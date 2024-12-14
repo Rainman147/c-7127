@@ -30,9 +30,9 @@ serve(async (req) => {
       parts: [{ text: msg.content }]
     }));
 
-    console.log('Sending streaming request to Gemini experimental model');
+    console.log('Sending request to Gemini experimental model');
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:streamGenerateContent?alt=sse&key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: {
@@ -48,59 +48,19 @@ serve(async (req) => {
       throw new Error(`Gemini API error: ${response.status} ${error}`);
     }
 
-    // Set up streaming response
-    const stream = new ReadableStream({
-      async start(controller) {
-        const reader = response.body?.getReader();
-        if (!reader) {
-          controller.close();
-          return;
-        }
+    const data = await response.json();
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-              controller.close();
-              break;
-            }
+    if (!content) {
+      throw new Error('No content in Gemini response');
+    }
 
-            // Parse SSE data
-            const text = new TextDecoder().decode(value);
-            const lines = text.split('\n').filter(line => line.trim());
-            
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = line.slice(5);
-                if (data === '[DONE]') continue;
-                
-                try {
-                  const parsed = JSON.parse(data);
-                  const content = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-                  if (content) {
-                    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ content })}\n\n`));
-                  }
-                } catch (e) {
-                  console.error('Error parsing SSE data:', e);
-                }
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error processing stream:', error);
-          controller.error(error);
-        }
+    return new Response(
+      JSON.stringify({ content }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
-    });
-
-    return new Response(stream, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      }
-    });
+    );
 
   } catch (error) {
     console.error('Error in gemini function:', error);

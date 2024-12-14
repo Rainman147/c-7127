@@ -52,7 +52,7 @@ export const useChat = () => {
           .from('chats')
           .insert({
             title: content.substring(0, 50),
-            user_id: user.id // Using the authenticated user's ID
+            user_id: user.id
           })
           .select()
           .single();
@@ -89,64 +89,26 @@ export const useChat = () => {
       setMessages([...newMessages, assistantMessage]);
 
       // Call Gemini function
-      const response = await supabase.functions.invoke('gemini', {
+      const { data, error } = await supabase.functions.invoke('gemini', {
         body: { messages: newMessages }
       });
 
-      if (!response.data) {
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
         throw new Error('No response from Gemini API');
       }
 
-      // Handle streaming response
-      const reader = response.data.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = '';
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-          
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(5));
-                if (data.content) {
-                  fullContent += data.content;
-                  setMessages(prev => {
-                    const lastMessage = prev[prev.length - 1];
-                    if (lastMessage.role === 'assistant') {
-                      return [
-                        ...prev.slice(0, -1),
-                        { ...lastMessage, content: fullContent }
-                      ];
-                    }
-                    return prev;
-                  });
-                }
-              } catch (e) {
-                console.error('Error parsing SSE data:', e);
-              }
-            }
-          }
-        }
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
-          console.log('Stream aborted');
-        } else {
-          throw error;
-        }
-      } finally {
-        // Update final message state
+      // Since we're getting a regular JSON response, not a stream
+      if (data.content) {
         setMessages(prev => {
           const lastMessage = prev[prev.length - 1];
           if (lastMessage.role === 'assistant') {
             return [
               ...prev.slice(0, -1),
-              { ...lastMessage, content: fullContent || 'Error: No response generated', isStreaming: false }
+              { ...lastMessage, content: data.content, isStreaming: false }
             ];
           }
           return prev;
