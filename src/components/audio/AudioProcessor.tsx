@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { validateAudioFile, splitAudioIntoChunks, mergeTranscriptions } from '@/utils/audioUtils';
-import { processAudioForTranscription } from '@/utils/audioHandlers';
+import { validateAudioFile } from '@/utils/audioUtils';
 import ProcessingIndicator from '../ProcessingIndicator';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AudioProcessorProps {
   audioBlob: Blob | null;
@@ -18,8 +18,6 @@ const AudioProcessor = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [processingStatus, setProcessingStatus] = useState('');
-  const [currentChunk, setCurrentChunk] = useState(0);
-  const [totalChunks, setTotalChunks] = useState(0);
   const { toast } = useToast();
 
   const processAudio = async (blob: Blob) => {
@@ -28,36 +26,36 @@ const AudioProcessor = ({
     setProcessingStatus('Processing audio...');
 
     try {
-      const audioChunks = await splitAudioIntoChunks(blob);
-      setTotalChunks(audioChunks.length);
-
-      const transcriptions: string[] = [];
+      validateAudioFile(blob);
       
-      for (let i = 0; i < audioChunks.length; i++) {
-        setCurrentChunk(i + 1);
-        setProcessingStatus(`Processing chunk ${i + 1} of ${audioChunks.length}...`);
-        setProgress((i + 1) / audioChunks.length * 100);
-        
-        const result = await processAudioForTranscription(audioChunks[i]);
-        transcriptions.push(result);
+      // Create FormData with the audio blob
+      const formData = new FormData();
+      formData.append('audio', blob, 'recording.webm');
+
+      const { data, error } = await supabase.functions.invoke('transcribe', {
+        body: formData
+      });
+
+      if (error) throw error;
+
+      if (!data?.transcription) {
+        throw new Error('No transcription received');
       }
 
-      const finalTranscription = mergeTranscriptions(transcriptions);
-      onProcessingComplete(finalTranscription);
+      onProcessingComplete(data.transcription);
+      setProgress(100);
 
     } catch (error: any) {
+      console.error('Audio processing error:', error);
       toast({
         title: "Processing Error",
         description: error.message || "Failed to process audio",
         variant: "destructive"
       });
-      console.error('Audio processing error:', error);
     } finally {
       setIsProcessing(false);
       setProgress(0);
       setProcessingStatus('');
-      setCurrentChunk(0);
-      setTotalChunks(0);
       onProcessingEnd();
     }
   };
@@ -71,8 +69,6 @@ const AudioProcessor = ({
     <ProcessingIndicator
       progress={progress}
       status={processingStatus}
-      currentChunk={currentChunk}
-      totalChunks={totalChunks}
     />
   ) : null;
 };
