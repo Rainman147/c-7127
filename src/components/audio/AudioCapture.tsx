@@ -13,9 +13,11 @@ const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) =
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const lastBatchTime = useRef<number>(0);
+  const recordingTimeout = useRef<NodeJS.Timeout>();
   const { toast } = useToast();
   const { initializeAudioContext, cleanupAudioContext } = useAudioContext();
   const BATCH_INTERVAL = 5000; // 5 seconds batch interval
+  const MAX_RECORDING_TIME = 120000; // 2 minutes in milliseconds
 
   const processBatch = useCallback(() => {
     if (chunks.current.length > 0) {
@@ -72,6 +74,18 @@ const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) =
       mediaRecorder.current.start(1000); // Collect data every second
       setIsRecording(true);
       console.log('Started recording');
+
+      // Set timeout to stop recording after 2 minutes
+      recordingTimeout.current = setTimeout(() => {
+        if (isRecording) {
+          stopRecording();
+          toast({
+            title: "Recording stopped",
+            description: "Maximum recording time of 2 minutes reached",
+            variant: "default"
+          });
+        }
+      }, MAX_RECORDING_TIME);
       
     } catch (error) {
       console.error('Error starting recording:', error);
@@ -81,11 +95,15 @@ const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) =
         variant: "destructive"
       });
     }
-  }, [initializeAudioContext, onRecordingComplete, onAudioData, toast, processBatch]);
+  }, [initializeAudioContext, onRecordingComplete, onAudioData, toast, processBatch, isRecording]);
 
   const stopRecording = useCallback(() => {
     console.log('Stopping recording...');
     
+    if (recordingTimeout.current) {
+      clearTimeout(recordingTimeout.current);
+    }
+
     if (mediaRecorder.current && mediaRecorder.current.state === 'recording') {
       mediaRecorder.current.stop();
       mediaRecorder.current.stream.getTracks().forEach(track => track.stop());

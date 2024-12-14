@@ -44,7 +44,7 @@ const AudioProcessor = ({
         const base64Promise = new Promise<string>((resolve, reject) => {
           reader.onloadend = () => {
             const base64String = reader.result as string;
-            const base64Data = base64String.split(',')[1]; // Remove data URL prefix
+            const base64Data = base64String.split(',')[1];
             resolve(base64Data);
           };
           reader.onerror = reject;
@@ -55,7 +55,7 @@ const AudioProcessor = ({
         
         console.log('Audio converted to base64, length:', base64Data.length);
         setProgress(25);
-        setProcessingStatus('Sending audio to transcription service...');
+        setProcessingStatus('Sending audio to Whisper API...');
 
         const { data, error } = await supabase.functions.invoke('transcribe', {
           body: { 
