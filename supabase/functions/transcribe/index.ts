@@ -33,27 +33,20 @@ serve(async (req) => {
     // Create form data for OpenAI API
     const formData = new FormData()
     
-    // Map MIME types to Whisper-supported extensions
-    const mimeToExt: { [key: string]: string } = {
-      'audio/webm': 'webm',
-      'audio/mp3': 'mp3',
-      'audio/mpeg': 'mp3',
-      'audio/wav': 'wav',
-      'audio/x-wav': 'wav',
-      'audio/ogg': 'ogg',
-      'audio/flac': 'flac',
-      'audio/m4a': 'm4a',
-      'audio/mp4': 'mp4',
-      'audio/mpeg': 'mpga',
-    }
+    // Always use webm format since that's what we're recording in
+    const filename = 'audio.webm'
+    
+    console.log(`Creating ${filename} for Whisper API`)
 
-    const ext = mimeToExt[metadata?.mimeType] || 'webm'
-    const filename = `audio.${ext}`
+    // Create blob with webm type which is supported by Whisper
+    const blob = new Blob([binaryData], { type: 'audio/webm' })
+    
+    // Log blob details for debugging
+    console.log('Created blob:', {
+      size: blob.size,
+      type: blob.type
+    })
 
-    console.log(`Creating ${filename} with MIME type ${metadata?.mimeType}`)
-
-    // Create blob with proper mime type
-    const blob = new Blob([binaryData], { type: metadata?.mimeType || 'audio/webm' })
     formData.append('file', blob, filename)
     formData.append('model', 'whisper-1')
     formData.append('language', 'en')
