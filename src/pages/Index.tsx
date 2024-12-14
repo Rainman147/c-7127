@@ -8,7 +8,7 @@ import { useChat } from '@/hooks/useChat';
 
 const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { messages, isLoading, handleSendMessage } = useChat();
+  const { messages, isLoading, handleSendMessage, setMessages } = useChat();
 
   const handleTranscriptionUpdate = (text: string) => {
     setMessages(prevMessages => {

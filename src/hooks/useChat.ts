@@ -171,6 +171,7 @@ export const useChat = () => {
   return {
     messages,
     isLoading,
-    handleSendMessage
+    handleSendMessage,
+    setMessages // Expose setMessages to allow external updates
   };
 };
