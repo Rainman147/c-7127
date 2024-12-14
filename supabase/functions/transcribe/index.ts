@@ -5,7 +5,8 @@ const ALLOWED_ORIGIN = 'https://a3499179-1ed8-4343-8cbe-3b734179bef0.lovableproj
 const corsHeaders = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-requested-with',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Max-Age': '86400',
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
   'Content-Security-Policy': "default-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com",
 }
@@ -58,17 +59,17 @@ serve(async (req) => {
     origin: req.headers.get('origin'),
   });
 
-  // Enforce TLS
-  if (!req.url.startsWith('https')) {
-    return new Response('HTTPS required', { status: 403, headers: corsHeaders });
-  }
-
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { 
       headers: corsHeaders,
       status: 204
     });
+  }
+
+  // Enforce TLS
+  if (!req.url.startsWith('https')) {
+    return new Response('HTTPS required', { status: 403, headers: corsHeaders });
   }
 
   try {
