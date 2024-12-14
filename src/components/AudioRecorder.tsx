@@ -5,6 +5,7 @@ import AudioProcessor from './audio/AudioProcessor';
 import FileUploader from './audio/FileUploader';
 import AudioCapture from './audio/AudioCapture';
 import ProcessingIndicator from './ProcessingIndicator';
+import { deidentifyText, secureLog, validateTLSVersion } from '@/utils/securityUtils';
 
 interface AudioRecorderProps {
   onTranscriptionComplete: (text: string) => void;
@@ -23,7 +24,7 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
   const RETRY_DELAY = 2000;
 
   const handleTranscriptionError = async (error: any, retryCallback: () => void) => {
-    console.error('Transcription error:', error);
+    secureLog('Transcription error', { error: error.message });
     
     if (retryCount < MAX_RETRIES) {
       setIsReconnecting(true);
@@ -50,8 +51,19 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
   };
 
   const handleAudioData = async (data: string) => {
+    // Validate TLS version before proceeding
+    if (!validateTLSVersion()) {
+      toast({
+        title: "Security Error",
+        description: "Secure connection required for HIPAA compliance.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      console.log('Sending audio chunk for transcription');
+      secureLog('Sending audio chunk', { chunkSize: data.length });
+      
       const response = await fetch('https://hlnzunnahksudbotqvpk.supabase.co/functions/v1/transcribe', {
         method: 'POST',
         headers: {
@@ -76,15 +88,14 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
       try {
         result = await response.json();
       } catch (error) {
-        // If the first attempt fails, try with the cloned response
-        console.log('Retrying with cloned response');
+        secureLog('Initial JSON parse failed, trying clone', {});
         result = await responseClone.json();
       }
 
-      console.log('Transcription result:', result);
+      secureLog('Transcription received', { hasTranscription: !!result.transcription });
       
       if (result.transcription) {
-        const newTranscription = result.transcription.trim();
+        const newTranscription = deidentifyText(result.transcription.trim());
         setLiveTranscription(prev => {
           const updated = prev + (prev ? ' ' : '') + newTranscription;
           onTranscriptionUpdate?.(updated);

@@ -3,26 +3,78 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Content-Security-Policy': "default-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com",
 }
-
-const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')
-const MAX_RETRIES = 3
-const RETRY_DELAY = 1000 // 1 second
 
 interface TranscriptionError extends Error {
   status?: number;
   retryable?: boolean;
 }
 
-async function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+// PHI patterns for server-side de-identification
+const PHI_PATTERNS = [
+  // Names
+  /\b(?:[A-Z][a-z]+ ){1,2}[A-Z][a-z]+\b/g,
+  // Phone numbers
+  /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g,
+  // SSN
+  /\b\d{3}[-]?\d{2}[-]?\d{4}\b/g,
+  // Email addresses
+  /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
+  // Dates
+  /\b(?:\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\d{4}[-/]\d{1,2}[-/]\d{1,2})\b/g,
+  // Medical record numbers
+  /\b(?:MRN|Medical Record Number)[:# ]?\d+\b/gi,
+];
 
-async function callGeminiAPI(audioData: string, retryCount = 0): Promise<Response> {
+const deidentifyText = (text: string): string => {
+  let deidentifiedText = text;
+  PHI_PATTERNS.forEach((pattern, index) => {
+    deidentifiedText = deidentifiedText.replace(pattern, `[REDACTED-${index}]`);
+  });
+  return deidentifiedText;
+};
+
+const secureLog = (event: string, data: any, excludeKeys: string[] = ['audioData', 'transcription']) => {
+  const sanitizedData = { ...data };
+  excludeKeys.forEach(key => {
+    if (key in sanitizedData) {
+      sanitizedData[key] = '[REDACTED]';
+    }
+  });
+  
+  console.log(`[${new Date().toISOString()}] ${event}:`, sanitizedData);
+};
+
+serve(async (req) => {
+  // Enforce TLS
+  if (!req.url.startsWith('https')) {
+    return new Response('HTTPS required', { status: 403 });
+  }
+
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   try {
-    console.log(`Attempting Gemini API call (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+    const { audioData, streaming } = await req.json();
     
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:streamGenerateContent?key=' + GOOGLE_API_KEY, {
+    if (!audioData) {
+      throw new Error('No audio data provided');
+    }
+
+    secureLog('Received transcription request', { streaming });
+
+    // Validate audio data format
+    try {
+      atob(audioData);
+    } catch {
+      throw new Error('Invalid audio data format. Must be base64 encoded.');
+    }
+
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:streamGenerateContent?key=' + Deno.env.get('GOOGLE_API_KEY'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -62,54 +114,22 @@ async function callGeminiAPI(audioData: string, retryCount = 0): Promise<Respons
     });
 
     if (!response.ok) {
-      const error = new Error(`Gemini API error: ${response.status}`) as TranscriptionError;
-      error.status = response.status;
-      error.retryable = response.status >= 500 || response.status === 429;
-      throw error;
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to transcribe audio');
     }
 
-    return response;
-  } catch (error) {
-    console.error(`API call failed (attempt ${retryCount + 1}):`, error);
-    
-    if (retryCount < MAX_RETRIES - 1 && (error as TranscriptionError).retryable !== false) {
-      console.log(`Retrying in ${RETRY_DELAY}ms...`);
-      await delay(RETRY_DELAY);
-      return callGeminiAPI(audioData, retryCount + 1);
-    }
-    
-    throw error;
-  }
-}
-
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
-
-  try {
-    const { audioData, streaming } = await req.json()
-    
-    if (!audioData) {
-      throw new Error('No audio data provided')
-    }
-
-    // Validate audio data format
-    try {
-      atob(audioData); // Verify it's valid base64
-    } catch {
-      throw new Error('Invalid audio data format. Must be base64 encoded.');
-    }
-
-    console.log('Received audio data, preparing request to Gemini API');
-
-    const response = await callGeminiAPI(audioData);
     const result = await response.json();
+    
+    // De-identify transcription before returning
+    if (result.transcription) {
+      result.transcription = deidentifyText(result.transcription);
+    }
+
+    secureLog('Transcription completed', { status: 'success' });
 
     return new Response(
       JSON.stringify({ 
-        transcription: result.candidates?.[0]?.content?.parts?.[0]?.text || '',
+        transcription: result.transcription || '',
         status: 'success'
       }),
       { 
@@ -120,7 +140,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Transcription error:', error);
+    secureLog('Transcription error', { error: error.message });
     
     const errorResponse = {
       error: error.message || 'An unexpected error occurred',
@@ -139,4 +159,4 @@ serve(async (req) => {
       }
     );
   }
-})
+});
