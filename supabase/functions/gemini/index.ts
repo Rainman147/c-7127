@@ -1,4 +1,3 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -12,58 +11,75 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Received request to Gemini function for audio transcription');
-    const { audioData, language = "en-US" } = await req.json();
+    console.log('Received request to Gemini function');
+    const { prompt } = await req.json();
     
-    if (!audioData) {
-      throw new Error('No audio data provided');
+    if (!prompt) {
+      throw new Error('No prompt provided');
     }
 
-    const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
-    if (!googleApiKey) {
+    const apiKey = Deno.env.get('GOOGLE_API_KEY');
+    if (!apiKey) {
       console.error('Google API key not found');
       throw new Error('Google API key not configured');
     }
 
-    console.log('Sending audio data to Gemini API');
+    console.log('Sending request to Gemini API');
     const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent',
+      `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-goog-api-key': googleApiKey,
         },
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `Transcribe this audio content: ${audioData}`
+              text: prompt
             }]
           }],
           generationConfig: {
-            temperature: 0,
-            topP: 1,
+            temperature: 0.7,
             topK: 1,
+            topP: 1,
             maxOutputTokens: 2048,
-          }
-        }),
+          },
+          safetySettings: [
+            {
+              category: "HARM_CATEGORY_HARASSMENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_HATE_SPEECH",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            }
+          ]
+        })
       }
     );
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.text();
       console.error('Gemini API error:', error);
-      throw new Error(error.error?.message || 'Failed to transcribe audio');
+      throw new Error(`Gemini API error: ${response.status} ${error}`);
     }
 
     const data = await response.json();
-    console.log('Received transcription from Gemini API');
+    console.log('Received response from Gemini API');
 
     return new Response(
-      JSON.stringify({ 
-        transcription: data.candidates?.[0]?.content?.parts?.[0]?.text || '',
+      JSON.stringify({
+        response: data.candidates?.[0]?.content?.parts?.[0]?.text || '',
         status: 'success'
-      }), 
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
@@ -71,10 +87,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in gemini function:', error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: error.message || 'An unexpected error occurred',
         status: 'error'
-      }), 
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
