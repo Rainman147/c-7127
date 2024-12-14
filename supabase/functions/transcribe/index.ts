@@ -8,10 +8,18 @@ const corsHeaders = {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
+    console.log('Processing transcription request...');
+    
+    // Get the Google API key from environment variables
+    const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
+    if (!GOOGLE_API_KEY) {
+      throw new Error('GOOGLE_API_KEY is not configured');
+    }
+
     let audioData: string;
     const contentType = req.headers.get('content-type');
     console.log('Content-Type:', contentType);
@@ -30,6 +38,8 @@ serve(async (req) => {
       audioData = btoa(
         String.fromCharCode(...new Uint8Array(arrayBuffer))
       );
+      
+      console.log('Successfully processed form data audio file');
     } else {
       // Handle JSON payload
       const body = await req.json();
@@ -37,16 +47,12 @@ serve(async (req) => {
         throw new Error('No audio data provided in JSON');
       }
       audioData = body.audioData;
+      console.log('Successfully processed JSON audio data');
     }
 
-    console.log('Processing audio data of length:', audioData.length);
-
-    const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
-    if (!GOOGLE_API_KEY) {
-      throw new Error('GOOGLE_API_KEY is not set in environment variables');
-    }
-
-    // Using the Gemini API for audio transcription
+    console.log('Sending request to Gemini API...');
+    
+    // Call Gemini API for transcription
     const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
       method: 'POST',
       headers: {
@@ -80,12 +86,16 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    const transcription = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!transcription) {
+      throw new Error('No transcription received from Gemini API');
+    }
+
     console.log('Transcription completed successfully');
 
     return new Response(
-      JSON.stringify({ 
-        transcription: data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-      }),
+      JSON.stringify({ transcription }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
