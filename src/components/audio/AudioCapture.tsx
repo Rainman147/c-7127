@@ -5,9 +5,10 @@ import { getMediaStream, cleanupMediaStream } from '@/utils/mediaStreamUtils';
 
 interface AudioCaptureProps {
   onRecordingComplete: (blob: Blob) => void;
+  onAudioData?: (data: Blob) => void;  // Added this prop
 }
 
-const AudioCapture = ({ onRecordingComplete }: AudioCaptureProps) => {
+const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
@@ -28,6 +29,10 @@ const AudioCapture = ({ onRecordingComplete }: AudioCaptureProps) => {
       mediaRecorder.current.ondataavailable = (e) => {
         if (e.data.size > 0) {
           chunks.current.push(e.data);
+          // If onAudioData is provided, send the chunk
+          if (onAudioData) {
+            onAudioData(e.data);
+          }
         }
       };
 
@@ -49,7 +54,7 @@ const AudioCapture = ({ onRecordingComplete }: AudioCaptureProps) => {
         variant: "destructive"
       });
     }
-  }, [initializeAudioContext, onRecordingComplete, toast]);
+  }, [initializeAudioContext, onRecordingComplete, onAudioData, toast]);
 
   const stopRecording = useCallback(() => {
     console.log('Stopping recording...');

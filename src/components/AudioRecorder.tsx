@@ -22,8 +22,8 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
   });
 
   const audioCapture = AudioCapture({
-    onAudioData: handleAudioData,
-    onRecordingComplete: setAudioBlob
+    onRecordingComplete: setAudioBlob,
+    onAudioData: handleAudioData
   });
 
   const handleFileUpload = () => {
