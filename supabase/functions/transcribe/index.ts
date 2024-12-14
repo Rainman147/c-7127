@@ -1,83 +1,73 @@
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { corsHeaders } from "./utils/cors.ts"
 
-Deno.serve(async (req) => {
-  // Handle CORS preflight requests
+const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')
+if (!GOOGLE_API_KEY) {
+  throw new Error('Missing GOOGLE_API_KEY environment variable')
+}
+
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // Parse request body
-    const body = await req.json();
-    
-    if (!body.audioData) {
-      console.error('No audio data provided');
-      throw new Error('No audio data provided');
+    const { audioData } = await req.json()
+
+    if (!audioData) {
+      throw new Error('No audio data provided')
     }
 
-    console.log('Received request with audio data');
-    console.log('Audio data length:', body.audioData.length);
+    console.log('Received audio data, sending to Gemini API...')
 
-    const apiKey = Deno.env.get('GOOGLE_API_KEY');
-    if (!apiKey) {
-      console.error('Google API key not found in environment');
-      throw new Error('Google API key not configured');
-    }
-
-    // Call Google Cloud Speech-to-Text API
-    console.log('Calling Google Speech-to-Text API...');
-    const response = await fetch(`https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`, {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro-vision:generateContent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-goog-api-key': GOOGLE_API_KEY,
       },
       body: JSON.stringify({
-        config: {
-          encoding: 'WEBM_OPUS',
-          sampleRateHertz: 48000,
-          languageCode: 'en-US',
-          model: 'default',
-        },
-        audio: {
-          content: body.audioData,
+        contents: [{
+          parts: [{
+            audio_data: {
+              mime_type: "audio/webm",
+              data: audioData
+            }
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+          topK: 1,
+          topP: 1,
+          maxOutputTokens: 2048,
         },
       }),
-    });
+    })
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Google API error:', response.status, errorText);
-      throw new Error(`Google API error: ${response.status} ${errorText}`);
+      const error = await response.text()
+      console.error('Gemini API error:', error)
+      throw new Error(`Gemini API error: ${response.status} ${error}`)
     }
 
-    const result = await response.json();
-    console.log('Transcription successful');
+    const data = await response.json()
+    console.log('Received response from Gemini:', data)
+
+    const transcription = data.candidates[0].content.parts[0].text
 
     return new Response(
-      JSON.stringify({
-        transcription: result.results?.[0]?.alternatives?.[0]?.transcript || '',
-        status: 'success',
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    );
+      JSON.stringify({ transcription }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
 
   } catch (error) {
-    console.error('Error in transcribe function:', error);
-    
+    console.error('Error in transcribe function:', error)
     return new Response(
-      JSON.stringify({
-        error: error.message || 'Internal server error',
-        status: 'error',
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      },
-    );
+      JSON.stringify({ error: error.message }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    )
   }
-});
+})
