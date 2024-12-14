@@ -52,31 +52,48 @@ serve(async (req) => {
 
     console.log('Sending request to Gemini API...');
     
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GOOGLE_API_KEY}`
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: "Please transcribe this audio recording accurately."
-          }, {
-            inline_data: {
-              mime_type: "audio/webm",
-              data: audioData
-            }
+    // Using the correct Gemini API endpoint for audio transcription
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${GOOGLE_API_KEY}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              inlineData: {
+                mimeType: "audio/webm",
+                data: audioData
+              }
+            }]
+          }],
+          generationConfig: {
+            temperature: 0,
+            topP: 1,
+            topK: 1,
+            maxOutputTokens: 2048,
+          },
+          tools: [{
+            functionDeclarations: [{
+              name: "transcribe",
+              description: "Transcribes the given audio",
+              parameters: {
+                type: "object",
+                properties: {
+                  text: {
+                    type: "string",
+                    description: "The transcribed text"
+                  }
+                },
+                required: ["text"]
+              }
+            }]
           }]
-        }],
-        generationConfig: {
-          temperature: 0,
-          topP: 1,
-          topK: 1,
-          maxOutputTokens: 2048,
-        }
-      })
-    });
+        })
+      }
+    );
 
     if (!response.ok) {
       const error = await response.text();
@@ -85,6 +102,8 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    console.log('Gemini API response:', data);
+    
     const transcription = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!transcription) {
