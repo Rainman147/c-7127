@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { deidentifyText, secureLog, validateTLSVersion } from '@/utils/securityUtils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UseTranscriptionProps {
   onTranscriptionComplete: (text: string) => void;
@@ -58,36 +59,21 @@ export const useTranscription = ({
     try {
       secureLog('Sending audio chunk', { chunkSize: data.length });
       
-      const response = await fetch('https://hlnzunnahksudbotqvpk.supabase.co/functions/v1/transcribe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
+      const { data: result, error } = await supabase.functions.invoke('transcribe', {
+        body: { 
           audioData: data,
           mimeType: 'audio/x-raw',
           streaming: true
-        }),
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to transcribe audio');
+      if (error) {
+        throw error;
       }
 
-      const responseClone = response.clone();
-      let result;
+      secureLog('Transcription received', { hasTranscription: !!result?.transcription });
       
-      try {
-        result = await response.json();
-      } catch (error) {
-        secureLog('Initial JSON parse failed, trying clone', {});
-        result = await responseClone.json();
-      }
-
-      secureLog('Transcription received', { hasTranscription: !!result.transcription });
-      
-      if (result.transcription) {
+      if (result?.transcription) {
         const newTranscription = deidentifyText(result.transcription.trim());
         setLiveTranscription(prev => {
           const updated = prev + (prev ? ' ' : '') + newTranscription;
