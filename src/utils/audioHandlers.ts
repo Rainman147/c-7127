@@ -5,12 +5,16 @@ export const processAudioForTranscription = async (audioBlob: Blob): Promise<str
   console.log('Processing audio for transcription with Gemini API');
   
   try {
-    // Convert blob to array buffer for sending to Gemini
-    const arrayBuffer = await audioBlob.arrayBuffer();
+    // Convert blob to base64 for sending to Gemini
+    const buffer = await audioBlob.arrayBuffer();
+    const base64Audio = btoa(
+      new Uint8Array(buffer)
+        .reduce((data, byte) => data + String.fromCharCode(byte), '')
+    );
     
     console.log('Sending audio data to Gemini API');
     const { data, error } = await supabase.functions.invoke('gemini', {
-      body: { audioData: arrayBuffer }
+      body: { audioData: base64Audio }
     });
 
     if (error) {
@@ -18,11 +22,18 @@ export const processAudioForTranscription = async (audioBlob: Blob): Promise<str
       throw error;
     }
 
-    if (!data?.generatedText) {
+    if (!data?.transcription) {
       throw new Error('No transcription received');
     }
 
-    return data.generatedText;
+    // Format the transcription with speaker labels
+    const formattedTranscription = data.transcription
+      .map((segment: { speaker: string; text: string }) => 
+        `${segment.speaker}: ${segment.text}`
+      )
+      .join('\n');
+
+    return formattedTranscription;
   } catch (error: any) {
     console.error('Audio processing error:', error);
     throw new Error(error.message || "Failed to process audio");
@@ -36,8 +47,18 @@ export const startRecording = async (
   onError: (error: string) => void
 ) => {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const recorder = new MediaRecorder(stream);
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      } 
+    });
+    
+    const recorder = new MediaRecorder(stream, {
+      mimeType: 'audio/webm'
+    });
+    
     const chunks: Blob[] = [];
 
     recorder.ondataavailable = (e) => {
@@ -48,7 +69,7 @@ export const startRecording = async (
 
     setMediaRecorder(recorder);
     setChunks(chunks);
-    recorder.start();
+    recorder.start(1000); // Start recording in 1-second chunks for real-time processing
     setIsRecording(true);
 
     // Auto-stop after 2 minutes

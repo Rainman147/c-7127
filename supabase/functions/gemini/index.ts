@@ -14,61 +14,36 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Received request to Gemini function');
-    const { prompt, audioData } = await req.json();
+    console.log('Received request to Gemini function for audio transcription');
+    const { audioData } = await req.json();
     
     if (!googleApiKey) {
       console.error('Google API key not found');
       throw new Error('Google API key not configured');
     }
 
-    let endpoint = 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent';
-    let requestBody: any = {
-      contents: [{
-        parts: [{
-          text: prompt || ''
-        }]
-      }],
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 2048,
+    // Configure the transcription request with speaker diarization and noise reduction
+    const requestBody = {
+      audio: {
+        content: audioData
       },
-      safetySettings: [
-        {
-          category: "HARM_CATEGORY_HARASSMENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_HATE_SPEECH",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+      config: {
+        languageCode: "en-US",
+        model: "gemini-pro",
+        enableAutomaticPunctuation: true,
+        enableSpeakerDiarization: true,
+        diarizationSpeakerCount: 2, // For patient-physician interactions
+        useEnhanced: true, // Enable noise reduction
+        metadata: {
+          interactionType: "DISCUSSION",
+          industryNaicsCodeOfAudio: "621111", // NAICS code for physician offices
+          originalMediaType: "AUDIO"
         }
-      ]
+      }
     };
 
-    // If audio data is provided, use it for transcription
-    if (audioData) {
-      endpoint = 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:transcribeContent';
-      requestBody = {
-        audio: {
-          data: audioData
-        },
-        config: {
-          languageCode: "en-US"
-        }
-      };
-    }
-
-    const response = await fetch(endpoint, {
+    console.log('Sending audio data to Gemini API');
+    const response = await fetch('https://generativelanguage.googleapis.com/v1/speech:recognize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -77,22 +52,48 @@ serve(async (req) => {
       body: JSON.stringify(requestBody),
     });
 
-    console.log('Received response from Gemini API');
-    const data = await response.json();
-    console.log('Parsed response:', data);
-
     if (!response.ok) {
-      console.error('Gemini API error:', data);
-      throw new Error(data.error?.message || 'Failed to generate content');
+      const error = await response.json();
+      console.error('Gemini API error:', error);
+      throw new Error(error.error?.message || 'Failed to transcribe audio');
     }
 
-    const generatedText = audioData 
-      ? data.transcript 
-      : data.candidates[0].content.parts[0].text;
-    
-    console.log('Generated text:', generatedText);
+    const data = await response.json();
+    console.log('Received transcription from Gemini API');
 
-    return new Response(JSON.stringify({ generatedText }), {
+    // Process the transcription results with speaker diarization
+    const transcription = data.results.map((result: any) => {
+      const words = result.alternatives[0].words || [];
+      let currentSpeaker = null;
+      let currentText = '';
+      const segments = [];
+
+      words.forEach((word: any) => {
+        if (word.speakerTag !== currentSpeaker) {
+          if (currentText) {
+            segments.push({
+              speaker: currentSpeaker === 1 ? 'Physician' : 'Patient',
+              text: currentText.trim()
+            });
+          }
+          currentSpeaker = word.speakerTag;
+          currentText = word.word;
+        } else {
+          currentText += ' ' + word.word;
+        }
+      });
+
+      if (currentText) {
+        segments.push({
+          speaker: currentSpeaker === 1 ? 'Physician' : 'Patient',
+          text: currentText.trim()
+        });
+      }
+
+      return segments;
+    }).flat();
+
+    return new Response(JSON.stringify({ transcription }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
