@@ -31,33 +31,13 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleTranscriptionUpdate = (text: string) => {
-    setMessages(prevMessages => {
-      const lastMessage = prevMessages[prevMessages.length - 1];
-      
-      // If the last message is a streaming transcription, update it
-      if (lastMessage?.isStreaming) {
-        return [
-          ...prevMessages.slice(0, -1),
-          { ...lastMessage, content: text, type: 'audio' }
-        ];
-      }
-      
-      // Otherwise, add a new streaming message
-      return [
-        ...prevMessages,
-        { role: 'user', content: text, isStreaming: true, type: 'audio' }
-      ];
-    });
-  };
+  // Remove the handleTranscriptionUpdate function since we don't want to show streaming updates
+  // in the chat window anymore
 
   const handleTranscriptionComplete = async (text: string) => {
-    try {
-      await handleSendMessage(text, 'audio');
-    } catch (error) {
-      console.error('Error handling transcription:', error);
-      handleTranscriptionError();
-    }
+    // Don't add the transcription to messages here - it will be sent
+    // only when the user clicks the send button
+    console.log('Transcription complete, ready for user to edit:', text);
   };
 
   if (!session) {
