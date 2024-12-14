@@ -24,7 +24,7 @@ serve(async (req) => {
       throw new Error('Google API key not configured');
     }
 
-    console.log('Sending request to Gemini API');
+    console.log('Sending request to Gemini API with experimental model');
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
       {
@@ -73,7 +73,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log('Received response from Gemini API');
+    console.log('Received response from Gemini experimental model');
 
     return new Response(
       JSON.stringify({
