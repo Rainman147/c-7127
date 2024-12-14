@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import Sidebar from '@/components/Sidebar';
 import ChatHeader from '@/components/ChatHeader';
 import ChatInput from '@/components/ChatInput';
@@ -30,12 +31,35 @@ const Index = () => {
     setIsLoading(true);
 
     try {
-      const newMessages = [
-        ...messages,
-        { role: 'user', content } as const
-      ];
-      
+      const userMessage: Message = { role: 'user', content };
+      const newMessages = [...messages, userMessage];
       setMessages(newMessages);
+
+      // Create a new chat if this is the first message
+      if (messages.length === 0) {
+        const { data: chatData, error: chatError } = await supabase
+          .from('chats')
+          .insert({
+            title: content.substring(0, 50),
+            user_id: (await supabase.auth.getUser()).data.user?.id
+          })
+          .select()
+          .single();
+
+        if (chatError) throw chatError;
+
+        // Insert the message
+        const { error: messageError } = await supabase
+          .from('messages')
+          .insert({
+            chat_id: chatData.id,
+            content: content,
+            sender: 'user',
+            type: 'text'
+          });
+
+        if (messageError) throw messageError;
+      }
 
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -47,6 +71,7 @@ const Index = () => {
 
       setMessages([...newMessages, assistantMessage]);
     } catch (error: any) {
+      console.error('Error sending message:', error);
       toast({
         title: "Error",
         description: error.message,

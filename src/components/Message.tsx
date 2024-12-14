@@ -12,7 +12,13 @@ const Message = ({ role, content }: MessageProps) => {
       <div className={`flex gap-4 ${role === 'user' ? 'flex-row-reverse' : ''}`}>
         <MessageAvatar isAssistant={role === 'assistant'} />
         <div className={`flex-1 space-y-2 ${role === 'user' ? 'flex justify-end' : ''}`}>
-          <div className={`${role === 'user' ? 'bg-gray-700/50 rounded-[20px] px-4 py-2 inline-block' : ''}`}>
+          <div 
+            className={`${
+              role === 'user' 
+                ? 'bg-gray-700/50 rounded-[20px] px-4 py-2 inline-block' 
+                : ''
+            }`}
+          >
             {content}
           </div>
           {role === 'assistant' && <MessageActions />}
