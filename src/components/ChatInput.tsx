@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ArrowUp, Loader2, X } from "lucide-react";
 import AudioRecorder from "./AudioRecorder";
 import { useToast } from "@/hooks/use-toast";
@@ -18,11 +18,13 @@ const ChatInput = ({
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const { toast } = useToast();
+  const transcriptionInProgress = useRef(false);
 
   const handleSubmit = () => {
     if (message.trim() && !isLoading) {
       onSend(message);
       setMessage("");
+      transcriptionInProgress.current = false;
     }
   };
 
@@ -34,14 +36,10 @@ const ChatInput = ({
   };
 
   const handleTranscriptionUpdate = (transcription: string) => {
-    console.log('Transcription update received:', transcription);
+    console.log('Transcription update received in ChatInput:', transcription);
+    transcriptionInProgress.current = true;
     // Update the input field with the new transcription
-    setMessage(prev => {
-      // Only add space if there's existing text
-      const newMessage = prev + (prev ? ' ' : '') + transcription;
-      console.log('Updated message:', newMessage);
-      return newMessage;
-    });
+    setMessage(transcription);
     
     if (onTranscriptionUpdate) {
       onTranscriptionUpdate(transcription);
@@ -49,16 +47,21 @@ const ChatInput = ({
   };
 
   const handleTranscriptionComplete = (transcription: string) => {
-    console.log('Transcription complete:', transcription);
-    onTranscriptionComplete(transcription);
-    toast({
-      title: "Transcription complete",
-      description: "Your audio has been transcribed. Review and edit before sending.",
-    });
+    console.log('Transcription complete in ChatInput:', transcription);
+    if (transcriptionInProgress.current) {
+      setMessage(transcription);
+      transcriptionInProgress.current = false;
+      onTranscriptionComplete(transcription);
+      toast({
+        title: "Transcription complete",
+        description: "Your audio has been transcribed. Review and edit before sending.",
+      });
+    }
   };
 
   const handleClearInput = () => {
     setMessage("");
+    transcriptionInProgress.current = false;
     toast({
       title: "Input cleared",
       description: "The message input has been cleared.",
