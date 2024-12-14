@@ -6,10 +6,16 @@ import { useToast } from "@/hooks/use-toast";
 interface ChatInputProps {
   onSend: (message: string) => void;
   onTranscriptionUpdate?: (text: string) => void;
+  onTranscriptionComplete?: (text: string) => void;  // Added this prop
   isLoading?: boolean;
 }
 
-const ChatInput = ({ onSend, onTranscriptionUpdate, isLoading = false }: ChatInputProps) => {
+const ChatInput = ({ 
+  onSend, 
+  onTranscriptionUpdate, 
+  onTranscriptionComplete,
+  isLoading = false 
+}: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const { toast } = useToast();
 
@@ -29,14 +35,11 @@ const ChatInput = ({ onSend, onTranscriptionUpdate, isLoading = false }: ChatInp
 
   const handleTranscriptionComplete = (transcription: string) => {
     setMessage(prev => prev + (prev ? ' ' : '') + transcription);
+    onTranscriptionComplete?.(transcription);
     toast({
       title: "Transcription complete",
       description: "Your audio has been successfully transcribed.",
     });
-  };
-
-  const handleTranscriptionUpdate = (text: string) => {
-    onTranscriptionUpdate?.(text);
   };
 
   return (
@@ -55,7 +58,7 @@ const ChatInput = ({ onSend, onTranscriptionUpdate, isLoading = false }: ChatInp
         <div className="absolute right-3 top-[50%] -translate-y-[50%] flex items-center gap-2">
           <AudioRecorder 
             onTranscriptionComplete={handleTranscriptionComplete}
-            onTranscriptionUpdate={handleTranscriptionUpdate}
+            onTranscriptionUpdate={onTranscriptionUpdate}
           />
           <button 
             onClick={handleSubmit}

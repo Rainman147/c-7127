@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { validateAudioFile } from '@/utils/audioUtils';
 import ProcessingIndicator from '../ProcessingIndicator';
@@ -20,58 +20,73 @@ const AudioProcessor = ({
   const [processingStatus, setProcessingStatus] = useState('');
   const { toast } = useToast();
 
-  const processAudio = async (blob: Blob) => {
-    setIsProcessing(true);
-    setProgress(0);
-    setProcessingStatus('Preparing audio for transcription...');
+  useEffect(() => {
+    let isMounted = true;
 
-    try {
-      validateAudioFile(blob);
+    const processAudio = async (blob: Blob) => {
+      if (!isMounted) return;
       
-      // Create FormData with the audio blob
-      const formData = new FormData();
-      formData.append('audio', blob, 'recording.webm');
-
-      console.log('Sending audio for transcription...');
-      setProgress(25);
-      setProcessingStatus('Sending audio to transcription service...');
-
-      const { data, error } = await supabase.functions.invoke('transcribe', {
-        body: formData
-      });
-
-      if (error) {
-        console.error('Transcription error:', error);
-        throw new Error(error.message || 'Failed to transcribe audio');
-      }
-
-      if (!data?.transcription) {
-        throw new Error('No transcription received');
-      }
-
-      setProgress(100);
-      setProcessingStatus('Transcription complete!');
-      onProcessingComplete(data.transcription);
-
-    } catch (error: any) {
-      console.error('Audio processing error:', error);
-      toast({
-        title: "Processing Error",
-        description: error.message || "Failed to process audio",
-        variant: "destructive"
-      });
-    } finally {
-      setIsProcessing(false);
+      setIsProcessing(true);
       setProgress(0);
-      setProcessingStatus('');
-      onProcessingEnd();
-    }
-  };
+      setProcessingStatus('Preparing audio for transcription...');
 
-  // Start processing if audioBlob is provided
-  if (audioBlob && !isProcessing) {
-    processAudio(audioBlob);
-  }
+      try {
+        validateAudioFile(blob);
+        
+        // Create FormData with the audio blob
+        const formData = new FormData();
+        formData.append('audio', blob, 'recording.webm');
+
+        console.log('Sending audio for transcription...');
+        setProgress(25);
+        setProcessingStatus('Sending audio to transcription service...');
+
+        const { data, error } = await supabase.functions.invoke('transcribe', {
+          body: formData
+        });
+
+        if (!isMounted) return;
+
+        if (error) {
+          console.error('Transcription error:', error);
+          throw new Error(error.message || 'Failed to transcribe audio');
+        }
+
+        if (!data?.transcription) {
+          throw new Error('No transcription received');
+        }
+
+        setProgress(100);
+        setProcessingStatus('Transcription complete!');
+        onProcessingComplete(data.transcription);
+
+      } catch (error: any) {
+        if (!isMounted) return;
+        
+        console.error('Audio processing error:', error);
+        toast({
+          title: "Processing Error",
+          description: error.message || "Failed to process audio",
+          variant: "destructive"
+        });
+      } finally {
+        if (isMounted) {
+          setIsProcessing(false);
+          setProgress(0);
+          setProcessingStatus('');
+          onProcessingEnd();
+        }
+      }
+    };
+
+    if (audioBlob && !isProcessing) {
+      processAudio(audioBlob);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [audioBlob, onProcessingComplete, onProcessingEnd, toast]);
 
   return isProcessing ? (
     <ProcessingIndicator
