@@ -10,6 +10,7 @@ import MessageList from '@/components/MessageList';
 type Message = {
   role: 'user' | 'assistant';
   content: string;
+  isStreaming?: boolean;
 };
 
 const Index = () => {
@@ -82,6 +83,26 @@ const Index = () => {
     }
   };
 
+  const handleTranscriptionUpdate = (text: string) => {
+    setMessages(prevMessages => {
+      const lastMessage = prevMessages[prevMessages.length - 1];
+      
+      // If the last message is a streaming transcription, update it
+      if (lastMessage?.isStreaming) {
+        return [
+          ...prevMessages.slice(0, -1),
+          { ...lastMessage, content: text }
+        ];
+      }
+      
+      // Otherwise, add a new streaming message
+      return [
+        ...prevMessages,
+        { role: 'user', content: text, isStreaming: true }
+      ];
+    });
+  };
+
   return (
     <div className="flex h-screen">
       <Sidebar 
@@ -98,7 +119,11 @@ const Index = () => {
             <div className="w-full max-w-3xl px-4 space-y-4">
               <div>
                 <h1 className="mb-8 text-4xl font-semibold text-center">What can I help with?</h1>
-                <ChatInput onSend={handleSendMessage} isLoading={isLoading} />
+                <ChatInput 
+                  onSend={handleSendMessage} 
+                  onTranscriptionUpdate={handleTranscriptionUpdate}
+                  isLoading={isLoading} 
+                />
               </div>
               <ActionButtons />
             </div>
@@ -106,7 +131,11 @@ const Index = () => {
             <>
               <MessageList messages={messages} />
               <div className="w-full max-w-3xl mx-auto px-4 py-2">
-                <ChatInput onSend={handleSendMessage} isLoading={isLoading} />
+                <ChatInput 
+                  onSend={handleSendMessage} 
+                  onTranscriptionUpdate={handleTranscriptionUpdate}
+                  isLoading={isLoading} 
+                />
               </div>
               <div className="text-xs text-center text-gray-500 py-2">
                 ChatGPT can make mistakes. Check important info.

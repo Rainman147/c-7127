@@ -4,10 +4,11 @@ import AudioRecorder from "./AudioRecorder";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
+  onTranscriptionUpdate?: (text: string) => void;
   isLoading?: boolean;
 }
 
-const ChatInput = ({ onSend, isLoading = false }: ChatInputProps) => {
+const ChatInput = ({ onSend, onTranscriptionUpdate, isLoading = false }: ChatInputProps) => {
   const [message, setMessage] = useState("");
 
   const handleSubmit = () => {
@@ -28,6 +29,10 @@ const ChatInput = ({ onSend, isLoading = false }: ChatInputProps) => {
     setMessage(prev => prev + (prev ? ' ' : '') + transcription);
   };
 
+  const handleTranscriptionUpdate = (text: string) => {
+    onTranscriptionUpdate?.(text);
+  };
+
   return (
     <div className="relative flex w-full flex-col items-center">
       <div className="relative w-full">
@@ -42,7 +47,10 @@ const ChatInput = ({ onSend, isLoading = false }: ChatInputProps) => {
           disabled={isLoading}
         />
         <div className="absolute right-3 top-[50%] -translate-y-[50%] flex items-center gap-2">
-          <AudioRecorder onTranscriptionComplete={handleTranscriptionComplete} />
+          <AudioRecorder 
+            onTranscriptionComplete={handleTranscriptionComplete}
+            onTranscriptionUpdate={handleTranscriptionUpdate}
+          />
           <button 
             onClick={handleSubmit}
             disabled={isLoading || !message.trim()}

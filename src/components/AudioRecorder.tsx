@@ -8,9 +8,10 @@ import ProcessingIndicator from './ProcessingIndicator';
 
 interface AudioRecorderProps {
   onTranscriptionComplete: (text: string) => void;
+  onTranscriptionUpdate?: (text: string) => void;
 }
 
-const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
+const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: AudioRecorderProps) => {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [liveTranscription, setLiveTranscription] = useState('');
@@ -48,7 +49,13 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
           console.log('Transcription result:', result);
           
           if (result.transcription) {
-            setLiveTranscription(prev => prev + ' ' + result.transcription.trim());
+            const newTranscription = result.transcription.trim();
+            setLiveTranscription(prev => {
+              const updated = prev + (prev ? ' ' : '') + newTranscription;
+              // Notify parent component of incremental updates
+              onTranscriptionUpdate?.(updated);
+              return updated;
+            });
           }
         }
       } catch (error) {
