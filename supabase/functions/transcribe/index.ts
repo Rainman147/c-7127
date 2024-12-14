@@ -31,13 +31,19 @@ serve(async (req) => {
 
     console.log('Audio data length:', body.audioData.length);
 
+    const apiKey = Deno.env.get('GOOGLE_API_KEY');
+    if (!apiKey) {
+      console.error('Google API key not found in environment');
+      throw new Error('Google API key not configured');
+    }
+
     // Call Google Cloud Speech-to-Text API
     console.log('Calling Google Speech-to-Text API...');
     const response = await fetch('https://speech.googleapis.com/v1/speech:recognize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('GOOGLE_API_KEY')}`,
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         config: {
