@@ -20,11 +20,13 @@ export const useTranscription = ({
       const transcription = await processAudioData(data, mimeType);
       console.log('Received transcription:', transcription);
       
-      // Send the update to the input field
-      onTranscriptionUpdate?.(transcription);
-      
-      // Update internal state
-      updateTranscription(transcription);
+      if (transcription && transcription.trim()) {
+        // Send the update to the input field
+        onTranscriptionUpdate?.(transcription);
+        
+        // Update internal state
+        updateTranscription(transcription);
+      }
       
     } catch (error) {
       await handleTranscriptionError(error, () => handleAudioData(data, mimeType));

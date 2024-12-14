@@ -20,7 +20,9 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
     onTranscriptionComplete,
     onTranscriptionUpdate: (text) => {
       console.log('Transcription update in AudioRecorder:', text);
-      onTranscriptionUpdate?.(text);
+      if (onTranscriptionUpdate && text.trim()) {
+        onTranscriptionUpdate(text);
+      }
     }
   });
 
