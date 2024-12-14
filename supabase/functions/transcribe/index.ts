@@ -7,13 +7,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Map of supported MIME types to their Whisper API compatible extensions
 const SUPPORTED_MIME_TYPES = {
   'audio/webm': 'webm',
   'audio/mpeg': 'mp3',
+  'audio/mp3': 'mp3',
   'audio/wav': 'wav',
+  'audio/x-wav': 'wav',
   'audio/ogg': 'ogg',
   'audio/m4a': 'm4a',
-  'audio/mp4': 'mp4'
+  'audio/mp4': 'mp4',
+  'audio/mpeg': 'mpeg',
+  'audio/mpga': 'mpga',
+  'audio/flac': 'flac',
+  'audio/oga': 'oga'
 };
 
 serve(async (req) => {
@@ -36,8 +43,10 @@ serve(async (req) => {
       streaming: metadata?.streaming
     })
 
-    // Validate MIME type
+    // Default to webm if no MIME type provided, as that's what the browser's MediaRecorder uses
     const mimeType = metadata?.mimeType || 'audio/webm';
+    
+    // Validate MIME type
     if (!SUPPORTED_MIME_TYPES[mimeType]) {
       console.error(`Unsupported MIME type: ${mimeType}`)
       throw new Error(`Unsupported audio format. Supported formats: ${Object.keys(SUPPORTED_MIME_TYPES).join(', ')}`)
@@ -67,6 +76,7 @@ serve(async (req) => {
     formData.append('file', blob, filename)
     formData.append('model', 'whisper-1')
     formData.append('language', 'en')
+    formData.append('response_format', 'json')
 
     console.log('Sending request to Whisper API')
 
