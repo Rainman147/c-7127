@@ -23,16 +23,13 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
   const { handleAudioData, isReconnecting } = useTranscription({
     onTranscriptionComplete: (text) => {
       console.log('Final transcription received:', text);
-      // Clear the buffer after completing
       transcriptionBuffer.current = [];
       onTranscriptionComplete(text);
     },
     onTranscriptionUpdate: (text) => {
       console.log('Transcription update received:', text);
       if (text.trim()) {
-        // Add new text to buffer
         transcriptionBuffer.current.push(text);
-        // Send the accumulated text to update the input field
         if (onTranscriptionUpdate) {
           const fullText = transcriptionBuffer.current.join(' ');
           console.log('Sending accumulated transcription to input:', fullText);
@@ -47,28 +44,49 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
       console.log('Processing audio blob:', { size: blob.size, type: blob.type });
       setIsProcessing(true);
       
-      const wavBlob = await convertWebMToWav(blob);
-      console.log('Converted to WAV format:', { size: wavBlob.size, type: wavBlob.type });
+      // Validate input blob
+      if (!blob.size) {
+        throw new Error('Empty audio data received');
+      }
+      
+      if (!blob.type.includes('audio/')) {
+        throw new Error('Invalid audio format');
+      }
+      
+      let wavBlob;
+      try {
+        wavBlob = await convertWebMToWav(blob);
+        console.log('Converted to WAV format:', { size: wavBlob.size, type: wavBlob.type });
+      } catch (conversionError: any) {
+        console.error('Audio conversion error:', conversionError);
+        throw new Error('Failed to convert audio format. Please try recording again.');
+      }
       
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const base64data = (reader.result as string).split(',')[1];
-        await handleAudioData(base64data, wavBlob.type);
+        try {
+          const base64data = (reader.result as string).split(',')[1];
+          console.log('[' + new Date().toISOString() + '] Sending audio chunk:', {
+            chunkSize: base64data.length
+          });
+          await handleAudioData(base64data, wavBlob.type);
+        } catch (error) {
+          console.error('Error processing audio data:', error);
+          throw error;
+        }
       };
+      
       reader.onerror = (error) => {
         console.error('Error reading audio file:', error);
-        toast({
-          title: "Error",
-          description: "Failed to process audio data",
-          variant: "destructive",
-        });
+        throw new Error('Failed to read audio data');
       };
+      
       reader.readAsDataURL(wavBlob);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing audio:', error);
       toast({
-        title: "Error",
-        description: "Failed to process audio. Please try again.",
+        title: "Audio Processing Error",
+        description: error.message || "Failed to process audio. Please try again.",
         variant: "destructive",
       });
     } finally {
