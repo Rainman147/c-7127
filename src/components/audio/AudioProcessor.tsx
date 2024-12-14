@@ -26,7 +26,11 @@ const AudioProcessor = ({
       if (!isMounted) return;
       
       try {
-        console.log('Starting audio processing with blob size:', blob.size);
+        console.log('Starting audio processing with blob:', { 
+          size: blob.size, 
+          type: blob.type 
+        });
+
         if (blob.size === 0) {
           throw new Error('Audio file is empty');
         }
@@ -36,14 +40,28 @@ const AudioProcessor = ({
         setProcessingStatus('Preparing audio for transcription...');
 
         // Convert blob to base64
-        const base64Data = await blobToBase64(blob);
-        console.log('Audio converted to base64, length:', base64Data.length);
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => {
+            const base64String = reader.result as string;
+            const base64Data = base64String.split(',')[1]; // Remove data URL prefix
+            resolve(base64Data);
+          };
+          reader.onerror = reject;
+        });
 
+        reader.readAsDataURL(blob);
+        const base64Data = await base64Promise;
+        
+        console.log('Audio converted to base64, length:', base64Data.length);
         setProgress(25);
         setProcessingStatus('Sending audio to transcription service...');
 
         const { data, error } = await supabase.functions.invoke('transcribe', {
-          body: { audioData: base64Data }
+          body: { 
+            audioData: base64Data,
+            mimeType: blob.type
+          }
         });
 
         if (!isMounted) return;
@@ -81,20 +99,11 @@ const AudioProcessor = ({
       }
     };
 
-    const blobToBase64 = (blob: Blob): Promise<string> => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64String = reader.result as string;
-          resolve(base64String.split(',')[1]); // Remove data URL prefix
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    };
-
     if (audioBlob && !isProcessing) {
-      console.log('Processing new audio blob:', { size: audioBlob.size, type: audioBlob.type });
+      console.log('Processing new audio blob:', { 
+        size: audioBlob.size, 
+        type: audioBlob.type 
+      });
       processAudio(audioBlob);
     }
 
