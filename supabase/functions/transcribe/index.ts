@@ -7,6 +7,24 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const SUPPORTED_MIME_TYPES = [
+  'audio/mpeg',
+  'audio/wav',
+  'audio/flac',
+  'audio/x-m4a',
+  'audio/ogg',
+  'audio/webm'
+];
+
+const MIME_TO_EXTENSION = {
+  'audio/mpeg': 'mp3',
+  'audio/wav': 'wav',
+  'audio/flac': 'flac',
+  'audio/x-m4a': 'm4a',
+  'audio/ogg': 'ogg',
+  'audio/webm': 'webm'
+};
+
 serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
@@ -27,24 +45,31 @@ serve(async (req) => {
       streaming: metadata?.streaming
     })
 
+    // Validate MIME type
+    if (!metadata?.mimeType || !SUPPORTED_MIME_TYPES.includes(metadata.mimeType)) {
+      console.error(`Unsupported MIME type: ${metadata?.mimeType}`)
+      throw new Error(`Unsupported audio format. Supported formats: ${SUPPORTED_MIME_TYPES.join(', ')}`)
+    }
+
     // Convert base64 to Uint8Array
     const binaryData = Uint8Array.from(atob(audioData), c => c.charCodeAt(0))
     
     // Create form data for OpenAI API
     const formData = new FormData()
     
-    // Always use webm format since that's what we're recording in
-    const filename = 'audio.webm'
+    // Use the correct extension based on MIME type
+    const extension = MIME_TO_EXTENSION[metadata.mimeType]
+    const filename = `audio.${extension}`
     
-    console.log(`Creating ${filename} for Whisper API`)
+    console.log(`Creating ${filename} for Whisper API with MIME type ${metadata.mimeType}`)
 
-    // Create blob with webm type which is supported by Whisper
-    const blob = new Blob([binaryData], { type: 'audio/webm' })
+    // Create blob with the correct MIME type
+    const blob = new Blob([binaryData], { type: metadata.mimeType })
     
-    // Log blob details for debugging
     console.log('Created blob:', {
       size: blob.size,
-      type: blob.type
+      type: blob.type,
+      filename
     })
 
     formData.append('file', blob, filename)
