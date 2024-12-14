@@ -67,11 +67,6 @@ serve(async (req) => {
     });
   }
 
-  // Enforce TLS
-  if (!req.url.startsWith('https')) {
-    return new Response('HTTPS required', { status: 403, headers: corsHeaders });
-  }
-
   try {
     const { audioData, streaming } = await req.json();
     
