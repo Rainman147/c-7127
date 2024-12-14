@@ -19,7 +19,7 @@ const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) =
 
   const { addChunk, processBatch, clearChunks } = useBatchProcessor({
     onBatchReady: (batch) => {
-      if (onAudioData) {
+      if (onAudioData && isRecording) { // Only process if still recording
         console.log('Sending batch for transcription with overlap, size:', batch.size);
         onAudioData(batch);
       }
@@ -34,15 +34,17 @@ const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) =
     });
     
     mediaRecorder.current.ondataavailable = (e) => {
-      if (e.data.size > 0) {
+      if (e.data.size > 0 && isRecording) { // Only add chunks if still recording
         addChunk(e.data);
       }
     };
 
     mediaRecorder.current.onstop = () => {
-      processBatch();
-      const finalBlob = new Blob([], { type: 'audio/webm' });
-      onRecordingComplete(finalBlob);
+      if (isRecording) { // Only process final batch if was recording
+        processBatch();
+        const finalBlob = new Blob([], { type: 'audio/webm' });
+        onRecordingComplete(finalBlob);
+      }
       clearChunks();
     };
 
@@ -74,6 +76,9 @@ const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) =
   const stopRecording = () => {
     console.log('Stopping recording with overlap handling...');
     
+    // Set isRecording to false first to prevent further processing
+    setIsRecording(false);
+    
     if (recordingTimeout.current) {
       clearTimeout(recordingTimeout.current);
     }
@@ -83,6 +88,7 @@ const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) =
     }
 
     stopStream();
+    clearChunks(); // Clear any remaining chunks
     console.log('Recording stopped with overlap cleanup');
   };
 
