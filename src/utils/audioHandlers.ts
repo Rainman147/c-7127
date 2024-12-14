@@ -6,8 +6,8 @@ const CHUNK_DURATION = 1000; // 1 second chunks
 const SAMPLE_RATE = 16000; // Required by Gemini API
 const CHANNELS = 1; // Mono audio
 
-export const processAudioForTranscription = async (audioBlob: Blob): Promise<string> => {
-  console.log('Processing audio for transcription with Gemini API');
+export const processAudioForTranscription = async (audioBlob: Blob, language = "en-US"): Promise<string> => {
+  console.log('Processing audio for transcription with enhanced Gemini API features');
   
   try {
     // Convert blob to base64 for sending to Gemini
@@ -17,9 +17,12 @@ export const processAudioForTranscription = async (audioBlob: Blob): Promise<str
         .reduce((data, byte) => data + String.fromCharCode(byte), '')
     );
     
-    console.log('Sending audio data to Gemini API');
+    console.log('Sending audio data to Gemini API with language:', language);
     const { data, error } = await supabase.functions.invoke('gemini', {
-      body: { audioData: base64Audio }
+      body: { 
+        audioData: base64Audio,
+        language: language
+      }
     });
 
     if (error) {
@@ -31,7 +34,15 @@ export const processAudioForTranscription = async (audioBlob: Blob): Promise<str
       throw new Error('No transcription received');
     }
 
-    return data.transcription;
+    // Format the transcription with speaker labels and timestamps
+    const formattedTranscription = data.transcription
+      .map((segment: any) => 
+        `[${segment.speaker} at ${segment.startTime}s]: ${segment.text}`
+      )
+      .join('\n');
+
+    console.log('Transcription completed with metadata:', data.metadata);
+    return formattedTranscription;
   } catch (error: any) {
     console.error('Audio processing error:', error);
     throw new Error(error.message || "Failed to process audio");
