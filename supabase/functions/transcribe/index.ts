@@ -13,26 +13,48 @@ serve(async (req) => {
   }
 
   try {
-    const { audioData } = await req.json()
+    const { audioData, mimeType = 'audio/webm' } = await req.json()
     
     if (!audioData) {
       console.error('No audio data provided')
       throw new Error('No audio data provided')
     }
 
-    console.log('Received audio data, length:', audioData.length)
+    console.log('Received audio data, length:', audioData.length, 'mimeType:', mimeType)
 
     // Convert base64 to Uint8Array
     const binaryData = Uint8Array.from(atob(audioData), c => c.charCodeAt(0))
     
     // Create form data for OpenAI API
     const formData = new FormData()
-    const blob = new Blob([binaryData], { type: 'audio/webm' })
-    formData.append('file', blob, 'audio.webm')
+    
+    // Ensure proper file extension based on mime type
+    let filename = 'audio'
+    switch (mimeType) {
+      case 'audio/webm':
+        filename += '.webm'
+        break
+      case 'audio/mp3':
+      case 'audio/mpeg':
+        filename += '.mp3'
+        break
+      case 'audio/wav':
+        filename += '.wav'
+        break
+      case 'audio/ogg':
+        filename += '.ogg'
+        break
+      default:
+        filename += '.webm' // Default to webm if unknown
+    }
+
+    // Create blob with proper mime type
+    const blob = new Blob([binaryData], { type: mimeType })
+    formData.append('file', blob, filename)
     formData.append('model', 'whisper-1')
     formData.append('language', 'en')
 
-    console.log('Sending request to Whisper API')
+    console.log('Sending request to Whisper API with file:', filename)
 
     // Make request to Whisper API
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {

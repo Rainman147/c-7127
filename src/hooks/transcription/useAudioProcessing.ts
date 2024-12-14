@@ -5,11 +5,11 @@ import { AudioPayload } from './types';
 export const useAudioProcessing = () => {
   const [liveTranscription, setLiveTranscription] = useState('');
 
-  const processAudioData = async (audioData: string): Promise<string> => {
+  const processAudioData = async (audioData: string, mimeType: string): Promise<string> => {
     const payload: AudioPayload = {
       audioData,
+      mimeType,
       metadata: {
-        mimeType: 'audio/webm',
         streaming: true
       }
     };

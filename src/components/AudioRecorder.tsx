@@ -23,11 +23,11 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
 
   const handleBlobData = async (blob: Blob) => {
     try {
-      console.log('Converting audio blob to base64...');
+      console.log('Converting audio blob to base64...', { type: blob.type });
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64data = (reader.result as string).split(',')[1];
-        await handleAudioData(base64data);
+        await handleAudioData(base64data, blob.type);
       };
       reader.readAsDataURL(blob);
     } catch (error) {

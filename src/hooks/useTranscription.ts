@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useErrorHandling } from './transcription/useErrorHandling';
 import { useAudioProcessing } from './transcription/useAudioProcessing';
 import { TranscriptionHookProps } from './transcription/types';
@@ -11,17 +12,17 @@ export const useTranscription = ({
   const { handleTranscriptionError, isReconnecting } = useErrorHandling();
   const { processAudioData, updateTranscription, liveTranscription } = useAudioProcessing();
 
-  const handleAudioData = async (data: string) => {
+  const handleAudioData = async (data: string, mimeType: string = 'audio/webm') => {
     try {
       validateAudioData(data);
       secureLog('Sending audio chunk', { chunkSize: data.length });
       
-      const transcription = await processAudioData(data);
+      const transcription = await processAudioData(data, mimeType);
       updateTranscription(transcription);
       onTranscriptionUpdate?.(transcription);
       
     } catch (error) {
-      await handleTranscriptionError(error, () => handleAudioData(data));
+      await handleTranscriptionError(error, () => handleAudioData(data, mimeType));
     }
   };
 
