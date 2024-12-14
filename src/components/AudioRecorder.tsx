@@ -42,8 +42,10 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
         .upload(fileName, blob, {
           cacheControl: '3600',
           upsert: false,
-          onUploadProgress: (progress) => {
-            setUploadProgress((progress.loaded / progress.total) * 100);
+          onUploadProgress: (progress: { loaded: number; total: number }) => {
+            const percentage = (progress.loaded / progress.total) * 100;
+            console.log('Upload progress:', percentage);
+            setUploadProgress(percentage);
           },
         });
 
