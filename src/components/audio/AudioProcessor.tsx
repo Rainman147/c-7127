@@ -32,18 +32,22 @@ const AudioProcessor = ({
       const formData = new FormData();
       formData.append('audio', blob, 'recording.webm');
 
+      console.log('Sending audio for transcription...');
       const { data, error } = await supabase.functions.invoke('transcribe', {
         body: formData
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Transcription error:', error);
+        throw new Error(error.message || 'Failed to transcribe audio');
+      }
 
       if (!data?.transcription) {
         throw new Error('No transcription received');
       }
 
-      onProcessingComplete(data.transcription);
       setProgress(100);
+      onProcessingComplete(data.transcription);
 
     } catch (error: any) {
       console.error('Audio processing error:', error);
