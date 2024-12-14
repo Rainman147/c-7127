@@ -18,7 +18,9 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
   const fileUploaderRef = useRef<HTMLInputElement>(null);
 
   const handleBlobData = async (blob: Blob) => {
+    console.log('Converting audio to WAV format...');
     const handleWAVBlob = (wavBlob: Blob) => {
+      console.log('WAV conversion complete:', { size: wavBlob.size, type: wavBlob.type });
       setAudioBlob(wavBlob);
     };
 
