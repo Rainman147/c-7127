@@ -1,6 +1,11 @@
 import { validateAudioFile } from './audioUtils';
 import { supabase } from '@/integrations/supabase/client';
 
+// Constants for audio processing
+const CHUNK_DURATION = 1000; // 1 second chunks
+const SAMPLE_RATE = 16000; // Required by Gemini API
+const CHANNELS = 1; // Mono audio
+
 export const processAudioForTranscription = async (audioBlob: Blob): Promise<string> => {
   console.log('Processing audio for transcription with Gemini API');
   
@@ -26,14 +31,7 @@ export const processAudioForTranscription = async (audioBlob: Blob): Promise<str
       throw new Error('No transcription received');
     }
 
-    // Format the transcription with speaker labels
-    const formattedTranscription = data.transcription
-      .map((segment: { speaker: string; text: string }) => 
-        `${segment.speaker}: ${segment.text}`
-      )
-      .join('\n');
-
-    return formattedTranscription;
+    return data.transcription;
   } catch (error: any) {
     console.error('Audio processing error:', error);
     throw new Error(error.message || "Failed to process audio");
@@ -47,29 +45,75 @@ export const startRecording = async (
   onError: (error: string) => void
 ) => {
   try {
+    // Request high-quality audio with noise suppression
     const stream = await navigator.mediaDevices.getUserMedia({ 
       audio: {
         echoCancellation: true,
         noiseSuppression: true,
-        autoGainControl: true
+        autoGainControl: true,
+        sampleRate: SAMPLE_RATE,
+        channelCount: CHANNELS
       } 
     });
+
+    // Create AudioContext for preprocessing
+    const audioContext = new AudioContext({
+      sampleRate: SAMPLE_RATE,
+      latencyHint: 'interactive'
+    });
     
+    // Create source node from stream
+    const source = audioContext.createMediaStreamSource(stream);
+    
+    // Create preprocessing nodes
+    const noiseFilter = audioContext.createBiquadFilter();
+    noiseFilter.type = 'highpass';
+    noiseFilter.frequency.value = 100;
+    
+    const compressor = audioContext.createDynamicsCompressor();
+    compressor.threshold.value = -50;
+    compressor.knee.value = 40;
+    compressor.ratio.value = 12;
+    compressor.attack.value = 0;
+    compressor.release.value = 0.25;
+    
+    // Connect audio processing nodes
+    source
+      .connect(noiseFilter)
+      .connect(compressor);
+    
+    // Create MediaRecorder with processed audio
     const recorder = new MediaRecorder(stream, {
-      mimeType: 'audio/webm'
+      mimeType: 'audio/webm;codecs=opus',
+      audioBitsPerSecond: 128000
     });
     
     const chunks: Blob[] = [];
+    let lastChunkTime = Date.now();
 
-    recorder.ondataavailable = (e) => {
+    recorder.ondataavailable = async (e) => {
       if (e.data.size > 0) {
         chunks.push(e.data);
+        
+        // Process chunk if enough time has passed
+        const now = Date.now();
+        if (now - lastChunkTime >= CHUNK_DURATION) {
+          const chunk = new Blob(chunks, { type: 'audio/webm' });
+          try {
+            const transcription = await processAudioForTranscription(chunk);
+            console.log('Chunk transcription:', transcription);
+          } catch (error) {
+            console.error('Chunk processing error:', error);
+          }
+          chunks.length = 0; // Clear processed chunks
+          lastChunkTime = now;
+        }
       }
     };
 
     setMediaRecorder(recorder);
     setChunks(chunks);
-    recorder.start(1000); // Start recording in 1-second chunks for real-time processing
+    recorder.start(CHUNK_DURATION); // Start recording in 1-second chunks
     setIsRecording(true);
 
     // Auto-stop after 2 minutes
@@ -77,7 +121,8 @@ export const startRecording = async (
       if (recorder.state === 'recording') {
         recorder.stop();
         setIsRecording(false);
-        recorder.stream.getTracks().forEach(track => track.stop());
+        audioContext.close();
+        stream.getTracks().forEach(track => track.stop());
       }
     }, 120000);
   } catch (error: any) {
