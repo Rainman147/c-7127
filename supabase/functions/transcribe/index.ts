@@ -1,8 +1,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
+const ALLOWED_ORIGIN = 'https://a3499179-1ed8-4343-8cbe-3b734179bef0.lovableproject.com';
+
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-requested-with',
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
   'Content-Security-Policy': "default-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com",
 }
@@ -48,14 +51,24 @@ const secureLog = (event: string, data: any, excludeKeys: string[] = ['audioData
 };
 
 serve(async (req) => {
+  // Log incoming request (excluding sensitive data)
+  secureLog('Incoming request', {
+    method: req.method,
+    url: req.url,
+    origin: req.headers.get('origin'),
+  });
+
   // Enforce TLS
   if (!req.url.startsWith('https')) {
-    return new Response('HTTPS required', { status: 403 });
+    return new Response('HTTPS required', { status: 403, headers: corsHeaders });
   }
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      headers: corsHeaders,
+      status: 204
+    });
   }
 
   try {
