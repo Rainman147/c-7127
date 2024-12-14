@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 interface ChatInputProps {
   onSend: (message: string, type?: 'text' | 'audio') => void;
   onTranscriptionComplete: (text: string) => void;
-  onTranscriptionUpdate?: (text: string) => void;  // Made optional since we removed real-time updates
+  onTranscriptionUpdate?: (text: string) => void;
   isLoading?: boolean;
 }
 
@@ -35,11 +35,16 @@ const ChatInput = ({
 
   const handleTranscriptionComplete = (transcription: string) => {
     console.log('Transcription complete in ChatInput:', transcription);
+    // Always set the transcription in the input field first
     setMessage(transcription);
+    
+    // Notify parent component but don't directly send the message
     onTranscriptionComplete(transcription);
+    
     toast({
       title: "Transcription complete",
       description: "Your audio has been transcribed. Review and edit before sending.",
+      duration: 3000,
     });
   };
 

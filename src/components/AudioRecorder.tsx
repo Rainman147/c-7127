@@ -48,7 +48,10 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
       
       <BlobProcessor
         blob={audioBlob}
-        onProcessingComplete={onTranscriptionComplete}
+        onProcessingComplete={(text) => {
+          // Always send transcription to input field via onTranscriptionComplete
+          onTranscriptionComplete(text);
+        }}
         onProcessingStart={() => setIsProcessing(true)}
         onProcessingEnd={() => {
           setAudioBlob(null);
