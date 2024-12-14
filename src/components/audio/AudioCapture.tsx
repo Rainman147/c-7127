@@ -14,11 +14,13 @@ const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) =
   const recordingTimeout = useRef<NodeJS.Timeout>();
   const { initializeAudioContext, cleanupAudioContext } = useAudioContext();
   const MAX_RECORDING_TIME = 120000; // 2 minutes in milliseconds
+  const CHUNK_DURATION = 5000; // 5 seconds per chunk
+  const OVERLAP_DURATION = 2000; // 2 seconds overlap
 
   const { addChunk, processBatch, clearChunks } = useBatchProcessor({
     onBatchReady: (batch) => {
       if (onAudioData) {
-        console.log('Sending batch for transcription, size:', batch.size);
+        console.log('Sending batch for transcription with overlap, size:', batch.size);
         onAudioData(batch);
       }
     }
@@ -44,9 +46,10 @@ const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) =
       clearChunks();
     };
 
-    mediaRecorder.current.start(1000);
+    // Start recording with shorter timeslice for more frequent chunks
+    mediaRecorder.current.start(CHUNK_DURATION - OVERLAP_DURATION);
     setIsRecording(true);
-    console.log('Started recording');
+    console.log('Started recording with overlap configuration');
 
     recordingTimeout.current = setTimeout(() => {
       if (isRecording) {
@@ -69,7 +72,7 @@ const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) =
   };
 
   const stopRecording = () => {
-    console.log('Stopping recording...');
+    console.log('Stopping recording with overlap handling...');
     
     if (recordingTimeout.current) {
       clearTimeout(recordingTimeout.current);
@@ -80,7 +83,7 @@ const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) =
     }
 
     stopStream();
-    console.log('Recording stopped');
+    console.log('Recording stopped with overlap cleanup');
   };
 
   return {

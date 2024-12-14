@@ -8,7 +8,10 @@ interface ChunkProcessorProps {
 
 export const processChunk = async (chunk: Blob): Promise<string> => {
   try {
-    console.log('Processing chunk:', { size: chunk.size, type: chunk.type });
+    console.log('Processing chunk with overlap handling:', { 
+      size: chunk.size, 
+      type: chunk.type 
+    });
     
     // Convert chunk to base64
     const reader = new FileReader();
@@ -24,12 +27,13 @@ export const processChunk = async (chunk: Blob): Promise<string> => {
     reader.readAsDataURL(chunk);
     const base64Data = await base64Promise;
     
-    console.log('Chunk converted to base64, length:', base64Data.length);
+    console.log('Chunk converted to base64 with overlap, length:', base64Data.length);
 
     const { data, error } = await supabase.functions.invoke('transcribe', {
       body: { 
         audioData: base64Data,
-        mimeType: chunk.type
+        mimeType: chunk.type,
+        withOverlap: true // Signal to the backend that this chunk has overlap
       }
     });
 
@@ -53,6 +57,7 @@ export const useChunkProcessor = ({ onChunkProcessed, onError }: ChunkProcessorP
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentChunk, setCurrentChunk] = useState(0);
   const [totalChunks, setTotalChunks] = useState(0);
+  const [previousTranscription, setPreviousTranscription] = useState('');
 
   const processChunks = async (chunks: Blob[]) => {
     setIsProcessing(true);
@@ -62,7 +67,11 @@ export const useChunkProcessor = ({ onChunkProcessed, onError }: ChunkProcessorP
       for (let i = 0; i < chunks.length; i++) {
         setCurrentChunk(i + 1);
         const transcription = await processChunk(chunks[i]);
-        onChunkProcessed(transcription);
+        
+        // Remove potential duplicate phrases from overlap
+        const cleanedTranscription = removeDuplicateOverlap(previousTranscription, transcription);
+        onChunkProcessed(cleanedTranscription);
+        setPreviousTranscription(transcription);
       }
     } catch (error: any) {
       onError(error);
@@ -70,7 +79,32 @@ export const useChunkProcessor = ({ onChunkProcessed, onError }: ChunkProcessorP
       setIsProcessing(false);
       setCurrentChunk(0);
       setTotalChunks(0);
+      setPreviousTranscription('');
     }
+  };
+
+  // Helper function to remove duplicate phrases from overlap
+  const removeDuplicateOverlap = (previous: string, current: string): string => {
+    if (!previous) return current;
+    
+    // Split into words and find potential overlapping phrases
+    const previousWords = previous.split(' ');
+    const currentWords = current.split(' ');
+    
+    // Look for overlapping phrases (3-5 words)
+    for (let phraseLength = 5; phraseLength >= 3; phraseLength--) {
+      if (previousWords.length < phraseLength) continue;
+      
+      const lastPhrase = previousWords.slice(-phraseLength).join(' ');
+      const currentText = current.toLowerCase();
+      
+      if (currentText.startsWith(lastPhrase.toLowerCase())) {
+        // Remove the overlapping phrase from the current transcription
+        return current.slice(lastPhrase.length).trim();
+      }
+    }
+    
+    return current;
   };
 
   return {
