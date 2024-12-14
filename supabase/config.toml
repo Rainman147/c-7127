@@ -1,4 +1,13 @@
 project_id = "hlnzunnahksudbotqvpk"
 
-[functions.transcribe]
+[api]
+enabled = true
+url = "https://hlnzunnahksudbotqvpk.supabase.co/functions/v1/"
+
+[[functions]]
+name = "transcribe"
+verify_jwt = false
+
+[[functions]]
+name = "gemini"
 verify_jwt = false
