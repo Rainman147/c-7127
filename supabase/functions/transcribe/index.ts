@@ -13,16 +13,26 @@ serve(async (req) => {
 
   try {
     console.log('Received transcription request');
-    const body = await req.json();
     
-    if (!body || !body.audioData) {
+    // Parse request body and validate
+    let body;
+    try {
+      body = await req.json();
+      console.log('Request body parsed successfully');
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError);
+      throw new Error('Invalid JSON in request body');
+    }
+    
+    if (!body?.audioData) {
+      console.error('Missing audio data in request');
       throw new Error('No audio data provided');
     }
 
-    // Convert base64 to buffer
-    const binaryData = Uint8Array.from(atob(body.audioData), c => c.charCodeAt(0));
+    console.log('Audio data length:', body.audioData.length);
 
     // Call Google Cloud Speech-to-Text API
+    console.log('Calling Google Speech-to-Text API...');
     const response = await fetch('https://speech.googleapis.com/v1/speech:recognize', {
       method: 'POST',
       headers: {
@@ -43,9 +53,9 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('Google API error:', error);
-      throw new Error(error.error?.message || 'Failed to transcribe audio');
+      const errorData = await response.text();
+      console.error('Google API error response:', errorData);
+      throw new Error(`Google API error: ${response.status} ${errorData}`);
     }
 
     const data = await response.json();
