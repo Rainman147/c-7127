@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { corsHeaders, handleCors } from './utils/cors.ts';
-import { validateAudioPayload } from './utils/validation.ts';
+import { validateAudioPayload, ValidationError } from './utils/validation.ts';
+import { withRetry } from './utils/retry.ts';
 import { transcribeWithGemini } from './services/gemini.ts';
 import { secureLog, logError } from './utils/logging.ts';
 
@@ -26,8 +27,10 @@ serve(async (req) => {
     // Validate payload
     const payload = validateAudioPayload(requestData);
     
-    // Process transcription
-    const result = await transcribeWithGemini(payload);
+    // Process transcription with retry logic
+    const result = await withRetry(async () => {
+      return await transcribeWithGemini(payload);
+    });
 
     secureLog('Transcription successful', { 
       hasResult: !!result,
@@ -51,16 +54,35 @@ serve(async (req) => {
       stage: 'edge_function_processing'
     });
 
+    // Handle validation errors specifically
+    if (error instanceof ValidationError) {
+      return new Response(
+        JSON.stringify({
+          error: error.message,
+          status: 'error',
+          retryable: error.retryable
+        }),
+        {
+          status: error.status,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    }
+
+    // Handle other errors
     const errorResponse = {
       error: error.message || 'An unexpected error occurred',
       status: 'error',
-      retryable: (error as any).status >= 500 || (error as any).status === 429
+      retryable: error.status >= 500 || error.status === 429
     };
 
     return new Response(
       JSON.stringify(errorResponse),
       {
-        status: (error as any).status || 500,
+        status: error.status || 500,
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/json',

@@ -59,7 +59,11 @@ export const transcribeWithGemini = async (payload: AudioPayload) => {
         statusText: response.statusText,
         error: errorData 
       });
-      throw new Error(errorData.error || 'Failed to transcribe audio');
+      
+      const error = new Error(errorData.error || 'Failed to transcribe audio');
+      (error as any).status = response.status;
+      (error as any).retryable = response.status >= 500 || response.status === 429;
+      throw error;
     }
 
     const result = await response.json();
