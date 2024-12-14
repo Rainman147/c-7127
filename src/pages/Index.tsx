@@ -82,7 +82,6 @@ const Index = () => {
                 <h1 className="mb-8 text-4xl font-semibold text-center">What can I help with?</h1>
                 <ChatInput 
                   onSend={handleSendMessage} 
-                  onTranscriptionUpdate={handleTranscriptionUpdate}
                   onTranscriptionComplete={handleTranscriptionComplete}
                   isLoading={isLoading} 
                 />
@@ -95,7 +94,6 @@ const Index = () => {
               <div className="w-full max-w-3xl mx-auto px-4 py-2">
                 <ChatInput 
                   onSend={handleSendMessage} 
-                  onTranscriptionUpdate={handleTranscriptionUpdate}
                   onTranscriptionComplete={handleTranscriptionComplete}
                   isLoading={isLoading} 
                 />

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { ArrowUp, Loader2, X } from "lucide-react";
 import AudioRecorder from "./AudioRecorder";
 import { useToast } from "@/hooks/use-toast";
@@ -6,12 +6,14 @@ import { useToast } from "@/hooks/use-toast";
 interface ChatInputProps {
   onSend: (message: string, type?: 'text' | 'audio') => void;
   onTranscriptionComplete: (text: string) => void;
+  onTranscriptionUpdate?: (text: string) => void;  // Made optional since we removed real-time updates
   isLoading?: boolean;
 }
 
 const ChatInput = ({ 
   onSend, 
   onTranscriptionComplete,
+  onTranscriptionUpdate,
   isLoading = false 
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
