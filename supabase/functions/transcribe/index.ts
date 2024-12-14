@@ -43,43 +43,41 @@ serve(async (req) => {
       throw new Error('GOOGLE_API_KEY is not set in environment variables');
     }
 
-    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent', {
+    // Using the Speech-to-Text API endpoint
+    const response = await fetch('https://speech.googleapis.com/v1/speech:recognize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${GOOGLE_API_KEY}`
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: "Please transcribe this audio recording accurately, focusing on medical terminology and symptoms if present.",
-          }, {
-            inline_data: {
-              mime_type: "audio/webm",
-              data: audioData
-            }
-          }]
-        }],
-        generationConfig: {
-          temperature: 0,
-          topP: 1,
-          topK: 1,
-          maxOutputTokens: 2048,
+        config: {
+          encoding: 'WEBM_OPUS',
+          sampleRateHertz: 48000,
+          languageCode: 'en-US',
+          model: 'default',
+          enableAutomaticPunctuation: true,
+        },
+        audio: {
+          content: audioData
         }
       })
     });
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('Gemini API error:', response.status, error);
-      throw new Error(`Gemini API error: ${response.status} ${error}`);
+      console.error('Google Speech-to-Text API error:', response.status, error);
+      throw new Error(`Google Speech-to-Text API error: ${response.status} ${error}`);
     }
 
     const data = await response.json();
     console.log('Transcription completed successfully');
 
+    // Extract transcription from the response
+    const transcription = data.results?.[0]?.alternatives?.[0]?.transcript || '';
+
     return new Response(
-      JSON.stringify({ transcription: data.candidates[0].content.parts[0].text }),
+      JSON.stringify({ transcription }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
