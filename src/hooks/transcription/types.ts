@@ -10,11 +10,11 @@ export interface TranscriptionHookProps {
 }
 
 export interface AudioMetadata {
+  mimeType: string;
+  streaming: boolean;
   duration?: number;
   sampleRate?: number;
   channels?: number;
-  mimeType: string;
-  streaming: boolean;
 }
 
 export interface AudioPayload {

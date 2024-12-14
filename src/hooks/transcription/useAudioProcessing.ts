@@ -8,8 +8,8 @@ export const useAudioProcessing = () => {
   const processAudioData = async (audioData: string, mimeType: string): Promise<string> => {
     const payload: AudioPayload = {
       audioData,
-      mimeType,
       metadata: {
+        mimeType,
         streaming: true
       }
     };
