@@ -20,6 +20,12 @@ interface AudioPayload {
   }
 }
 
+interface TranscriptionError extends Error {
+  status?: number;
+  retryable?: boolean;
+  details?: any;
+}
+
 export const useTranscription = ({ 
   onTranscriptionComplete, 
   onTranscriptionUpdate 
@@ -32,9 +38,19 @@ export const useTranscription = ({
   const RETRY_DELAY = 2000;
 
   const handleTranscriptionError = async (error: any, retryCallback: () => void) => {
-    secureLog('Transcription error:', { error: error.message });
+    const transcriptionError = error as TranscriptionError;
     
-    if (retryCount < MAX_RETRIES) {
+    // Log detailed error information
+    console.error('Transcription error details:', {
+      message: transcriptionError.message,
+      status: transcriptionError.status,
+      retryable: transcriptionError.retryable,
+      details: transcriptionError.details,
+      retryCount,
+    });
+    
+    // Handle retryable errors
+    if (transcriptionError.retryable !== false && retryCount < MAX_RETRIES) {
       setIsReconnecting(true);
       toast({
         title: "Connection lost",
@@ -48,13 +64,33 @@ export const useTranscription = ({
       return true;
     }
     
+    // Handle non-retryable errors or max retries reached
     setIsReconnecting(false);
     setRetryCount(0);
-    toast({
-      title: "Error",
-      description: "Failed to transcribe audio after multiple attempts. Please try again.",
-      variant: "destructive",
-    });
+    
+    // Show appropriate error message based on error type
+    if (transcriptionError.status === 500) {
+      toast({
+        title: "Server Error",
+        description: "An unexpected error occurred. Our team has been notified.",
+        variant: "destructive",
+      });
+      // Log server error for debugging
+      console.error('Server error:', transcriptionError.details);
+    } else if (!transcriptionError.retryable) {
+      toast({
+        title: "Error",
+        description: "Unable to process audio. Please contact support if the issue persists.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to transcribe audio after multiple attempts. Please try again.",
+        variant: "destructive",
+      });
+    }
+    
     return false;
   };
 
@@ -139,7 +175,12 @@ export const useTranscription = ({
       });
 
       if (error) {
-        throw error;
+        // Create a TranscriptionError with additional details
+        const transcriptionError = new Error(error.message) as TranscriptionError;
+        transcriptionError.status = error.status;
+        transcriptionError.retryable = error.status >= 500 || error.status === 429;
+        transcriptionError.details = error;
+        throw transcriptionError;
       }
 
       secureLog('Transcription received', { hasTranscription: !!result?.transcription });
@@ -153,6 +194,7 @@ export const useTranscription = ({
         });
       }
 
+      // Reset retry count on successful transcription
       if (retryCount > 0) {
         setRetryCount(0);
         setIsReconnecting(false);
