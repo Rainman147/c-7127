@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { createAudioProcessingPipeline, encodeAudioData } from '@/utils/audioProcessing';
+import { createAudioProcessingPipeline } from '@/utils/audioProcessing';
 
 interface AudioCaptureProps {
   onAudioData: (data: string) => void;
@@ -33,48 +33,32 @@ const AudioCapture = ({ onAudioData, onRecordingComplete }: AudioCaptureProps) =
       const source = audioContext.current.createMediaStreamSource(stream);
       processor.current = audioContext.current.createScriptProcessor(4096, 1, 1);
 
-      // Create and connect audio processing pipeline
       const pipeline = createAudioProcessingPipeline(audioContext.current);
       pipeline.connectNodes(source);
 
-      let accumulatedData = new Float32Array(0);
-      const CHUNK_SIZE = 16000; // 1 second of audio at 16kHz
-
-      processor.current.onaudioprocess = (e) => {
-        const inputData = e.inputBuffer.getChannelData(0);
-        
-        // Accumulate data
-        const newData = new Float32Array(accumulatedData.length + inputData.length);
-        newData.set(accumulatedData);
-        newData.set(inputData, accumulatedData.length);
-        accumulatedData = newData;
-
-        // If we have enough data for a chunk, process it
-        if (accumulatedData.length >= CHUNK_SIZE) {
-          const chunk = accumulatedData.slice(0, CHUNK_SIZE);
-          accumulatedData = accumulatedData.slice(CHUNK_SIZE);
-
-          const encodedData = encodeAudioData(chunk);
-          onAudioData(encodedData);
-        }
-      };
-
-      source.connect(processor.current);
-      processor.current.connect(audioContext.current.destination);
-
-      mediaRecorder.current = new MediaRecorder(stream);
+      mediaRecorder.current = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      });
+      
       chunks.current = [];
 
       mediaRecorder.current.ondataavailable = (e) => {
         if (e.data.size > 0) {
           chunks.current.push(e.data);
+          // Convert blob to base64 and send to transcription
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64Audio = (reader.result as string).split(',')[1];
+            onAudioData(base64Audio);
+          };
+          reader.readAsDataURL(e.data);
         }
       };
 
-      mediaRecorder.current.start();
+      mediaRecorder.current.start(1000); // Record in 1-second chunks
       setIsRecording(true);
 
-      console.log('Started recording with enhanced audio settings and noise suppression');
+      console.log('Started recording with enhanced audio settings');
     } catch (error) {
       console.error('Error starting recording:', error);
       toast({
@@ -106,7 +90,7 @@ const AudioCapture = ({ onAudioData, onRecordingComplete }: AudioCaptureProps) =
     setIsRecording(false);
 
     if (chunks.current.length > 0) {
-      const audioBlob = new Blob(chunks.current, { type: 'audio/wav' });
+      const audioBlob = new Blob(chunks.current, { type: 'audio/webm' });
       onRecordingComplete(audioBlob);
       chunks.current = [];
     }
