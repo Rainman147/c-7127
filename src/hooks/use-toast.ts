@@ -6,7 +6,9 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+
+// Update the TOAST_REMOVE_DELAY constant to make toasts disappear faster
+const TOAST_REMOVE_DELAY = 3000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -189,3 +191,4 @@ function useToast() {
 }
 
 export { useToast, toast }
+
