@@ -1,22 +1,16 @@
-import { validateAudioFile, SUPPORTED_FORMATS } from './audioUtils';
+import { validateAudioFile } from './audioUtils';
 import { supabase } from '@/integrations/supabase/client';
 
 export const processAudioForTranscription = async (audioBlob: Blob): Promise<string> => {
-  console.log('Processing audio for transcription');
+  console.log('Processing audio for transcription with Gemini API');
   
-  const formData = new FormData();
-  const fileName = `audio.${audioBlob.type.split('/')[1] || 'wav'}`;
-  const file = new File([audioBlob], fileName, { type: audioBlob.type });
-  
-  console.log('Sending audio file:', {
-    name: file.name,
-    type: file.type,
-    size: file.size
-  });
-
   try {
+    // Convert blob to array buffer for sending to Gemini
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    
+    console.log('Sending audio data to Gemini API');
     const { data, error } = await supabase.functions.invoke('gemini', {
-      body: { audioData: await file.arrayBuffer() }
+      body: { audioData: arrayBuffer }
     });
 
     if (error) {
