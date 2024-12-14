@@ -69,7 +69,18 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
         throw new Error(errorData.error || 'Failed to transcribe audio');
       }
 
-      const result = await response.json();
+      // Clone the response before reading it
+      const responseClone = response.clone();
+      let result;
+      
+      try {
+        result = await response.json();
+      } catch (error) {
+        // If the first attempt fails, try with the cloned response
+        console.log('Retrying with cloned response');
+        result = await responseClone.json();
+      }
+
       console.log('Transcription result:', result);
       
       if (result.transcription) {
