@@ -35,6 +35,13 @@ export const useChat = () => {
     setIsLoading(true);
 
     try {
+      // First check if user is authenticated
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('You must be logged in to send messages');
+      }
+
       const userMessage: Message = { role: 'user', content };
       const newMessages = [...messages, userMessage];
       setMessages(newMessages);
@@ -45,7 +52,7 @@ export const useChat = () => {
           .from('chats')
           .insert({
             title: content.substring(0, 50),
-            user_id: (await supabase.auth.getUser()).data.user?.id
+            user_id: user.id // Using the authenticated user's ID
           })
           .select()
           .single();
