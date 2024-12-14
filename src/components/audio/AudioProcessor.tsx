@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { validateAudioFile } from '@/utils/audioUtils';
 import ProcessingIndicator from '../ProcessingIndicator';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -28,20 +27,23 @@ const AudioProcessor = ({
       
       try {
         console.log('Starting audio processing with blob size:', blob.size);
+        if (blob.size === 0) {
+          throw new Error('Audio file is empty');
+        }
+
         setIsProcessing(true);
         setProgress(0);
         setProcessingStatus('Preparing audio for transcription...');
 
-        // Create FormData with the audio blob
-        const formData = new FormData();
-        formData.append('file', blob, 'recording.webm');
+        // Convert blob to base64
+        const base64Data = await blobToBase64(blob);
+        console.log('Audio converted to base64, length:', base64Data.length);
 
-        console.log('Sending audio for transcription...');
         setProgress(25);
         setProcessingStatus('Sending audio to transcription service...');
 
         const { data, error } = await supabase.functions.invoke('transcribe', {
-          body: { audioData: await blobToBase64(blob) }
+          body: { audioData: base64Data }
         });
 
         if (!isMounted) return;
@@ -55,6 +57,7 @@ const AudioProcessor = ({
           throw new Error('No transcription received');
         }
 
+        console.log('Transcription received:', data.transcription);
         setProgress(100);
         setProcessingStatus('Transcription complete!');
         onProcessingComplete(data.transcription);

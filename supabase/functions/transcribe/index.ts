@@ -1,7 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { corsHeaders } from "./utils/cors.ts"
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 serve(async (req) => {
   // Handle CORS
@@ -11,8 +14,9 @@ serve(async (req) => {
 
   try {
     const { audioData } = await req.json()
-
+    
     if (!audioData) {
+      console.error('No audio data provided')
       throw new Error('No audio data provided')
     }
 
@@ -20,7 +24,7 @@ serve(async (req) => {
 
     // Convert base64 to Uint8Array
     const binaryData = Uint8Array.from(atob(audioData), c => c.charCodeAt(0))
-
+    
     // Create form data for OpenAI API
     const formData = new FormData()
     const blob = new Blob([binaryData], { type: 'audio/webm' })
@@ -56,7 +60,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error:', error)
     return new Response(
-      JSON.stringify({ error: error.message, details: error.toString() }),
+      JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }
