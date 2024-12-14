@@ -105,7 +105,16 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
         const shouldRetry = await handleTranscriptionError(error, () => {
           // Create a retry callback that captures the data parameter
           if (data) {
-            onAudioData(data);
+            // Use the onAudioData function from the RecordingManager props
+            RecordingManager({
+              onRecordingComplete: setAudioBlob,
+              onAudioData: async (audioData) => {
+                if (audioData === data) {
+                  // Only retry with the same data
+                  await handleAudioData(audioData);
+                }
+              }
+            });
           }
         });
         
@@ -116,6 +125,43 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
       }
     }
   });
+
+  // Helper function to handle audio data processing
+  const handleAudioData = async (data: string) => {
+    try {
+      console.log('Sending audio chunk for transcription');
+      const response = await fetch('https://hlnzunnahksudbotqvpk.supabase.co/functions/v1/transcribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          audioData: data,
+          mimeType: 'audio/x-raw',
+          streaming: true
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to transcribe audio');
+      }
+
+      const result = await response.json();
+      console.log('Transcription result:', result);
+      
+      if (result.transcription) {
+        const newTranscription = result.transcription.trim();
+        setLiveTranscription(prev => {
+          const updated = prev + (prev ? ' ' : '') + newTranscription;
+          onTranscriptionUpdate?.(updated);
+          return updated;
+        });
+      }
+    } catch (error) {
+      throw error; // Re-throw the error to be handled by the caller
+    }
+  };
 
   useEffect(() => {
     if (!isRecording && liveTranscription) {
