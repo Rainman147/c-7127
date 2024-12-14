@@ -23,6 +23,11 @@ const ProcessingIndicator = ({
           {status && (
             <span className="text-xs text-gray-500">{status}</span>
           )}
+          {progress > 0 && progress < 100 && (
+            <span className="text-xs text-gray-500">
+              {Math.round(progress)}% complete
+            </span>
+          )}
           {currentChunk && totalChunks && totalChunks > 1 && (
             <span className="text-xs text-gray-500">
               Processing chunk {currentChunk} of {totalChunks}

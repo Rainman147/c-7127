@@ -5,8 +5,8 @@ import FileUploader from './audio/FileUploader';
 import ProcessingIndicator from './ProcessingIndicator';
 import AudioCapture from './audio/AudioCapture';
 import { useTranscription } from '@/hooks/useTranscription';
-import { convertWebMToWav } from '@/utils/audioUtils';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AudioRecorderProps {
   onTranscriptionComplete: (text: string) => void;
@@ -16,28 +16,9 @@ interface AudioRecorderProps {
 const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: AudioRecorderProps) => {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileUploaderRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const transcriptionBuffer = useRef<string[]>([]);
-
-  const { handleAudioData, isReconnecting } = useTranscription({
-    onTranscriptionComplete: (text) => {
-      console.log('Final transcription received:', text);
-      transcriptionBuffer.current = [];
-      onTranscriptionComplete(text);
-    },
-    onTranscriptionUpdate: (text) => {
-      console.log('Transcription update received:', text);
-      if (text.trim()) {
-        transcriptionBuffer.current.push(text);
-        if (onTranscriptionUpdate) {
-          const fullText = transcriptionBuffer.current.join(' ');
-          console.log('Sending accumulated transcription to input:', fullText);
-          onTranscriptionUpdate(fullText);
-        }
-      }
-    }
-  });
 
   const handleBlobData = async (blob: Blob) => {
     try {
@@ -52,36 +33,42 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
       if (!blob.type.includes('audio/')) {
         throw new Error('Invalid audio format');
       }
-      
-      let wavBlob;
-      try {
-        wavBlob = await convertWebMToWav(blob);
-        console.log('Converted to WAV format:', { size: wavBlob.size, type: wavBlob.type });
-      } catch (conversionError: any) {
-        console.error('Audio conversion error:', conversionError);
-        throw new Error('Failed to convert audio format. Please try recording again.');
+
+      // Upload to Supabase Storage
+      const fileName = `${Date.now()}.webm`;
+      const { data: uploadData, error: uploadError } = await supabase
+        .storage
+        .from('audio_files')
+        .upload(fileName, blob, {
+          cacheControl: '3600',
+          upsert: false,
+          onUploadProgress: (progress) => {
+            setUploadProgress((progress.loaded / progress.total) * 100);
+          },
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw new Error('Failed to upload audio file');
       }
-      
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const base64data = (reader.result as string).split(',')[1];
-          console.log('[' + new Date().toISOString() + '] Sending audio chunk:', {
-            chunkSize: base64data.length
-          });
-          await handleAudioData(base64data, wavBlob.type);
-        } catch (error) {
-          console.error('Error processing audio data:', error);
-          throw error;
-        }
-      };
-      
-      reader.onerror = (error) => {
-        console.error('Error reading audio file:', error);
-        throw new Error('Failed to read audio data');
-      };
-      
-      reader.readAsDataURL(wavBlob);
+
+      console.log('Audio file uploaded successfully:', fileName);
+
+      // Process audio using Edge Function
+      const { data, error } = await supabase.functions.invoke('process-audio', {
+        body: { audioPath: fileName }
+      });
+
+      if (error) {
+        console.error('Processing error:', error);
+        throw error;
+      }
+
+      if (data?.transcription) {
+        console.log('Transcription received:', data.transcription);
+        onTranscriptionComplete(data.transcription);
+      }
+
     } catch (error: any) {
       console.error('Error processing audio:', error);
       toast({
@@ -91,6 +78,7 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
       });
     } finally {
       setIsProcessing(false);
+      setUploadProgress(0);
     }
   };
 
@@ -107,10 +95,10 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
     <div className="flex items-center gap-4">
       <FileUploader onFileSelected={setAudioBlob} />
       
-      {(isProcessing || isReconnecting) && (
+      {isProcessing && (
         <ProcessingIndicator
-          progress={0}
-          status={isReconnecting ? "Reconnecting..." : "Processing audio..."}
+          progress={uploadProgress}
+          status={uploadProgress < 100 ? "Uploading audio..." : "Processing audio..."}
         />
       )}
       
