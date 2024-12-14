@@ -6,6 +6,14 @@ const corsHeaders = {
 }
 
 const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')
+const SUPPORTED_FORMATS = [
+  'audio/wav',
+  'audio/mp3',
+  'audio/aiff',
+  'audio/aac',
+  'audio/ogg',
+  'audio/flac'
+];
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -14,13 +22,18 @@ serve(async (req) => {
   }
 
   try {
-    const { audioData } = await req.json()
+    const { audioData, mimeType = 'audio/wav' } = await req.json()
     
     if (!audioData) {
       throw new Error('No audio data provided')
     }
 
+    if (!SUPPORTED_FORMATS.includes(mimeType)) {
+      throw new Error(`Unsupported audio format. Supported formats are: ${SUPPORTED_FORMATS.join(', ')}`)
+    }
+
     console.log('Received audio data, preparing WebSocket connection to Gemini API')
+    console.log(`Audio format: ${mimeType}`)
 
     // Create WebSocket connection to Gemini API
     const ws = new WebSocket('wss://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-exp:streamGenerateContent', {
@@ -40,17 +53,20 @@ serve(async (req) => {
           contents: [{
             role: "user",
             parts: [{
-              text: "Please transcribe the following audio data"
+              text: "Generate a transcript of the following audio."
             }, {
               inline_data: {
-                mime_type: "audio/x-raw",
+                mime_type: mimeType,
                 data: audioData
               }
             }]
           }],
           generation_config: {
             temperature: 0,
-            candidate_count: 1
+            candidate_count: 1,
+            top_p: 1,
+            top_k: 1,
+            max_output_tokens: 2048,
           },
           tools: [{
             function_declarations: [{
@@ -62,6 +78,10 @@ serve(async (req) => {
                   text: {
                     type: "string",
                     description: "The transcribed text from the audio"
+                  },
+                  confidence: {
+                    type: "number",
+                    description: "Confidence score of the transcription"
                   }
                 },
                 required: ["text"]
@@ -85,7 +105,10 @@ serve(async (req) => {
           if (response.candidates?.[0]?.finishReason === 'STOP') {
             ws.close()
             resolve(new Response(
-              JSON.stringify({ transcription: transcription.trim() }),
+              JSON.stringify({ 
+                transcription: transcription.trim(),
+                status: 'success'
+              }),
               { 
                 headers: { 
                   ...corsHeaders,
@@ -120,7 +143,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Transcription error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        status: 'error'
+      }),
       {
         status: 500,
         headers: {
