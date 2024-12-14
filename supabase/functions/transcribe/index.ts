@@ -18,58 +18,39 @@ serve(async (req) => {
       throw new Error('No audio data provided')
     }
 
-    console.log('Received audio data, preparing request to Gemini API')
+    console.log('Received audio data, preparing request to Speech-to-Text API')
 
-    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-exp:generateContent', {
+    const response = await fetch('https://speech.googleapis.com/v1/speech:recognize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': Deno.env.get('GOOGLE_API_KEY') || '',
+        'Authorization': `Bearer ${Deno.env.get('GOOGLE_API_KEY')}`,
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            inline_data: {
-              mime_type: "audio/x-raw",
-              data: audioData
-            }
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.1,
-          topP: 1,
-          topK: 32,
-          maxOutputTokens: 4096,
+        config: {
+          encoding: 'LINEAR16',
+          sampleRateHertz: 16000,
+          languageCode: 'en-US',
+          model: 'default',
+          enableAutomaticPunctuation: true,
         },
-        tools: [{
-          functionDeclarations: [{
-            name: "transcribe_audio",
-            description: "Transcribes the given audio data into text",
-            parameters: {
-              type: "object",
-              properties: {
-                text: {
-                  type: "string",
-                  description: "The transcribed text from the audio"
-                }
-              },
-              required: ["text"]
-            }
-          }]
-        }]
+        audio: {
+          content: audioData
+        }
       })
     })
 
     if (!response.ok) {
-      console.error('Gemini API error:', await response.text())
-      throw new Error(`Gemini API error: ${response.statusText}`)
+      const errorText = await response.text()
+      console.error('Speech-to-Text API error:', errorText)
+      throw new Error(`Speech-to-Text API error: ${response.statusText}`)
     }
 
     const data = await response.json()
     console.log('Transcription response:', data)
 
-    // Extract the transcription from Gemini's response
-    const transcription = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    // Extract the transcription from the response
+    const transcription = data.results?.[0]?.alternatives?.[0]?.transcript || ''
 
     return new Response(
       JSON.stringify({ transcription }),
