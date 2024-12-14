@@ -23,7 +23,7 @@ serve(async (req) => {
     console.log('Received audio data, preparing WebSocket connection to Gemini API')
 
     // Create WebSocket connection to Gemini API
-    const ws = new WebSocket('wss://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-exp:bidiGenerateContent', {
+    const ws = new WebSocket('wss://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-exp:streamGenerateContent', {
       headers: {
         'x-goog-api-key': GOOGLE_API_KEY || '',
       }
@@ -35,24 +35,39 @@ serve(async (req) => {
       ws.onopen = () => {
         console.log('WebSocket connection established')
         
-        // Send configuration
-        ws.send(JSON.stringify({
-          config: {
-            response_modalities: ["TEXT"],
-          }
-        }))
-
-        // Send audio data
+        // Send initial configuration for text-only responses
         ws.send(JSON.stringify({
           contents: [{
+            role: "user",
             parts: [{
+              text: "Please transcribe the following audio data"
+            }, {
               inline_data: {
                 mime_type: "audio/x-raw",
                 data: audioData
               }
             }]
           }],
-          end_of_turn: true
+          generation_config: {
+            temperature: 0,
+            candidate_count: 1
+          },
+          tools: [{
+            function_declarations: [{
+              name: "transcribe_audio",
+              description: "Transcribes audio data to text",
+              parameters: {
+                type: "object",
+                properties: {
+                  text: {
+                    type: "string",
+                    description: "The transcribed text from the audio"
+                  }
+                },
+                required: ["text"]
+              }
+            }]
+          }]
         }))
       }
 
@@ -61,15 +76,16 @@ serve(async (req) => {
           const response = JSON.parse(event.data)
           console.log('Received response:', response)
 
-          if (response.text) {
-            transcription += response.text
+          // Extract text from the response
+          if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
+            transcription += response.candidates[0].content.parts[0].text
           }
 
           // Check if this is the final message
-          if (response.end_of_turn) {
+          if (response.candidates?.[0]?.finishReason === 'STOP') {
             ws.close()
             resolve(new Response(
-              JSON.stringify({ transcription }),
+              JSON.stringify({ transcription: transcription.trim() }),
               { 
                 headers: { 
                   ...corsHeaders,
