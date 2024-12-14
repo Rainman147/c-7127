@@ -22,7 +22,7 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
   const MAX_RETRIES = 3;
   const RETRY_DELAY = 2000; // 2 seconds
   
-  const handleTranscriptionError = async (error: any) => {
+  const handleTranscriptionError = async (error: any, retryCallback: () => void) => {
     console.error('Transcription error:', error);
     
     if (retryCount < MAX_RETRIES) {
@@ -36,6 +36,7 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
       // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
       setRetryCount(prev => prev + 1);
+      retryCallback(); // Call the retry callback
       return true; // Indicate that we should retry
     }
     
@@ -101,12 +102,14 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
         }
       } catch (error) {
         console.error('Transcription error:', error);
-        const shouldRetry = await handleTranscriptionError(error);
+        const shouldRetry = await handleTranscriptionError(error, () => {
+          // Create a retry callback that captures the data parameter
+          if (data) {
+            onAudioData(data);
+          }
+        });
         
-        if (shouldRetry) {
-          // Retry sending the same audio data
-          onAudioData(data);
-        } else {
+        if (!shouldRetry) {
           // Stop recording if max retries reached
           stopRecording();
         }
