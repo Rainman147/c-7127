@@ -23,12 +23,14 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
   const { toast } = useToast();
 
   const encodeAudioData = (float32Array: Float32Array): string => {
+    // Convert to 16-bit PCM
     const int16Array = new Int16Array(float32Array.length);
     for (let i = 0; i < float32Array.length; i++) {
       const s = Math.max(-1, Math.min(1, float32Array[i]));
       int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
     }
     
+    // Convert to base64
     const uint8Array = new Uint8Array(int16Array.buffer);
     let binary = '';
     const chunkSize = 0x8000;
@@ -43,16 +45,18 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
 
   const handleStartRecording = useCallback(async () => {
     try {
+      console.log('Requesting microphone access...');
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          sampleRate: 16000,
-          channelCount: 1,
+          sampleRate: 16000, // Required by Gemini
+          channelCount: 1,   // Mono audio
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true
         }
       });
 
+      console.log('Microphone access granted, initializing audio context...');
       audioContext.current = new AudioContext({ sampleRate: 16000 });
       const source = audioContext.current.createMediaStreamSource(stream);
       processor.current = audioContext.current.createScriptProcessor(4096, 1, 1);
@@ -93,6 +97,8 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
   }, [onAudioData, toast]);
 
   const handleStopRecording = useCallback(() => {
+    console.log('Stopping recording and cleaning up resources...');
+    
     if (mediaRecorder.current && mediaRecorder.current.state === 'recording') {
       mediaRecorder.current.stop();
       mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
@@ -116,7 +122,7 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
       chunks.current = [];
     }
 
-    console.log('Stopped recording and cleaned up audio resources');
+    console.log('Recording stopped and audio resources cleaned up');
   }, [onRecordingComplete]);
 
   return {
