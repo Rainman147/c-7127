@@ -5,6 +5,7 @@ import FileUploader from './audio/FileUploader';
 import ProcessingIndicator from './ProcessingIndicator';
 import AudioCapture from './audio/AudioCapture';
 import { useTranscription } from '@/hooks/useTranscription';
+import { convertWebMToWav } from '@/utils/audioUtils';
 
 interface AudioRecorderProps {
   onTranscriptionComplete: (text: string) => void;
@@ -28,15 +29,18 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
 
   const handleBlobData = async (blob: Blob) => {
     try {
-      console.log('Converting audio blob to base64...', { type: blob.type });
+      console.log('Converting WebM blob to WAV...', { type: blob.type });
+      const wavBlob = await convertWebMToWav(blob);
+      console.log('Converting WAV blob to base64...', { type: wavBlob.type });
+      
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64data = (reader.result as string).split(',')[1];
-        await handleAudioData(base64data, blob.type);
+        await handleAudioData(base64data, wavBlob.type);
       };
-      reader.readAsDataURL(blob);
+      reader.readAsDataURL(wavBlob);
     } catch (error) {
-      console.error('Error converting blob to base64:', error);
+      console.error('Error processing audio:', error);
     }
   };
 
