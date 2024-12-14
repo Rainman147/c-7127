@@ -4,9 +4,9 @@ import AudioRecorder from "./AudioRecorder";
 import { useToast } from "@/hooks/use-toast";
 
 interface ChatInputProps {
-  onSend: (message: string) => void;
+  onSend: (message: string, type?: 'text' | 'audio') => void;
   onTranscriptionUpdate?: (text: string) => void;
-  onTranscriptionComplete?: (text: string) => void;  // Added this prop
+  onTranscriptionComplete: (text: string) => void;  // Changed from optional to required
   isLoading?: boolean;
 }
 
@@ -35,7 +35,7 @@ const ChatInput = ({
 
   const handleTranscriptionComplete = (transcription: string) => {
     setMessage(prev => prev + (prev ? ' ' : '') + transcription);
-    onTranscriptionComplete?.(transcription);
+    onTranscriptionComplete(transcription);
     toast({
       title: "Transcription complete",
       description: "Your audio has been successfully transcribed.",
