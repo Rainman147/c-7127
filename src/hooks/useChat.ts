@@ -6,6 +6,7 @@ export type Message = {
   role: 'user' | 'assistant';
   content: string;
   isStreaming?: boolean;
+  type?: 'text' | 'audio';
 };
 
 export const useChat = () => {
@@ -22,7 +23,48 @@ export const useChat = () => {
     };
   }, []);
 
-  const handleSendMessage = async (content: string) => {
+  const saveMessageToSupabase = async (message: Message, chatId?: string) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('You must be logged in to send messages');
+      }
+
+      // Create a new chat if no chatId is provided
+      if (!chatId) {
+        const { data: chatData, error: chatError } = await supabase
+          .from('chats')
+          .insert({
+            title: message.content.substring(0, 50),
+            user_id: user.id
+          })
+          .select()
+          .single();
+
+        if (chatError) throw chatError;
+        chatId = chatData.id;
+      }
+
+      // Insert the message
+      const { error: messageError } = await supabase
+        .from('messages')
+        .insert({
+          chat_id: chatId,
+          content: message.content,
+          sender: message.role,
+          type: message.type || 'text'
+        });
+
+      if (messageError) throw messageError;
+      return chatId;
+    } catch (error: any) {
+      console.error('Error saving message:', error);
+      throw error;
+    }
+  };
+
+  const handleSendMessage = async (content: string, type: 'text' | 'audio' = 'text') => {
     if (!content.trim()) {
       toast({
         title: "Error",
@@ -35,42 +77,12 @@ export const useChat = () => {
     setIsLoading(true);
 
     try {
-      // First check if user is authenticated
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !user) {
-        throw new Error('You must be logged in to send messages');
-      }
-
-      const userMessage: Message = { role: 'user', content };
+      const userMessage: Message = { role: 'user', content, type };
       const newMessages = [...messages, userMessage];
       setMessages(newMessages);
 
-      // Create a new chat if this is the first message
-      if (messages.length === 0) {
-        const { data: chatData, error: chatError } = await supabase
-          .from('chats')
-          .insert({
-            title: content.substring(0, 50),
-            user_id: user.id
-          })
-          .select()
-          .single();
-
-        if (chatError) throw chatError;
-
-        // Insert the message
-        const { error: messageError } = await supabase
-          .from('messages')
-          .insert({
-            chat_id: chatData.id,
-            content: content,
-            sender: 'user',
-            type: 'text'
-          });
-
-        if (messageError) throw messageError;
-      }
+      // Save message to Supabase
+      await saveMessageToSupabase(userMessage);
 
       // Cancel any ongoing stream
       if (abortControllerRef.current) {
@@ -101,18 +113,15 @@ export const useChat = () => {
         throw new Error('No response from Gemini API');
       }
 
-      // Since we're getting a regular JSON response, not a stream
+      // Update the assistant message with the response
       if (data.content) {
-        setMessages(prev => {
-          const lastMessage = prev[prev.length - 1];
-          if (lastMessage.role === 'assistant') {
-            return [
-              ...prev.slice(0, -1),
-              { ...lastMessage, content: data.content, isStreaming: false }
-            ];
-          }
-          return prev;
-        });
+        const finalAssistantMessage: Message = {
+          role: 'assistant',
+          content: data.content,
+          isStreaming: false
+        };
+        setMessages(prev => [...prev.slice(0, -1), finalAssistantMessage]);
+        await saveMessageToSupabase(finalAssistantMessage);
       }
 
     } catch (error: any) {
@@ -130,10 +139,20 @@ export const useChat = () => {
     }
   };
 
+  const handleTranscriptionError = () => {
+    const errorMessage: Message = {
+      role: 'user',
+      content: 'Error processing audio transcription.',
+      type: 'audio'
+    };
+    setMessages(prev => [...prev, errorMessage]);
+  };
+
   return {
     messages,
     isLoading,
     handleSendMessage,
-    setMessages // Expose setMessages to allow external updates
+    handleTranscriptionError,
+    setMessages
   };
 };

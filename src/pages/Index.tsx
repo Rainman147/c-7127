@@ -12,7 +12,7 @@ import Login from '@/components/Login';
 const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [session, setSession] = useState<any>(null);
-  const { messages, isLoading, handleSendMessage, setMessages } = useChat();
+  const { messages, isLoading, handleSendMessage, handleTranscriptionError, setMessages } = useChat();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,16 +39,25 @@ const Index = () => {
       if (lastMessage?.isStreaming) {
         return [
           ...prevMessages.slice(0, -1),
-          { ...lastMessage, content: text }
+          { ...lastMessage, content: text, type: 'audio' }
         ];
       }
       
       // Otherwise, add a new streaming message
       return [
         ...prevMessages,
-        { role: 'user', content: text, isStreaming: true }
+        { role: 'user', content: text, isStreaming: true, type: 'audio' }
       ];
     });
+  };
+
+  const handleTranscriptionComplete = async (text: string) => {
+    try {
+      await handleSendMessage(text, 'audio');
+    } catch (error) {
+      console.error('Error handling transcription:', error);
+      handleTranscriptionError();
+    }
   };
 
   if (!session) {
@@ -74,6 +83,7 @@ const Index = () => {
                 <ChatInput 
                   onSend={handleSendMessage} 
                   onTranscriptionUpdate={handleTranscriptionUpdate}
+                  onTranscriptionComplete={handleTranscriptionComplete}
                   isLoading={isLoading} 
                 />
               </div>
@@ -86,6 +96,7 @@ const Index = () => {
                 <ChatInput 
                   onSend={handleSendMessage} 
                   onTranscriptionUpdate={handleTranscriptionUpdate}
+                  onTranscriptionComplete={handleTranscriptionComplete}
                   isLoading={isLoading} 
                 />
               </div>
