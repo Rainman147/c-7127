@@ -23,7 +23,7 @@ const AudioProcessor = ({
   const processAudio = async (blob: Blob) => {
     setIsProcessing(true);
     setProgress(0);
-    setProcessingStatus('Processing audio...');
+    setProcessingStatus('Preparing audio for transcription...');
 
     try {
       validateAudioFile(blob);
@@ -33,6 +33,9 @@ const AudioProcessor = ({
       formData.append('audio', blob, 'recording.webm');
 
       console.log('Sending audio for transcription...');
+      setProgress(25);
+      setProcessingStatus('Sending audio to transcription service...');
+
       const { data, error } = await supabase.functions.invoke('transcribe', {
         body: formData
       });
@@ -47,6 +50,7 @@ const AudioProcessor = ({
       }
 
       setProgress(100);
+      setProcessingStatus('Transcription complete!');
       onProcessingComplete(data.transcription);
 
     } catch (error: any) {
