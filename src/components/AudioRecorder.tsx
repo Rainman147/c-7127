@@ -20,8 +20,7 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
   const {
     isRecording,
     startRecording,
-    stopRecording,
-    audioData
+    stopRecording
   } = RecordingManager({
     onRecordingComplete: setAudioBlob,
     onAudioData: async (data) => {

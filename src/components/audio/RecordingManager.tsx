@@ -6,8 +6,16 @@ interface RecordingManagerProps {
   onAudioData?: (data: string) => void;
 }
 
-const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManagerProps) => {
+interface RecordingManagerReturn {
+  isRecording: boolean;
+  startRecording: () => Promise<void>;
+  stopRecording: () => void;
+  audioData?: string;
+}
+
+const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManagerProps): RecordingManagerReturn => {
   const [isRecording, setIsRecording] = useState(false);
+  const [audioData, setAudioData] = useState<string>();
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioContext = useRef<AudioContext | null>(null);
   const processor = useRef<ScriptProcessorNode | null>(null);
@@ -53,6 +61,7 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
         const inputData = e.inputBuffer.getChannelData(0);
         if (onAudioData) {
           const encodedData = encodeAudioData(inputData);
+          setAudioData(encodedData);
           onAudioData(encodedData);
         }
       };
@@ -113,7 +122,8 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
   return {
     isRecording,
     startRecording: handleStartRecording,
-    stopRecording: handleStopRecording
+    stopRecording: handleStopRecording,
+    audioData
   };
 };
 
