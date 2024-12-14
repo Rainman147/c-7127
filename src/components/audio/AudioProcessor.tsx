@@ -26,23 +26,22 @@ const AudioProcessor = ({
     const processAudio = async (blob: Blob) => {
       if (!isMounted) return;
       
-      setIsProcessing(true);
-      setProgress(0);
-      setProcessingStatus('Preparing audio for transcription...');
-
       try {
-        validateAudioFile(blob);
-        
+        console.log('Starting audio processing with blob size:', blob.size);
+        setIsProcessing(true);
+        setProgress(0);
+        setProcessingStatus('Preparing audio for transcription...');
+
         // Create FormData with the audio blob
         const formData = new FormData();
-        formData.append('audio', blob, 'recording.webm');
+        formData.append('file', blob, 'recording.webm');
 
         console.log('Sending audio for transcription...');
         setProgress(25);
         setProcessingStatus('Sending audio to transcription service...');
 
         const { data, error } = await supabase.functions.invoke('transcribe', {
-          body: formData
+          body: { audioData: await blobToBase64(blob) }
         });
 
         if (!isMounted) return;
@@ -79,7 +78,20 @@ const AudioProcessor = ({
       }
     };
 
+    const blobToBase64 = (blob: Blob): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result as string;
+          resolve(base64String.split(',')[1]); // Remove data URL prefix
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    };
+
     if (audioBlob && !isProcessing) {
+      console.log('Processing new audio blob:', { size: audioBlob.size, type: audioBlob.type });
       processAudio(audioBlob);
     }
 
