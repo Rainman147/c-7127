@@ -1,19 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import Sidebar from '@/components/Sidebar';
 import ChatHeader from '@/components/ChatHeader';
 import ChatInput from '@/components/ChatInput';
 import ActionButtons from '@/components/ActionButtons';
 import MessageList from '@/components/MessageList';
-import { supabase } from '@/integrations/supabase/client';
 
 type Message = {
-  id: string;
   role: 'user' | 'assistant';
   content: string;
-  speaker?: 'Physician' | 'Patient';
-  timestamp?: string;
-  confidence?: number;
 };
 
 const Index = () => {
@@ -21,30 +16,6 @@ const Index = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-
-  // Subscribe to real-time transcription updates
-  useEffect(() => {
-    const channel = supabase
-      .channel('messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-        },
-        (payload) => {
-          console.log('New message received:', payload);
-          const newMessage = payload.new as Message;
-          setMessages((prev) => [...prev, newMessage]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim()) {
@@ -59,31 +30,23 @@ const Index = () => {
     setIsLoading(true);
 
     try {
-      const { data: chat, error: chatError } = await supabase
-        .from('chats')
-        .insert([{ title: 'New Chat' }])
-        .select()
-        .single();
+      const newMessages = [
+        ...messages,
+        { role: 'user', content } as const
+      ];
+      
+      setMessages(newMessages);
 
-      if (chatError) throw chatError;
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const { data: message, error: messageError } = await supabase
-        .from('messages')
-        .insert([{
-          chat_id: chat.id,
-          content,
-          role: 'user',
-          type: 'text'
-        }])
-        .select()
-        .single();
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: "I am a hardcoded response. The database connection has been removed for testing purposes. You can modify this response in the Index.tsx file."
+      };
 
-      if (messageError) throw messageError;
-
-      setMessages((prev) => [...prev, message as Message]);
-
+      setMessages([...newMessages, assistantMessage]);
     } catch (error: any) {
-      console.error('Error sending message:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -94,32 +57,12 @@ const Index = () => {
     }
   };
 
-  const handleEditMessage = async (messageId: string, newContent: string) => {
-    try {
-      const { error } = await supabase
-        .from('messages')
-        .update({ content: newContent })
-        .eq('id', messageId);
-
-      if (error) throw error;
-
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === messageId ? { ...msg, content: newContent } : msg
-        )
-      );
-    } catch (error: any) {
-      console.error('Error updating message:', error);
-      throw error;
-    }
-  };
-
   return (
     <div className="flex h-screen">
       <Sidebar 
         isOpen={isSidebarOpen} 
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-        onApiKeyChange={() => {}} 
+        onApiKeyChange={() => {}} // Empty function since we don't need API key anymore
       />
       
       <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
@@ -136,10 +79,7 @@ const Index = () => {
             </div>
           ) : (
             <>
-              <MessageList 
-                messages={messages} 
-                onEditMessage={handleEditMessage}
-              />
+              <MessageList messages={messages} />
               <div className="w-full max-w-3xl mx-auto px-4 py-2">
                 <ChatInput onSend={handleSendMessage} isLoading={isLoading} />
               </div>
