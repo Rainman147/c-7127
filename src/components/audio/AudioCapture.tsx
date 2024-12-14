@@ -16,10 +16,11 @@ const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) =
   const MAX_RECORDING_TIME = 120000; // 2 minutes in milliseconds
   const CHUNK_DURATION = 5000; // 5 seconds per chunk
   const OVERLAP_DURATION = 2000; // 2 seconds overlap
+  const chunks = useRef<Blob[]>([]);
 
   const { addChunk, processBatch, clearChunks } = useBatchProcessor({
     onBatchReady: (batch) => {
-      if (onAudioData) {
+      if (onAudioData && batch.size > 0) {
         console.log('Sending batch for transcription with overlap, size:', batch.size);
         onAudioData(batch);
       }
@@ -35,14 +36,19 @@ const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) =
     
     mediaRecorder.current.ondataavailable = (e) => {
       if (e.data.size > 0) {
+        chunks.current.push(e.data);
         addChunk(e.data);
       }
     };
 
     mediaRecorder.current.onstop = () => {
       processBatch();
-      const finalBlob = new Blob([], { type: 'audio/webm' });
-      onRecordingComplete(finalBlob);
+      if (chunks.current.length > 0) {
+        const finalBlob = new Blob(chunks.current, { type: 'audio/webm' });
+        console.log('Final recording blob size:', finalBlob.size);
+        onRecordingComplete(finalBlob);
+        chunks.current = [];
+      }
       clearChunks();
     };
 
@@ -68,6 +74,7 @@ const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) =
   });
 
   const startRecording = async () => {
+    chunks.current = []; // Reset chunks array
     await startStream();
   };
 

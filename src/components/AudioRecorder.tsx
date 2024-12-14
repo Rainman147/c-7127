@@ -23,7 +23,6 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
   const handleBlobData = async (blob: Blob) => {
     try {
       console.log('Processing audio blob:', { size: blob.size, type: blob.type });
-      setIsProcessing(true);
       
       // Validate input blob
       if (!blob.size) {
@@ -34,6 +33,8 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
         throw new Error('Invalid audio format');
       }
 
+      setIsProcessing(true);
+      
       // Upload to Supabase Storage
       const fileName = `${Date.now()}.webm`;
       
@@ -76,6 +77,8 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
       if (data?.transcription) {
         console.log('Transcription received:', data.transcription);
         onTranscriptionComplete(data.transcription);
+      } else {
+        throw new Error('No transcription received from the server');
       }
 
     } catch (error: any) {
