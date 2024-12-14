@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import AudioControls from './AudioControls';
 import AudioProcessor from './audio/AudioProcessor';
 import FileUploader from './audio/FileUploader';
-import RecordingManager from './audio/RecordingManager';
+import AudioCapture from './audio/AudioCapture';
 import ProcessingIndicator from './ProcessingIndicator';
 
 interface AudioRecorderProps {
@@ -20,8 +20,8 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
   const fileUploaderRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const MAX_RETRIES = 3;
-  const RETRY_DELAY = 2000; // 2 seconds
-  
+  const RETRY_DELAY = 2000;
+
   const handleTranscriptionError = async (error: any, retryCallback: () => void) => {
     console.error('Transcription error:', error);
     
@@ -33,11 +33,10 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
         variant: "default",
       });
       
-      // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
       setRetryCount(prev => prev + 1);
-      retryCallback(); // Call the retry callback
-      return true; // Indicate that we should retry
+      retryCallback();
+      return true;
     }
     
     setIsReconnecting(false);
@@ -47,86 +46,9 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
       description: "Failed to transcribe audio after multiple attempts. Please try again.",
       variant: "destructive",
     });
-    return false; // Indicate that we should not retry
+    return false;
   };
-  
-  const {
-    isRecording,
-    startRecording,
-    stopRecording
-  } = RecordingManager({
-    onRecordingComplete: setAudioBlob,
-    onAudioData: async (data) => {
-      try {
-        if (data) {
-          console.log('Sending audio chunk for transcription');
-          const response = await fetch('https://hlnzunnahksudbotqvpk.supabase.co/functions/v1/transcribe', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-              audioData: data,
-              mimeType: 'audio/x-raw',
-              streaming: true
-            }),
-          });
 
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to transcribe audio');
-          }
-
-          const result = await response.json();
-          console.log('Transcription result:', result);
-          
-          if (result.transcription) {
-            const newTranscription = result.transcription.trim();
-            setLiveTranscription(prev => {
-              const updated = prev + (prev ? ' ' : '') + newTranscription;
-              onTranscriptionUpdate?.(updated);
-              return updated;
-            });
-          }
-          
-          // Reset retry count on successful transcription
-          if (retryCount > 0) {
-            setRetryCount(0);
-            setIsReconnecting(false);
-            toast({
-              title: "Connection restored",
-              description: "Transcription has resumed successfully.",
-              variant: "default",
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Transcription error:', error);
-        const shouldRetry = await handleTranscriptionError(error, () => {
-          // Create a retry callback that captures the data parameter
-          if (data) {
-            // Use the onAudioData function from the RecordingManager props
-            RecordingManager({
-              onRecordingComplete: setAudioBlob,
-              onAudioData: async (audioData) => {
-                if (audioData === data) {
-                  // Only retry with the same data
-                  await handleAudioData(audioData);
-                }
-              }
-            });
-          }
-        });
-        
-        if (!shouldRetry) {
-          // Stop recording if max retries reached
-          stopRecording();
-        }
-      }
-    }
-  });
-
-  // Helper function to handle audio data processing
   const handleAudioData = async (data: string) => {
     try {
       console.log('Sending audio chunk for transcription');
@@ -158,19 +80,32 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
           return updated;
         });
       }
+
+      // Reset retry count on successful transcription
+      if (retryCount > 0) {
+        setRetryCount(0);
+        setIsReconnecting(false);
+        toast({
+          title: "Connection restored",
+          description: "Transcription has resumed successfully.",
+          variant: "default",
+        });
+      }
     } catch (error) {
-      throw error; // Re-throw the error to be handled by the caller
+      const shouldRetry = await handleTranscriptionError(error, () => {
+        handleAudioData(data);
+      });
+      
+      if (!shouldRetry) {
+        audioCapture.stopRecording();
+      }
     }
   };
 
-  useEffect(() => {
-    if (!isRecording && liveTranscription) {
-      onTranscriptionComplete(liveTranscription.trim());
-      setLiveTranscription('');
-      setRetryCount(0);
-      setIsReconnecting(false);
-    }
-  }, [isRecording, liveTranscription, onTranscriptionComplete]);
+  const audioCapture = AudioCapture({
+    onAudioData: handleAudioData,
+    onRecordingComplete: setAudioBlob
+  });
 
   const handleFileUpload = () => {
     fileUploaderRef.current?.click();
@@ -197,9 +132,9 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
       />
       
       <AudioControls
-        isRecording={isRecording}
-        onStartRecording={startRecording}
-        onStopRecording={stopRecording}
+        isRecording={audioCapture.isRecording}
+        onStartRecording={audioCapture.startRecording}
+        onStopRecording={audioCapture.stopRecording}
         onFileUpload={handleFileUpload}
       />
     </div>
