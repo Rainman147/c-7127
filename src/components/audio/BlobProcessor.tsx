@@ -30,9 +30,19 @@ const BlobProcessor = ({
 
       onProcessingStart();
       
-      // Upload to Supabase Storage
-      const fileName = `${Date.now()}.wav`;
+      // Get the current user's ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Create a file path with user ID as folder
+      const timestamp = Date.now();
+      const fileName = `${user.id}/${timestamp}.wav`;
       
+      console.log('Uploading file to path:', fileName);
+
+      // Upload to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase
         .storage
         .from('audio_files')
