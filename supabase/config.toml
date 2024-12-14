@@ -2,12 +2,16 @@ project_id = "hlnzunnahksudbotqvpk"
 
 [api]
 enabled = true
-url = "https://hlnzunnahksudbotqvpk.supabase.co/functions/v1/"
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
 
 [[functions]]
 name = "transcribe"
-verify_jwt = false
-
-[[functions]]
-name = "gemini"
 verify_jwt = false

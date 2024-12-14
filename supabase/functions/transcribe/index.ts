@@ -1,5 +1,9 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { corsHeaders } from './utils/cors.ts';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -9,21 +13,21 @@ serve(async (req) => {
 
   try {
     console.log('Received transcription request');
-    const { audioData, metadata } = await req.json();
-
-    if (!audioData) {
+    const body = await req.json();
+    
+    if (!body || !body.audioData) {
       throw new Error('No audio data provided');
     }
 
     // Convert base64 to buffer
-    const binaryData = Uint8Array.from(atob(audioData), c => c.charCodeAt(0));
+    const binaryData = Uint8Array.from(atob(body.audioData), c => c.charCodeAt(0));
 
     // Call Google Cloud Speech-to-Text API
-    const response = await fetch('https://generativelanguage.googleapis.com/v1/speech:recognize', {
+    const response = await fetch('https://speech.googleapis.com/v1/speech:recognize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': Deno.env.get('GOOGLE_API_KEY') || '',
+        'Authorization': `Bearer ${Deno.env.get('GOOGLE_API_KEY')}`,
       },
       body: JSON.stringify({
         config: {
@@ -33,7 +37,7 @@ serve(async (req) => {
           model: 'default',
         },
         audio: {
-          content: audioData,
+          content: body.audioData,
         },
       }),
     });
@@ -53,6 +57,7 @@ serve(async (req) => {
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
   } catch (error) {
     console.error('Transcription error:', error);
     return new Response(JSON.stringify({ 
