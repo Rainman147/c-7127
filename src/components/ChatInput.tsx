@@ -35,8 +35,11 @@ const ChatInput = ({
 
   const handleTranscriptionUpdate = (transcription: string) => {
     console.log('Transcription update received:', transcription);
+    // Update the input field with the new transcription
     setMessage(prev => {
+      // Only add space if there's existing text
       const newMessage = prev + (prev ? ' ' : '') + transcription;
+      console.log('Updated message:', newMessage);
       return newMessage;
     });
     
