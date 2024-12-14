@@ -36,17 +36,24 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
 
       // Upload to Supabase Storage
       const fileName = `${Date.now()}.webm`;
+      
+      // Create upload event handler
+      const uploadEventHandler = (event: ProgressEvent) => {
+        const percentage = (event.loaded / event.total) * 100;
+        console.log('Upload progress:', percentage);
+        setUploadProgress(percentage);
+      };
+
+      // Create XMLHttpRequest for tracking progress
+      const xhr = new XMLHttpRequest();
+      xhr.upload.addEventListener('progress', uploadEventHandler);
+      
       const { data: uploadData, error: uploadError } = await supabase
         .storage
         .from('audio_files')
         .upload(fileName, blob, {
           cacheControl: '3600',
           upsert: false,
-          onUploadProgress: (progress: { loaded: number; total: number }) => {
-            const percentage = (progress.loaded / progress.total) * 100;
-            console.log('Upload progress:', percentage);
-            setUploadProgress(percentage);
-          },
         });
 
       if (uploadError) {
