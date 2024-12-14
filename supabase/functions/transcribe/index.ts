@@ -30,7 +30,7 @@ serve(async (req) => {
       throw new Error('No audio file provided');
     }
 
-    console.log('Received audio file:', audioFile.name, 'Type:', audioFile.type);
+    console.log('Received audio file:', audioFile.name, 'Type:', audioFile.type, 'Size:', audioFile.size);
 
     // Extract file extension and validate format
     const fileExtension = audioFile.name.split('.').pop()?.toLowerCase();

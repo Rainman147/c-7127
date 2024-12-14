@@ -3,7 +3,7 @@ import { Mic, Square, Loader2, Upload } from 'lucide-react';
 import { Progress } from './ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { validateAudioFile, splitAudioIntoChunks, mergeTranscriptions, SUPPORTED_FORMATS, MAX_FILE_SIZE } from '@/utils/audioUtils';
+import { validateAudioFile, splitAudioIntoChunks, mergeTranscriptions, SUPPORTED_FORMATS } from '@/utils/audioUtils';
 
 interface AudioRecorderProps {
   onTranscriptionComplete: (text: string) => void;
@@ -139,17 +139,36 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
   const transcribeAudioChunk = async (audioBlob: Blob): Promise<string> => {
     const formData = new FormData();
     const fileName = `audio.${audioBlob.type.split('/')[1] || 'wav'}`;
-    formData.append('audio', new File([audioBlob], fileName, { type: audioBlob.type }));
+    const file = new File([audioBlob], fileName, { type: audioBlob.type });
+    formData.append('audio', file);
+
+    console.log('Sending audio file:', {
+      name: file.name,
+      type: file.type,
+      size: file.size
+    });
 
     try {
       const { data, error } = await supabase.functions.invoke('transcribe', {
         body: formData,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
+
+      if (!data?.text) {
+        throw new Error('No transcription received');
+      }
+
       return data.text;
     } catch (error: any) {
-      console.error('Transcription error:', error);
+      console.error('Transcription error details:', {
+        error,
+        message: error.message,
+        context: error.context
+      });
       throw new Error(error.message || "Failed to transcribe audio");
     }
   };
