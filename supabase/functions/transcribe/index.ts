@@ -1,90 +1,60 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import "https://deno.land/x/xhr@0.1.0/mod.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Map of supported MIME types to their Whisper API compatible extensions
-const SUPPORTED_MIME_TYPES = {
-  'audio/webm': 'webm',
-  'audio/mpeg': 'mp3',
-  'audio/mp3': 'mp3',
-  'audio/wav': 'wav',
-  'audio/x-wav': 'wav',
-  'audio/ogg': 'ogg',
-  'audio/m4a': 'm4a',
-  'audio/mp4': 'mp4',
-  'audio/mpeg': 'mpeg',
-  'audio/mpga': 'mpga',
-  'audio/flac': 'flac',
-  'audio/oga': 'oga'
-};
-
 serve(async (req) => {
-  // Handle CORS
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const { audioData, metadata } = await req.json()
-    
+    const { audioPath } = await req.json()
+    console.log('Received request to transcribe:', audioPath)
+
+    if (!audioPath) {
+      throw new Error('No audio path provided')
+    }
+
+    // Initialize Supabase client
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    // Download the file from storage
+    const { data: audioData, error: downloadError } = await supabaseAdmin
+      .storage
+      .from('audio_files')
+      .download(audioPath)
+
+    if (downloadError) {
+      console.error('Error downloading audio:', downloadError)
+      throw new Error('Failed to download audio file')
+    }
+
     if (!audioData) {
-      console.error('No audio data provided')
-      throw new Error('No audio data provided')
+      throw new Error('No audio data received')
     }
 
-    console.log('Received audio data:', {
-      dataLength: audioData.length,
-      mimeType: metadata?.mimeType,
-      streaming: metadata?.streaming
-    })
+    console.log('Downloaded audio file:', { size: audioData.size })
 
-    // Default to webm if no MIME type provided, as that's what the browser's MediaRecorder uses
-    const mimeType = metadata?.mimeType || 'audio/webm';
-    
-    // Validate MIME type
-    if (!SUPPORTED_MIME_TYPES[mimeType]) {
-      console.error(`Unsupported MIME type: ${mimeType}`)
-      throw new Error(`Unsupported audio format. Supported formats: ${Object.keys(SUPPORTED_MIME_TYPES).join(', ')}`)
-    }
-
-    // Convert base64 to Uint8Array
-    const binaryData = Uint8Array.from(atob(audioData), c => c.charCodeAt(0))
-    
     // Create form data for OpenAI API
     const formData = new FormData()
-    
-    // Use the correct extension based on MIME type
-    const extension = SUPPORTED_MIME_TYPES[mimeType]
-    const filename = `audio.${extension}`
-    
-    console.log(`Creating ${filename} for Whisper API with MIME type ${mimeType}`)
-
-    // Create blob with the correct MIME type
-    const blob = new Blob([binaryData], { type: mimeType })
-    
-    console.log('Created blob:', {
-      size: blob.size,
-      type: blob.type,
-      filename
-    })
-
-    formData.append('file', blob, filename)
+    formData.append('file', audioData, 'audio.wav')
     formData.append('model', 'whisper-1')
     formData.append('language', 'en')
     formData.append('response_format', 'json')
 
-    console.log('Sending request to Whisper API')
-
-    // Make request to Whisper API
+    // Send to Whisper API
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
       },
       body: formData,
     })
@@ -97,6 +67,16 @@ serve(async (req) => {
 
     const result = await response.json()
     console.log('Transcription completed successfully')
+
+    // Clean up the audio file
+    const { error: deleteError } = await supabaseAdmin
+      .storage
+      .from('audio_files')
+      .remove([audioPath])
+
+    if (deleteError) {
+      console.error('Error deleting audio file:', deleteError)
+    }
 
     return new Response(
       JSON.stringify({ transcription: result.text }),
