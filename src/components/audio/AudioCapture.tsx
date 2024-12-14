@@ -1,7 +1,7 @@
-import { useState, useRef, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useRef } from 'react';
 import { useAudioContext } from '@/hooks/useAudioContext';
-import { getMediaStream, cleanupMediaStream } from '@/utils/mediaStreamUtils';
+import { useAudioStreamManager } from './capture/AudioStreamManager';
+import { useBatchProcessor } from './capture/BatchProcessor';
 
 interface AudioCaptureProps {
   onRecordingComplete: (blob: Blob) => void;
@@ -11,93 +11,64 @@ interface AudioCaptureProps {
 const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
-  const chunks = useRef<Blob[]>([]);
-  const lastBatchTime = useRef<number>(0);
   const recordingTimeout = useRef<NodeJS.Timeout>();
-  const { toast } = useToast();
   const { initializeAudioContext, cleanupAudioContext } = useAudioContext();
-  const BATCH_INTERVAL = 5000; // 5 seconds batch interval
   const MAX_RECORDING_TIME = 120000; // 2 minutes in milliseconds
 
-  const processBatch = useCallback(() => {
-    if (chunks.current.length > 0) {
-      console.log(`Processing batch of ${chunks.current.length} chunks`);
-      const batchBlob = new Blob(chunks.current, { type: 'audio/webm' });
-      
+  const { addChunk, processBatch, clearChunks } = useBatchProcessor({
+    onBatchReady: (batch) => {
       if (onAudioData) {
-        console.log('Sending batch for transcription, size:', batchBlob.size);
-        onAudioData(batchBlob);
+        console.log('Sending batch for transcription, size:', batch.size);
+        onAudioData(batch);
       }
-      
-      chunks.current = []; // Clear processed chunks
-      lastBatchTime.current = Date.now();
     }
-  }, [onAudioData]);
+  });
 
-  const startRecording = useCallback(async () => {
-    try {
-      console.log('Requesting microphone access...');
-      const stream = await getMediaStream();
-      console.log('Microphone access granted');
-      
-      const { source } = initializeAudioContext(stream);
-      
-      mediaRecorder.current = new MediaRecorder(stream, {
-        mimeType: 'audio/webm'
-      });
-      
-      chunks.current = [];
-      lastBatchTime.current = Date.now();
+  const handleStreamStart = (stream: MediaStream) => {
+    const { source } = initializeAudioContext(stream);
+    
+    mediaRecorder.current = new MediaRecorder(stream, {
+      mimeType: 'audio/webm'
+    });
+    
+    mediaRecorder.current.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        addChunk(e.data);
+      }
+    };
 
-      mediaRecorder.current.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunks.current.push(e.data);
-          
-          // Process batch if enough time has passed
-          const now = Date.now();
-          if (now - lastBatchTime.current >= BATCH_INTERVAL) {
-            processBatch();
-          }
-        }
-      };
+    mediaRecorder.current.onstop = () => {
+      processBatch();
+      const finalBlob = new Blob([], { type: 'audio/webm' });
+      onRecordingComplete(finalBlob);
+      clearChunks();
+    };
 
-      mediaRecorder.current.onstop = () => {
-        // Process any remaining chunks
-        processBatch();
-        
-        // Create final blob with all remaining data
-        const audioBlob = new Blob(chunks.current, { type: 'audio/webm' });
-        onRecordingComplete(audioBlob);
-        chunks.current = [];
-      };
+    mediaRecorder.current.start(1000);
+    setIsRecording(true);
+    console.log('Started recording');
 
-      mediaRecorder.current.start(1000); // Collect data every second
-      setIsRecording(true);
-      console.log('Started recording');
+    recordingTimeout.current = setTimeout(() => {
+      if (isRecording) {
+        stopRecording();
+      }
+    }, MAX_RECORDING_TIME);
+  };
 
-      // Set timeout to stop recording after 2 minutes
-      recordingTimeout.current = setTimeout(() => {
-        if (isRecording) {
-          stopRecording();
-          toast({
-            title: "Recording stopped",
-            description: "Maximum recording time of 2 minutes reached",
-            variant: "default"
-          });
-        }
-      }, MAX_RECORDING_TIME);
-      
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      toast({
-        title: "Error",
-        description: "Could not access microphone. Please check permissions.",
-        variant: "destructive"
-      });
+  const { startStream, stopStream } = useAudioStreamManager({
+    onStreamStart: handleStreamStart,
+    onStreamError: () => setIsRecording(false),
+    onStreamStop: () => {
+      cleanupAudioContext();
+      setIsRecording(false);
     }
-  }, [initializeAudioContext, onRecordingComplete, onAudioData, toast, processBatch, isRecording]);
+  });
 
-  const stopRecording = useCallback(() => {
+  const startRecording = async () => {
+    await startStream();
+  };
+
+  const stopRecording = () => {
     console.log('Stopping recording...');
     
     if (recordingTimeout.current) {
@@ -106,13 +77,11 @@ const AudioCapture = ({ onRecordingComplete, onAudioData }: AudioCaptureProps) =
 
     if (mediaRecorder.current && mediaRecorder.current.state === 'recording') {
       mediaRecorder.current.stop();
-      mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
     }
 
-    cleanupAudioContext();
-    setIsRecording(false);
+    stopStream();
     console.log('Recording stopped');
-  }, [cleanupAudioContext]);
+  };
 
   return {
     isRecording,
