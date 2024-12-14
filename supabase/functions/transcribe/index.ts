@@ -13,39 +13,24 @@ serve(async (req) => {
   }
 
   try {
-    const { audioPath } = await req.json()
-    console.log('Received request to transcribe:', audioPath)
-
-    if (!audioPath) {
-      throw new Error('No audio path provided')
-    }
-
-    // Initialize Supabase client
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
-
-    // Download the file from storage
-    const { data: audioData, error: downloadError } = await supabaseAdmin
-      .storage
-      .from('audio_files')
-      .download(audioPath)
-
-    if (downloadError) {
-      console.error('Error downloading audio:', downloadError)
-      throw new Error('Failed to download audio file')
-    }
+    const { audioData, mimeType } = await req.json()
+    console.log('Received request to transcribe audio chunk')
 
     if (!audioData) {
-      throw new Error('No audio data received')
+      throw new Error('No audio data provided')
     }
 
-    console.log('Downloaded audio file:', { size: audioData.size })
+    // Convert base64 to blob
+    const binaryData = atob(audioData);
+    const bytes = new Uint8Array(binaryData.length);
+    for (let i = 0; i < binaryData.length; i++) {
+      bytes[i] = binaryData.charCodeAt(i);
+    }
+    const audioBlob = new Blob([bytes], { type: mimeType || 'audio/wav' });
 
     // Create form data for OpenAI API
     const formData = new FormData()
-    formData.append('file', audioData, 'audio.wav')
+    formData.append('file', audioBlob, 'audio.wav')
     formData.append('model', 'whisper-1')
     formData.append('language', 'en')
     formData.append('response_format', 'json')
@@ -67,16 +52,6 @@ serve(async (req) => {
 
     const result = await response.json()
     console.log('Transcription completed successfully')
-
-    // Clean up the audio file
-    const { error: deleteError } = await supabaseAdmin
-      .storage
-      .from('audio_files')
-      .remove([audioPath])
-
-    if (deleteError) {
-      console.error('Error deleting audio file:', deleteError)
-    }
 
     return new Response(
       JSON.stringify({ transcription: result.text }),

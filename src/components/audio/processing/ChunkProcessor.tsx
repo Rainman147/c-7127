@@ -8,7 +8,7 @@ interface ChunkProcessorProps {
 
 export const processChunk = async (chunk: Blob): Promise<string> => {
   try {
-    console.log('Processing chunk with overlap handling:', { 
+    console.log('Processing chunk with overlap:', { 
       size: chunk.size, 
       type: chunk.type 
     });
@@ -33,7 +33,7 @@ export const processChunk = async (chunk: Blob): Promise<string> => {
       body: { 
         audioData: base64Data,
         mimeType: chunk.type,
-        withOverlap: true // Signal to the backend that this chunk has overlap
+        withOverlap: true
       }
     });
 
