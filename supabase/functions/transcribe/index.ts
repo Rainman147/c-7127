@@ -6,6 +6,7 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -13,7 +14,13 @@ serve(async (req) => {
   try {
     const { audioData } = await req.json()
     
-    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro:streamGenerateContent', {
+    if (!audioData) {
+      throw new Error('No audio data provided')
+    }
+
+    console.log('Received audio data, preparing request to Gemini API')
+
+    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro-vision:generateContent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -22,35 +29,50 @@ serve(async (req) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            audio_data: {
+            inline_data: {
+              mime_type: "audio/x-raw",
               data: audioData
             }
           }]
         }],
-        generation_config: {
-          temperature: 0.2,
-          topP: 0.8,
-          topK: 40,
-          maxOutputTokens: 1024,
+        generationConfig: {
+          temperature: 0.1,
+          topP: 1,
+          topK: 32,
+          maxOutputTokens: 4096,
         },
-        safety_settings: [{
-          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        tools: [{
+          functionDeclarations: [{
+            name: "transcribe_audio",
+            description: "Transcribes the given audio data into text",
+            parameters: {
+              type: "object",
+              properties: {
+                text: {
+                  type: "string",
+                  description: "The transcribed text from the audio"
+                }
+              },
+              required: ["text"]
+            }
+          }]
         }]
       })
     })
 
     if (!response.ok) {
+      console.error('Gemini API error:', await response.text())
       throw new Error(`Gemini API error: ${response.statusText}`)
     }
 
     const data = await response.json()
     console.log('Transcription response:', data)
 
+    // Extract the transcription from Gemini's response
+    const transcription = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+
     return new Response(
-      JSON.stringify({
-        transcription: data.candidates[0]?.content?.parts[0]?.text || '',
-      }),
+      JSON.stringify({ transcription }),
       {
         headers: {
           ...corsHeaders,
