@@ -1,14 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import Sidebar from '@/components/Sidebar';
 import ChatHeader from '@/components/ChatHeader';
 import ChatInput from '@/components/ChatInput';
 import ActionButtons from '@/components/ActionButtons';
 import MessageList from '@/components/MessageList';
 import { useChat } from '@/hooks/useChat';
+import Login from '@/components/Login';
 
 const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [session, setSession] = useState<any>(null);
   const { messages, isLoading, handleSendMessage, setMessages } = useChat();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleTranscriptionUpdate = (text: string) => {
     setMessages(prevMessages => {
@@ -29,6 +50,10 @@ const Index = () => {
       ];
     });
   };
+
+  if (!session) {
+    return <Login />;
+  }
 
   return (
     <div className="flex h-screen">
