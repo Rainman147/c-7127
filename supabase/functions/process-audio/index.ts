@@ -32,24 +32,19 @@ serve(async (req) => {
       throw new Error('Failed to download audio file')
     }
 
-    // Convert audio file to base64
-    const audioBuffer = await audioFile.arrayBuffer()
-    const audioBase64 = btoa(
-      String.fromCharCode(...new Uint8Array(audioBuffer))
-    )
+    // Create form data for Whisper API
+    const formData = new FormData()
+    formData.append('file', audioFile, audioPath)
+    formData.append('model', 'whisper-1')
+    formData.append('response_format', 'json')
 
     // Send to Whisper API
     const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'multipart/form-data',
       },
-      body: JSON.stringify({
-        file: audioBase64,
-        model: 'whisper-1',
-        response_format: 'json',
-      }),
+      body: formData,
     })
 
     if (!whisperResponse.ok) {
