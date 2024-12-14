@@ -7,22 +7,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const SUPPORTED_MIME_TYPES = [
-  'audio/mpeg',
-  'audio/wav',
-  'audio/flac',
-  'audio/x-m4a',
-  'audio/ogg',
-  'audio/webm'
-];
-
-const MIME_TO_EXTENSION = {
+const SUPPORTED_MIME_TYPES = {
+  'audio/webm': 'webm',
   'audio/mpeg': 'mp3',
   'audio/wav': 'wav',
-  'audio/flac': 'flac',
-  'audio/x-m4a': 'm4a',
   'audio/ogg': 'ogg',
-  'audio/webm': 'webm'
+  'audio/m4a': 'm4a',
+  'audio/mp4': 'mp4'
 };
 
 serve(async (req) => {
@@ -46,9 +37,10 @@ serve(async (req) => {
     })
 
     // Validate MIME type
-    if (!metadata?.mimeType || !SUPPORTED_MIME_TYPES.includes(metadata.mimeType)) {
-      console.error(`Unsupported MIME type: ${metadata?.mimeType}`)
-      throw new Error(`Unsupported audio format. Supported formats: ${SUPPORTED_MIME_TYPES.join(', ')}`)
+    const mimeType = metadata?.mimeType || 'audio/webm';
+    if (!SUPPORTED_MIME_TYPES[mimeType]) {
+      console.error(`Unsupported MIME type: ${mimeType}`)
+      throw new Error(`Unsupported audio format. Supported formats: ${Object.keys(SUPPORTED_MIME_TYPES).join(', ')}`)
     }
 
     // Convert base64 to Uint8Array
@@ -58,13 +50,13 @@ serve(async (req) => {
     const formData = new FormData()
     
     // Use the correct extension based on MIME type
-    const extension = MIME_TO_EXTENSION[metadata.mimeType]
+    const extension = SUPPORTED_MIME_TYPES[mimeType]
     const filename = `audio.${extension}`
     
-    console.log(`Creating ${filename} for Whisper API with MIME type ${metadata.mimeType}`)
+    console.log(`Creating ${filename} for Whisper API with MIME type ${mimeType}`)
 
     // Create blob with the correct MIME type
-    const blob = new Blob([binaryData], { type: metadata.mimeType })
+    const blob = new Blob([binaryData], { type: mimeType })
     
     console.log('Created blob:', {
       size: blob.size,
