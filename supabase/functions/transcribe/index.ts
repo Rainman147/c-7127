@@ -43,41 +43,46 @@ serve(async (req) => {
       throw new Error('GOOGLE_API_KEY is not set in environment variables');
     }
 
-    // Using the Speech-to-Text API endpoint
-    const response = await fetch('https://speech.googleapis.com/v1/speech:recognize', {
+    // Using the Gemini API for audio transcription
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${GOOGLE_API_KEY}`
       },
       body: JSON.stringify({
-        config: {
-          encoding: 'WEBM_OPUS',
-          sampleRateHertz: 48000,
-          languageCode: 'en-US',
-          model: 'default',
-          enableAutomaticPunctuation: true,
-        },
-        audio: {
-          content: audioData
+        contents: [{
+          parts: [{
+            text: "Please transcribe this audio recording accurately."
+          }, {
+            inline_data: {
+              mime_type: "audio/webm",
+              data: audioData
+            }
+          }]
+        }],
+        generationConfig: {
+          temperature: 0,
+          topP: 1,
+          topK: 1,
+          maxOutputTokens: 2048,
         }
       })
     });
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('Google Speech-to-Text API error:', response.status, error);
-      throw new Error(`Google Speech-to-Text API error: ${response.status} ${error}`);
+      console.error('Gemini API error:', response.status, error);
+      throw new Error(`Gemini API error: ${response.status} ${error}`);
     }
 
     const data = await response.json();
     console.log('Transcription completed successfully');
 
-    // Extract transcription from the response
-    const transcription = data.results?.[0]?.alternatives?.[0]?.transcript || '';
-
     return new Response(
-      JSON.stringify({ transcription }),
+      JSON.stringify({ 
+        transcription: data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
