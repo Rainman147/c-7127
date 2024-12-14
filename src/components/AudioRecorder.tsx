@@ -26,19 +26,26 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
     onAudioData: async (data) => {
       try {
         if (data) {
+          console.log('Sending audio chunk for transcription');
           const response = await fetch('https://hlnzunnahksudbotqvpk.supabase.co/functions/v1/transcribe', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ audioData: data }),
+            body: JSON.stringify({ 
+              audioData: data,
+              mimeType: 'audio/wav'
+            }),
           });
 
           if (!response.ok) {
-            throw new Error('Failed to transcribe audio');
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to transcribe audio');
           }
 
           const result = await response.json();
+          console.log('Transcription result:', result);
+          
           if (result.transcription) {
             setLiveTranscription(prev => prev + ' ' + result.transcription.trim());
           }
