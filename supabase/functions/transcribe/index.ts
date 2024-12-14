@@ -1,93 +1,66 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { corsHeaders, handleCors } from './utils/cors.ts';
-import { validateAudioPayload, ValidationError } from './utils/validation.ts';
-import { withRetry } from './utils/retry.ts';
-import { transcribeWithGemini } from './services/gemini.ts';
-import { secureLog, logError } from './utils/logging.ts';
+import { corsHeaders } from './utils/cors.ts';
 
 serve(async (req) => {
-  // Log incoming request (excluding sensitive data)
-  secureLog('Incoming request', {
-    method: req.method,
-    url: req.url,
-    origin: req.headers.get('origin'),
-  });
-
   // Handle CORS preflight
-  const corsResponse = handleCors(req);
-  if (corsResponse) return corsResponse;
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
-    const requestData = await req.json();
-    secureLog('Request received', { 
-      hasAudioData: !!requestData.audioData,
-      hasMetadata: !!requestData.metadata 
-    });
+    console.log('Received transcription request');
+    const { audioData, metadata } = await req.json();
 
-    // Validate payload
-    const payload = validateAudioPayload(requestData);
-    
-    // Process transcription with retry logic
-    const result = await withRetry(async () => {
-      return await transcribeWithGemini(payload);
-    });
-
-    secureLog('Transcription successful', { 
-      hasResult: !!result,
-      resultType: typeof result 
-    });
-
-    return new Response(
-      JSON.stringify({ 
-        transcription: result.transcription || '',
-        status: 'success'
-      }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-  } catch (error) {
-    logError(error as Error, { 
-      stage: 'edge_function_processing'
-    });
-
-    // Handle validation errors specifically
-    if (error instanceof ValidationError) {
-      return new Response(
-        JSON.stringify({
-          error: error.message,
-          status: 'error',
-          retryable: error.retryable
-        }),
-        {
-          status: error.status,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+    if (!audioData) {
+      throw new Error('No audio data provided');
     }
 
-    // Handle other errors
-    const errorResponse = {
-      error: error.message || 'An unexpected error occurred',
-      status: 'error',
-      retryable: error.status >= 500 || error.status === 429
-    };
+    // Convert base64 to buffer
+    const binaryData = Uint8Array.from(atob(audioData), c => c.charCodeAt(0));
 
-    return new Response(
-      JSON.stringify(errorResponse),
-      {
-        status: error.status || 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
+    // Call Google Cloud Speech-to-Text API
+    const response = await fetch('https://generativelanguage.googleapis.com/v1/speech:recognize', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': Deno.env.get('GOOGLE_API_KEY') || '',
+      },
+      body: JSON.stringify({
+        config: {
+          encoding: 'WEBM_OPUS',
+          sampleRateHertz: 16000,
+          languageCode: 'en-US',
+          model: 'default',
         },
-      }
-    );
+        audio: {
+          content: audioData,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Google API error:', error);
+      throw new Error(error.error?.message || 'Failed to transcribe audio');
+    }
+
+    const data = await response.json();
+    console.log('Transcription successful');
+
+    return new Response(JSON.stringify({ 
+      transcription: data.results?.[0]?.alternatives?.[0]?.transcript || '',
+      status: 'success'
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Transcription error:', error);
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      status: 'error'
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

@@ -34,7 +34,8 @@ const AudioCapture = ({ onAudioData, onRecordingComplete }: AudioCaptureProps) =
       const stream = await getMediaStream();
       const { source, processor } = initializeAudioContext(stream);
       
-      const pipeline = createAudioProcessingPipeline(source.context);
+      // Explicitly cast source.context as AudioContext
+      const pipeline = createAudioProcessingPipeline(source.context as AudioContext);
       pipeline.connectNodes(source);
 
       mediaRecorder.current = new MediaRecorder(stream, RECORDER_OPTIONS);
