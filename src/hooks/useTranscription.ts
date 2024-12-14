@@ -18,8 +18,13 @@ export const useTranscription = ({
       secureLog('Sending audio chunk', { chunkSize: data.length });
       
       const transcription = await processAudioData(data, mimeType);
-      updateTranscription(transcription);
+      console.log('Received transcription:', transcription);
+      
+      // Send the update to the input field
       onTranscriptionUpdate?.(transcription);
+      
+      // Update internal state
+      updateTranscription(transcription);
       
     } catch (error) {
       await handleTranscriptionError(error, () => handleAudioData(data, mimeType));

@@ -33,13 +33,20 @@ const ChatInput = ({
     }
   };
 
-  const handleTranscriptionComplete = (transcription: string) => {
-    // Instead of auto-sending, append to existing message
+  const handleTranscriptionUpdate = (transcription: string) => {
+    console.log('Transcription update received:', transcription);
     setMessage(prev => {
       const newMessage = prev + (prev ? ' ' : '') + transcription;
       return newMessage;
     });
     
+    if (onTranscriptionUpdate) {
+      onTranscriptionUpdate(transcription);
+    }
+  };
+
+  const handleTranscriptionComplete = (transcription: string) => {
+    console.log('Transcription complete:', transcription);
     onTranscriptionComplete(transcription);
     toast({
       title: "Transcription complete",
@@ -80,7 +87,7 @@ const ChatInput = ({
           )}
           <AudioRecorder 
             onTranscriptionComplete={handleTranscriptionComplete}
-            onTranscriptionUpdate={onTranscriptionUpdate}
+            onTranscriptionUpdate={handleTranscriptionUpdate}
           />
           <button 
             onClick={handleSubmit}

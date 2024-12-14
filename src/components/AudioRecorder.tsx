@@ -18,7 +18,10 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
 
   const { handleAudioData, isReconnecting } = useTranscription({
     onTranscriptionComplete,
-    onTranscriptionUpdate
+    onTranscriptionUpdate: (text) => {
+      console.log('Transcription update in AudioRecorder:', text);
+      onTranscriptionUpdate?.(text);
+    }
   });
 
   const handleBlobData = async (blob: Blob) => {
