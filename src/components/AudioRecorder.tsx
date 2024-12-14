@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react';
-import { Mic, Square, Loader2, Upload } from 'lucide-react';
-import { Progress } from './ui/progress';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { validateAudioFile, splitAudioIntoChunks, mergeTranscriptions, SUPPORTED_FORMATS } from '@/utils/audioUtils';
+import { validateAudioFile, splitAudioIntoChunks, mergeTranscriptions } from '@/utils/audioUtils';
+import { processAudioForTranscription, startRecording, stopRecording } from '@/utils/audioHandlers';
+import AudioControls from './AudioControls';
+import ProcessingIndicator from './ProcessingIndicator';
 
 interface AudioRecorderProps {
   onTranscriptionComplete: (text: string) => void;
@@ -21,41 +21,29 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder.current = new MediaRecorder(stream);
-      chunks.current = [];
-
-      mediaRecorder.current.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunks.current.push(e.data);
-        }
-      };
-
-      mediaRecorder.current.onstop = async () => {
-        const audioBlob = new Blob(chunks.current, { type: 'audio/wav' });
-        await processAudioChunk(audioBlob);
-      };
-
-      mediaRecorder.current.start();
-      setIsRecording(true);
-      setProgress(0);
-
-      // Auto-stop after 2 minutes
-      setTimeout(() => {
-        if (mediaRecorder.current?.state === 'recording') {
-          stopRecording();
-        }
-      }, 120000);
-    } catch (error: any) {
-      toast({
+  const handleStartRecording = async () => {
+    await startRecording(
+      (recorder) => mediaRecorder.current = recorder,
+      (newChunks) => chunks.current = newChunks,
+      setIsRecording,
+      (error) => toast({
         title: "Error",
-        description: "Could not access microphone. Please check permissions.",
+        description: error,
         variant: "destructive"
-      });
-      console.error('Error accessing microphone:', error);
-    }
+      })
+    );
+  };
+
+  const handleStopRecording = () => {
+    stopRecording(mediaRecorder.current, setIsRecording);
+    processRecordedAudio();
+  };
+
+  const processRecordedAudio = async () => {
+    if (chunks.current.length === 0) return;
+    
+    const audioBlob = new Blob(chunks.current, { type: 'audio/wav' });
+    await processAudioChunk(audioBlob);
   };
 
   const processAudioChunk = async (audioBlob: Blob) => {
@@ -64,8 +52,8 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
     setProcessingStatus('Processing audio...');
 
     try {
-      const result = await transcribeAudioChunk(audioBlob);
-      onTranscriptionComplete(result);
+      const transcription = await processAudioForTranscription(audioBlob);
+      onTranscriptionComplete(transcription);
     } catch (error: any) {
       toast({
         title: "Transcription Error",
@@ -77,14 +65,6 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
       setIsProcessing(false);
       setProgress(0);
       setProcessingStatus('');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorder.current?.state === 'recording') {
-      mediaRecorder.current.stop();
-      setIsRecording(false);
-      mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
     }
   };
 
@@ -110,7 +90,7 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
         setProcessingStatus(`Processing chunk ${i + 1} of ${audioChunks.length}...`);
         setProgress((i + 1) / audioChunks.length * 100);
         
-        const result = await transcribeAudioChunk(audioChunks[i]);
+        const result = await processAudioForTranscription(audioChunks[i]);
         transcriptions.push(result);
       }
 
@@ -136,43 +116,6 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
     }
   };
 
-  const transcribeAudioChunk = async (audioBlob: Blob): Promise<string> => {
-    const formData = new FormData();
-    const fileName = `audio.${audioBlob.type.split('/')[1] || 'wav'}`;
-    const file = new File([audioBlob], fileName, { type: audioBlob.type });
-    formData.append('audio', file);
-
-    console.log('Sending audio file:', {
-      name: file.name,
-      type: file.type,
-      size: file.size
-    });
-
-    try {
-      const { data, error } = await supabase.functions.invoke('transcribe', {
-        body: formData,
-      });
-
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw error;
-      }
-
-      if (!data?.text) {
-        throw new Error('No transcription received');
-      }
-
-      return data.text;
-    } catch (error: any) {
-      console.error('Transcription error details:', {
-        error,
-        message: error.message,
-        context: error.context
-      });
-      throw new Error(error.message || "Failed to transcribe audio");
-    }
-  };
-
   return (
     <div className="flex items-center gap-4">
       <input
@@ -184,46 +127,19 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
       />
       
       {isProcessing ? (
-        <div className="flex items-center gap-4">
-          <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
-          <div className="flex flex-col gap-1 min-w-[200px]">
-            <Progress value={progress} className="h-2" />
-            {processingStatus && (
-              <span className="text-xs text-gray-500">{processingStatus}</span>
-            )}
-            {totalChunks > 1 && (
-              <span className="text-xs text-gray-500">
-                Processing chunk {currentChunk} of {totalChunks}
-              </span>
-            )}
-          </div>
-        </div>
+        <ProcessingIndicator
+          progress={progress}
+          status={processingStatus}
+          currentChunk={currentChunk}
+          totalChunks={totalChunks}
+        />
       ) : (
-        <div className="flex gap-2">
-          <button
-            onClick={isRecording ? stopRecording : startRecording}
-            className={`p-2 rounded-full transition-colors ${
-              isRecording 
-                ? 'bg-red-500 hover:bg-red-600' 
-                : 'bg-gray-200 hover:bg-gray-300'
-            }`}
-            title={isRecording ? "Stop recording" : "Start recording"}
-          >
-            {isRecording ? (
-              <Square className="h-5 w-5 text-white" />
-            ) : (
-              <Mic className="h-5 w-5 text-gray-700" />
-            )}
-          </button>
-          
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition-colors"
-            title="Upload audio file"
-          >
-            <Upload className="h-5 w-5 text-gray-700" />
-          </button>
-        </div>
+        <AudioControls
+          isRecording={isRecording}
+          onStartRecording={handleStartRecording}
+          onStopRecording={handleStopRecording}
+          onFileUpload={() => fileInputRef.current?.click()}
+        />
       )}
     </div>
   );
