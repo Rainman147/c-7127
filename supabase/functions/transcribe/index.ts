@@ -6,21 +6,22 @@ const corsHeaders = {
 }
 
 const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')
+const MAX_RETRIES = 3
+const RETRY_DELAY = 1000 // 1 second
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+interface TranscriptionError extends Error {
+  status?: number;
+  retryable?: boolean;
+}
 
+async function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function callGeminiAPI(audioData: string, retryCount = 0): Promise<Response> {
   try {
-    const { audioData, streaming } = await req.json()
+    console.log(`Attempting Gemini API call (attempt ${retryCount + 1}/${MAX_RETRIES})`);
     
-    if (!audioData) {
-      throw new Error('No audio data provided')
-    }
-
-    console.log('Received audio data, preparing request to Gemini API')
-
     const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:streamGenerateContent?key=' + GOOGLE_API_KEY, {
       method: 'POST',
       headers: {
@@ -56,80 +57,86 @@ serve(async (req) => {
           topP: 1,
           topK: 1,
           maxOutputTokens: 2048,
-        },
-        stream: streaming || false
+        }
       })
-    })
+    });
 
     if (!response.ok) {
-      const error = await response.text()
-      console.error('Gemini API error:', error)
-      throw new Error(`Gemini API error: ${response.status}`)
+      const error = new Error(`Gemini API error: ${response.status}`) as TranscriptionError;
+      error.status = response.status;
+      error.retryable = response.status >= 500 || response.status === 429;
+      throw error;
     }
 
-    if (streaming) {
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      let transcription = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n').filter(line => line.trim() !== '')
-        
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = JSON.parse(line.slice(5))
-            if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-              transcription += ' ' + data.candidates[0].content.parts[0].text
-            }
-          }
-        }
-      }
-
-      return new Response(
-        JSON.stringify({ 
-          transcription: transcription.trim(),
-          status: 'success'
-        }),
-        { 
-          headers: { 
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
-        }
-      )
-    } else {
-      const result = await response.json()
-      return new Response(
-        JSON.stringify({ 
-          transcription: result.candidates?.[0]?.content?.parts?.[0]?.text || '',
-          status: 'success'
-        }),
-        { 
-          headers: { 
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
-        }
-      )
-    }
+    return response;
   } catch (error) {
-    console.error('Transcription error:', error)
+    console.error(`API call failed (attempt ${retryCount + 1}):`, error);
+    
+    if (retryCount < MAX_RETRIES - 1 && (error as TranscriptionError).retryable !== false) {
+      console.log(`Retrying in ${RETRY_DELAY}ms...`);
+      await delay(RETRY_DELAY);
+      return callGeminiAPI(audioData, retryCount + 1);
+    }
+    
+    throw error;
+  }
+}
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
+  try {
+    const { audioData, streaming } = await req.json()
+    
+    if (!audioData) {
+      throw new Error('No audio data provided')
+    }
+
+    // Validate audio data format
+    try {
+      atob(audioData); // Verify it's valid base64
+    } catch {
+      throw new Error('Invalid audio data format. Must be base64 encoded.');
+    }
+
+    console.log('Received audio data, preparing request to Gemini API');
+
+    const response = await callGeminiAPI(audioData);
+    const result = await response.json();
+
     return new Response(
       JSON.stringify({ 
-        error: error.message,
-        status: 'error'
+        transcription: result.candidates?.[0]?.content?.parts?.[0]?.text || '',
+        status: 'success'
       }),
+      { 
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Transcription error:', error);
+    
+    const errorResponse = {
+      error: error.message || 'An unexpected error occurred',
+      status: 'error',
+      retryable: (error as TranscriptionError).retryable ?? true
+    };
+
+    return new Response(
+      JSON.stringify(errorResponse),
       {
-        status: 500,
+        status: (error as TranscriptionError).status || 500,
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/json',
         },
       }
-    )
+    );
   }
 })
