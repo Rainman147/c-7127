@@ -58,6 +58,28 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
     }
   };
 
+  const processAudioChunk = async (audioBlob: Blob) => {
+    setIsProcessing(true);
+    setProgress(0);
+    setProcessingStatus('Processing audio...');
+
+    try {
+      const result = await transcribeAudioChunk(audioBlob);
+      onTranscriptionComplete(result);
+    } catch (error: any) {
+      toast({
+        title: "Transcription Error",
+        description: error.message || "Failed to transcribe audio",
+        variant: "destructive"
+      });
+      console.error('Transcription error:', error);
+    } finally {
+      setIsProcessing(false);
+      setProgress(0);
+      setProcessingStatus('');
+    }
+  };
+
   const stopRecording = () => {
     if (mediaRecorder.current?.state === 'recording') {
       mediaRecorder.current.stop();
