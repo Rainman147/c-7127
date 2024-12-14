@@ -38,11 +38,16 @@ serve(async (req) => {
 
     console.log('Processing audio data of length:', audioData.length);
 
+    const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
+    if (!GOOGLE_API_KEY) {
+      throw new Error('GOOGLE_API_KEY is not set in environment variables');
+    }
+
     const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('GOOGLE_API_KEY')}`
+        'Authorization': `Bearer ${GOOGLE_API_KEY}`
       },
       body: JSON.stringify({
         contents: [{
@@ -54,7 +59,13 @@ serve(async (req) => {
               data: audioData
             }
           }]
-        }]
+        }],
+        generationConfig: {
+          temperature: 0,
+          topP: 1,
+          topK: 1,
+          maxOutputTokens: 2048,
+        }
       })
     });
 
