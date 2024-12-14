@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowUp, Loader2 } from "lucide-react";
 import AudioRecorder from "./AudioRecorder";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -10,6 +11,7 @@ interface ChatInputProps {
 
 const ChatInput = ({ onSend, onTranscriptionUpdate, isLoading = false }: ChatInputProps) => {
   const [message, setMessage] = useState("");
+  const { toast } = useToast();
 
   const handleSubmit = () => {
     if (message.trim() && !isLoading) {
@@ -27,6 +29,10 @@ const ChatInput = ({ onSend, onTranscriptionUpdate, isLoading = false }: ChatInp
 
   const handleTranscriptionComplete = (transcription: string) => {
     setMessage(prev => prev + (prev ? ' ' : '') + transcription);
+    toast({
+      title: "Transcription complete",
+      description: "Your audio has been successfully transcribed.",
+    });
   };
 
   const handleTranscriptionUpdate = (text: string) => {

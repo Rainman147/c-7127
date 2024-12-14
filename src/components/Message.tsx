@@ -1,12 +1,14 @@
 import MessageAvatar from './MessageAvatar';
 import MessageActions from './MessageActions';
+import { Loader2 } from 'lucide-react';
 
 type MessageProps = {
   role: 'user' | 'assistant';
   content: string;
+  isStreaming?: boolean;
 };
 
-const Message = ({ role, content }: MessageProps) => {
+const Message = ({ role, content, isStreaming }: MessageProps) => {
   return (
     <div className="py-6">
       <div className={`flex gap-4 ${role === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -20,6 +22,12 @@ const Message = ({ role, content }: MessageProps) => {
             }`}
           >
             {content}
+            {isStreaming && (
+              <div className="inline-flex items-center gap-2 ml-2 text-gray-400">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span className="text-xs">Transcribing...</span>
+              </div>
+            )}
           </div>
           {role === 'assistant' && <MessageActions />}
         </div>
