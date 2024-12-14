@@ -114,7 +114,8 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
 
     try {
       const formData = new FormData();
-      formData.append('audio', audioBlob);
+      const fileName = 'audio.' + (audioBlob.type.split('/')[1] || 'wav');
+      formData.append('audio', new File([audioBlob], fileName, { type: audioBlob.type }));
 
       setProgress(50);
       

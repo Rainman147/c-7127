@@ -1,39 +1,51 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-
+const SUPPORTED_FORMATS = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm'];
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const formData = await req.formData();
-    const audioBlob = formData.get('audio') as Blob;
-    
-    if (!audioBlob) {
+    const audioFile = formData.get('audio');
+
+    if (!audioFile || !(audioFile instanceof File)) {
       throw new Error('No audio file provided');
     }
 
-    console.log('Received audio chunk, size:', audioBlob.size);
+    console.log('Received audio file:', audioFile.name, 'Type:', audioFile.type);
 
-    const whisperFormData = new FormData();
-    whisperFormData.append('file', audioBlob, 'audio.wav');
-    whisperFormData.append('model', 'whisper-1');
-    whisperFormData.append('language', 'en');
+    // Extract file extension and validate format
+    const fileExtension = audioFile.name.split('.').pop()?.toLowerCase();
+    const mimeType = audioFile.type.split('/')[1]?.toLowerCase();
+
+    if (!fileExtension || !SUPPORTED_FORMATS.includes(fileExtension)) {
+      console.error('Invalid file extension:', fileExtension);
+      throw new Error(`Invalid file format. Supported formats: ${JSON.stringify(SUPPORTED_FORMATS)}`);
+    }
+
+    // Prepare form data for OpenAI API
+    const openAIFormData = new FormData();
+    openAIFormData.append('file', audioFile);
+    openAIFormData.append('model', 'whisper-1');
+    openAIFormData.append('language', 'en');
+
+    console.log('Sending request to OpenAI Whisper API...');
 
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
       },
-      body: whisperFormData,
+      body: openAIFormData,
     });
 
     if (!response.ok) {
@@ -45,14 +57,19 @@ serve(async (req) => {
     const result = await response.json();
     console.log('Transcription successful');
 
-    return new Response(JSON.stringify({ text: result.text }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ text: result.text }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
   } catch (error) {
     console.error('Transcription error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      }
+    );
   }
 });
