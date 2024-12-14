@@ -5,26 +5,22 @@ import { useToast } from "@/hooks/use-toast";
 
 interface ChatInputProps {
   onSend: (message: string, type?: 'text' | 'audio') => void;
-  onTranscriptionUpdate?: (text: string) => void;
   onTranscriptionComplete: (text: string) => void;
   isLoading?: boolean;
 }
 
 const ChatInput = ({ 
   onSend, 
-  onTranscriptionUpdate, 
   onTranscriptionComplete,
   isLoading = false 
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const { toast } = useToast();
-  const transcriptionInProgress = useRef(false);
 
   const handleSubmit = () => {
     if (message.trim() && !isLoading) {
       onSend(message);
       setMessage("");
-      transcriptionInProgress.current = false;
     }
   };
 
@@ -35,33 +31,18 @@ const ChatInput = ({
     }
   };
 
-  const handleTranscriptionUpdate = (transcription: string) => {
-    console.log('Transcription update received in ChatInput:', transcription);
-    transcriptionInProgress.current = true;
-    // Update the input field with the new transcription
-    setMessage(transcription);
-    
-    if (onTranscriptionUpdate) {
-      onTranscriptionUpdate(transcription);
-    }
-  };
-
   const handleTranscriptionComplete = (transcription: string) => {
     console.log('Transcription complete in ChatInput:', transcription);
-    if (transcriptionInProgress.current) {
-      setMessage(transcription);
-      transcriptionInProgress.current = false;
-      onTranscriptionComplete(transcription);
-      toast({
-        title: "Transcription complete",
-        description: "Your audio has been transcribed. Review and edit before sending.",
-      });
-    }
+    setMessage(transcription);
+    onTranscriptionComplete(transcription);
+    toast({
+      title: "Transcription complete",
+      description: "Your audio has been transcribed. Review and edit before sending.",
+    });
   };
 
   const handleClearInput = () => {
     setMessage("");
-    transcriptionInProgress.current = false;
     toast({
       title: "Input cleared",
       description: "The message input has been cleared.",
@@ -93,7 +74,6 @@ const ChatInput = ({
           )}
           <AudioRecorder 
             onTranscriptionComplete={handleTranscriptionComplete}
-            onTranscriptionUpdate={handleTranscriptionUpdate}
           />
           <button 
             onClick={handleSubmit}

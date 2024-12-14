@@ -4,16 +4,14 @@ import AudioProcessor from './audio/AudioProcessor';
 import FileUploader from './audio/FileUploader';
 import ProcessingIndicator from './ProcessingIndicator';
 import AudioCapture from './audio/AudioCapture';
-import { useTranscription } from '@/hooks/useTranscription';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AudioRecorderProps {
   onTranscriptionComplete: (text: string) => void;
-  onTranscriptionUpdate?: (text: string) => void;
 }
 
-const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: AudioRecorderProps) => {
+const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -137,8 +135,7 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
   };
 
   const audioCapture = AudioCapture({
-    onRecordingComplete: setAudioBlob,
-    onAudioData: handleBlobData
+    onRecordingComplete: handleBlobData
   });
 
   const handleFileUpload = () => {
