@@ -23,7 +23,7 @@ const AudioRecorder = ({ onTranscriptionComplete, onTranscriptionUpdate }: Audio
 
   const handleBlobData = async (blob: Blob) => {
     try {
-      // Convert Blob to base64 string
+      console.log('Converting audio blob to base64...');
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64data = (reader.result as string).split(',')[1];

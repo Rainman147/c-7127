@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { ArrowUp, Loader2 } from "lucide-react";
+import { ArrowUp, Loader2, X } from "lucide-react";
 import AudioRecorder from "./AudioRecorder";
 import { useToast } from "@/hooks/use-toast";
 
 interface ChatInputProps {
   onSend: (message: string, type?: 'text' | 'audio') => void;
   onTranscriptionUpdate?: (text: string) => void;
-  onTranscriptionComplete: (text: string) => void;  // Changed from optional to required
+  onTranscriptionComplete: (text: string) => void;
   isLoading?: boolean;
 }
 
@@ -34,11 +34,24 @@ const ChatInput = ({
   };
 
   const handleTranscriptionComplete = (transcription: string) => {
-    setMessage(prev => prev + (prev ? ' ' : '') + transcription);
+    // Instead of auto-sending, append to existing message
+    setMessage(prev => {
+      const newMessage = prev + (prev ? ' ' : '') + transcription;
+      return newMessage;
+    });
+    
     onTranscriptionComplete(transcription);
     toast({
       title: "Transcription complete",
-      description: "Your audio has been successfully transcribed.",
+      description: "Your audio has been transcribed. Review and edit before sending.",
+    });
+  };
+
+  const handleClearInput = () => {
+    setMessage("");
+    toast({
+      title: "Input cleared",
+      description: "The message input has been cleared.",
     });
   };
 
@@ -56,6 +69,15 @@ const ChatInput = ({
           disabled={isLoading}
         />
         <div className="absolute right-3 top-[50%] -translate-y-[50%] flex items-center gap-2">
+          {message && (
+            <button
+              onClick={handleClearInput}
+              className="p-1.5 hover:bg-gray-700 rounded-full transition-colors"
+              title="Clear input"
+            >
+              <X className="h-4 w-4 text-gray-400" />
+            </button>
+          )}
           <AudioRecorder 
             onTranscriptionComplete={handleTranscriptionComplete}
             onTranscriptionUpdate={onTranscriptionUpdate}
