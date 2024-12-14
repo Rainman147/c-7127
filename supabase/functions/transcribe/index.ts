@@ -5,14 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
-const ALLOWED_MIME_TYPES = [
-  'audio/wav',
-  'audio/x-wav',
-  'audio/mp3',
-  'audio/mpeg',
-  'audio/webm'
-];
+const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -23,8 +16,6 @@ serve(async (req) => {
   try {
     console.log('Processing transcription request...');
     
-    // Get the Google API key from environment variables
-    const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
     if (!GOOGLE_API_KEY) {
       throw new Error('GOOGLE_API_KEY is not configured');
     }
@@ -40,16 +31,6 @@ serve(async (req) => {
       
       if (!audioFile || !(audioFile instanceof File)) {
         throw new Error('No audio file provided in form data');
-      }
-
-      // Validate file size
-      if (audioFile.size > MAX_FILE_SIZE) {
-        throw new Error(`File size exceeds maximum limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
-      }
-
-      // Validate mime type
-      if (!ALLOWED_MIME_TYPES.includes(audioFile.type)) {
-        throw new Error(`Invalid file type. Supported types: ${ALLOWED_MIME_TYPES.join(', ')}`);
       }
 
       // Convert file to base64
@@ -71,7 +52,6 @@ serve(async (req) => {
 
     console.log('Sending request to Gemini API...');
     
-    // Call Gemini API for transcription
     const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
       method: 'POST',
       headers: {
