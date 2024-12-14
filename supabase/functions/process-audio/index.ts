@@ -32,11 +32,22 @@ serve(async (req) => {
       throw new Error('Failed to download audio file')
     }
 
+    if (!audioFile) {
+      throw new Error('No audio file received from storage')
+    }
+
+    console.log('Successfully downloaded audio file, size:', audioFile.size)
+
     // Create form data for Whisper API
     const formData = new FormData()
-    formData.append('file', audioFile, audioPath)
+    
+    // Create a File object from the Blob with a proper filename
+    const file = new File([audioFile], audioPath, { type: audioFile.type })
+    formData.append('file', file)
     formData.append('model', 'whisper-1')
     formData.append('response_format', 'json')
+
+    console.log('Sending request to Whisper API')
 
     // Send to Whisper API
     const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -50,7 +61,7 @@ serve(async (req) => {
     if (!whisperResponse.ok) {
       const error = await whisperResponse.text()
       console.error('Whisper API error:', error)
-      throw new Error('Failed to transcribe audio')
+      throw new Error(`Failed to transcribe audio: ${error}`)
     }
 
     const transcription = await whisperResponse.json()
