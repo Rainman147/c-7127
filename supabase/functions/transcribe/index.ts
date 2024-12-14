@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
 const corsHeaders = {
@@ -21,9 +22,9 @@ serve(async (req) => {
     }
 
     console.log('Received audio data:', {
-      length: audioData.length,
-      mimeType: metadata.mimeType,
-      streaming: metadata.streaming
+      dataLength: audioData.length,
+      mimeType: metadata?.mimeType,
+      streaming: metadata?.streaming
     })
 
     // Convert base64 to Uint8Array
@@ -33,7 +34,7 @@ serve(async (req) => {
     const formData = new FormData()
     
     // Map MIME types to Whisper-supported extensions
-    const mimeToExt = {
+    const mimeToExt: { [key: string]: string } = {
       'audio/webm': 'webm',
       'audio/mp3': 'mp3',
       'audio/mpeg': 'mp3',
@@ -46,13 +47,13 @@ serve(async (req) => {
       'audio/mpeg': 'mpga',
     }
 
-    const ext = mimeToExt[metadata.mimeType] || 'webm'
+    const ext = mimeToExt[metadata?.mimeType] || 'webm'
     const filename = `audio.${ext}`
 
-    console.log(`Creating ${filename} with MIME type ${metadata.mimeType}`)
+    console.log(`Creating ${filename} with MIME type ${metadata?.mimeType}`)
 
     // Create blob with proper mime type
-    const blob = new Blob([binaryData], { type: metadata.mimeType })
+    const blob = new Blob([binaryData], { type: metadata?.mimeType || 'audio/webm' })
     formData.append('file', blob, filename)
     formData.append('model', 'whisper-1')
     formData.append('language', 'en')
