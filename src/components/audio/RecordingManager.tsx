@@ -61,12 +61,28 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
       const source = audioContext.current.createMediaStreamSource(stream);
       processor.current = audioContext.current.createScriptProcessor(4096, 1, 1);
 
+      let accumulatedData = new Float32Array(0);
+      const CHUNK_SIZE = 16000; // 1 second of audio at 16kHz
+
       processor.current.onaudioprocess = (e) => {
         const inputData = e.inputBuffer.getChannelData(0);
-        if (onAudioData) {
-          const encodedData = encodeAudioData(inputData);
-          setAudioData(encodedData);
-          onAudioData(encodedData);
+        
+        // Accumulate data
+        const newData = new Float32Array(accumulatedData.length + inputData.length);
+        newData.set(accumulatedData);
+        newData.set(inputData, accumulatedData.length);
+        accumulatedData = newData;
+
+        // If we have enough data for a chunk, process it
+        if (accumulatedData.length >= CHUNK_SIZE) {
+          const chunk = accumulatedData.slice(0, CHUNK_SIZE);
+          accumulatedData = accumulatedData.slice(CHUNK_SIZE);
+
+          if (onAudioData) {
+            const encodedData = encodeAudioData(chunk);
+            setAudioData(encodedData);
+            onAudioData(encodedData);
+          }
         }
       };
 

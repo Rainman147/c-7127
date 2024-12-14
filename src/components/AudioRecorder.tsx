@@ -34,7 +34,7 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
             },
             body: JSON.stringify({ 
               audioData: data,
-              mimeType: 'audio/wav',
+              mimeType: 'audio/x-raw',
               streaming: true
             }),
           });
