@@ -59,9 +59,26 @@ const BlobProcessor = ({
 
       console.log('Audio file uploaded successfully:', fileName);
 
+      // Convert blob to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const base64String = reader.result as string;
+          const base64Data = base64String.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+      });
+
+      reader.readAsDataURL(audioBlob);
+      const base64Data = await base64Promise;
+
       // Process audio using Edge Function
       const { data, error } = await supabase.functions.invoke('transcribe', {
-        body: { audioPath: fileName }
+        body: { 
+          audioData: base64Data,
+          mimeType: audioBlob.type
+        }
       });
 
       if (error) {

@@ -35,6 +35,8 @@ serve(async (req) => {
     formData.append('language', 'en')
     formData.append('response_format', 'json')
 
+    console.log('Sending request to Whisper API')
+
     // Send to Whisper API
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
