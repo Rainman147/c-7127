@@ -12,10 +12,10 @@ serve(async (req) => {
 
   try {
     console.log('Received request to Gemini function');
-    const { prompt } = await req.json();
+    const { messages } = await req.json();
     
-    if (!prompt) {
-      throw new Error('No prompt provided');
+    if (!messages || !Array.isArray(messages)) {
+      throw new Error('Invalid messages format');
     }
 
     const apiKey = Deno.env.get('GOOGLE_API_KEY');
@@ -24,45 +24,21 @@ serve(async (req) => {
       throw new Error('Google API key not configured');
     }
 
-    console.log('Sending request to Gemini API with experimental model');
+    // Convert messages to Gemini format
+    const contents = messages.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    }));
+
+    console.log('Sending streaming request to Gemini experimental model');
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:streamGenerateContent?alt=sse&key=${apiKey}`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 1,
-            topP: 1,
-            maxOutputTokens: 2048,
-          },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            }
-          ]
-        })
+        body: JSON.stringify({ contents })
       }
     );
 
@@ -72,18 +48,60 @@ serve(async (req) => {
       throw new Error(`Gemini API error: ${response.status} ${error}`);
     }
 
-    const data = await response.json();
-    console.log('Received response from Gemini experimental model');
+    // Set up streaming response
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = response.body?.getReader();
+        if (!reader) {
+          controller.close();
+          return;
+        }
 
-    return new Response(
-      JSON.stringify({
-        response: data.candidates?.[0]?.content?.parts?.[0]?.text || '',
-        status: 'success'
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              controller.close();
+              break;
+            }
+
+            // Parse SSE data
+            const text = new TextDecoder().decode(value);
+            const lines = text.split('\n').filter(line => line.trim());
+            
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(5);
+                if (data === '[DONE]') continue;
+                
+                try {
+                  const parsed = JSON.parse(data);
+                  const content = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                  if (content) {
+                    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ content })}\n\n`));
+                  }
+                } catch (e) {
+                  console.error('Error parsing SSE data:', e);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error processing stream:', error);
+          controller.error(error);
+        }
       }
-    );
+    });
+
+    return new Response(stream, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      }
+    });
+
   } catch (error) {
     console.error('Error in gemini function:', error);
     return new Response(
