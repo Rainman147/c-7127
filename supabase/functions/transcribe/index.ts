@@ -20,7 +20,7 @@ serve(async (req) => {
 
     console.log('Received audio data, sending to Gemini API...')
 
-    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro-vision:generateContent', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -29,7 +29,7 @@ serve(async (req) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            audio_data: {
+            inline_data: {
               mime_type: "audio/webm",
               data: audioData
             }
