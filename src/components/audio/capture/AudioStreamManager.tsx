@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getMediaStream, cleanupMediaStream } from '@/utils/mediaStreamUtils';
 
@@ -14,12 +14,14 @@ export const useAudioStreamManager = ({
   onStreamStop
 }: AudioStreamManagerProps) => {
   const { toast } = useToast();
+  const streamRef = useRef<MediaStream | null>(null);
 
   const startStream = useCallback(async () => {
     try {
       console.log('Requesting microphone access...');
       const stream = await getMediaStream();
       console.log('Microphone access granted');
+      streamRef.current = stream;
       onStreamStart(stream);
     } catch (error: any) {
       console.error('Error accessing microphone:', error);
@@ -33,7 +35,10 @@ export const useAudioStreamManager = ({
   }, [onStreamStart, onStreamError, toast]);
 
   const stopStream = useCallback(() => {
-    cleanupMediaStream();
+    if (streamRef.current) {
+      cleanupMediaStream(streamRef.current);
+      streamRef.current = null;
+    }
     onStreamStop();
   }, [onStreamStop]);
 
