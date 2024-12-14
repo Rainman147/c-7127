@@ -9,6 +9,17 @@ interface UseTranscriptionProps {
   onTranscriptionUpdate?: (text: string) => void;
 }
 
+interface AudioPayload {
+  audioData: string;
+  metadata: {
+    duration?: number;
+    sampleRate?: number;
+    channels?: number;
+    mimeType: string;
+    streaming: boolean;
+  }
+}
+
 export const useTranscription = ({ 
   onTranscriptionComplete, 
   onTranscriptionUpdate 
@@ -47,6 +58,32 @@ export const useTranscription = ({
     return false;
   };
 
+  const validatePayload = (payload: AudioPayload): boolean => {
+    if (!payload.audioData) {
+      throw new Error('Audio data is missing from payload');
+    }
+
+    if (!payload.metadata) {
+      throw new Error('Metadata is missing from payload');
+    }
+
+    if (!payload.metadata.mimeType) {
+      throw new Error('MIME type is missing from metadata');
+    }
+
+    console.log('Payload validation passed:', {
+      metadataPresent: !!payload.metadata,
+      audioDataLength: payload.audioData.length,
+      mimeType: payload.metadata.mimeType,
+      streaming: payload.metadata.streaming,
+      duration: payload.metadata.duration,
+      sampleRate: payload.metadata.sampleRate,
+      channels: payload.metadata.channels
+    });
+
+    return true;
+  };
+
   const handleAudioData = async (data: string) => {
     try {
       // Validate the audio data before processing
@@ -66,20 +103,39 @@ export const useTranscription = ({
       // Validate the audio blob
       validateAudioFile(audioBlob);
       
-      // Get and log audio metadata
+      // Get audio metadata
+      let metadata = {
+        mimeType: 'audio/x-raw',
+        streaming: true
+      };
+
       try {
-        await getAudioMetadata(audioBlob);
+        const audioMetadata = await getAudioMetadata(audioBlob);
+        metadata = {
+          ...metadata,
+          ...audioMetadata
+        };
       } catch (error) {
         console.warn('Could not extract audio metadata:', error);
-        // Continue with transcription even if metadata extraction fails
       }
+
+      // Construct and validate payload
+      const payload: AudioPayload = {
+        audioData: data,
+        metadata
+      };
+
+      // Log payload before validation
+      console.log('Preparing payload for Edge Function:', {
+        payloadSize: data.length,
+        metadata: payload.metadata
+      });
+
+      // Validate payload structure
+      validatePayload(payload);
       
       const { data: result, error } = await supabase.functions.invoke('transcribe', {
-        body: { 
-          audioData: data,
-          mimeType: 'audio/x-raw',
-          streaming: true
-        }
+        body: payload
       });
 
       if (error) {
