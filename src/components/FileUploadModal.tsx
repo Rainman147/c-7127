@@ -45,7 +45,7 @@ const FileUploadModal = ({ onFileSelected }: FileUploadModalProps) => {
         setIsProcessing(true);
         
         try {
-          // Process through BlobProcessor for transcription
+          // Create BlobProcessor instance
           const processor = new BlobProcessor({
             blob: wavBlob,
             onProcessingComplete: (text) => {
@@ -58,8 +58,8 @@ const FileUploadModal = ({ onFileSelected }: FileUploadModalProps) => {
             onProcessingEnd: () => setIsProcessing(false)
           });
           
-          // Trigger processing
-          processor.processBlob(wavBlob);
+          // Process the WAV blob
+          await processor.processBlob(wavBlob);
         } catch (error) {
           console.error('Error processing audio:', error);
           setError('Failed to process audio file. Please try again.');

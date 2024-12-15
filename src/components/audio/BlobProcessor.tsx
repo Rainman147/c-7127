@@ -1,22 +1,18 @@
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-
-interface BlobProcessorProps {
+interface BlobProcessorConfig {
   blob: Blob | null;
   onProcessingComplete: (text: string) => void;
   onProcessingStart: () => void;
   onProcessingEnd: () => void;
 }
 
-const BlobProcessor = ({
-  blob,
-  onProcessingComplete,
-  onProcessingStart,
-  onProcessingEnd
-}: BlobProcessorProps) => {
-  const { toast } = useToast();
+class BlobProcessor {
+  private config: BlobProcessorConfig;
 
-  const processBlob = async (audioBlob: Blob) => {
+  constructor(config: BlobProcessorConfig) {
+    this.config = config;
+  }
+
+  async processBlob(audioBlob: Blob) {
     try {
       console.log('Processing audio blob:', { size: audioBlob.size, type: audioBlob.type });
       
@@ -28,7 +24,7 @@ const BlobProcessor = ({
         throw new Error('Invalid audio format');
       }
 
-      onProcessingStart();
+      this.config.onProcessingStart();
       
       // Get the current user's ID
       const { data: { user } } = await supabase.auth.getUser();
@@ -88,28 +84,18 @@ const BlobProcessor = ({
 
       if (data?.transcription) {
         console.log('Transcription received:', data.transcription);
-        onProcessingComplete(data.transcription);
+        this.config.onProcessingComplete(data.transcription);
       } else {
         throw new Error('No transcription received from the server');
       }
 
     } catch (error: any) {
       console.error('Error processing audio:', error);
-      toast({
-        title: "Audio Processing Error",
-        description: error.message || "Failed to process audio. Please try again.",
-        variant: "destructive",
-      });
+      throw error;
     } finally {
-      onProcessingEnd();
+      this.config.onProcessingEnd();
     }
-  };
-
-  if (blob) {
-    processBlob(blob);
   }
-
-  return null;
-};
+}
 
 export default BlobProcessor;
