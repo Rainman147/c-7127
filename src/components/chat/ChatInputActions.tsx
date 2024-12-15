@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Loader2, ArrowUp } from "lucide-react";
 import AudioRecorder from "../AudioRecorder";
 import FileUploadModal from "../FileUploadModal";
