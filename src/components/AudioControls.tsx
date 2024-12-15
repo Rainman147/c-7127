@@ -1,6 +1,5 @@
 import { Mic, Square } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import FileUploadModal from './FileUploadModal';
 
 interface AudioControlsProps {
   isRecording: boolean;

@@ -10,6 +10,21 @@ interface ChatInputActionsProps {
   handleFileUpload: (file: File) => void;
 }
 
+const RecordingIndicator = () => {
+  return (
+    <div className="absolute -bottom-6 left-0 right-0 flex justify-center">
+      <div className="text-sm text-gray-400 dark:text-gray-500 flex items-center gap-1">
+        Recording in session
+        <span className="flex gap-0.5">
+          <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+          <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+          <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+        </span>
+      </div>
+    </div>
+  );
+};
+
 const ChatInputActions = ({
   isLoading,
   message,
@@ -18,7 +33,7 @@ const ChatInputActions = ({
   handleFileUpload
 }: ChatInputActionsProps) => {
   return (
-    <div className="flex items-center justify-between px-4 py-2 bg-transparent">
+    <div className="relative flex items-center justify-between px-4 py-2 bg-transparent">
       {/* Left side icons */}
       <div className="flex items-center space-x-2">
         <FileUploadModal 
@@ -44,6 +59,9 @@ const ChatInputActions = ({
           )}
         </button>
       </div>
+
+      {/* Recording Indicator */}
+      <RecordingIndicator />
     </div>
   );
 };
