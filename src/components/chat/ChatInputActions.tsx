@@ -11,21 +11,6 @@ interface ChatInputActionsProps {
   handleFileUpload: (file: File) => void;
 }
 
-const RecordingIndicator = () => {
-  return (
-    <div className="absolute -bottom-6 left-0 right-0 flex justify-center">
-      <div className="text-sm text-gray-400 dark:text-gray-500 flex items-center gap-1">
-        Recording in session
-        <span className="flex gap-0.5">
-          <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-          <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-          <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-        </span>
-      </div>
-    </div>
-  );
-};
-
 const ChatInputActions = ({
   isLoading,
   message,
@@ -33,10 +18,8 @@ const ChatInputActions = ({
   onTranscriptionComplete,
   handleFileUpload
 }: ChatInputActionsProps) => {
-  // Track recording state
   const [isRecording, setIsRecording] = useState(false);
 
-  // Handler for recording state changes
   const handleRecordingStateChange = (recording: boolean) => {
     console.log('Recording state changed:', recording);
     setIsRecording(recording);
@@ -70,9 +53,6 @@ const ChatInputActions = ({
           )}
         </button>
       </div>
-
-      {/* Recording Indicator - only show when recording */}
-      {isRecording && <RecordingIndicator />}
     </div>
   );
 };
