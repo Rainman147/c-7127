@@ -3,46 +3,42 @@ import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
-import { AuthError } from '@supabase/supabase-js';
 
 const Login = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Listen for auth state changes to show appropriate messages
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, session);
-      
-      if (event === 'SIGNED_IN') {
-        toast({
-          title: "Welcome back!",
-          description: "Successfully signed in.",
-        });
-      } else if (event === 'SIGNED_OUT') {
-        toast({
-          title: "Signed out",
-          description: "Successfully signed out.",
-        });
-      } else if (event === 'USER_UPDATED') {
-        toast({
-          title: "Profile updated",
-          description: "Your profile has been updated.",
-        });
-      } else if (event === 'PASSWORD_RECOVERY') {
-        toast({
-          title: "Password recovery",
-          description: "Check your email for password reset instructions.",
-        });
+    const handleAuthStateChange = (event: string) => {
+      switch (event) {
+        case 'SIGNED_IN':
+          toast({
+            title: "Welcome back!",
+            description: "Successfully signed in.",
+          });
+          break;
+        case 'SIGNED_OUT':
+          toast({
+            title: "Signed out",
+            description: "Successfully signed out.",
+          });
+          break;
+        case 'USER_UPDATED':
+          toast({
+            title: "Profile updated",
+            description: "Your profile has been updated.",
+          });
+          break;
+        case 'PASSWORD_RECOVERY':
+          toast({
+            title: "Password recovery",
+            description: "Check your email for password reset instructions.",
+          });
+          break;
       }
+    };
 
-      // Handle any authentication errors that might occur
-      if (session?.error) {
-        toast({
-          title: "Authentication Error",
-          description: (session.error as AuthError).message,
-          variant: "destructive",
-        });
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      handleAuthStateChange(event);
     });
 
     return () => {
