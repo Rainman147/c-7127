@@ -4,8 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Upload, FileAudio, FileText, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { validateAudioFile } from '@/utils/audioUtils';
 import { useToast } from '@/hooks/use-toast';
-import WAVConverter from './audio/WAVConverter';
-import BlobProcessor from './audio/BlobProcessor';
+import FileProcessor from './audio/FileProcessor';
 
 interface FileUploadModalProps {
   onFileSelected: (file: File) => void;
@@ -27,56 +26,40 @@ const FileUploadModal = ({ onFileSelected }: FileUploadModalProps) => {
       // Validate the audio file
       validateAudioFile(file);
       
-      // Convert file to blob
-      const blob = new Blob([await file.arrayBuffer()], { type: file.type });
-      
       console.log('Processing uploaded audio file:', { 
         type: file.type,
         size: file.size
       });
 
-      // Convert to WAV if needed
-      const handleWAVBlob = async (wavBlob: Blob) => {
-        console.log('WAV conversion complete:', { 
-          size: wavBlob.size, 
-          type: wavBlob.type 
-        });
-        
-        setIsProcessing(true);
-        
-        try {
-          // Create BlobProcessor instance
-          const processor = new BlobProcessor({
-            blob: wavBlob,
-            onProcessingComplete: (text) => {
-              console.log('Transcription complete:', text);
-              onFileSelected(file);
-              setIsOpen(false);
-              setIsProcessing(false);
-            },
-            onProcessingStart: () => setIsProcessing(true),
-            onProcessingEnd: () => setIsProcessing(false)
-          });
-          
-          // Process the WAV blob
-          await processor.processBlob(wavBlob);
-        } catch (error) {
-          console.error('Error processing audio:', error);
-          setError('Failed to process audio file. Please try again.');
+      // Create FileProcessor instance
+      const processor = new FileProcessor({
+        onProcessingComplete: (text) => {
+          console.log('Transcription complete:', text);
+          onFileSelected(file);
+          setIsOpen(false);
           setIsProcessing(false);
-        }
-      };
-
-      // Convert to WAV format
-      await WAVConverter({ blob, onConversionComplete: handleWAVBlob });
-      
-      toast({
-        title: "File selected",
-        description: "Your file is being processed for transcription.",
+          
+          toast({
+            title: "Transcription complete",
+            description: "Your audio file has been processed successfully.",
+          });
+        },
+        onProcessingStart: () => setIsProcessing(true),
+        onProcessingEnd: () => setIsProcessing(false)
       });
+      
+      // Process the file
+      await processor.processFile(file);
+      
     } catch (error: any) {
       setError(error.message);
-      console.error('File validation error:', error);
+      console.error('File processing error:', error);
+      
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process audio file",
+        variant: "destructive"
+      });
     } finally {
       if (event.target.value) {
         event.target.value = '';

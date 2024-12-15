@@ -5,28 +5,41 @@ export const validateAudioFile = (file: File | Blob) => {
     lastModified: file instanceof File ? file.lastModified : 'N/A'
   });
 
+  // Whisper API supported formats
   const SUPPORTED_FORMATS = [
-    'audio/wav',
+    'audio/mp3',
     'audio/mpeg',
+    'audio/mpga',
     'audio/mp4',
     'audio/x-m4a',
+    'audio/wav',
     'audio/webm'
   ];
 
-  // Increased to 100MB since we now support chunked uploads
-  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+  const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB (Whisper's limit)
 
   if (!SUPPORTED_FORMATS.includes(file.type)) {
-    throw new Error(`Unsupported format: ${file.type}. Please upload a WAV, MP3, M4A, or WebM file.`);
+    throw new Error(
+      `Unsupported format: ${file.type}. Please upload one of the following formats: MP3, MP4, M4A, WAV, or WEBM.`
+    );
   }
 
   if (file.size > MAX_FILE_SIZE) {
-    throw new Error(`File too large (${(file.size / (1024 * 1024)).toFixed(2)}MB). Maximum size is ${MAX_FILE_SIZE / (1024 * 1024)}MB.`);
+    throw new Error(
+      `File too large (${(file.size / (1024 * 1024)).toFixed(2)}MB). Maximum size is ${
+        MAX_FILE_SIZE / (1024 * 1024)
+      }MB.`
+    );
   }
 
   if (file.size === 0) {
     throw new Error('Audio file is empty.');
   }
+
+  console.log('Audio file validation passed:', {
+    type: file.type,
+    size: `${(file.size / (1024 * 1024)).toFixed(2)}MB`
+  });
 };
 
 export const validateAudioData = (audioData: string) => {
