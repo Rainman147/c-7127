@@ -7,13 +7,15 @@ interface AudioControlsProps {
   onStartRecording: () => void;
   onStopRecording: () => void;
   onFileUpload: (file: File) => void;
+  onTranscriptionComplete: (text: string) => void;
 }
 
 const AudioControls = ({
   isRecording,
   onStartRecording,
   onStopRecording,
-  onFileUpload
+  onFileUpload,
+  onTranscriptionComplete
 }: AudioControlsProps) => {
   return (
     <div className="flex gap-2">
@@ -45,7 +47,10 @@ const AudioControls = ({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <FileUploadModal onFileSelected={onFileUpload} />
+            <FileUploadModal 
+              onFileSelected={onFileUpload} 
+              onTranscriptionComplete={onTranscriptionComplete}
+            />
           </TooltipTrigger>
           <TooltipContent>
             <p>Upload audio file</p>
