@@ -32,6 +32,22 @@ const Login = () => {
           title: "Password recovery",
           description: "Check your email for password reset instructions.",
         });
+      } else if (event === 'USER_DELETED') {
+        toast({
+          title: "Account deleted",
+          description: "Your account has been successfully deleted.",
+        });
+      }
+    });
+
+    // Also listen for auth errors
+    const authListener = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'AUTH_ERROR') {
+        toast({
+          title: "Authentication Error",
+          description: "There was a problem with authentication. Please try again.",
+          variant: "destructive",
+        });
       }
     });
 
@@ -53,20 +69,33 @@ const Login = () => {
                 colors: {
                   brand: '#2563eb',
                   brandAccent: '#1d4ed8',
-                }
+                },
+                borderWidths: {
+                  buttonBorderWidth: '1px',
+                  inputBorderWidth: '1px',
+                },
+                radii: {
+                  borderRadiusButton: '0.375rem',
+                  buttonBorderRadius: '0.375rem',
+                  inputBorderRadius: '0.375rem',
+                },
               }
-            }
+            },
+            style: {
+              button: {
+                padding: '8px 16px',
+                fontSize: '14px',
+              },
+              input: {
+                padding: '8px 12px',
+                fontSize: '14px',
+              },
+            },
           }}
           theme="dark"
-          providers={[]}
-          onError={(error) => {
-            console.error('Auth error:', error);
-            toast({
-              title: "Authentication Error",
-              description: error.message,
-              variant: "destructive",
-            });
-          }}
+          providers={['google']}
+          redirectTo={window.location.origin}
+          magicLink={false}
         />
       </div>
     </div>
