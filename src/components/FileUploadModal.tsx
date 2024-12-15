@@ -4,7 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Upload, FileAudio, FileText, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { validateAudioFile } from '@/utils/audioUtils';
 import { useToast } from '@/hooks/use-toast';
-import FileUploader from './audio/FileUploader';
+import WAVConverter from './audio/WAVConverter';
+import BlobProcessor from './audio/BlobProcessor';
 
 interface FileUploadModalProps {
   onFileSelected: (file: File) => void;
@@ -14,6 +15,7 @@ const FileUploadModal = ({ onFileSelected }: FileUploadModalProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -22,13 +24,55 @@ const FileUploadModal = ({ onFileSelected }: FileUploadModalProps) => {
     if (!file) return;
 
     try {
-      // For now, we only handle audio files
+      // Validate the audio file
       validateAudioFile(file);
-      onFileSelected(file);
-      setIsOpen(false);
+      
+      // Convert file to blob
+      const blob = new Blob([await file.arrayBuffer()], { type: file.type });
+      
+      console.log('Processing uploaded audio file:', { 
+        type: file.type,
+        size: file.size
+      });
+
+      // Convert to WAV if needed
+      const handleWAVBlob = async (wavBlob: Blob) => {
+        console.log('WAV conversion complete:', { 
+          size: wavBlob.size, 
+          type: wavBlob.type 
+        });
+        
+        setIsProcessing(true);
+        
+        try {
+          // Process through BlobProcessor for transcription
+          const processor = new BlobProcessor({
+            blob: wavBlob,
+            onProcessingComplete: (text) => {
+              console.log('Transcription complete:', text);
+              onFileSelected(file);
+              setIsOpen(false);
+              setIsProcessing(false);
+            },
+            onProcessingStart: () => setIsProcessing(true),
+            onProcessingEnd: () => setIsProcessing(false)
+          });
+          
+          // Trigger processing
+          processor.processBlob(wavBlob);
+        } catch (error) {
+          console.error('Error processing audio:', error);
+          setError('Failed to process audio file. Please try again.');
+          setIsProcessing(false);
+        }
+      };
+
+      // Convert to WAV format
+      await WAVConverter({ blob, onConversionComplete: handleWAVBlob });
+      
       toast({
         title: "File selected",
-        description: "Your file has been selected and is being processed.",
+        description: "Your file is being processed for transcription.",
       });
     } catch (error: any) {
       setError(error.message);
@@ -100,8 +144,16 @@ const FileUploadModal = ({ onFileSelected }: FileUploadModalProps) => {
                   className="hidden" 
                   accept="audio/*"
                   onChange={handleFileChange}
+                  disabled={isProcessing}
                 />
               </label>
+              
+              {isProcessing && (
+                <div className="flex items-center justify-center gap-2 text-sm text-white/70">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white/70" />
+                  Processing audio...
+                </div>
+              )}
             </div>
           </TabsContent>
           
