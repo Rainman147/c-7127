@@ -54,8 +54,8 @@ const ChatInput = ({
 
   return (
     <div className="relative flex w-full flex-col items-center">
-      <div className="w-full max-w-4xl bg-[#2F2F2F] rounded-xl">
-        {/* Input field */}
+      <div className="w-full max-w-4xl bg-[#2F2F2F] rounded-xl overflow-hidden">
+        {/* Input field - removed border and padding bottom */}
         <div className="w-full">
           <textarea
             rows={1}
@@ -69,12 +69,12 @@ const ChatInput = ({
           />
         </div>
         
-        {/* Icon row */}
-        <div className="flex items-center justify-between px-4 py-2 border-t border-gray-700">
+        {/* Icon row - removed border-t and adjusted padding */}
+        <div className="flex items-center justify-between px-4 py-2 bg-transparent">
           {/* Left side icons */}
           <div className="flex items-center space-x-2">
             <FileUploadModal 
-              onFileSelected={handleFileUpload} 
+              onFileSelected={handleFileUpload}
               onTranscriptionComplete={onTranscriptionComplete}
             />
           </div>
