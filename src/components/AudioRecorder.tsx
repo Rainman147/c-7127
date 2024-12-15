@@ -6,10 +6,9 @@ import { useToast } from '@/hooks/use-toast';
 
 interface AudioRecorderProps {
   onTranscriptionComplete: (text: string) => void;
-  className?: string; // Added className prop
 }
 
-const AudioRecorder = ({ onTranscriptionComplete, className }: AudioRecorderProps) => {
+const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const { toast } = useToast();
 
@@ -45,15 +44,13 @@ const AudioRecorder = ({ onTranscriptionComplete, className }: AudioRecorderProp
   };
 
   return (
-    <div className={className}>
-      <AudioControls
-        isRecording={isRecording}
-        onStartRecording={handleStartRecording}
-        onStopRecording={handleStopRecording}
-        onFileUpload={handleFileUpload}
-        onTranscriptionComplete={onTranscriptionComplete}
-      />
-    </div>
+    <AudioControls
+      isRecording={isRecording}
+      onStartRecording={handleStartRecording}
+      onStopRecording={handleStopRecording}
+      onFileUpload={handleFileUpload}
+      onTranscriptionComplete={onTranscriptionComplete}
+    />
   );
 };
 
