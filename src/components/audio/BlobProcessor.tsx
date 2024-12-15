@@ -1,3 +1,5 @@
+import { supabase } from '@/integrations/supabase/client';
+
 interface BlobProcessorConfig {
   blob: Blob | null;
   onProcessingComplete: (text: string) => void;

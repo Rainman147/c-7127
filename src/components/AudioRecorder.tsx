@@ -6,6 +6,7 @@ import ProcessingIndicator from './ProcessingIndicator';
 import AudioCapture from './audio/AudioCapture';
 import BlobProcessor from './audio/BlobProcessor';
 import WAVConverter from './audio/WAVConverter';
+import { useToast } from '@/hooks/use-toast';
 
 interface AudioRecorderProps {
   onTranscriptionComplete: (text: string) => void;
@@ -16,6 +17,7 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileUploaderRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const handleBlobData = async (blob: Blob) => {
     console.log('Converting audio to WAV format...');
@@ -35,6 +37,38 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
     fileUploaderRef.current?.click();
   };
 
+  // Process the audio blob when it's available
+  const processAudioBlob = async (blob: Blob) => {
+    try {
+      const processor = new BlobProcessor({
+        blob,
+        onProcessingComplete: (text) => {
+          onTranscriptionComplete(text);
+          setAudioBlob(null);
+        },
+        onProcessingStart: () => setIsProcessing(true),
+        onProcessingEnd: () => {
+          setIsProcessing(false);
+          setUploadProgress(0);
+        }
+      });
+
+      await processor.processBlob(blob);
+    } catch (error: any) {
+      console.error('Error processing audio:', error);
+      toast({
+        title: "Audio Processing Error",
+        description: error.message || "Failed to process audio. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Process the audio blob when it changes
+  if (audioBlob && !isProcessing) {
+    processAudioBlob(audioBlob);
+  }
+
   return (
     <div className="flex items-center gap-4">
       <FileUploader onFileSelected={setAudioBlob} />
@@ -45,20 +79,6 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
           status={uploadProgress < 100 ? "Uploading audio..." : "Processing audio..."}
         />
       )}
-      
-      <BlobProcessor
-        blob={audioBlob}
-        onProcessingComplete={(text) => {
-          // Always send transcription to input field via onTranscriptionComplete
-          onTranscriptionComplete(text);
-        }}
-        onProcessingStart={() => setIsProcessing(true)}
-        onProcessingEnd={() => {
-          setAudioBlob(null);
-          setIsProcessing(false);
-          setUploadProgress(0);
-        }}
-      />
       
       <AudioControls
         isRecording={audioCapture.isRecording}
