@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { ArrowUp, Loader2 } from "lucide-react";
-import AudioRecorder from "./AudioRecorder";
-import FileUploadModal from "./FileUploadModal";
 import { useToast } from "@/hooks/use-toast";
+import ChatInputField from "./chat/ChatInputField";
+import ChatInputActions from "./chat/ChatInputActions";
 
 interface ChatInputProps {
   onSend: (message: string, type?: 'text' | 'audio') => void;
@@ -48,55 +47,24 @@ const ChatInput = ({
 
   const handleFileUpload = async (file: File) => {
     console.log('File uploaded:', file);
-    // The FileUploadModal component will handle the actual file processing
-    // and call onTranscriptionComplete when done
   };
 
   return (
     <div className="relative flex w-full flex-col items-center">
       <div className="w-full max-w-4xl bg-[#2F2F2F] rounded-xl overflow-hidden">
-        {/* Input field - removed border and padding bottom */}
-        <div className="w-full">
-          <textarea
-            rows={1}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Message Claude"
-            className="w-full resize-none bg-transparent px-4 py-4 focus:outline-none"
-            style={{ maxHeight: "200px" }}
-            disabled={isLoading}
-          />
-        </div>
-        
-        {/* Icon row - removed border-t and adjusted padding */}
-        <div className="flex items-center justify-between px-4 py-2 bg-transparent">
-          {/* Left side icons */}
-          <div className="flex items-center space-x-2">
-            <FileUploadModal 
-              onFileSelected={handleFileUpload}
-              onTranscriptionComplete={onTranscriptionComplete}
-            />
-          </div>
-          
-          {/* Right side icons */}
-          <div className="flex items-center space-x-2">
-            <AudioRecorder 
-              onTranscriptionComplete={handleTranscriptionComplete}
-            />
-            <button 
-              onClick={handleSubmit}
-              disabled={isLoading || !message.trim()}
-              className="p-2 bg-white rounded-full hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-            >
-              {isLoading ? (
-                <Loader2 className="h-5 w-5 text-black animate-spin" />
-              ) : (
-                <ArrowUp className="h-5 w-5 text-black" />
-              )}
-            </button>
-          </div>
-        </div>
+        <ChatInputField
+          message={message}
+          setMessage={setMessage}
+          handleKeyDown={handleKeyDown}
+          isLoading={isLoading}
+        />
+        <ChatInputActions
+          isLoading={isLoading}
+          message={message}
+          handleSubmit={handleSubmit}
+          onTranscriptionComplete={handleTranscriptionComplete}
+          handleFileUpload={handleFileUpload}
+        />
       </div>
     </div>
   );
