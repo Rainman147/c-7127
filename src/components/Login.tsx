@@ -35,14 +35,16 @@ const Login = () => {
         });
       }
 
-      // Handle any authentication errors
-      if (session?.error) {
-        const authError = session.error as AuthError;
-        toast({
-          title: "Authentication Error",
-          description: authError.message,
-          variant: "destructive",
-        });
+      // Handle any authentication errors that might occur during the auth state change
+      if (event === 'AUTH_ERROR') {
+        const error = session as unknown as { error: AuthError };
+        if (error?.error) {
+          toast({
+            title: "Authentication Error",
+            description: error.error.message,
+            variant: "destructive",
+          });
+        }
       }
     });
 
