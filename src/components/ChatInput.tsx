@@ -51,7 +51,7 @@ const ChatInput = ({
 
   return (
     <div className="relative flex w-full flex-col items-center">
-      <div className="w-full max-w-4xl bg-[#2F2F2F] rounded-xl overflow-hidden">
+      <div className="w-full max-w-4xl rounded-3xl overflow-hidden bg-[#2F2F2F]">
         <ChatInputField
           message={message}
           setMessage={setMessage}
