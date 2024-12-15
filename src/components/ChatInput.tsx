@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { ArrowUp, Loader2, X } from "lucide-react";
+import { ArrowUp, Loader2 } from "lucide-react";
 import AudioRecorder from "./AudioRecorder";
+import FileUploadModal from "./FileUploadModal";
 import { useToast } from "@/hooks/use-toast";
 
 interface ChatInputProps {
@@ -35,10 +36,7 @@ const ChatInput = ({
 
   const handleTranscriptionComplete = (transcription: string) => {
     console.log('Transcription complete in ChatInput:', transcription);
-    // Always set the transcription in the input field first
     setMessage(transcription);
-    
-    // Notify parent component but don't directly send the message
     onTranscriptionComplete(transcription);
     
     toast({
@@ -48,51 +46,50 @@ const ChatInput = ({
     });
   };
 
-  const handleClearInput = () => {
-    setMessage("");
-    toast({
-      title: "Input cleared",
-      description: "The message input has been cleared.",
-    });
-  };
-
   return (
     <div className="relative flex w-full flex-col items-center">
-      <div className="relative w-full">
-        <textarea
-          rows={1}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Message Claude"
-          className="w-full resize-none rounded-full bg-[#2F2F2F] px-4 py-4 pr-24 focus:outline-none"
-          style={{ maxHeight: "200px" }}
-          disabled={isLoading}
-        />
-        <div className="absolute right-3 top-[50%] -translate-y-[50%] flex items-center gap-2">
-          {message && (
-            <button
-              onClick={handleClearInput}
-              className="p-1.5 hover:bg-gray-700 rounded-full transition-colors"
-              title="Clear input"
-            >
-              <X className="h-4 w-4 text-gray-400" />
-            </button>
-          )}
-          <AudioRecorder 
-            onTranscriptionComplete={handleTranscriptionComplete}
+      <div className="w-full max-w-4xl bg-[#2F2F2F] rounded-xl">
+        {/* Input field */}
+        <div className="w-full">
+          <textarea
+            rows={1}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Message Claude"
+            className="w-full resize-none bg-transparent px-4 py-4 focus:outline-none"
+            style={{ maxHeight: "200px" }}
+            disabled={isLoading}
           />
-          <button 
-            onClick={handleSubmit}
-            disabled={isLoading || !message.trim()}
-            className="p-1.5 bg-white rounded-full hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 text-black animate-spin" />
-            ) : (
-              <ArrowUp className="h-4 w-4 text-black" />
-            )}
-          </button>
+        </div>
+        
+        {/* Icon row */}
+        <div className="flex items-center justify-between px-4 py-2 border-t border-gray-700">
+          {/* Left side icons */}
+          <div className="flex items-center space-x-2">
+            <FileUploadModal 
+              onFileSelected={onFileUpload} 
+              onTranscriptionComplete={onTranscriptionComplete}
+            />
+          </div>
+          
+          {/* Right side icons */}
+          <div className="flex items-center space-x-2">
+            <AudioRecorder 
+              onTranscriptionComplete={handleTranscriptionComplete}
+            />
+            <button 
+              onClick={handleSubmit}
+              disabled={isLoading || !message.trim()}
+              className="p-2 bg-white rounded-full hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            >
+              {isLoading ? (
+                <Loader2 className="h-5 w-5 text-black animate-spin" />
+              ) : (
+                <ArrowUp className="h-5 w-5 text-black" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

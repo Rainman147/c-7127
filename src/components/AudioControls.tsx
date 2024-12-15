@@ -26,7 +26,7 @@ const AudioControls = ({
               onClick={isRecording ? onStopRecording : onStartRecording}
               className={`p-2 rounded-full transition-all duration-300 ${
                 isRecording 
-                  ? 'bg-red-500 hover:bg-red-600 animate-pulse shadow-lg shadow-red-500/50' 
+                  ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
                   : 'bg-gray-200 hover:bg-gray-300'
               }`}
               aria-label={isRecording ? "Stop recording" : "Start recording"}
@@ -40,20 +40,6 @@ const AudioControls = ({
           </TooltipTrigger>
           <TooltipContent>
             <p>{isRecording ? "Stop recording" : "Start recording"}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <FileUploadModal 
-              onFileSelected={onFileUpload} 
-              onTranscriptionComplete={onTranscriptionComplete}
-            />
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Upload audio file</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
