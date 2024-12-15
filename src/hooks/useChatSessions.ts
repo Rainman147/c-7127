@@ -38,9 +38,15 @@ export const useChatSessions = () => {
 
   const createSession = async (title: string = 'New Chat') => {
     try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('User not authenticated');
+
       const { data, error } = await supabase
         .from('chats')
-        .insert({ title })
+        .insert({ 
+          title,
+          user_id: user.id 
+        })
         .select()
         .single();
 

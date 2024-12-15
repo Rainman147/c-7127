@@ -42,7 +42,7 @@ const Index = () => {
       setMessages(messages.map(msg => ({
         role: msg.sender as 'user' | 'assistant',
         content: msg.content,
-        type: msg.type
+        type: msg.type as 'text' | 'audio'
       })));
     } catch (error) {
       console.error('Error loading chat messages:', error);
