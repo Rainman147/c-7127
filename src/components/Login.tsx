@@ -3,6 +3,7 @@ import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
+import { AuthError } from '@supabase/supabase-js';
 
 const Login = () => {
   const { toast } = useToast();
@@ -32,20 +33,14 @@ const Login = () => {
           title: "Password recovery",
           description: "Check your email for password reset instructions.",
         });
-      } else if (event === 'USER_DELETED') {
-        toast({
-          title: "Account deleted",
-          description: "Your account has been successfully deleted.",
-        });
       }
-    });
 
-    // Also listen for auth errors
-    const authListener = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'AUTH_ERROR') {
+      // Handle any authentication errors
+      if (session?.error) {
+        const authError = session.error as AuthError;
         toast({
           title: "Authentication Error",
-          description: "There was a problem with authentication. Please try again.",
+          description: authError.message,
           variant: "destructive",
         });
       }
