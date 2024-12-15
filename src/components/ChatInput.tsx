@@ -46,6 +46,12 @@ const ChatInput = ({
     });
   };
 
+  const handleFileUpload = async (file: File) => {
+    console.log('File uploaded:', file);
+    // The FileUploadModal component will handle the actual file processing
+    // and call onTranscriptionComplete when done
+  };
+
   return (
     <div className="relative flex w-full flex-col items-center">
       <div className="w-full max-w-4xl bg-[#2F2F2F] rounded-xl">
@@ -68,7 +74,7 @@ const ChatInput = ({
           {/* Left side icons */}
           <div className="flex items-center space-x-2">
             <FileUploadModal 
-              onFileSelected={onFileUpload} 
+              onFileSelected={handleFileUpload} 
               onTranscriptionComplete={onTranscriptionComplete}
             />
           </div>
