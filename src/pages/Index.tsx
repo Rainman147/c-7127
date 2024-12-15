@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import Sidebar from '@/components/Sidebar';
 import ChatHeader from '@/components/ChatHeader';
 import ChatInput from '@/components/ChatInput';
-import ActionButtons from '@/components/ActionButtons';
 import MessageList from '@/components/MessageList';
 import { useChat } from '@/hooks/useChat';
 
@@ -65,7 +64,6 @@ const Index = () => {
                   isLoading={isLoading} 
                 />
               </div>
-              <ActionButtons onTranscriptionComplete={handleTranscriptionComplete} />
             </div>
           ) : (
             <>
