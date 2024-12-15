@@ -13,7 +13,8 @@ export const validateAudioFile = (file: File | Blob) => {
     'audio/webm'
   ];
 
-  const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+  // Increased to 100MB since we now support chunked uploads
+  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
   if (!SUPPORTED_FORMATS.includes(file.type)) {
     throw new Error(`Unsupported format: ${file.type}. Please upload a WAV, MP3, M4A, or WebM file.`);

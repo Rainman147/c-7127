@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Upload, FileAudio, FileText, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { validateAudioFile } from '@/utils/audioUtils';
 import { useToast } from '@/hooks/use-toast';
+import FileUploader from './audio/FileUploader';
 
 interface FileUploadModalProps {
   onFileSelected: (file: File) => void;
@@ -76,7 +77,7 @@ const FileUploadModal = ({ onFileSelected }: FileUploadModalProps) => {
           <TabsContent value="audio" className="mt-4">
             <div className="space-y-4">
               <div className="text-sm text-white/70">
-                Supported formats: MP3, WAV, FLAC
+                Supported formats: MP3, WAV, FLAC (up to 100MB)
               </div>
               
               {error && (
@@ -92,7 +93,7 @@ const FileUploadModal = ({ onFileSelected }: FileUploadModalProps) => {
                   <p className="mb-2 text-sm text-white/90">
                     <span className="font-semibold">Click to upload</span> or drag and drop
                   </p>
-                  <p className="text-xs text-white/70">Maximum file size: 25MB</p>
+                  <p className="text-xs text-white/70">Maximum file size: 100MB</p>
                 </div>
                 <input 
                   type="file" 
