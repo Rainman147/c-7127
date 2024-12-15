@@ -1,11 +1,12 @@
-import { Mic, Square, Upload } from 'lucide-react';
+import { Mic, Square } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import FileUploadModal from './FileUploadModal';
 
 interface AudioControlsProps {
   isRecording: boolean;
   onStartRecording: () => void;
   onStopRecording: () => void;
-  onFileUpload: () => void;
+  onFileUpload: (file: File) => void;
 }
 
 const AudioControls = ({
@@ -44,13 +45,7 @@ const AudioControls = ({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
-              onClick={onFileUpload}
-              className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition-colors"
-              aria-label="Upload audio file"
-            >
-              <Upload className="h-5 w-5 text-gray-700" />
-            </button>
+            <FileUploadModal onFileSelected={onFileUpload} />
           </TooltipTrigger>
           <TooltipContent>
             <p>Upload audio file</p>
