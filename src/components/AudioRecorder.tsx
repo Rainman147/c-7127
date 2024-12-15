@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 import AudioControls from './AudioControls';
-import AudioProcessor from './audio/AudioProcessor';
 import FileUploader from './audio/FileUploader';
 import ProcessingIndicator from './ProcessingIndicator';
 import AudioCapture from './audio/AudioCapture';
