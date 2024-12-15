@@ -1,30 +1,25 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { AudioPayload } from './types';
-import { useToast } from '@/hooks/use-toast';
 
 interface AudioProcessingOptions {
   onTranscriptionComplete: (text: string) => void;
   onError: (error: string) => void;
 }
 
-export const useAudioProcessing = ({ onTranscriptionComplete, onError }: AudioProcessingOptions) => {
-  const [liveTranscription, setLiveTranscription] = useState('');
-  const { toast } = useToast();
-  
-  const processAudioData = async (audioData: string, mimeType: string): Promise<string> => {
-    console.log('Processing audio data...');
-    const payload: AudioPayload = {
-      audioData,
-      metadata: {
-        mimeType,
-        streaming: true
-      }
-    };
-
+export const useAudioProcessing = ({ 
+  onTranscriptionComplete, 
+  onError 
+}: AudioProcessingOptions) => {
+  const processAudioData = useCallback(async (audioData: string, mimeType: string): Promise<string> => {
+    console.log('Processing audio data:', { mimeType });
+    
     try {
       const { data, error } = await supabase.functions.invoke('transcribe', {
-        body: payload
+        body: { 
+          audioData,
+          mimeType,
+          streaming: true
+        }
       });
 
       if (error) {
@@ -37,65 +32,44 @@ export const useAudioProcessing = ({ onTranscriptionComplete, onError }: AudioPr
       }
 
       console.log('Transcription received:', data.transcription);
+      onTranscriptionComplete(data.transcription);
       return data.transcription;
+
     } catch (error: any) {
       console.error('Audio processing error:', error);
       onError(error.message || 'Failed to process audio');
       throw error;
     }
-  };
-
-  const updateTranscription = useCallback((newText: string) => {
-    setLiveTranscription(prev => {
-      const updated = prev + (prev ? ' ' : '') + newText;
-      return updated;
-    });
-  }, []);
-
-  const startRecording = useCallback(async () => {
-    console.log('Starting recording from useAudioProcessing...');
-    try {
-      // Implementation will be handled by RecordingManager
-      return true;
-    } catch (error: any) {
-      console.error('Start recording error:', error);
-      onError(error.message);
-      return false;
-    }
-  }, [onError]);
-
-  const stopRecording = useCallback(async () => {
-    console.log('Stopping recording from useAudioProcessing...');
-    try {
-      // Implementation will be handled by RecordingManager
-      return true;
-    } catch (error: any) {
-      console.error('Stop recording error:', error);
-      onError(error.message);
-      return false;
-    }
-  }, [onError]);
+  }, [onTranscriptionComplete, onError]);
 
   const handleFileUpload = useCallback(async (file: File) => {
-    console.log('Handling file upload from useAudioProcessing...');
+    console.log('Processing uploaded file:', { type: file.type, size: file.size });
+    
     try {
-      // File processing logic will be implemented here
-      toast({
-        title: "Processing audio file",
-        description: "Please wait while we process your audio file...",
+      // Convert file to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const base64String = reader.result as string;
+          const base64Data = base64String.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
       });
+
+      reader.readAsDataURL(file);
+      const base64Data = await base64Promise;
+      
+      return await processAudioData(base64Data, file.type);
     } catch (error: any) {
       console.error('File upload error:', error);
-      onError(error.message);
+      onError(error.message || 'Failed to process audio file');
+      throw error;
     }
-  }, [onError, toast]);
+  }, [processAudioData, onError]);
 
   return {
     processAudioData,
-    updateTranscription,
-    liveTranscription,
-    startRecording,
-    stopRecording,
     handleFileUpload
   };
 };

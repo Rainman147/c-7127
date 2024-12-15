@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useErrorHandling } from './transcription/useErrorHandling';
 import { useAudioProcessing } from './transcription/useAudioProcessing';
 import { TranscriptionHookProps } from './transcription/types';
@@ -13,7 +12,7 @@ export const useTranscription = ({
   const { handleTranscriptionError, isReconnecting } = useErrorHandling();
   const { toast } = useToast();
   
-  const { processAudioData, updateTranscription, liveTranscription } = useAudioProcessing({
+  const { processAudioData } = useAudioProcessing({
     onTranscriptionComplete,
     onError: (error: string) => {
       toast({
@@ -33,11 +32,7 @@ export const useTranscription = ({
       console.log('Received transcription:', transcription);
       
       if (transcription && transcription.trim()) {
-        // Send the update to the input field
         onTranscriptionUpdate?.(transcription);
-        
-        // Update internal state
-        updateTranscription(transcription);
       }
       
     } catch (error) {
@@ -47,7 +42,6 @@ export const useTranscription = ({
 
   return {
     handleAudioData,
-    isReconnecting,
-    liveTranscription
+    isReconnecting
   };
 };
