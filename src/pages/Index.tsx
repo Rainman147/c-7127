@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Sidebar from '@/components/Sidebar';
 import ChatHeader from '@/components/ChatHeader';
@@ -7,13 +6,11 @@ import ChatInput from '@/components/ChatInput';
 import ActionButtons from '@/components/ActionButtons';
 import MessageList from '@/components/MessageList';
 import { useChat } from '@/hooks/useChat';
-import Login from '@/components/Login';
 
 const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [session, setSession] = useState<any>(null);
   const { messages, isLoading, handleSendMessage, handleTranscriptionError, setMessages } = useChat();
-  const navigate = useNavigate();
 
   useEffect(() => {
     // Get initial session
@@ -31,18 +28,9 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Remove the handleTranscriptionUpdate function since we don't want to show streaming updates
-  // in the chat window anymore
-
   const handleTranscriptionComplete = async (text: string) => {
-    // Don't add the transcription to messages here - it will be sent
-    // only when the user clicks the send button
     console.log('Transcription complete, ready for user to edit:', text);
   };
-
-  if (!session) {
-    return <Login />;
-  }
 
   return (
     <div className="flex h-screen">
