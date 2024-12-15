@@ -42,11 +42,16 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
       const processor = new BlobProcessor({
         blob,
         onProcessingComplete: (text) => {
+          console.log('Transcription complete:', text);
           onTranscriptionComplete(text);
           setAudioBlob(null);
         },
-        onProcessingStart: () => setIsProcessing(true),
+        onProcessingStart: () => {
+          console.log('Starting audio processing...');
+          setIsProcessing(true);
+        },
         onProcessingEnd: () => {
+          console.log('Audio processing completed');
           setIsProcessing(false);
           setUploadProgress(0);
         }
@@ -60,6 +65,8 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
         description: error.message || "Failed to process audio. Please try again.",
         variant: "destructive",
       });
+      setIsProcessing(false);
+      setUploadProgress(0);
     }
   };
 
