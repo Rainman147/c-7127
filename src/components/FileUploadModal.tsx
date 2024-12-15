@@ -8,9 +8,10 @@ import FileProcessor from './audio/FileProcessor';
 
 interface FileUploadModalProps {
   onFileSelected: (file: File) => void;
+  onTranscriptionComplete: (text: string) => void;
 }
 
-const FileUploadModal = ({ onFileSelected }: FileUploadModalProps) => {
+const FileUploadModal = ({ onFileSelected, onTranscriptionComplete }: FileUploadModalProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
@@ -34,14 +35,15 @@ const FileUploadModal = ({ onFileSelected }: FileUploadModalProps) => {
       // Create FileProcessor instance
       const processor = new FileProcessor({
         onProcessingComplete: (text) => {
-          console.log('Transcription complete:', text);
+          console.log('Transcription complete in FileUploadModal:', text);
           onFileSelected(file);
+          onTranscriptionComplete(text); // Pass the transcription text up
           setIsOpen(false);
           setIsProcessing(false);
           
           toast({
             title: "Transcription complete",
-            description: "Your audio file has been processed successfully.",
+            description: "Your audio has been processed successfully.",
           });
         },
         onProcessingStart: () => setIsProcessing(true),

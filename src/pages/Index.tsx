@@ -29,7 +29,18 @@ const Index = () => {
   }, []);
 
   const handleTranscriptionComplete = async (text: string) => {
-    console.log('Transcription complete, ready for user to edit:', text);
+    console.log('Transcription complete in Index, ready for user to edit:', text);
+    // Pass the transcription to ChatInput
+    if (text) {
+      // We don't send the message automatically, just populate the input
+      const chatInput = document.querySelector('textarea');
+      if (chatInput) {
+        (chatInput as HTMLTextAreaElement).value = text;
+        // Trigger a change event to update the state
+        const event = new Event('input', { bubbles: true });
+        chatInput.dispatchEvent(event);
+      }
+    }
   };
 
   return (
@@ -54,7 +65,7 @@ const Index = () => {
                   isLoading={isLoading} 
                 />
               </div>
-              <ActionButtons />
+              <ActionButtons onTranscriptionComplete={handleTranscriptionComplete} />
             </div>
           ) : (
             <>
