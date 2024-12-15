@@ -43,6 +43,12 @@ const FileUploader = ({ onFileSelected }: FileUploaderProps) => {
       validateAudioFile(file);
       setIsUploading(true);
       
+      // Get the current user's ID
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('Authentication required');
+      }
+      
       // Create upload session
       const { data: session, error: sessionError } = await supabase
         .from('file_upload_sessions')
@@ -50,7 +56,8 @@ const FileUploader = ({ onFileSelected }: FileUploaderProps) => {
           original_filename: file.name,
           content_type: file.type,
           total_size: file.size,
-          total_chunks: Math.ceil(file.size / (5 * 1024 * 1024))
+          total_chunks: Math.ceil(file.size / (5 * 1024 * 1024)),
+          user_id: user.id
         })
         .select()
         .single();
