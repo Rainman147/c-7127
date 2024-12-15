@@ -88,6 +88,53 @@ export type Database = {
           },
         ]
       }
+      file_upload_sessions: {
+        Row: {
+          chunks_uploaded: number | null
+          content_type: string
+          created_at: string
+          id: string
+          original_filename: string
+          status: string | null
+          total_chunks: number
+          total_size: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chunks_uploaded?: number | null
+          content_type: string
+          created_at?: string
+          id?: string
+          original_filename: string
+          status?: string | null
+          total_chunks: number
+          total_size: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chunks_uploaded?: number | null
+          content_type?: string
+          created_at?: string
+          id?: string
+          original_filename?: string
+          status?: string | null
+          total_chunks?: number
+          total_size?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_upload_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           chat_id: string
@@ -149,7 +196,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cleanup_expired_upload_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
