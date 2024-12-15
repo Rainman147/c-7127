@@ -6,15 +6,17 @@ import { useToast } from '@/hooks/use-toast';
 
 interface AudioRecorderProps {
   onTranscriptionComplete: (text: string) => void;
+  onRecordingStateChange?: (isRecording: boolean) => void;
 }
 
-const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
+const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: AudioRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const { toast } = useToast();
 
   const handleError = (error: string) => {
     console.error('Audio processing error:', error);
     setIsRecording(false);
+    onRecordingStateChange?.(false);
     toast({
       title: "Error",
       description: error,
@@ -26,6 +28,7 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
     console.log('Transcription completed successfully:', text);
     onTranscriptionComplete(text);
     setIsRecording(false);
+    onRecordingStateChange?.(false);
   };
 
   const { startRecording: startRec, stopRecording: stopRec } = useRecording({
@@ -41,6 +44,7 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
   const handleStartRecording = async () => {
     console.log('Starting recording...');
     setIsRecording(true);
+    onRecordingStateChange?.(true);
     await startRec();
   };
 
