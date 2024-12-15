@@ -1,14 +1,17 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RecordingOptions {
   onError: (error: string) => void;
+  onTranscriptionComplete: (text: string) => void;
 }
 
-export const useRecording = ({ onError }: RecordingOptions) => {
+export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOptions) => {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const { toast } = useToast();
+  const chunks: Blob[] = [];
 
   const startRecording = useCallback(async () => {
     try {
@@ -24,17 +27,55 @@ export const useRecording = ({ onError }: RecordingOptions) => {
       });
 
       const recorder = new MediaRecorder(stream);
-      const chunks: Blob[] = [];
-
+      
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           chunks.push(e.data);
         }
       };
 
-      recorder.onstop = () => {
-        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-        console.log('Recording stopped, blob created:', { size: audioBlob.size });
+      recorder.onstop = async () => {
+        try {
+          const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+          console.log('Recording stopped, blob created:', { size: audioBlob.size });
+
+          // Convert blob to base64
+          const reader = new FileReader();
+          reader.onloadend = async () => {
+            const base64Audio = (reader.result as string).split(',')[1];
+            
+            console.log('Sending audio data to transcription service...');
+            const { data, error } = await supabase.functions.invoke('transcribe', {
+              body: { 
+                audioData: base64Audio,
+                mimeType: 'audio/webm'
+              }
+            });
+
+            if (error) {
+              console.error('Transcription error:', error);
+              onError(error.message);
+              return;
+            }
+
+            if (data?.transcription) {
+              console.log('Transcription received:', data.transcription);
+              onTranscriptionComplete(data.transcription);
+            } else {
+              onError('No transcription received from the service');
+            }
+          };
+
+          reader.onerror = () => {
+            console.error('Error reading audio file:', reader.error);
+            onError('Failed to process audio file');
+          };
+
+          reader.readAsDataURL(audioBlob);
+        } catch (error: any) {
+          console.error('Error processing recording:', error);
+          onError(error.message || 'Failed to process recording');
+        }
       };
 
       setMediaRecorder(recorder);
@@ -44,9 +85,9 @@ export const useRecording = ({ onError }: RecordingOptions) => {
 
     } catch (error: any) {
       console.error('Error starting recording:', error);
-      onError("Could not access microphone. Please check permissions.");
+      onError('Could not access microphone. Please check permissions.');
     }
-  }, [onError]);
+  }, [onError, onTranscriptionComplete]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorder && mediaRecorder.state === 'recording') {

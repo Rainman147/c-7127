@@ -22,12 +22,19 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
     });
   };
 
+  const handleTranscriptionSuccess = (text: string) => {
+    console.log('Transcription completed successfully:', text);
+    onTranscriptionComplete(text);
+    setIsRecording(false);
+  };
+
   const { startRecording: startRec, stopRecording: stopRec } = useRecording({
-    onError: handleError
+    onError: handleError,
+    onTranscriptionComplete: handleTranscriptionSuccess
   });
 
   const { handleFileUpload } = useAudioProcessing({
-    onTranscriptionComplete,
+    onTranscriptionComplete: handleTranscriptionSuccess,
     onError: handleError
   });
 
@@ -39,7 +46,6 @@ const AudioRecorder = ({ onTranscriptionComplete }: AudioRecorderProps) => {
 
   const handleStopRecording = async () => {
     console.log('Stopping recording...');
-    setIsRecording(false);
     await stopRec();
   };
 
