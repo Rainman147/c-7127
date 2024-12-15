@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 interface ChatInputFieldProps {
   message: string;
@@ -13,16 +13,35 @@ const ChatInputField = ({
   handleKeyDown,
   isLoading 
 }: ChatInputFieldProps) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      const newHeight = Math.min(textarea.scrollHeight, 200); // Max height of 200px
+      textarea.style.height = `${newHeight}px`;
+    }
+  };
+
+  // Adjust height when message changes
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [message]);
+
   return (
     <div className="w-full">
       <textarea
+        ref={textareaRef}
         rows={1}
         value={message}
-        onChange={(e) => setMessage(e.target.value)}
+        onChange={(e) => {
+          setMessage(e.target.value);
+          adjustTextareaHeight();
+        }}
         onKeyDown={handleKeyDown}
         placeholder="Message Claude"
-        className="w-full resize-none bg-transparent px-4 py-4 focus:outline-none"
-        style={{ maxHeight: "200px" }}
+        className="w-full min-h-[40px] max-h-[200px] resize-none bg-transparent px-4 py-2 focus:outline-none overflow-y-auto transition-all duration-150 ease-in-out scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 hover:scrollbar-thumb-gray-500"
         disabled={isLoading}
       />
     </div>
