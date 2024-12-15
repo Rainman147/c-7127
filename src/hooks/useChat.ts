@@ -14,6 +14,7 @@ export const useChat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -44,6 +45,7 @@ export const useChat = () => {
 
         if (chatError) throw chatError;
         chatId = chatData.id;
+        setCurrentChatId(chatId);
       }
 
       // Insert the message
@@ -82,7 +84,8 @@ export const useChat = () => {
       setMessages(newMessages);
 
       // Save message to Supabase
-      await saveMessageToSupabase(userMessage);
+      const chatId = await saveMessageToSupabase(userMessage, currentChatId);
+      setCurrentChatId(chatId);
 
       // Cancel any ongoing stream
       if (abortControllerRef.current) {
@@ -121,7 +124,7 @@ export const useChat = () => {
           isStreaming: false
         };
         setMessages(prev => [...prev.slice(0, -1), finalAssistantMessage]);
-        await saveMessageToSupabase(finalAssistantMessage);
+        await saveMessageToSupabase(finalAssistantMessage, chatId);
       }
 
     } catch (error: any) {
@@ -153,6 +156,8 @@ export const useChat = () => {
     isLoading,
     handleSendMessage,
     handleTranscriptionError,
-    setMessages
+    setMessages,
+    currentChatId,
+    setCurrentChatId
   };
 };

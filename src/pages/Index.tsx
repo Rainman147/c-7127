@@ -10,6 +10,7 @@ const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [session, setSession] = useState<any>(null);
   const { messages, isLoading, handleSendMessage, handleTranscriptionError, setMessages } = useChat();
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
   useEffect(() => {
     // Get initial session
@@ -27,15 +28,33 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  const handleSessionSelect = async (chatId: string) => {
+    setCurrentChatId(chatId);
+    try {
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_id', chatId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      
+      setMessages(messages.map(msg => ({
+        role: msg.sender as 'user' | 'assistant',
+        content: msg.content,
+        type: msg.type
+      })));
+    } catch (error) {
+      console.error('Error loading chat messages:', error);
+    }
+  };
+
   const handleTranscriptionComplete = async (text: string) => {
     console.log('Transcription complete in Index, ready for user to edit:', text);
-    // Pass the transcription to ChatInput
     if (text) {
-      // We don't send the message automatically, just populate the input
       const chatInput = document.querySelector('textarea');
       if (chatInput) {
         (chatInput as HTMLTextAreaElement).value = text;
-        // Trigger a change event to update the state
         const event = new Event('input', { bubbles: true });
         chatInput.dispatchEvent(event);
       }
@@ -48,6 +67,7 @@ const Index = () => {
         isOpen={isSidebarOpen} 
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         onApiKeyChange={() => {}} 
+        onSessionSelect={handleSessionSelect}
       />
       
       <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
