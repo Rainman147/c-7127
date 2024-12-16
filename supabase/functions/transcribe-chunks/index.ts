@@ -15,6 +15,7 @@ serve(async (req) => {
     const { sessionId, userId } = await req.json()
     
     if (!sessionId || !userId) {
+      console.error('Missing required parameters:', { sessionId, userId })
       throw new Error('Session ID and User ID are required')
     }
 
@@ -25,11 +26,12 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get all chunks for this session
+    // Get all chunks for this session ordered by chunk number
     const { data: chunks, error: chunksError } = await supabase
       .from('audio_chunks')
       .select('*')
       .eq('user_id', userId)
+      .eq('session_id', sessionId)
       .order('chunk_number', { ascending: true })
 
     if (chunksError) {
@@ -48,7 +50,10 @@ serve(async (req) => {
     const audioChunks: Uint8Array[] = []
     
     for (const chunk of chunks) {
-      console.log('Downloading chunk:', chunk.storage_path)
+      console.log('Processing chunk:', {
+        chunkNumber: chunk.chunk_number,
+        storagePath: chunk.storage_path
+      })
       
       const { data, error: downloadError } = await supabase.storage
         .from('audio_files')
@@ -73,10 +78,12 @@ serve(async (req) => {
       offset += chunk.length
     }
 
+    console.log('Combined audio size:', totalLength, 'bytes')
+
     // Send to Whisper API for transcription
     const { data: transcription, error: transcriptionError } = await supabase.functions.invoke('transcribe', {
       body: { 
-        audioData: combinedArray,
+        audioData: Array.from(combinedArray),
         userId,
         sessionId
       }
@@ -88,6 +95,17 @@ serve(async (req) => {
     }
 
     console.log('Transcription completed successfully')
+
+    // Clean up chunks after successful transcription
+    const { error: cleanupError } = await supabase
+      .from('audio_chunks')
+      .update({ status: 'processed' })
+      .eq('session_id', sessionId)
+
+    if (cleanupError) {
+      console.error('Error cleaning up chunks:', cleanupError)
+      // Don't throw here as transcription was successful
+    }
 
     return new Response(
       JSON.stringify({
