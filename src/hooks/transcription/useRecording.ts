@@ -33,7 +33,12 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       const chunkNumber = chunksRef.current.length;
 
       try {
-        await uploadChunk(event.data, sessionId, chunkNumber);
+        await uploadChunk(
+          event.data, 
+          sessionId, 
+          chunkNumber,
+          chunksRef.current.length // Pass total chunks
+        );
         uploadedChunksCount.current++;
         console.log(`[useRecording] Chunk ${chunkNumber} uploaded successfully`);
       } catch (error: any) {

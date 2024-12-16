@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 export const useChunkUpload = () => {
   const { toast } = useToast();
 
-  const uploadChunk = useCallback(async (chunk: Blob, sessionId: string, chunkNumber: number) => {
+  const uploadChunk = useCallback(async (chunk: Blob, sessionId: string, chunkNumber: number, totalChunks: number) => {
     if (!sessionId) {
       throw new Error('No active recording session');
     }
@@ -22,7 +22,8 @@ export const useChunkUpload = () => {
       console.log('[useChunkUpload] Uploading chunk to storage:', {
         path: storagePath,
         size: chunk.size,
-        chunkNumber
+        chunkNumber,
+        totalChunks
       });
 
       // Upload chunk to storage
@@ -46,6 +47,7 @@ export const useChunkUpload = () => {
           session_id: sessionId,
           storage_path: storagePath,
           chunk_number: chunkNumber,
+          total_chunks: totalChunks,
           original_filename: `chunk_${chunkNumber}.webm`,
           status: 'stored'
         });
@@ -58,7 +60,8 @@ export const useChunkUpload = () => {
       console.log('[useChunkUpload] Successfully uploaded chunk:', {
         chunkNumber,
         sessionId,
-        storagePath
+        storagePath,
+        totalChunks
       });
 
       return { success: true, storagePath };
