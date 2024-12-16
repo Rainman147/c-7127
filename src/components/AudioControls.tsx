@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Mic, Square, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { getDeviceType, getBrowserType } from '@/utils/deviceDetection';
@@ -11,7 +12,7 @@ interface AudioControlsProps {
   onTranscriptionComplete: (text: string) => void;
 }
 
-const RecordingIndicator = () => (
+const RecordingIndicator = memo(() => (
   <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
     <span className="hidden sm:inline">Recording in session</span>
     <span className="inline sm:hidden">Recording</span>
@@ -21,9 +22,11 @@ const RecordingIndicator = () => (
       <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
     </span>
   </div>
-);
+));
 
-const AudioControls = ({
+RecordingIndicator.displayName = 'RecordingIndicator';
+
+const AudioControls = memo(({
   isRecording,
   isInitializing,
   onStartRecording,
@@ -106,6 +109,8 @@ const AudioControls = ({
       {isRecording && <RecordingIndicator />}
     </div>
   );
-};
+});
+
+AudioControls.displayName = 'AudioControls';
 
 export default AudioControls;

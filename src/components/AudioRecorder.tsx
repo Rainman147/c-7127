@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, memo } from 'react';
+import { useState, useCallback, useRef, memo } from 'react';
 import AudioControls from './AudioControls';
 import { useRecording } from '@/hooks/transcription/useRecording';
 import { useAudioProcessing } from '@/hooks/transcription/useAudioProcessing';
@@ -86,8 +86,8 @@ const AudioRecorder = memo(({ onTranscriptionComplete, onRecordingStateChange }:
 
       console.log('[AudioRecorder] Starting recording with network:', networkType);
       await startRec();
-      setIsRecording(true);
       recordingStateRef.current = true;
+      setIsRecording(true);
       onRecordingStateChange?.(true);
     } catch (error) {
       console.error('[AudioRecorder] Start recording error:', error);
