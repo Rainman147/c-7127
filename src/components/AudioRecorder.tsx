@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, memo } from 'react';
 import AudioControls from './AudioControls';
 import { useRecording } from '@/hooks/transcription/useRecording';
 import { useAudioProcessing } from '@/hooks/transcription/useAudioProcessing';
@@ -13,7 +13,7 @@ interface AudioRecorderProps {
   onRecordingStateChange?: (isRecording: boolean) => void;
 }
 
-const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: AudioRecorderProps) => {
+const AudioRecorder = memo(({ onTranscriptionComplete, onRecordingStateChange }: AudioRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const recordingStateRef = useRef(false);
@@ -22,20 +22,6 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
   const validateTranscription = useTranscriptionValidation(onTranscriptionComplete);
   const { toast } = useToast();
   const { isIOS } = getDeviceType();
-
-  useEffect(() => {
-    console.log('[AudioRecorder] Component mounted, hasPermission:', hasPermission);
-    return () => {
-      console.log('[AudioRecorder] Component unmounting');
-      if (recordingStateRef.current) {
-        console.log('[AudioRecorder] Cleaning up active recording');
-      }
-    };
-  }, [hasPermission]);
-
-  useEffect(() => {
-    recordingStateRef.current = isRecording;
-  }, [isRecording]);
 
   const handleError = useCallback((error: string) => {
     console.error('[AudioRecorder] Error:', error);
@@ -99,9 +85,10 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
       }
 
       console.log('[AudioRecorder] Starting recording with network:', networkType);
-      setIsRecording(true);
-      onRecordingStateChange?.(true);
       await startRec();
+      setIsRecording(true);
+      recordingStateRef.current = true;
+      onRecordingStateChange?.(true);
     } catch (error) {
       console.error('[AudioRecorder] Start recording error:', error);
       handleError(error instanceof Error ? error.message : 'Failed to start recording');
@@ -135,6 +122,8 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
       onTranscriptionComplete={onTranscriptionComplete}
     />
   );
-};
+});
+
+AudioRecorder.displayName = 'AudioRecorder';
 
 export default AudioRecorder;
