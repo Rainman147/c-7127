@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useMediaRecorder } from './useMediaRecorder';
 import { useAudioStream } from './useAudioStream';
@@ -44,7 +44,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         toast({
           title: "Backup Warning",
           description: "Audio backup failed, but recording continues",
-          variant: "warning",
+          variant: "default"
         });
       } else {
         setChunkCount(prev => prev + 1);
@@ -63,10 +63,10 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     onError(error.message);
   }, [currentStream, cleanupStream, onError]);
 
-  const { isRecording, startRecording, stopRecording } = useMediaRecorder({
-    onDataAvailable: handleDataAvailable,
-    onError: handleError
-  });
+  const handleTranscriptionSuccess = useCallback((text: string) => {
+    console.log('Transcription completed successfully:', text);
+    onTranscriptionComplete(text);
+  }, [onTranscriptionComplete]);
 
   const startRec = useCallback(async () => {
     try {
@@ -135,7 +135,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
       if (transcriptionData?.transcription) {
         console.log('Transcription complete');
-        onTranscriptionComplete(transcriptionData.transcription);
+        handleTranscriptionSuccess(transcriptionData.transcription);
       }
     } catch (error: any) {
       console.error('Error processing recording:', error);
@@ -146,20 +146,10 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       });
       onError(error.message);
     }
-  }, [stopRecording, currentStream, cleanupStream, onTranscriptionComplete, onError, toast]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (currentStream) {
-        console.log('Cleaning up media stream on unmount');
-        cleanupStream(currentStream);
-      }
-    };
-  }, [currentStream, cleanupStream]);
+  }, [stopRecording, currentStream, cleanupStream, handleTranscriptionSuccess, onError, toast]);
 
   return {
-    isRecording,
+    isRecording: Boolean(currentStream),
     startRecording: startRec,
     stopRecording: stopRec
   };
