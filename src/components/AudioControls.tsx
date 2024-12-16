@@ -1,9 +1,10 @@
-import { Mic, Square } from 'lucide-react';
+import { Mic, Square, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { getDeviceType, getBrowserType } from '@/utils/deviceDetection';
 
 interface AudioControlsProps {
   isRecording: boolean;
+  isInitializing: boolean;
   onStartRecording: () => void;
   onStopRecording: () => void;
   onFileUpload: (file: File) => void;
@@ -24,18 +25,20 @@ const RecordingIndicator = () => (
 
 const AudioControls = ({
   isRecording,
+  isInitializing,
   onStartRecording,
   onStopRecording,
   onFileUpload,
   onTranscriptionComplete
 }: AudioControlsProps) => {
-  console.log('[AudioControls] Rendering with isRecording:', isRecording);
+  console.log('[AudioControls] Rendering with states:', { isRecording, isInitializing });
   
   const { isIOS } = getDeviceType();
   const { isSafari, isChrome } = getBrowserType();
   console.log('[AudioControls] Device detection:', { isIOS, isSafari, isChrome });
 
   const getTooltipContent = () => {
+    if (isInitializing) return "Initializing...";
     if (isRecording) return "Stop recording";
     if (isIOS) {
       if (isChrome) return "Tap to start recording (Chrome iOS)";
@@ -45,10 +48,16 @@ const AudioControls = ({
   };
 
   const handleRecordingClick = async (event: React.MouseEvent) => {
-    event.preventDefault(); // Prevent any default behavior
-    event.stopPropagation(); // Stop event bubbling
+    event.preventDefault();
+    event.stopPropagation();
     
-    console.log('[AudioControls] Record button clicked, current state:', { isRecording });
+    console.log('[AudioControls] Record button clicked, current states:', { isRecording, isInitializing });
+    
+    if (isInitializing) {
+      console.log('[AudioControls] Ignoring click while initializing');
+      return;
+    }
+
     try {
       if (isRecording) {
         console.log('[AudioControls] Stopping recording...');
@@ -70,14 +79,19 @@ const AudioControls = ({
             <button
               onClick={handleRecordingClick}
               className={`p-2 rounded-full transition-all duration-300 ${
-                isRecording 
-                  ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
-                  : 'bg-white hover:bg-gray-100 dark:bg-gray-200 dark:hover:bg-gray-300'
+                isInitializing 
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : isRecording 
+                    ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
+                    : 'bg-white hover:bg-gray-100 dark:bg-gray-200 dark:hover:bg-gray-300'
               }`}
+              disabled={isInitializing}
               aria-label={isRecording ? "Stop recording" : "Start recording"}
-              type="button" // Explicitly set type to prevent form submission
+              type="button"
             >
-              {isRecording ? (
+              {isInitializing ? (
+                <Loader2 className="h-5 w-5 text-gray-500 animate-spin" />
+              ) : isRecording ? (
                 <Square className="h-5 w-5 text-white" />
               ) : (
                 <Mic className="h-5 w-5 text-gray-700" />

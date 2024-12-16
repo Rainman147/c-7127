@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getDeviceType } from '@/utils/deviceDetection';
 
@@ -7,27 +7,45 @@ export const useAudioPermissions = () => {
   const { toast } = useToast();
   const { isIOS } = getDeviceType();
 
-  useEffect(() => {
-    const checkMicrophonePermission = async () => {
-      try {
-        const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+  const checkPermission = useCallback(async () => {
+    try {
+      const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+      console.log('[useAudioPermissions] Permission state:', result.state);
+      setHasPermission(result.state === 'granted');
+      
+      result.onchange = () => {
+        console.log('[useAudioPermissions] Permission changed:', result.state);
         setHasPermission(result.state === 'granted');
-        
-        result.onchange = () => {
-          setHasPermission(result.state === 'granted');
-        };
-      } catch (error) {
-        console.error('Error checking microphone permission:', error);
-        if (isIOS) {
-          setHasPermission(null);
-        }
+      };
+    } catch (error) {
+      console.log('[useAudioPermissions] Error checking permission:', error);
+      // On iOS, we can't check permissions directly
+      if (isIOS) {
+        setHasPermission(null);
       }
-    };
-
-    checkMicrophonePermission();
+    }
   }, [isIOS]);
 
-  const handlePermissionError = () => {
+  useEffect(() => {
+    checkPermission();
+  }, [checkPermission]);
+
+  const requestPermission = useCallback(async () => {
+    console.log('[useAudioPermissions] Requesting microphone permission');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      console.log('[useAudioPermissions] Permission granted');
+      setHasPermission(true);
+      return true;
+    } catch (error) {
+      console.error('[useAudioPermissions] Permission denied:', error);
+      setHasPermission(false);
+      return false;
+    }
+  }, []);
+
+  const handlePermissionError = useCallback(() => {
     if (isIOS) {
       toast({
         title: "Microphone Access Required",
@@ -42,10 +60,11 @@ export const useAudioPermissions = () => {
         variant: "destructive"
       });
     }
-  };
+  }, [isIOS, toast]);
 
   return {
     hasPermission,
+    requestPermission,
     handlePermissionError
   };
 };
