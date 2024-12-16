@@ -12,11 +12,6 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
-
     const formData = await req.formData()
     const audioChunk = formData.get('chunk') as File
     const sessionId = formData.get('sessionId')?.toString()
@@ -32,18 +27,38 @@ serve(async (req) => {
       userId,
     })
 
-    // Validate required fields
+    // Validate session ID first
+    if (!sessionId || sessionId.trim() === '') {
+      console.error('Missing or empty session ID')
+      return new Response(
+        JSON.stringify({ 
+          error: 'Missing session ID',
+          details: 'A valid session ID is required'
+        }),
+        { 
+          status: 400,
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      )
+    }
+
+    // Validate other required fields
     if (!audioChunk) {
       throw new Error('Missing audio chunk')
-    }
-    if (!sessionId || sessionId.trim() === '') {
-      throw new Error('Missing session ID')
     }
     if (!userId) {
       throw new Error('Missing user ID')
     }
 
     console.log(`Processing chunk ${chunkNumber} of ${totalChunks} for session ${sessionId}`)
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
 
     // Upload chunk to storage
     const chunkPath = `chunks/${sessionId}/${chunkNumber}.webm`

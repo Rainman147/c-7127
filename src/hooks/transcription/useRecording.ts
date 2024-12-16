@@ -24,14 +24,13 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       size: data.size,
       type: data.type,
       timestamp: new Date().toISOString(),
-      sessionId: recordingSessionId // Log session ID for debugging
+      sessionId: recordingSessionId
     });
     
     chunks.current.push(data);
     console.log('Audio chunk captured:', data.size, 'bytes');
     
     try {
-      // Get current user before attempting backup
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
@@ -39,7 +38,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         throw new Error('Authentication required for backup');
       }
 
-      // Back up the chunk
+      // Create FormData with all required fields
       const formData = new FormData();
       formData.append('chunk', data);
       formData.append('sessionId', recordingSessionId);
@@ -124,14 +123,11 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     }
 
     try {
-      // Combine all chunks into one blob
       const completeAudio = new Blob(chunks.current, { type: 'audio/webm' });
       console.log('Combined audio size:', completeAudio.size);
 
-      // Convert to WAV
       const wavBlob = await convertWebMToWav(completeAudio);
       
-      // Convert to base64
       const reader = new FileReader();
       const base64Promise = new Promise<string>((resolve, reject) => {
         reader.onloadend = () => {
@@ -144,7 +140,6 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       reader.readAsDataURL(wavBlob);
       const base64Data = await base64Promise;
 
-      // Send to transcription service
       const { data: transcriptionData, error } = await supabase.functions.invoke('transcribe', {
         body: { 
           audioData: base64Data,
