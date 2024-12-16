@@ -4,6 +4,7 @@ import { useRecording } from '@/hooks/transcription/useRecording';
 import { useAudioProcessing } from '@/hooks/transcription/useAudioProcessing';
 import { useToast } from '@/hooks/use-toast';
 import { getDeviceType, getBrowserType } from '@/utils/deviceDetection';
+import { getNetworkInfo } from '@/utils/networkUtils';
 
 interface AudioRecorderProps {
   onTranscriptionComplete: (text: string) => void;
@@ -13,6 +14,7 @@ interface AudioRecorderProps {
 const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: AudioRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [networkType, setNetworkType] = useState<string>('unknown');
   const { toast } = useToast();
   const { isIOS } = getDeviceType();
   const { isSafari } = getBrowserType();
@@ -28,6 +30,22 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
             setHasPermission(result.state === 'granted');
           };
         });
+    }
+
+    // Monitor network conditions
+    const checkNetwork = async () => {
+      const network = await getNetworkInfo();
+      setNetworkType(network.effectiveType);
+      console.log('Current network conditions:', network);
+    };
+
+    checkNetwork();
+
+    // Set up network change listener if supported
+    if ('connection' in navigator) {
+      const connection = (navigator as any).connection;
+      connection.addEventListener('change', checkNetwork);
+      return () => connection.removeEventListener('change', checkNetwork);
     }
   }, []);
 
@@ -85,7 +103,7 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
       });
     }
 
-    console.log('Starting recording...');
+    console.log('Starting recording with network type:', networkType);
     setIsRecording(true);
     onRecordingStateChange?.(true);
     await startRec();
