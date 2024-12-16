@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
-import { getDeviceType, getBrowserType } from '@/utils/deviceDetection';
+import { useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useMediaRecorder } from './useMediaRecorder';
+import { useAudioStream } from './useAudioStream';
 
 interface RecordingOptions {
   onError: (error: string) => void;
@@ -8,115 +9,89 @@ interface RecordingOptions {
 }
 
 export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOptions) => {
-  const [isRecording, setIsRecording] = useState(false);
-  const mediaRecorder = useRef<MediaRecorder | null>(null);
-  const chunks = useRef<Blob[]>([]);
-  const { isIOS } = getDeviceType();
-  const { isChrome } = getBrowserType();
+  const [currentStream, setCurrentStream] = useState<MediaStream | null>(null);
+  const { getStream, cleanupStream } = useAudioStream();
 
-  const getAudioConfig = () => ({
-    sampleRate: isIOS ? 44100 : 16000,
-    channelCount: 1,
-    echoCancellation: true,
-    noiseSuppression: true,
-    autoGainControl: true,
-    ...(isChrome && {
-      latencyHint: 'interactive',
-      googEchoCancellation: true,
-      googAutoGainControl: true,
-      googNoiseSuppression: true,
-      googHighpassFilter: true
-    })
+  const handleDataAvailable = useCallback(async (data: Blob) => {
+    console.log('Recording chunk received, size:', data.size);
+    
+    try {
+      // Convert blob to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const base64String = reader.result as string;
+          const base64Data = base64String.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+      });
+
+      reader.readAsDataURL(data);
+      const base64Data = await base64Promise;
+
+      // Send to transcription service
+      const { data: transcriptionData, error } = await supabase.functions.invoke('transcribe', {
+        body: { 
+          audioData: base64Data,
+          mimeType: data.type
+        }
+      });
+
+      if (error) {
+        console.error('Transcription error:', error);
+        onError(error.message);
+        return;
+      }
+
+      if (transcriptionData?.transcription) {
+        console.log('Transcription received:', transcriptionData.transcription);
+        onTranscriptionComplete(transcriptionData.transcription);
+      } else {
+        onError('No transcription received from the service');
+      }
+    } catch (error: any) {
+      console.error('Error processing recording:', error);
+      onError(error.message || 'Failed to process recording');
+    }
+  }, [onTranscriptionComplete, onError]);
+
+  const handleError = useCallback((error: Error) => {
+    console.error('Recording error:', error);
+    if (currentStream) {
+      cleanupStream(currentStream);
+      setCurrentStream(null);
+    }
+    onError(error.message);
+  }, [currentStream, cleanupStream, onError]);
+
+  const { isRecording, startRecording, stopRecording } = useMediaRecorder({
+    onDataAvailable: handleDataAvailable,
+    onError: handleError
   });
 
-  const startRecording = async () => {
+  const startRec = useCallback(async () => {
     try {
-      const audioConfig = getAudioConfig();
-      console.log('Requesting microphone access with config:', audioConfig);
-      
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: audioConfig
-      });
-
-      mediaRecorder.current = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
-      });
-
-      mediaRecorder.current.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunks.current.push(e.data);
-          console.log('Received audio chunk, size:', e.data.size);
-        }
-      };
-
-      mediaRecorder.current.onstop = async () => {
-        try {
-          if (chunks.current.length === 0) {
-            console.error('No audio data recorded');
-            onError('No audio data recorded');
-            return;
-          }
-
-          const audioBlob = new Blob(chunks.current, { type: mediaRecorder.current?.mimeType });
-          console.log('Recording stopped, final blob size:', audioBlob.size);
-
-          // Convert blob to base64
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-            const base64Audio = (reader.result as string).split(',')[1];
-            
-            console.log('Sending audio data to transcription service...');
-            const { data, error } = await supabase.functions.invoke('transcribe', {
-              body: { 
-                audioData: base64Audio,
-                mimeType: mediaRecorder.current?.mimeType
-              }
-            });
-
-            if (error) {
-              console.error('Transcription error:', error);
-              onError(error.message);
-              return;
-            }
-
-            if (data?.transcription) {
-              console.log('Transcription received:', data.transcription);
-              onTranscriptionComplete(data.transcription);
-            } else {
-              onError('No transcription received from the service');
-            }
-          };
-
-          reader.readAsDataURL(audioBlob);
-        } catch (error: any) {
-          console.error('Error processing recording:', error);
-          onError(error.message || 'Failed to process recording');
-        }
-      };
-
-      mediaRecorder.current.start(1000);
-      setIsRecording(true);
-      console.log('Started recording with enhanced audio settings');
-
+      const stream = await getStream();
+      setCurrentStream(stream);
+      await startRecording(stream);
     } catch (error: any) {
-      console.error('Error starting recording:', error);
-      onError('Could not access microphone. Please check permissions.');
+      console.error('Failed to start recording:', error);
+      onError(error.message);
     }
-  };
+  }, [getStream, startRecording, onError]);
 
-  const stopRecording = async () => {
-    if (mediaRecorder.current && mediaRecorder.current.state === 'recording') {
-      console.log('Stopping recording...');
-      mediaRecorder.current.stop();
-      mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
-      setIsRecording(false);
-      chunks.current = [];
+  const stopRec = useCallback(() => {
+    stopRecording();
+    if (currentStream) {
+      cleanupStream(currentStream);
+      setCurrentStream(null);
     }
-  };
+  }, [stopRecording, currentStream, cleanupStream]);
 
   return {
     isRecording,
-    startRecording,
-    stopRecording
+    startRecording: startRec,
+    stopRecording: stopRec
   };
 };
