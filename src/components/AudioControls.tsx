@@ -32,23 +32,30 @@ const AudioControls = ({
   console.log('[AudioControls] Rendering with isRecording:', isRecording);
   
   const { isIOS } = getDeviceType();
-  const { isSafari } = getBrowserType();
-  console.log('[AudioControls] Device detection:', { isIOS, isSafari });
+  const { isSafari, isChrome } = getBrowserType();
+  console.log('[AudioControls] Device detection:', { isIOS, isSafari, isChrome });
 
   const getTooltipContent = () => {
     if (isRecording) return "Stop recording";
-    if (isIOS && isSafari) return "Tap to start recording (Safari requires permission)";
+    if (isIOS) {
+      if (isChrome) return "Tap to start recording (Chrome iOS)";
+      if (isSafari) return "Tap to start recording (Safari iOS)";
+    }
     return "Start recording";
   };
 
-  const handleRecordingClick = () => {
+  const handleRecordingClick = async () => {
     console.log('[AudioControls] Record button clicked, current state:', { isRecording });
-    if (isRecording) {
-      console.log('[AudioControls] Stopping recording...');
-      onStopRecording();
-    } else {
-      console.log('[AudioControls] Starting recording...');
-      onStartRecording();
+    try {
+      if (isRecording) {
+        console.log('[AudioControls] Stopping recording...');
+        await onStopRecording();
+      } else {
+        console.log('[AudioControls] Starting recording...');
+        await onStartRecording();
+      }
+    } catch (error) {
+      console.error('[AudioControls] Error handling recording:', error);
     }
   };
 

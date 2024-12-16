@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import AudioControls from './AudioControls';
 import { useRecording } from '@/hooks/transcription/useRecording';
 import { useAudioProcessing } from '@/hooks/transcription/useAudioProcessing';
@@ -14,14 +14,26 @@ interface AudioRecorderProps {
 
 const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: AudioRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
+  const recordingStateRef = useRef(false);
   const { hasPermission, handlePermissionError } = useAudioPermissions();
   const networkType = useNetworkMonitor();
   const validateTranscription = useTranscriptionValidation(onTranscriptionComplete);
   const { toast } = useToast();
 
+  useEffect(() => {
+    console.log('[AudioRecorder] Component mounted');
+    return () => {
+      console.log('[AudioRecorder] Component unmounting');
+      if (recordingStateRef.current) {
+        console.log('[AudioRecorder] Cleaning up active recording');
+      }
+    };
+  }, []);
+
   const handleError = useCallback((error: string) => {
-    console.error('Audio processing error:', error);
+    console.error('[AudioRecorder] Error:', error);
     setIsRecording(false);
+    recordingStateRef.current = false;
     onRecordingStateChange?.(false);
 
     if (error.includes('Permission denied')) {
@@ -36,9 +48,10 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
   }, [handlePermissionError, onRecordingStateChange, toast]);
 
   const handleTranscriptionSuccess = useCallback((text: string) => {
-    console.log('Transcription completed successfully:', text);
+    console.log('[AudioRecorder] Transcription completed:', text);
     if (validateTranscription(text)) {
       setIsRecording(false);
+      recordingStateRef.current = false;
       onRecordingStateChange?.(false);
       toast({
         title: "Success",
@@ -48,7 +61,7 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
     }
   }, [validateTranscription, onRecordingStateChange, toast]);
 
-  const { startRecording: startRec, stopRecording: stopRec, isRecording: recorderIsRecording } = useRecording({
+  const { startRecording: startRec, stopRecording: stopRec } = useRecording({
     onError: handleError,
     onTranscriptionComplete: handleTranscriptionSuccess
   });
@@ -59,37 +72,34 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
   });
 
   const handleStartRecording = useCallback(async () => {
+    console.log('[AudioRecorder] Starting recording attempt');
     if (!hasPermission) {
+      console.log('[AudioRecorder] No permission, requesting...');
       handlePermissionError();
       return;
     }
 
-    console.log('Starting recording with network type:', networkType);
+    console.log('[AudioRecorder] Starting recording with network:', networkType);
     try {
       setIsRecording(true);
+      recordingStateRef.current = true;
       onRecordingStateChange?.(true);
       await startRec();
     } catch (error) {
+      console.error('[AudioRecorder] Start recording error:', error);
       handleError(error as string);
     }
   }, [networkType, onRecordingStateChange, startRec, hasPermission, handlePermissionError, handleError]);
 
   const handleStopRecording = useCallback(async () => {
-    console.log('Stopping recording...');
+    console.log('[AudioRecorder] Stopping recording...');
     try {
       await stopRec();
     } catch (error) {
+      console.error('[AudioRecorder] Stop recording error:', error);
       handleError(error as string);
     }
   }, [stopRec, handleError]);
-
-  // Sync recording state with the recorder
-  useState(() => {
-    if (isRecording !== recorderIsRecording) {
-      setIsRecording(recorderIsRecording);
-      onRecordingStateChange?.(recorderIsRecording);
-    }
-  });
 
   return (
     <AudioControls
