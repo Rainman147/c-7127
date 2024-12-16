@@ -2,8 +2,9 @@ import { useCallback, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useRecordingSession } from './useRecordingSession';
 import { useChunkUpload } from './useChunkUpload';
+import { useAudioStreamSetup } from './useAudioStreamSetup';
+import { useMediaRecorderSetup } from './useMediaRecorderSetup';
 import { supabase } from '@/integrations/supabase/client';
-import { getDeviceType } from '@/utils/deviceDetection';
 
 interface RecordingOptions {
   onError: (error: string) => void;
@@ -12,13 +13,10 @@ interface RecordingOptions {
 
 export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOptions) => {
   const [isRecording, setIsRecording] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const streamRef = useRef<MediaStream | null>(null);
   const { toast } = useToast();
   const { createSession, clearSession, getSessionId } = useRecordingSession();
   const { uploadChunk } = useChunkUpload();
-  const { isIOS } = getDeviceType();
   
   const handleDataAvailable = useCallback(async (event: BlobEvent) => {
     if (event.data.size > 0) {
@@ -43,98 +41,38 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     }
   }, [getSessionId, uploadChunk, onError]);
 
+  const { setupMediaRecorder, mediaRecorderRef } = useMediaRecorderSetup({
+    onDataAvailable: handleDataAvailable,
+    onError
+  });
+
+  const { setupAudioStream, cleanupStream } = useAudioStreamSetup();
+
   const startRec = useCallback(async () => {
     try {
-      // Clear any existing chunks and stream
+      // Clear any existing chunks
       chunksRef.current = [];
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
       
       const sessionId = createSession();
       console.log('[useRecording] Starting recording with session:', sessionId);
 
-      // Configure audio constraints based on device
-      const audioConstraints: MediaTrackConstraints = {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-        channelCount: 1,
-        sampleRate: isIOS ? 44100 : 16000, // iOS requires 44.1kHz
-      };
-
-      console.log('[useRecording] Requesting media with constraints:', audioConstraints);
-
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: audioConstraints
-      });
-      streamRef.current = stream;
-
-      // Verify we have an active audio track
-      const audioTrack = stream.getAudioTracks()[0];
-      if (!audioTrack) {
-        throw new Error('No audio track available');
-      }
-      console.log('[useRecording] Audio track obtained:', {
-        label: audioTrack.label,
-        enabled: audioTrack.enabled,
-        muted: audioTrack.muted,
-        readyState: audioTrack.readyState
-      });
-
-      // Set up MediaRecorder with appropriate MIME type
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-        ? 'audio/webm;codecs=opus' 
-        : 'audio/webm';
-      console.log('[useRecording] Using MIME type:', mimeType);
-
-      const recorder = new MediaRecorder(stream, {
-        mimeType,
-        audioBitsPerSecond: 128000
-      });
-
-      // Set up event handlers before starting
-      recorder.ondataavailable = handleDataAvailable;
-      
-      recorder.onerror = (event: ErrorEvent) => {
-        console.error('[useRecording] MediaRecorder error:', event.error);
-        onError('Recording failed: ' + (event.error?.message || 'Unknown error'));
-        stopRec();
-      };
-
-      recorder.onstart = () => {
-        console.log('[useRecording] MediaRecorder started successfully');
-        setIsRecording(true);
-      };
-
-      recorder.onstop = () => {
-        console.log('[useRecording] MediaRecorder stopped');
-        setIsRecording(false);
-      };
-
-      // Store the recorder reference before starting
-      mediaRecorderRef.current = recorder;
+      const stream = await setupAudioStream();
+      const recorder = setupMediaRecorder(stream);
 
       // Start recording with a reasonable chunk interval
       console.log('[useRecording] Starting MediaRecorder...');
       recorder.start(5000); // Chunk every 5 seconds
+      setIsRecording(true);
 
       console.log('[useRecording] MediaRecorder configured with:', {
-        mimeType,
-        audioBitsPerSecond: 128000,
-        sessionId,
-        state: recorder.state
+        state: recorder.state,
+        sessionId
       });
 
     } catch (error: any) {
       console.error('[useRecording] Failed to start recording:', error);
       onError(error.message);
-      // Clean up any partial setup
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-      streamRef.current = null;
-      mediaRecorderRef.current = null;
+      cleanupStream();
       setIsRecording(false);
       
       toast({
@@ -143,29 +81,18 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         variant: "destructive"
       });
     }
-  }, [createSession, handleDataAvailable, onError, toast, isIOS]);
+  }, [createSession, setupAudioStream, setupMediaRecorder, cleanupStream, onError, toast]);
 
   const stopRec = useCallback(async () => {
     const sessionId = getSessionId();
     console.log('[useRecording] Stopping recording session:', sessionId);
     
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+    if (mediaRecorderRef.current?.state === 'recording') {
       console.log('[useRecording] Stopping MediaRecorder');
       mediaRecorderRef.current.stop();
     }
 
-    // Stop all tracks
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => {
-        console.log('[useRecording] Stopping track:', {
-          label: track.label,
-          enabled: track.enabled,
-          readyState: track.readyState
-        });
-        track.stop();
-      });
-      streamRef.current = null;
-    }
+    cleanupStream();
 
     // Wait a short moment to ensure all chunks are processed
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -177,23 +104,16 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     }
 
     try {
-      console.log('[useRecording] Sending chunks for transcription');
+      console.log('[useRecording] Processing transcription');
       const { data: transcriptionData, error: transcriptionError } = await supabase.functions.invoke('transcribe-chunks', {
-        body: { 
-          sessionId,
-          userId: (await supabase.auth.getUser()).data.user?.id
-        }
+        body: { sessionId }
       });
 
-      if (transcriptionError) {
-        console.error('[useRecording] Transcription error:', transcriptionError);
-        throw transcriptionError;
-      }
+      if (transcriptionError) throw transcriptionError;
 
       if (transcriptionData?.transcription) {
         console.log('[useRecording] Transcription complete:', transcriptionData.transcription);
         onTranscriptionComplete(transcriptionData.transcription);
-        
         toast({
           title: "Success",
           description: "Audio transcribed successfully",
@@ -206,7 +126,6 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     } catch (error: any) {
       console.error('[useRecording] Error stopping recording:', error);
       onError(error.message);
-      
       toast({
         title: "Error",
         description: "Failed to transcribe audio. Please try again.",
@@ -216,10 +135,9 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     } finally {
       chunksRef.current = [];
       clearSession();
-      mediaRecorderRef.current = null;
       setIsRecording(false);
     }
-  }, [getSessionId, clearSession, onError, onTranscriptionComplete, toast]);
+  }, [getSessionId, cleanupStream, onError, onTranscriptionComplete, clearSession, toast]);
 
   return {
     isRecording,
