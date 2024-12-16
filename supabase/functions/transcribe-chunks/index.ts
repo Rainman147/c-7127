@@ -35,10 +35,12 @@ serve(async (req) => {
       .order('chunk_number', { ascending: true })
 
     if (chunksError) {
+      console.error('Error fetching chunks:', chunksError)
       throw chunksError
     }
 
     if (!chunks || chunks.length === 0) {
+      console.error('No chunks found for session:', sessionId)
       throw new Error('No chunks found for session')
     }
 
@@ -83,8 +85,11 @@ serve(async (req) => {
     })
 
     if (transcriptionError) {
+      console.error('Transcription error:', transcriptionError)
       throw transcriptionError
     }
+
+    console.log('Transcription completed successfully')
 
     return new Response(
       JSON.stringify({
