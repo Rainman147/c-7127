@@ -29,21 +29,27 @@ export const getOptimalAudioConfig = async () => {
   // Adjust audio quality based on network conditions
   if (network.effectiveType === '5g' || network.downlink > 10) {
     return {
-      audioBitsPerSecond: 128000, // High quality for 5G/fast networks
       sampleRate: 48000,
-      channelCount: 2
+      channelCount: 2,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
     };
   } else if (network.effectiveType === '4g' || network.downlink > 5) {
     return {
-      audioBitsPerSecond: 96000, // Good quality for 4G
       sampleRate: 44100,
-      channelCount: 2
+      channelCount: 2,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
     };
   } else {
     return {
-      audioBitsPerSecond: 64000, // Compressed for slower networks
       sampleRate: 22050,
-      channelCount: 1
+      channelCount: 1,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
     };
   }
 };

@@ -9,13 +9,13 @@ export interface AudioConfig {
   autoGainControl: boolean | { ideal: boolean };
 }
 
-export const getDeviceAudioConfig = (): AudioConfig => {
+export const getDeviceAudioConfig = async (): Promise<AudioConfig> => {
   const deviceType = getDeviceType();
   const browserType = getBrowserType();
   console.log('Device type:', deviceType);
   console.log('Browser type:', browserType);
   
-  return getOptimalAudioConfig();
+  return await getOptimalAudioConfig();
 };
 
 export const getMimeType = (): string => {
