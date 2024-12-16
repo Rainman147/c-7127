@@ -13,31 +13,46 @@ serve(async (req) => {
   }
 
   try {
-    const formData = await req.formData()
-    const chunk = formData.get('chunk') as Blob
-    const sessionId = formData.get('sessionId') as string
-    const totalChunks = formData.get('totalChunks') as string || '1'
-
-    if (!sessionId) {
-      throw new Error('Missing session ID')
-    }
-
-    if (!chunk) {
-      throw new Error('No audio chunk provided')
-    }
-
-    console.log('Processing chunk for session:', sessionId)
-
+    // Create Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    // Get the authorization header
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader) {
+      throw new Error('No authorization header')
+    }
+
+    // Get the JWT token
+    const token = authHeader.replace('Bearer ', '')
+    
+    // Get the user from the JWT token
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
+    
+    if (userError || !user) {
+      console.error('Error getting user:', userError)
+      throw new Error('Failed to get user ID')
+    }
+
+    console.log('Processing request for user:', user.id)
+
+    const formData = await req.formData()
+    const chunk = formData.get('chunk') as Blob
+    const totalChunks = formData.get('totalChunks') as string
+
+    if (!chunk || !totalChunks) {
+      throw new Error('Missing required fields')
+    }
+
+    console.log('Processing chunk with total chunks:', totalChunks)
+
     // Get current chunk number
     const { data: existingChunks, error: countError } = await supabase
       .from('audio_chunks')
       .select('chunk_number')
-      .eq('storage_path', `chunks/${sessionId}/%`)
+      .eq('user_id', user.id)
       .order('chunk_number', { ascending: false })
       .limit(1)
 
@@ -49,12 +64,12 @@ serve(async (req) => {
       ? existingChunks[0].chunk_number + 1 
       : 0
 
-    const storagePath = `chunks/${sessionId}/${chunkNumber}.webm`
+    const storagePath = `chunks/${user.id}/${chunkNumber}.webm`
 
     // Check if file already exists
     const { data: existingFile } = await supabase.storage
       .from('audio_files')
-      .list(`chunks/${sessionId}`)
+      .list(`chunks/${user.id}`)
 
     const fileExists = existingFile?.some(file => file.name === `${chunkNumber}.webm`)
     if (fileExists) {
@@ -81,21 +96,15 @@ serve(async (req) => {
       throw new Error('Failed to upload audio chunk')
     }
 
-    // Get user ID
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      throw new Error('Failed to get user ID')
-    }
-
     // Save chunk metadata
     const { error: insertError } = await supabase
       .from('audio_chunks')
       .insert({
+        user_id: user.id,
         storage_path: storagePath,
         chunk_number: chunkNumber,
         total_chunks: parseInt(totalChunks),
         status: 'stored',
-        user_id: user.id,
         original_filename: `chunk_${chunkNumber}.webm`
       })
 
@@ -105,7 +114,7 @@ serve(async (req) => {
     }
 
     console.log('Successfully processed chunk:', {
-      sessionId,
+      userId: user.id,
       chunkNumber,
       storagePath
     })
