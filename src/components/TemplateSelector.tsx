@@ -55,7 +55,7 @@ interface TemplateSelectorProps {
   onTemplateChange: (template: Template) => void;
 }
 
-const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
+export const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
   const [selectedTemplate, setSelectedTemplate] = useState<Template>(templates[0]);
   const { toast } = useToast();
 

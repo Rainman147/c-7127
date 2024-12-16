@@ -1,4 +1,4 @@
-import { TemplateSelector } from "./TemplateSelector";
+import TemplateSelector from "./TemplateSelector";
 
 interface ChatHeaderProps {
   isSidebarOpen?: boolean;
