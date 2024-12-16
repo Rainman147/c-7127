@@ -14,6 +14,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
   const { toast } = useToast();
   const { createSession, clearSession, getSessionId } = useRecordingSession();
   const { uploadChunk } = useChunkUpload();
@@ -25,7 +26,8 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       console.log('[useRecording] Recording chunk received:', {
         size: event.data.size,
         type: event.data.type,
-        sessionId
+        sessionId,
+        isRecording: mediaRecorderRef.current?.state
       });
       
       chunksRef.current.push(event.data);
@@ -43,8 +45,11 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
   const startRec = useCallback(async () => {
     try {
-      // Clear any existing chunks
+      // Clear any existing chunks and stream
       chunksRef.current = [];
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
       
       const sessionId = createSession();
       console.log('[useRecording] Starting recording with session:', sessionId);
@@ -63,13 +68,19 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: audioConstraints
       });
+      streamRef.current = stream;
 
       // Verify we have an active audio track
       const audioTrack = stream.getAudioTracks()[0];
       if (!audioTrack) {
         throw new Error('No audio track available');
       }
-      console.log('[useRecording] Audio track obtained:', audioTrack.label);
+      console.log('[useRecording] Audio track obtained:', {
+        label: audioTrack.label,
+        enabled: audioTrack.enabled,
+        muted: audioTrack.muted,
+        readyState: audioTrack.readyState
+      });
 
       // Set up MediaRecorder with appropriate MIME type
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
@@ -101,19 +112,31 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         setIsRecording(false);
       };
 
-      // Start recording with a reasonable chunk interval
-      recorder.start(5000); // Chunk every 5 seconds
+      // Store the recorder reference before starting
       mediaRecorderRef.current = recorder;
+
+      // Start recording with a reasonable chunk interval
+      console.log('[useRecording] Starting MediaRecorder...');
+      recorder.start(5000); // Chunk every 5 seconds
 
       console.log('[useRecording] MediaRecorder configured with:', {
         mimeType,
         audioBitsPerSecond: 128000,
-        sessionId
+        sessionId,
+        state: recorder.state
       });
 
     } catch (error: any) {
       console.error('[useRecording] Failed to start recording:', error);
       onError(error.message);
+      // Clean up any partial setup
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      streamRef.current = null;
+      mediaRecorderRef.current = null;
+      setIsRecording(false);
+      
       toast({
         title: "Error",
         description: "Failed to start recording. Please check your microphone permissions.",
@@ -129,12 +152,19 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       console.log('[useRecording] Stopping MediaRecorder');
       mediaRecorderRef.current.stop();
-      
-      // Stop all tracks
-      mediaRecorderRef.current.stream.getTracks().forEach(track => {
-        console.log('[useRecording] Stopping track:', track.label);
+    }
+
+    // Stop all tracks
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => {
+        console.log('[useRecording] Stopping track:', {
+          label: track.label,
+          enabled: track.enabled,
+          readyState: track.readyState
+        });
         track.stop();
       });
+      streamRef.current = null;
     }
 
     // Wait a short moment to ensure all chunks are processed
