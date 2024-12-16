@@ -21,31 +21,31 @@ const templates: Template[] = [
   {
     id: "live-session",
     name: "Live Patient Session",
-    description: "Real-time session with focus on symptoms and immediate observations",
+    description: "Real-time session with focus on symptoms and immediate observations. Perfect for capturing patient interactions as they happen.",
     systemInstructions: "Prioritize extracting symptoms, diagnoses, treatments, and test recommendations. Ignore non-relevant data unless a pattern emerges."
   },
   {
     id: "soap-standard",
     name: "SOAP Note (Standard)",
-    description: "Structured format for patient encounters",
+    description: "Structured format for patient encounters following the classic SOAP methodology: Subjective, Objective, Assessment, Plan.",
     systemInstructions: "Format output in SOAP format: Subjective, Objective, Assessment, Plan. Focus on clinical findings and treatment plans."
   },
   {
     id: "soap-expanded",
     name: "SOAP Note (Expanded)",
-    description: "Detailed SOAP format with additional sections",
+    description: "Comprehensive SOAP format including detailed vital signs, lab results, and extensive treatment planning sections.",
     systemInstructions: "Use expanded SOAP format including vital signs, lab results, and detailed treatment plans."
   },
   {
     id: "discharge",
     name: "Discharge Summary",
-    description: "Comprehensive discharge documentation",
+    description: "Complete discharge documentation including admission details, hospital course, and detailed follow-up instructions.",
     systemInstructions: "Focus on admission details, hospital course, and discharge instructions."
   },
   {
     id: "referral",
     name: "Referral Letter",
-    description: "Specialist referral documentation",
+    description: "Professional specialist referral documentation with emphasis on reason for referral and relevant clinical history.",
     systemInstructions: "Emphasize reason for referral, relevant history, and specific consultation requests."
   }
 ];
@@ -55,7 +55,7 @@ interface TemplateSelectorProps {
   onTemplateChange: (template: Template) => void;
 }
 
-export const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
+const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
   const [selectedTemplate, setSelectedTemplate] = useState<Template>(templates[0]);
   const { toast } = useToast();
 
@@ -104,7 +104,7 @@ export const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSe
           description: `Now using: ${template.name}`,
           duration: 3000,
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error updating template:', error);
         toast({
           title: "Error",
@@ -121,28 +121,34 @@ export const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSe
         {selectedTemplate.name}
         <ChevronDown className="h-4 w-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64 bg-chatgpt-secondary border border-chatgpt-border">
+      <DropdownMenuContent className="w-72 bg-chatgpt-secondary border border-chatgpt-border">
         {templates.map((template) => (
           <TooltipProvider key={template.id}>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuItem
-                  className={`flex items-center justify-between px-3 py-2 cursor-pointer ${
-                    selectedTemplate.id === template.id ? 'bg-chatgpt-hover' : ''
-                  }`}
-                  onClick={() => handleTemplateChange(template)}
-                >
-                  <span className="flex items-center gap-2">
-                    {template.name}
-                    <Info className="h-4 w-4 text-gray-400" />
-                  </span>
+              <DropdownMenuItem
+                className={`flex items-center justify-between px-3 py-2 cursor-pointer ${
+                  selectedTemplate.id === template.id ? 'bg-chatgpt-hover' : ''
+                }`}
+                onClick={() => handleTemplateChange(template)}
+              >
+                <span className="flex-1">{template.name}</span>
+                <div className="flex items-center gap-2">
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-gray-400 hover:text-gray-300 transition-colors cursor-help" />
+                  </TooltipTrigger>
                   {selectedTemplate.id === template.id && (
                     <Check className="h-4 w-4" />
                   )}
-                </DropdownMenuItem>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="max-w-sm">
-                <p>{template.description}</p>
+                </div>
+              </DropdownMenuItem>
+              <TooltipContent 
+                side="right" 
+                className="max-w-sm bg-chatgpt-secondary border border-chatgpt-border text-sm p-3"
+              >
+                <div className="space-y-2">
+                  <p className="font-medium">{template.name}</p>
+                  <p className="text-gray-300">{template.description}</p>
+                </div>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
