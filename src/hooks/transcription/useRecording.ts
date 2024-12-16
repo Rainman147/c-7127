@@ -16,6 +16,25 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
   const { recordingSessionId, createSession, clearSession, handleSessionError } = useSessionManagement();
   const { processChunk } = useChunkProcessing();
 
+  const getSupportedMimeType = () => {
+    const types = [
+      'audio/webm',
+      'audio/webm;codecs=opus',
+      'audio/ogg;codecs=opus',
+      'audio/mp4'
+    ];
+    
+    for (const type of types) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        console.log('Using supported MIME type:', type);
+        return type;
+      }
+    }
+    
+    console.warn('No preferred MIME types supported, falling back to browser default');
+    return '';
+  };
+
   const handleDataAvailable = useCallback(async (data: Blob) => {
     console.log('Recording chunk received:', {
       size: data.size,
@@ -51,8 +70,9 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
       setCurrentStream(stream);
       
+      const mimeType = getSupportedMimeType();
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm',
+        mimeType: mimeType,
         audioBitsPerSecond: 128000
       });
 
@@ -68,12 +88,18 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       };
 
       mediaRecorder.start(5000); // Chunk every 5 seconds
-      console.log('MediaRecorder started');
+      console.log('MediaRecorder started with mime type:', mimeType);
 
     } catch (error: any) {
       console.error('Failed to start recording:', error);
       handleSessionError(error);
       onError(error.message);
+      
+      // Clean up any partial stream if there was an error
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+        setCurrentStream(null);
+      }
     }
   }, [createSession, handleDataAvailable, handleSessionError, onError]);
 
