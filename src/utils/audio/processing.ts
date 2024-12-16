@@ -1,21 +1,10 @@
 import { getOptimalAudioConfig, shouldCompressFile } from '../networkUtils';
+import { createWavBlob } from './wavUtils';
+import { normalizeAudio, applyNoiseGate } from './audioProcessing';
 
-export const normalizeAudio = async (audioData: Float32Array): Promise<Float32Array> => {
-  const maxAmplitude = Math.max(...audioData.map(Math.abs));
-  if (maxAmplitude === 0) return audioData;
-  
-  const normalizedData = new Float32Array(audioData.length);
-  for (let i = 0; i < audioData.length; i++) {
-    normalizedData[i] = audioData[i] / maxAmplitude;
-  }
-  
-  return normalizedData;
-};
-
-export const applyNoiseGate = (audioData: Float32Array, threshold = 0.01): Float32Array => {
-  return audioData.map(sample => Math.abs(sample) < threshold ? 0 : sample);
-};
-
+/**
+ * Compresses an audio file based on network conditions
+ */
 export const compressAudioFile = async (file: File): Promise<Blob> => {
   const shouldCompress = await shouldCompressFile(file.size);
   if (!shouldCompress) {
@@ -54,7 +43,10 @@ export const compressAudioFile = async (file: File): Promise<Blob> => {
   
   // Convert to required format
   for (let channel = 0; channel < renderedBuffer.numberOfChannels; channel++) {
-    chunks.push(renderedBuffer.getChannelData(channel));
+    const channelData = renderedBuffer.getChannelData(channel);
+    const normalizedData = await normalizeAudio(channelData);
+    const processedData = applyNoiseGate(normalizedData);
+    chunks.push(processedData);
   }
   
   // Create WAV blob with compressed settings
@@ -73,6 +65,9 @@ export const compressAudioFile = async (file: File): Promise<Blob> => {
   return wavBlob;
 };
 
+/**
+ * Gets metadata for an audio blob
+ */
 export const getAudioMetadata = async (audioBlob: Blob): Promise<{ 
   duration: number; 
   channels: number; 
@@ -112,53 +107,4 @@ export const getAudioMetadata = async (audioBlob: Blob): Promise<{
 
     reader.readAsArrayBuffer(audioBlob);
   });
-};
-
-// Helper function to create WAV blob
-const createWavBlob = async (chunks: Float32Array[], options: {
-  sampleRate: number;
-  bitsPerSample: number;
-  channels: number;
-}): Promise<Blob> => {
-  return new Promise((resolve) => {
-    const { sampleRate, bitsPerSample, channels } = options;
-    const bytesPerSample = bitsPerSample / 8;
-    const length = chunks[0].length;
-
-    const buffer = new ArrayBuffer(44 + length * bytesPerSample * channels);
-    const view = new DataView(buffer);
-
-    // Write WAV header
-    writeString(view, 0, 'RIFF');
-    view.setUint32(4, 36 + length * bytesPerSample * channels, true);
-    writeString(view, 8, 'WAVE');
-    writeString(view, 12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, channels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * channels * bytesPerSample, true);
-    view.setUint16(32, channels * bytesPerSample, true);
-    view.setUint16(34, bitsPerSample, true);
-    writeString(view, 36, 'data');
-    view.setUint32(40, length * bytesPerSample * channels, true);
-
-    // Write audio data
-    const offset = 44;
-    for (let i = 0; i < length; i++) {
-      for (let channel = 0; channel < channels; channel++) {
-        const sample = Math.max(-1, Math.min(1, chunks[channel][i]));
-        const value = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-        view.setInt16(offset + (i * channels + channel) * bytesPerSample, value, true);
-      }
-    }
-
-    resolve(new Blob([buffer], { type: 'audio/wav' }));
-  });
-};
-
-const writeString = (view: DataView, offset: number, string: string) => {
-  for (let i = 0; i < string.length; i++) {
-    view.setUint8(offset + i, string.charCodeAt(i));
-  }
 };
