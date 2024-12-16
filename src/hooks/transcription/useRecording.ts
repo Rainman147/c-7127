@@ -23,7 +23,8 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     console.log('Recording chunk received:', {
       size: data.size,
       type: data.type,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      sessionId: recordingSessionId // Log session ID for debugging
     });
     
     chunks.current.push(data);
@@ -167,6 +168,11 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         variant: "destructive",
       });
       onError(error.message);
+    } finally {
+      // Reset session state
+      setRecordingSessionId('');
+      setChunkCount(0);
+      chunks.current = [];
     }
   }, [stopRecording, currentStream, cleanupStream, onTranscriptionComplete, onError, toast]);
 
