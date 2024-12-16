@@ -11,6 +11,7 @@ export const useMediaRecorder = ({ onDataAvailable, onError }: MediaRecorderHook
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const { toast } = useToast();
+  const CHUNK_DURATION = 5000; // 5 seconds
 
   const startRecording = useCallback(async (stream: MediaStream) => {
     try {
@@ -22,6 +23,7 @@ export const useMediaRecorder = ({ onDataAvailable, onError }: MediaRecorderHook
 
       mediaRecorder.current.ondataavailable = (e) => {
         if (e.data.size > 0) {
+          console.log(`Audio chunk captured: ${e.data.size} bytes`);
           onDataAvailable(e.data);
         }
       };
@@ -31,9 +33,9 @@ export const useMediaRecorder = ({ onDataAvailable, onError }: MediaRecorderHook
         onError(new Error('Recording failed'));
       };
 
-      mediaRecorder.current.start(1000);
+      mediaRecorder.current.start(CHUNK_DURATION);
       setIsRecording(true);
-      console.log('MediaRecorder started');
+      console.log('MediaRecorder started with chunk duration:', CHUNK_DURATION);
     } catch (error) {
       console.error('Error starting MediaRecorder:', error);
       toast({
@@ -47,9 +49,9 @@ export const useMediaRecorder = ({ onDataAvailable, onError }: MediaRecorderHook
 
   const stopRecording = useCallback(() => {
     if (mediaRecorder.current && mediaRecorder.current.state === 'recording') {
+      console.log('Stopping MediaRecorder and requesting final chunk');
       mediaRecorder.current.stop();
       setIsRecording(false);
-      console.log('MediaRecorder stopped');
     }
   }, []);
 

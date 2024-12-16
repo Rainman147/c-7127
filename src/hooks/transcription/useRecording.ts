@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useMediaRecorder } from './useMediaRecorder';
 import { useAudioStream } from './useAudioStream';
 import { convertWebMToWav } from '@/utils/audio/conversion';
+import { useToast } from '@/hooks/use-toast';
 
 interface RecordingOptions {
   onError: (error: string) => void;
@@ -11,7 +12,11 @@ interface RecordingOptions {
 
 export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOptions) => {
   const [currentStream, setCurrentStream] = useState<MediaStream | null>(null);
+  const [recordingSessionId, setRecordingSessionId] = useState<string>('');
+  const [chunkCount, setChunkCount] = useState(0);
   const { getStream, cleanupStream } = useAudioStream();
+  const { toast } = useToast();
+  const chunks = useRef<Blob[]>([]);
 
   const handleDataAvailable = useCallback(async (data: Blob) => {
     console.log('Recording chunk received:', {
@@ -20,62 +25,34 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       timestamp: new Date().toISOString()
     });
     
+    chunks.current.push(data);
+    
     try {
-      // Convert WebM to WAV
-      console.log('Starting WebM to WAV conversion');
-      const wavBlob = await convertWebMToWav(data);
-      console.log('WAV conversion complete:', {
-        originalSize: data.size,
-        wavSize: wavBlob.size,
-        wavType: wavBlob.type
+      // Back up the chunk
+      const formData = new FormData();
+      formData.append('chunk', data);
+      formData.append('sessionId', recordingSessionId);
+      formData.append('chunkNumber', chunkCount.toString());
+      formData.append('userId', (await supabase.auth.getUser()).data.user?.id || '');
+
+      const { error: backupError } = await supabase.functions.invoke('backup-audio-chunk', {
+        body: formData
       });
 
-      // Convert WAV blob to base64
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onloadend = () => {
-          const base64String = reader.result as string;
-          const base64Data = base64String.split(',')[1];
-          resolve(base64Data);
-        };
-        reader.onerror = reject;
-      });
-
-      reader.readAsDataURL(wavBlob);
-      const base64Data = await base64Promise;
-      
-      console.log('Sending audio to transcription service:', {
-        dataLength: base64Data.length,
-        mimeType: wavBlob.type
-      });
-
-      // Send to transcription service
-      const { data: transcriptionData, error } = await supabase.functions.invoke('transcribe', {
-        body: { 
-          audioData: base64Data,
-          mimeType: wavBlob.type
-        }
-      });
-
-      if (error) {
-        console.error('Transcription error:', error);
-        // Don't stop recording on transcription error
-        return;
-      }
-
-      if (transcriptionData?.transcription) {
-        console.log('Transcription received:', {
-          length: transcriptionData.transcription.length,
-          preview: transcriptionData.transcription.substring(0, 50)
+      if (backupError) {
+        console.warn('Failed to backup chunk:', backupError);
+        toast({
+          title: "Backup Warning",
+          description: "Audio backup failed, but recording continues",
+          variant: "warning",
         });
-        onTranscriptionComplete(transcriptionData.transcription);
+      } else {
+        setChunkCount(prev => prev + 1);
       }
-    } catch (error: any) {
-      console.error('Error processing recording:', error);
-      // Don't stop recording on conversion error, just log it
-      console.warn('Continuing recording despite conversion error');
+    } catch (error) {
+      console.warn('Error backing up chunk:', error);
     }
-  }, [onTranscriptionComplete]);
+  }, [recordingSessionId, chunkCount, toast]);
 
   const handleError = useCallback((error: Error) => {
     console.error('Recording error:', error);
@@ -93,12 +70,13 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
   const startRec = useCallback(async () => {
     try {
-      console.log('Requesting audio stream');
+      console.log('Starting new recording session');
+      setRecordingSessionId(crypto.randomUUID());
+      setChunkCount(0);
+      chunks.current = [];
+      
       const stream = await getStream();
-      console.log('Audio stream obtained:', {
-        tracks: stream.getTracks().length,
-        settings: stream.getTracks()[0].getSettings()
-      });
+      console.log('Audio stream obtained');
       
       setCurrentStream(stream);
       await startRecording(stream);
@@ -108,15 +86,67 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     }
   }, [getStream, startRecording, onError]);
 
-  const stopRec = useCallback(() => {
-    console.log('Stopping recording...');
+  const stopRec = useCallback(async () => {
+    console.log('Stopping recording and processing final data');
     stopRecording();
+    
     if (currentStream) {
-      console.log('Cleaning up media stream');
       cleanupStream(currentStream);
       setCurrentStream(null);
     }
-  }, [stopRecording, currentStream, cleanupStream]);
+
+    if (chunks.current.length === 0) {
+      console.warn('No audio data recorded');
+      return;
+    }
+
+    try {
+      // Combine all chunks into one blob
+      const completeAudio = new Blob(chunks.current, { type: 'audio/webm' });
+      console.log('Combined audio size:', completeAudio.size);
+
+      // Convert to WAV
+      const wavBlob = await convertWebMToWav(completeAudio);
+      
+      // Convert to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const base64String = reader.result as string;
+          resolve(base64String.split(',')[1]);
+        };
+        reader.onerror = reject;
+      });
+
+      reader.readAsDataURL(wavBlob);
+      const base64Data = await base64Promise;
+
+      // Send to transcription service
+      const { data: transcriptionData, error } = await supabase.functions.invoke('transcribe', {
+        body: { 
+          audioData: base64Data,
+          mimeType: wavBlob.type
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (transcriptionData?.transcription) {
+        console.log('Transcription complete');
+        onTranscriptionComplete(transcriptionData.transcription);
+      }
+    } catch (error: any) {
+      console.error('Error processing recording:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process recording. Your audio has been backed up and can be recovered.",
+        variant: "destructive",
+      });
+      onError(error.message);
+    }
+  }, [stopRecording, currentStream, cleanupStream, onTranscriptionComplete, onError, toast]);
 
   // Cleanup on unmount
   useEffect(() => {
