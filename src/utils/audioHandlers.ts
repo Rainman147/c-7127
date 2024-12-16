@@ -126,16 +126,8 @@ export const startRecording = async (
     setChunks(chunks);
     recorder.start(CHUNK_DURATION); // Start recording in 1-second chunks
     setIsRecording(true);
-
-    // Auto-stop after 2 minutes
-    setTimeout(() => {
-      if (recorder.state === 'recording') {
-        recorder.stop();
-        setIsRecording(false);
-        audioContext.close();
-        stream.getTracks().forEach(track => track.stop());
-      }
-    }, 120000);
+    
+    console.log('Recording started with continuous mode');
   } catch (error: any) {
     onError("Could not access microphone. Please check permissions.");
     console.error('Error accessing microphone:', error);
@@ -150,5 +142,6 @@ export const stopRecording = (
     mediaRecorder.stop();
     setIsRecording(false);
     mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    console.log('Recording stopped by user');
   }
 };
