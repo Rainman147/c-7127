@@ -12,6 +12,7 @@ interface RecordingOptions {
 
 export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOptions) => {
   const [currentStream, setCurrentStream] = useState<MediaStream | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const { toast } = useToast();
   const { recordingSessionId, createSession, clearSession, handleSessionError } = useSessionManagement();
   const { processChunk } = useChunkProcessing();
@@ -51,23 +52,21 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
       setCurrentStream(stream);
       
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm',
-        audioBitsPerSecond: 128000
-      });
+      const recorder = new MediaRecorder(stream);
+      setMediaRecorder(recorder);
 
-      mediaRecorder.ondataavailable = (e) => {
+      recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           handleDataAvailable(e.data);
         }
       };
 
-      mediaRecorder.onerror = (event) => {
+      recorder.onerror = (event) => {
         console.error('MediaRecorder error:', event);
         onError('Recording failed');
       };
 
-      mediaRecorder.start(5000); // Chunk every 5 seconds
+      recorder.start(5000); // Chunk every 5 seconds
       console.log('MediaRecorder started');
 
     } catch (error: any) {
@@ -83,6 +82,11 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     if (currentStream) {
       currentStream.getTracks().forEach(track => track.stop());
       setCurrentStream(null);
+    }
+
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+      setMediaRecorder(null);
     }
 
     if (!recordingSessionId) {
@@ -120,7 +124,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     } finally {
       clearSession();
     }
-  }, [recordingSessionId, currentStream, clearSession, onError, onTranscriptionComplete]);
+  }, [recordingSessionId, currentStream, mediaRecorder, clearSession, onError, onTranscriptionComplete]);
 
   return {
     isRecording: Boolean(currentStream),
