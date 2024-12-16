@@ -1,8 +1,7 @@
-import { useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useSessionManagement } from './useSessionManagement';
-import { useChunkProcessing } from './useChunkProcessing';
+import { useCallback, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useRecordingSession } from './useRecordingSession';
+import { useChunkUpload } from './useChunkUpload';
 
 interface RecordingOptions {
   onError: (error: string) => void;
@@ -10,94 +9,38 @@ interface RecordingOptions {
 }
 
 export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOptions) => {
+  const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
-  const { recordingSessionId, createSession, clearSession, handleSessionError } = useSessionManagement();
-  const { processChunk } = useChunkProcessing();
-
-  const getSupportedMimeType = () => {
-    const types = [
-      'audio/webm',
-      'audio/webm;codecs=opus',
-      'audio/ogg;codecs=opus',
-      'audio/mp4'
-    ];
-    
-    for (const type of types) {
-      if (MediaRecorder.isTypeSupported(type)) {
-        console.log('Using supported MIME type:', type);
-        return type;
-      }
-    }
-    
-    console.warn('No preferred MIME types supported, falling back to browser default');
-    return '';
-  };
-
+  const { createSession, clearSession, getSessionId } = useRecordingSession();
+  const { uploadChunk } = useChunkUpload();
+  
   const handleDataAvailable = useCallback(async (event: BlobEvent) => {
     if (event.data.size > 0) {
+      const sessionId = getSessionId();
       console.log('Recording chunk received:', {
         size: event.data.size,
         type: event.data.type,
-        sessionId: recordingSessionId
+        sessionId
       });
       
       chunksRef.current.push(event.data);
       const chunkNumber = chunksRef.current.length;
 
       try {
-        // Get the current user's ID
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          throw new Error('User not authenticated');
-        }
-
-        // Create a file path with user ID and session ID
-        const timestamp = Date.now();
-        const fileName = `${user.id}/${recordingSessionId}/${chunkNumber}.webm`;
-        
-        console.log('Uploading chunk to storage path:', fileName);
-
-        // Upload to Supabase Storage
-        const { error: uploadError } = await supabase.storage
-          .from('audio_files')
-          .upload(fileName, event.data, {
-            contentType: 'audio/webm',
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          throw new Error('Failed to upload audio chunk');
-        }
-
-        console.log('Successfully uploaded chunk:', fileName);
-
-        // Process the chunk
-        const formData = new FormData();
-        formData.append('chunk', event.data);
-        formData.append('sessionId', recordingSessionId || '');
-        formData.append('chunkNumber', chunkNumber.toString());
-
-        await processChunk(event.data, recordingSessionId || '');
-
+        await uploadChunk(event.data, sessionId, chunkNumber);
       } catch (error: any) {
         console.error('Error handling audio chunk:', error);
         onError(error.message);
-        toast({
-          title: "Error",
-          description: "Failed to process audio chunk. Please try again.",
-          variant: "destructive"
-        });
       }
     }
-  }, [recordingSessionId, onError, processChunk, toast]);
+  }, [getSessionId, uploadChunk, onError]);
 
   const startRec = useCallback(async () => {
     try {
       const sessionId = createSession();
-      console.log('Starting new recording session:', sessionId);
+      console.log('Starting recording with session:', sessionId);
 
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -109,9 +52,11 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
       chunksRef.current = []; // Reset chunks array
       
-      const mimeType = getSupportedMimeType();
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+      console.log('Using supported MIME type:', mimeType);
+
       const recorder = new MediaRecorder(stream, {
-        mimeType: mimeType,
+        mimeType,
         audioBitsPerSecond: 128000
       });
 
@@ -124,11 +69,10 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
       recorder.start(5000); // Chunk every 5 seconds for optimal processing
       mediaRecorderRef.current = recorder;
-      console.log('MediaRecorder started with mime type:', mimeType);
+      console.log('MediaRecorder started');
 
     } catch (error: any) {
       console.error('Failed to start recording:', error);
-      handleSessionError(error);
       onError(error.message);
       toast({
         title: "Error",
@@ -136,17 +80,18 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         variant: "destructive"
       });
     }
-  }, [createSession, handleDataAvailable, handleSessionError, onError, toast]);
+  }, [createSession, handleDataAvailable, onError, toast]);
 
   const stopRec = useCallback(async () => {
-    console.log('Stopping recording session:', recordingSessionId);
+    const sessionId = getSessionId();
+    console.log('Stopping recording session:', sessionId);
     
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
     }
 
-    if (!recordingSessionId || chunksRef.current.length === 0) {
+    if (!sessionId || chunksRef.current.length === 0) {
       console.warn('No chunks recorded or no active session');
       onError('No audio recorded');
       return;
@@ -156,7 +101,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       // Transcribe the complete audio
       const { data: transcriptionData, error: transcriptionError } = await supabase.functions.invoke('transcribe-chunks', {
         body: { 
-          sessionId: recordingSessionId,
+          sessionId,
           userId: (await supabase.auth.getUser()).data.user?.id
         }
       });
@@ -191,10 +136,10 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       clearSession();
       mediaRecorderRef.current = null;
     }
-  }, [recordingSessionId, clearSession, onError, onTranscriptionComplete, toast]);
+  }, [getSessionId, clearSession, onError, onTranscriptionComplete, toast]);
 
   return {
-    isRecording: Boolean(mediaRecorderRef.current?.state === 'recording'),
+    isRecording,
     startRecording: startRec,
     stopRecording: stopRec
   };
