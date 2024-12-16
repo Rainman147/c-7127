@@ -88,8 +88,11 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
   const startRec = useCallback(async () => {
     try {
-      console.log('Starting new recording session');
-      setRecordingSessionId(crypto.randomUUID());
+      // Generate a new session ID before starting recording
+      const newSessionId = crypto.randomUUID();
+      console.log('Starting new recording session:', newSessionId);
+      
+      setRecordingSessionId(newSessionId);
       setChunkCount(0);
       chunks.current = [];
       estimatedTotalChunks.current = 6; // 30 seconds / 5 seconds per chunk
