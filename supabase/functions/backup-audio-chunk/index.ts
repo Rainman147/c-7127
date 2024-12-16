@@ -40,55 +40,29 @@ serve(async (req) => {
 
     const formData = await req.formData()
     const chunk = formData.get('chunk') as Blob
-    const totalChunks = formData.get('totalChunks') as string
+    const sessionId = formData.get('sessionId')?.toString()
+    const chunkNumber = formData.get('chunkNumber')?.toString()
 
-    if (!chunk || !totalChunks) {
+    if (!chunk || !sessionId || !chunkNumber) {
       throw new Error('Missing required fields')
     }
 
-    console.log('Processing chunk with total chunks:', totalChunks)
+    console.log('Processing chunk:', {
+      sessionId,
+      chunkNumber,
+      size: chunk.size,
+      type: chunk.type
+    })
 
-    // Get current chunk number
-    const { data: existingChunks, error: countError } = await supabase
-      .from('audio_chunks')
-      .select('chunk_number')
-      .eq('user_id', user.id)
-      .order('chunk_number', { ascending: false })
-      .limit(1)
-
-    if (countError) {
-      throw countError
-    }
-
-    const chunkNumber = existingChunks && existingChunks.length > 0 
-      ? existingChunks[0].chunk_number + 1 
-      : 0
-
-    const storagePath = `chunks/${user.id}/${chunkNumber}.webm`
-
-    // Check if file already exists
-    const { data: existingFile } = await supabase.storage
-      .from('audio_files')
-      .list(`chunks/${user.id}`)
-
-    const fileExists = existingFile?.some(file => file.name === `${chunkNumber}.webm`)
-    if (fileExists) {
-      console.log('Chunk already exists, skipping upload:', storagePath)
-      return new Response(
-        JSON.stringify({ 
-          message: 'Chunk already processed',
-          chunkNumber 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    // Create storage path with user ID and session ID
+    const storagePath = `chunks/${user.id}/${sessionId}/${chunkNumber}.webm`
 
     // Upload chunk to storage
     const { error: uploadError } = await supabase.storage
       .from('audio_files')
       .upload(storagePath, chunk, {
         contentType: 'audio/webm',
-        upsert: false
+        upsert: true
       })
 
     if (uploadError) {
@@ -102,8 +76,8 @@ serve(async (req) => {
       .insert({
         user_id: user.id,
         storage_path: storagePath,
-        chunk_number: chunkNumber,
-        total_chunks: parseInt(totalChunks),
+        chunk_number: parseInt(chunkNumber),
+        total_chunks: -1, // Will be updated when recording ends
         status: 'stored',
         original_filename: `chunk_${chunkNumber}.webm`
       })
@@ -115,6 +89,7 @@ serve(async (req) => {
 
     console.log('Successfully processed chunk:', {
       userId: user.id,
+      sessionId,
       chunkNumber,
       storagePath
     })
