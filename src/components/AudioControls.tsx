@@ -15,9 +15,9 @@ const RecordingIndicator = () => (
     <span className="hidden sm:inline">Recording in session</span>
     <span className="inline sm:hidden">Recording</span>
     <span className="flex gap-0.5">
-      <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-      <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-      <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+      <span className="w-1 h-1 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+      <span className="w-1 h-1 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+      <span className="w-1 h-1 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
     </span>
   </div>
 );
@@ -45,17 +45,17 @@ const AudioControls = ({
           <TooltipTrigger asChild>
             <button
               onClick={isRecording ? onStopRecording : onStartRecording}
-              className={`p-2 rounded-full transition-all duration-300 ${
+              className={`p-4 rounded-lg transition-all duration-300 ${
                 isRecording 
                   ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
-                  : 'bg-gray-200 hover:bg-gray-300'
+                  : 'bg-chatgpt-hover hover:bg-chatgpt-selected'
               }`}
               aria-label={isRecording ? "Stop recording" : "Start recording"}
             >
               {isRecording ? (
-                <Square className="h-5 w-5 text-white" />
+                <Square className="h-6 w-6 text-white" />
               ) : (
-                <Mic className="h-5 w-5 text-gray-700" />
+                <Mic className="h-6 w-6" />
               )}
             </button>
           </TooltipTrigger>
