@@ -32,10 +32,11 @@ serve(async (req) => {
       userId,
     })
 
+    // Validate required fields
     if (!audioChunk) {
       throw new Error('Missing audio chunk')
     }
-    if (!sessionId) {
+    if (!sessionId || sessionId.trim() === '') {
       throw new Error('Missing session ID')
     }
     if (!userId) {
@@ -46,7 +47,7 @@ serve(async (req) => {
 
     // Upload chunk to storage
     const chunkPath = `chunks/${sessionId}/${chunkNumber}.webm`
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError, data: uploadData } = await supabase.storage
       .from('audio_files')
       .upload(chunkPath, audioChunk, {
         contentType: 'audio/webm',
@@ -54,8 +55,11 @@ serve(async (req) => {
       })
 
     if (uploadError) {
+      console.error('Upload error:', uploadError)
       throw uploadError
     }
+
+    console.log('Successfully uploaded chunk to storage:', chunkPath)
 
     // Update audio chunks table
     const { error: dbError } = await supabase
@@ -70,15 +74,19 @@ serve(async (req) => {
       })
 
     if (dbError) {
+      console.error('Database error:', dbError)
       throw dbError
     }
+
+    console.log('Successfully updated database record for chunk')
 
     return new Response(
       JSON.stringify({ 
         success: true,
         chunkNumber,
         sessionId,
-        totalChunks
+        totalChunks,
+        path: chunkPath
       }),
       { 
         headers: { 
@@ -91,13 +99,16 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error processing chunk:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.toString()
+      }),
       { 
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json' 
         },
-        status: 500
+        status: 400
       }
     )
   }
