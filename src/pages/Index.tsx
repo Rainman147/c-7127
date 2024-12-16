@@ -6,12 +6,20 @@ import ChatInput from '@/components/ChatInput';
 import MessageList from '@/components/MessageList';
 import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
+import type { Template } from '@/components/TemplateSelector';
 
 const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [session, setSession] = useState<any>(null);
-  const { messages, isLoading, handleSendMessage, handleTranscriptionError, setMessages } = useChat();
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const { 
+    messages, 
+    isLoading, 
+    handleSendMessage, 
+    handleTranscriptionError, 
+    setMessages,
+    currentChatId,
+    setCurrentChatId
+  } = useChat();
 
   // Initialize audio recovery
   useAudioRecovery();
@@ -53,6 +61,12 @@ const Index = () => {
     }
   };
 
+  const handleTemplateChange = (template: Template) => {
+    console.log('Template changed:', template);
+    // Update AI behavior based on template
+    // This will be used by the chat system to adjust its responses
+  };
+
   const handleTranscriptionComplete = async (text: string) => {
     console.log('Transcription complete in Index, ready for user to edit:', text);
     if (text) {
@@ -75,7 +89,11 @@ const Index = () => {
       />
       
       <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
-        <ChatHeader isSidebarOpen={isSidebarOpen} />
+        <ChatHeader 
+          isSidebarOpen={isSidebarOpen}
+          currentChatId={currentChatId}
+          onTemplateChange={handleTemplateChange}
+        />
         
         <div className={`flex h-full flex-col ${messages.length === 0 ? 'items-center justify-center' : 'justify-between'} pt-[60px] pb-4`}>
           {messages.length === 0 ? (
