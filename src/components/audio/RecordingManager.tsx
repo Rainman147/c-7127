@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { getOptimalAudioConfig, getSupportedMimeType, getDeviceType } from '@/utils/deviceDetection';
 
 interface RecordingManagerProps {
   onRecordingComplete: (blob: Blob) => void;
@@ -13,7 +14,10 @@ interface RecordingManagerReturn {
   audioData?: string;
 }
 
-const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManagerProps): RecordingManagerReturn => {
+const RecordingManager = ({ 
+  onRecordingComplete, 
+  onAudioData 
+}: RecordingManagerProps): RecordingManagerReturn => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioData, setAudioData] = useState<string>();
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -43,28 +47,30 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
 
   const handleStartRecording = useCallback(async () => {
     try {
-      console.log('Requesting microphone access...');
-      
-      // More permissive audio constraints for mobile devices
+      console.log('Starting recording with device-specific configuration');
+      const deviceType = getDeviceType();
+      console.log('Detected device type:', deviceType);
+
+      const audioConfig = getOptimalAudioConfig();
+      console.log('Using audio configuration:', audioConfig);
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: { ideal: true },
-          noiseSuppression: { ideal: true },
-          autoGainControl: { ideal: true }
-        }
+        audio: audioConfig
       });
 
-      console.log('Microphone access granted, initializing audio context...');
-      
+      console.log('Successfully obtained media stream');
+
       // Create AudioContext only after user interaction
-      audioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      audioContext.current = new AudioContextClass();
       const source = audioContext.current.createMediaStreamSource(stream);
-      
-      // Use a more compatible buffer size for mobile
-      processor.current = audioContext.current.createScriptProcessor(2048, 1, 1);
+
+      // Use device-appropriate buffer size
+      const bufferSize = deviceType.isMobile ? 2048 : 4096;
+      processor.current = audioContext.current.createScriptProcessor(bufferSize, 1, 1);
 
       let accumulatedData = new Float32Array(0);
-      const CHUNK_SIZE = 16000;
+      const CHUNK_SIZE = deviceType.isMobile ? 8000 : 16000;
 
       processor.current.onaudioprocess = (e) => {
         const inputData = e.inputBuffer.getChannelData(0);
@@ -89,18 +95,12 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
       source.connect(processor.current);
       processor.current.connect(audioContext.current.destination);
 
-      // Try different MIME types based on browser support
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm')
-        ? 'audio/webm'
-        : MediaRecorder.isTypeSupported('audio/mp4')
-          ? 'audio/mp4'
-          : 'audio/wav';
+      const mimeType = getSupportedMimeType();
+      console.log(`Using MIME type: ${mimeType}`);
 
-      console.log('Using MIME type:', mimeType);
-      
       mediaRecorder.current = new MediaRecorder(stream, {
         mimeType,
-        audioBitsPerSecond: 128000
+        audioBitsPerSecond: deviceType.isMobile ? 64000 : 128000
       });
       
       chunks.current = [];
@@ -112,11 +112,11 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
         }
       };
 
-      mediaRecorder.current.start(1000); // Collect data every second
+      mediaRecorder.current.start(1000);
       setIsRecording(true);
+      console.log('Recording started successfully');
 
-      console.log('Started recording with mobile-compatible settings');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error starting recording:', error);
       toast({
         title: "Error",
@@ -151,7 +151,8 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
 
     if (chunks.current.length > 0) {
       console.log('Creating final audio blob from chunks:', chunks.current.length);
-      const audioBlob = new Blob(chunks.current, { type: 'audio/wav' });
+      const mimeType = getSupportedMimeType();
+      const audioBlob = new Blob(chunks.current, { type: mimeType });
       console.log('Final blob size:', audioBlob.size);
       onRecordingComplete(audioBlob);
       chunks.current = [];
