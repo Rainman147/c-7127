@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useMediaRecorder } from './useMediaRecorder';
 import { useAudioStream } from './useAudioStream';
@@ -69,6 +69,15 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     onDataAvailable: handleDataAvailable,
     onError: handleError
   });
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (currentStream) {
+        cleanupStream(currentStream);
+      }
+    };
+  }, [currentStream, cleanupStream]);
 
   const startRec = useCallback(async () => {
     try {

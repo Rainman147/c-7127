@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import AudioControls from './AudioControls';
 import { useRecording } from '@/hooks/transcription/useRecording';
 import { useAudioProcessing } from '@/hooks/transcription/useAudioProcessing';
@@ -19,7 +19,7 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
   const validateTranscription = useTranscriptionValidation(onTranscriptionComplete);
   const { toast } = useToast();
 
-  const handleError = (error: string) => {
+  const handleError = useCallback((error: string) => {
     console.error('Audio processing error:', error);
     setIsRecording(false);
     onRecordingStateChange?.(false);
@@ -33,15 +33,15 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
         variant: "destructive"
       });
     }
-  };
+  }, [handlePermissionError, onRecordingStateChange, toast]);
 
-  const handleTranscriptionSuccess = (text: string) => {
+  const handleTranscriptionSuccess = useCallback((text: string) => {
     console.log('Transcription completed successfully:', text);
     if (validateTranscription(text)) {
       setIsRecording(false);
       onRecordingStateChange?.(false);
     }
-  };
+  }, [validateTranscription, onRecordingStateChange]);
 
   const { startRecording: startRec, stopRecording: stopRec } = useRecording({
     onError: handleError,
@@ -53,17 +53,17 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
     onError: handleError
   });
 
-  const handleStartRecording = async () => {
+  const handleStartRecording = useCallback(async () => {
     console.log('Starting recording with network type:', networkType);
     setIsRecording(true);
     onRecordingStateChange?.(true);
     await startRec();
-  };
+  }, [networkType, onRecordingStateChange, startRec]);
 
-  const handleStopRecording = async () => {
+  const handleStopRecording = useCallback(async () => {
     console.log('Stopping recording...');
     await stopRec();
-  };
+  }, [stopRec]);
 
   return (
     <AudioControls
