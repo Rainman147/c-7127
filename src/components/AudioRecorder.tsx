@@ -30,6 +30,11 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
     };
   }, []);
 
+  useEffect(() => {
+    // Sync the ref with the state for cleanup purposes
+    recordingStateRef.current = isRecording;
+  }, [isRecording]);
+
   const handleError = useCallback((error: string) => {
     console.error('[AudioRecorder] Error:', error);
     setIsRecording(false);
@@ -79,27 +84,36 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
       return;
     }
 
+    if (isRecording) {
+      console.log('[AudioRecorder] Already recording, ignoring start request');
+      return;
+    }
+
     console.log('[AudioRecorder] Starting recording with network:', networkType);
     try {
       setIsRecording(true);
-      recordingStateRef.current = true;
       onRecordingStateChange?.(true);
       await startRec();
     } catch (error) {
       console.error('[AudioRecorder] Start recording error:', error);
       handleError(error as string);
     }
-  }, [networkType, onRecordingStateChange, startRec, hasPermission, handlePermissionError, handleError]);
+  }, [networkType, onRecordingStateChange, startRec, hasPermission, handlePermissionError, handleError, isRecording]);
 
   const handleStopRecording = useCallback(async () => {
     console.log('[AudioRecorder] Stopping recording...');
+    if (!isRecording) {
+      console.log('[AudioRecorder] Not recording, ignoring stop request');
+      return;
+    }
+
     try {
       await stopRec();
     } catch (error) {
       console.error('[AudioRecorder] Stop recording error:', error);
       handleError(error as string);
     }
-  }, [stopRec, handleError]);
+  }, [stopRec, handleError, isRecording]);
 
   return (
     <AudioControls

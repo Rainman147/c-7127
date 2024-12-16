@@ -20,7 +20,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
   const handleDataAvailable = useCallback(async (event: BlobEvent) => {
     if (event.data.size > 0) {
       const sessionId = getSessionId();
-      console.log('Recording chunk received:', {
+      console.log('[useRecording] Recording chunk received:', {
         size: event.data.size,
         type: event.data.type,
         sessionId
@@ -31,9 +31,9 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
       try {
         await uploadChunk(event.data, sessionId, chunkNumber);
-        console.log(`Chunk ${chunkNumber} uploaded successfully`);
+        console.log(`[useRecording] Chunk ${chunkNumber} uploaded successfully`);
       } catch (error: any) {
-        console.error('Error handling audio chunk:', error);
+        console.error('[useRecording] Error handling audio chunk:', error);
         onError(error.message);
       }
     }
@@ -45,7 +45,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       chunksRef.current = [];
       
       const sessionId = createSession();
-      console.log('Starting recording with session:', sessionId);
+      console.log('[useRecording] Starting recording with session:', sessionId);
 
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -60,7 +60,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
         ? 'audio/webm;codecs=opus' 
         : 'audio/webm';
-      console.log('Using supported MIME type:', mimeType);
+      console.log('[useRecording] Using supported MIME type:', mimeType);
 
       const recorder = new MediaRecorder(stream, {
         mimeType,
@@ -70,7 +70,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       recorder.ondataavailable = handleDataAvailable;
       
       recorder.onerror = (event: ErrorEvent) => {
-        console.error('MediaRecorder error:', event.error);
+        console.error('[useRecording] MediaRecorder error:', event.error);
         onError('Recording failed: ' + (event.error?.message || 'Unknown error'));
         stopRec();
       };
@@ -78,14 +78,14 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       recorder.start(5000); // Chunk every 5 seconds
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
-      console.log('MediaRecorder started with configuration:', {
+      console.log('[useRecording] MediaRecorder started with configuration:', {
         mimeType,
         audioBitsPerSecond: 128000,
         sessionId
       });
 
     } catch (error: any) {
-      console.error('Failed to start recording:', error);
+      console.error('[useRecording] Failed to start recording:', error);
       onError(error.message);
       toast({
         title: "Error",
@@ -97,7 +97,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
   const stopRec = useCallback(async () => {
     const sessionId = getSessionId();
-    console.log('Stopping recording session:', sessionId);
+    console.log('[useRecording] Stopping recording session:', sessionId);
     
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
@@ -108,7 +108,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     await new Promise(resolve => setTimeout(resolve, 100));
 
     if (!sessionId || chunksRef.current.length === 0) {
-      console.warn('No chunks recorded or no active session');
+      console.warn('[useRecording] No chunks recorded or no active session');
       onError('No audio recorded');
       return;
     }
@@ -123,12 +123,12 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       });
 
       if (transcriptionError) {
-        console.error('Transcription error:', transcriptionError);
+        console.error('[useRecording] Transcription error:', transcriptionError);
         throw transcriptionError;
       }
 
       if (transcriptionData?.transcription) {
-        console.log('Transcription complete:', transcriptionData.transcription);
+        console.log('[useRecording] Transcription complete:', transcriptionData.transcription);
         onTranscriptionComplete(transcriptionData.transcription);
         
         toast({
@@ -141,7 +141,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       }
 
     } catch (error: any) {
-      console.error('Error stopping recording:', error);
+      console.error('[useRecording] Error stopping recording:', error);
       onError(error.message);
       
       toast({

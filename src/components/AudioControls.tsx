@@ -44,7 +44,10 @@ const AudioControls = ({
     return "Start recording";
   };
 
-  const handleRecordingClick = async () => {
+  const handleRecordingClick = async (event: React.MouseEvent) => {
+    event.preventDefault(); // Prevent any default behavior
+    event.stopPropagation(); // Stop event bubbling
+    
     console.log('[AudioControls] Record button clicked, current state:', { isRecording });
     try {
       if (isRecording) {
@@ -72,6 +75,7 @@ const AudioControls = ({
                   : 'bg-white hover:bg-gray-100 dark:bg-gray-200 dark:hover:bg-gray-300'
               }`}
               aria-label={isRecording ? "Stop recording" : "Start recording"}
+              type="button" // Explicitly set type to prevent form submission
             >
               {isRecording ? (
                 <Square className="h-5 w-5 text-white" />
