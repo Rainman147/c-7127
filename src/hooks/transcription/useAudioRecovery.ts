@@ -3,6 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useChat } from '@/hooks/useChat';
 
+interface AudioChunk {
+  storage_path: string;
+  chunk_number: number;
+  status: string;
+}
+
 export const useAudioRecovery = () => {
   const { toast } = useToast();
   const { handleSendMessage } = useChat();
@@ -34,7 +40,7 @@ export const useAudioRecovery = () => {
         console.log('Found interrupted audio sessions:', chunks.length);
 
         // Group chunks by session ID
-        const sessions = chunks.reduce((acc, chunk) => {
+        const sessions = (chunks as AudioChunk[]).reduce((acc: { [key: string]: AudioChunk[] }, chunk) => {
           const sessionId = chunk.storage_path.split('/')[1];
           if (!acc[sessionId]) {
             acc[sessionId] = [];
