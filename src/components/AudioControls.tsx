@@ -1,5 +1,6 @@
 import { Mic, Square } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { getDeviceType, getBrowserType } from '@/utils/deviceDetection';
 
 interface AudioControlsProps {
   isRecording: boolean;
@@ -11,7 +12,8 @@ interface AudioControlsProps {
 
 const RecordingIndicator = () => (
   <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
-    <span>Recording in session</span>
+    <span className="hidden sm:inline">Recording in session</span>
+    <span className="inline sm:hidden">Recording</span>
     <span className="flex gap-0.5">
       <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
       <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
@@ -27,6 +29,15 @@ const AudioControls = ({
   onFileUpload,
   onTranscriptionComplete
 }: AudioControlsProps) => {
+  const { isIOS } = getDeviceType();
+  const { isSafari } = getBrowserType();
+
+  const getTooltipContent = () => {
+    if (isRecording) return "Stop recording";
+    if (isIOS && isSafari) return "Tap to start recording (Safari requires permission)";
+    return "Start recording";
+  };
+
   return (
     <div className="flex items-center gap-2">
       <TooltipProvider>
@@ -49,7 +60,7 @@ const AudioControls = ({
             </button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{isRecording ? "Stop recording" : "Start recording"}</p>
+            <p>{getTooltipContent()}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

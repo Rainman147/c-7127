@@ -25,22 +25,12 @@ export const getBrowserType = () => {
 };
 
 export const getOptimalAudioConfig = () => {
-  const { isIOS, isAndroid, isDesktop } = getDeviceType();
-  const { isChrome, isSafari } = getBrowserType();
-
-  // Default desktop configuration (currently working)
-  const defaultConfig = {
-    sampleRate: 16000,
-    channelCount: 1,
-    echoCancellation: true,
-    noiseSuppression: true,
-    autoGainControl: true
-  };
+  const { isIOS, isAndroid } = getDeviceType();
+  const { isSafari } = getBrowserType();
 
   // iOS-specific configuration
   if (isIOS) {
     return {
-      ...defaultConfig,
       sampleRate: 44100, // iOS preferred sample rate
       channelCount: 1,
       echoCancellation: { ideal: true },
@@ -52,14 +42,22 @@ export const getOptimalAudioConfig = () => {
   // Android-specific configuration
   if (isAndroid) {
     return {
-      ...defaultConfig,
       sampleRate: 44100,
-      channelCount: 1
+      channelCount: 1,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
     };
   }
 
-  // Return default config for desktop (preserving existing behavior)
-  return defaultConfig;
+  // Default desktop configuration (currently working)
+  return {
+    sampleRate: 16000,
+    channelCount: 1,
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true
+  };
 };
 
 export const getSupportedMimeType = () => {
