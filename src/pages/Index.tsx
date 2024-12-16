@@ -66,7 +66,6 @@ const Index = () => {
   const handleTemplateChange = (template: Template) => {
     console.log('Template changed:', template);
     setCurrentTemplate(template);
-    // The template's system instructions will be used in the next API call
   };
 
   const handleTranscriptionComplete = async (text: string) => {
@@ -82,9 +81,7 @@ const Index = () => {
   };
 
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
-    // Include template instructions in the API call
-    const systemInstructions = currentTemplate?.systemInstructions;
-    await handleSendMessage(message, type, systemInstructions);
+    await handleSendMessage(message, type);
   };
 
   return (
