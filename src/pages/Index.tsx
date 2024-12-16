@@ -5,12 +5,16 @@ import ChatHeader from '@/components/ChatHeader';
 import ChatInput from '@/components/ChatInput';
 import MessageList from '@/components/MessageList';
 import { useChat } from '@/hooks/useChat';
+import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 
 const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [session, setSession] = useState<any>(null);
   const { messages, isLoading, handleSendMessage, handleTranscriptionError, setMessages } = useChat();
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+
+  // Initialize audio recovery
+  useAudioRecovery();
 
   useEffect(() => {
     // Get initial session
