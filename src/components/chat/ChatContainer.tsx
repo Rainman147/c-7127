@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import ChatHeader from '@/components/ChatHeader';
+import { ChatHeader } from '@/components/ChatHeader';
 import ChatInput from '@/components/ChatInput';
 import MessageList from '@/components/MessageList';
 import type { Template } from '@/components/template/types';

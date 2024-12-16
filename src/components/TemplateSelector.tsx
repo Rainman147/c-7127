@@ -15,7 +15,7 @@ interface TemplateSelectorProps {
   onTemplateChange: (template: Template) => void;
 }
 
-const TemplateSelector = memo(({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
+export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
   console.log('[TemplateSelector] Initializing with currentChatId:', currentChatId);
   
   const { selectedTemplate, isLoading, handleTemplateChange } = useTemplateSelection(

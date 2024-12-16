@@ -1,5 +1,5 @@
 import { memo, useEffect } from "react";
-import TemplateSelector from "./TemplateSelector";
+import { TemplateSelector } from "./TemplateSelector";
 
 interface ChatHeaderProps {
   isSidebarOpen?: boolean;
@@ -7,7 +7,7 @@ interface ChatHeaderProps {
   onTemplateChange: (template: any) => void;
 }
 
-const ChatHeader = memo(({ 
+export const ChatHeader = memo(({ 
   isSidebarOpen = true, 
   currentChatId,
   onTemplateChange 
