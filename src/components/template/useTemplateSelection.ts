@@ -20,6 +20,7 @@ export const useTemplateSelection = (
       }
 
       try {
+        setIsLoading(true);
         const { data, error } = await supabase
           .from('chats')
           .select('template_type')
@@ -43,6 +44,8 @@ export const useTemplateSelection = (
           description: "Failed to load template settings",
           variant: "destructive",
         });
+      } finally {
+        setIsLoading(false);
       }
     };
 

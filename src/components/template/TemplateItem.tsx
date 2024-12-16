@@ -28,10 +28,10 @@ export const TemplateItem = ({
           className={`flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-700/50 transition-colors ${
             isSelected ? 'bg-gray-700' : ''
           }`}
-          onClick={() => onSelect(template)}
+          onClick={() => !isLoading && onSelect(template)}
           disabled={isLoading}
         >
-          <span className="flex-1 text-sm font-medium">{template.name}</span>
+          <span className="flex-1 text-sm font-medium text-white">{template.name}</span>
           <div className="flex items-center gap-2">
             <TooltipTrigger asChild>
               <button 

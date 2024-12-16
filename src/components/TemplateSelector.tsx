@@ -23,21 +23,21 @@ const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorP
   return (
     <DropdownMenu>
       <DropdownMenuTrigger 
-        className="flex items-center gap-2 px-3 py-1 font-semibold text-sm hover:bg-gray-700/50 rounded-md transition-colors disabled:opacity-50"
+        className="flex items-center gap-2 px-3 py-1 font-semibold text-sm text-white hover:bg-gray-700/50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={isLoading}
       >
-        {selectedTemplate.name}
+        <span className="whitespace-nowrap">{selectedTemplate?.name || 'Live Patient Session'}</span>
         <ChevronDown className="h-4 w-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent 
-        className="w-72 bg-gray-800 border border-gray-700 rounded-md shadow-lg"
+        className="w-72 bg-gray-800 border border-gray-700 rounded-md shadow-lg z-50"
         align="start"
       >
         {templates.map((template) => (
           <TemplateItem
             key={template.id}
             template={template}
-            isSelected={selectedTemplate.id === template.id}
+            isSelected={selectedTemplate?.id === template.id}
             onSelect={handleTemplateChange}
             isLoading={isLoading}
           />
