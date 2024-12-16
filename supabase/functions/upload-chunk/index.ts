@@ -17,6 +17,23 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    // Get the authorization header
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader) {
+      throw new Error('No authorization header')
+    }
+
+    // Get the JWT token
+    const token = authHeader.replace('Bearer ', '')
+    
+    // Get the user from the JWT token
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
+    
+    if (userError || !user) {
+      console.error('Error getting user:', userError)
+      throw new Error('Failed to get user ID')
+    }
+
     const formData = await req.formData()
     const sessionId = formData.get('sessionId')?.toString()
     const chunkNumber = parseInt(formData.get('chunkNumber')?.toString() || '0')
@@ -26,76 +43,68 @@ serve(async (req) => {
       throw new Error('Missing required fields')
     }
 
-    console.log(`Processing chunk ${chunkNumber} for session ${sessionId}`)
+    console.log(`Processing chunk ${chunkNumber} for session ${sessionId} and user ${user.id}`)
+
+    // Create a consistent storage path
+    const storagePath = `chunks/${user.id}/${sessionId}/${chunkNumber}.webm`
+    console.log('Uploading to storage path:', storagePath)
 
     // Upload chunk to storage
-    const chunkPath = `chunks/${sessionId}/${chunkNumber}`
     const { error: uploadError } = await supabase.storage
       .from('audio_files')
-      .upload(chunkPath, chunk, {
-        contentType: 'application/octet-stream',
+      .upload(storagePath, chunk, {
+        contentType: 'audio/webm',
         upsert: true
       })
 
     if (uploadError) {
+      console.error('Upload error:', uploadError)
       throw uploadError
     }
 
-    // Update session progress
-    const { data: session, error: sessionError } = await supabase
-      .from('file_upload_sessions')
-      .update({
-        chunks_uploaded: chunkNumber + 1,
-        status: 'uploading'
+    // Save chunk metadata
+    const { error: insertError } = await supabase
+      .from('audio_chunks')
+      .insert({
+        user_id: user.id,
+        storage_path: storagePath,
+        chunk_number: chunkNumber,
+        total_chunks: -1, // Will be updated when recording ends
+        status: 'stored',
+        original_filename: `chunk_${chunkNumber}.webm`
       })
-      .eq('id', sessionId)
-      .select()
-      .single()
 
-    if (sessionError) {
-      throw sessionError
+    if (insertError) {
+      console.error('Insert error:', insertError)
+      throw insertError
     }
 
-    // Check if all chunks are uploaded
-    if (session && session.chunks_uploaded === session.total_chunks) {
-      console.log(`All chunks uploaded for session ${sessionId}`)
-      
-      const { error: updateError } = await supabase
-        .from('file_upload_sessions')
-        .update({ status: 'completed' })
-        .eq('id', sessionId)
-
-      if (updateError) {
-        throw updateError
-      }
-    }
+    console.log('Successfully processed chunk:', {
+      userId: user.id,
+      sessionId,
+      chunkNumber,
+      storagePath
+    })
 
     return new Response(
       JSON.stringify({ 
-        success: true, 
+        message: 'Chunk processed successfully',
         chunkNumber,
-        sessionId
+        storagePath
       }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
     console.error('Error processing chunk:', error)
     return new Response(
       JSON.stringify({ 
-        error: error.message 
+        error: error.message,
+        details: 'Failed to process audio chunk'
       }),
       { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        },
-        status: 500
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400
       }
     )
   }

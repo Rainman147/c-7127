@@ -1,5 +1,5 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,31 +7,29 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
     const { sessionId, userId } = await req.json()
-
+    
     if (!sessionId || !userId) {
-      throw new Error('Missing required parameters')
+      throw new Error('Session ID and User ID are required')
     }
 
-    console.log('Processing chunks for session:', sessionId)
+    console.log('Processing chunks for session:', sessionId, 'and user:', userId)
 
-    // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get all chunks for the session
+    // Get all chunks for this session
     const { data: chunks, error: chunksError } = await supabase
       .from('audio_chunks')
       .select('*')
-      .eq('storage_path', 'like', `%${sessionId}%`)
+      .eq('user_id', userId)
       .order('chunk_number', { ascending: true })
 
     if (chunksError) {
@@ -47,39 +45,39 @@ serve(async (req) => {
     console.log(`Found ${chunks.length} chunks to process`)
 
     // Download and combine all chunks
-    const audioChunks: Blob[] = []
+    const audioChunks: Uint8Array[] = []
+    
     for (const chunk of chunks) {
+      console.log('Downloading chunk:', chunk.storage_path)
+      
       const { data, error: downloadError } = await supabase.storage
         .from('audio_files')
         .download(chunk.storage_path)
 
       if (downloadError) {
         console.error('Error downloading chunk:', downloadError)
-        continue
+        throw downloadError
       }
 
-      audioChunks.push(data)
+      const arrayBuffer = await data.arrayBuffer()
+      audioChunks.push(new Uint8Array(arrayBuffer))
     }
 
-    if (audioChunks.length === 0) {
-      throw new Error('Failed to download any chunks')
-    }
-
-    // Combine chunks into a single blob
-    const combinedAudio = new Blob(audioChunks, { type: 'audio/webm' })
+    // Combine chunks
+    const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.length, 0)
+    const combinedArray = new Uint8Array(totalLength)
+    let offset = 0
     
-    // Convert to base64
-    const buffer = await combinedAudio.arrayBuffer()
-    const base64Audio = btoa(
-      new Uint8Array(buffer)
-        .reduce((data, byte) => data + String.fromCharCode(byte), '')
-    )
+    for (const chunk of audioChunks) {
+      combinedArray.set(chunk, offset)
+      offset += chunk.length
+    }
 
     // Send to Whisper API for transcription
-    const { data: transcriptionData, error: transcriptionError } = await supabase.functions.invoke('transcribe', {
+    const { data: transcription, error: transcriptionError } = await supabase.functions.invoke('transcribe', {
       body: { 
-        audioData: base64Audio,
-        mimeType: 'audio/webm',
+        audioData: combinedArray,
+        userId,
         sessionId
       }
     })
@@ -93,23 +91,29 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        transcription: transcriptionData.transcription,
-        message: 'Chunks processed successfully'
+        transcription: transcription.text,
+        metadata: transcription.metadata
       }),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
       }
     )
+
   } catch (error) {
     console.error('Error processing chunks:', error)
     return new Response(
-      JSON.stringify({
+      JSON.stringify({ 
         error: error.message,
         details: 'Failed to process audio chunks'
       }),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        },
         status: 400
       }
     )
