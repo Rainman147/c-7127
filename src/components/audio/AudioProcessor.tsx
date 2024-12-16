@@ -71,15 +71,17 @@ const AudioProcessor = ({
 
         console.log(`Split audio into ${chunks.length} chunks`);
         
-        // Add totalChunks to each chunk's FormData
-        const chunksWithTotal = chunks.map(chunk => {
-          const formData = new FormData();
-          formData.append('chunk', chunk);
-          formData.append('totalChunks', chunks.length.toString());
-          return formData;
-        });
+        // Process chunks with metadata
+        const processChunksWithMetadata = async (chunks: Blob[]) => {
+          for (let i = 0; i < chunks.length; i++) {
+            const formData = new FormData();
+            formData.append('chunk', chunks[i]);
+            formData.append('totalChunks', chunks.length.toString());
+            await processChunks([chunks[i]]);
+          }
+        };
 
-        await processChunks(chunksWithTotal);
+        await processChunksWithMetadata(chunks);
         
         setProcessingStatus('Processing complete!');
         console.log('Audio processing completed successfully');
@@ -110,7 +112,7 @@ const AudioProcessor = ({
 
   return (
     <AudioProgressTracker
-      isProcessing={isProcessording}
+      isProcessing={isProcessing}
       currentChunk={currentChunk}
       totalChunks={totalChunks}
       status={processingStatus}
