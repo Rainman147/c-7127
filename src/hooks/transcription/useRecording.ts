@@ -69,10 +69,9 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
       recorder.ondataavailable = handleDataAvailable;
       
-      recorder.onerror = (event: Event) => {
-        const error = (event.target as MediaRecorder).error;
-        console.error('MediaRecorder error:', error);
-        onError('Recording failed: ' + (error?.message || 'Unknown error'));
+      recorder.onerror = (event: ErrorEvent) => {
+        console.error('MediaRecorder error:', event.error);
+        onError('Recording failed: ' + (event.error?.message || 'Unknown error'));
         stopRec();
       };
 
