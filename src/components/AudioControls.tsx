@@ -48,7 +48,7 @@ const AudioControls = ({
               className={`p-2 rounded-full transition-all duration-300 ${
                 isRecording 
                   ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
-                  : 'bg-gray-200 hover:bg-gray-300'
+                  : 'bg-white hover:bg-gray-100 dark:bg-gray-200 dark:hover:bg-gray-300'
               }`}
               aria-label={isRecording ? "Stop recording" : "Start recording"}
             >
