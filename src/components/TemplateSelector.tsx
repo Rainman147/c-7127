@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -14,13 +15,13 @@ interface TemplateSelectorProps {
   onTemplateChange: (template: Template) => void;
 }
 
-const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
+const TemplateSelector = memo(({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
   const { selectedTemplate, isLoading, handleTemplateChange } = useTemplateSelection(
     currentChatId,
     onTemplateChange
   );
 
-  console.log('Current selected template:', selectedTemplate?.name);
+  console.log('TemplateSelector rendering with template:', selectedTemplate?.name);
 
   return (
     <DropdownMenu>
@@ -47,6 +48,8 @@ const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorP
       </DropdownMenuContent>
     </DropdownMenu>
   );
-};
+});
+
+TemplateSelector.displayName = 'TemplateSelector';
 
 export default TemplateSelector;

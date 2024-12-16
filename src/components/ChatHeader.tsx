@@ -1,3 +1,4 @@
+import { memo } from "react";
 import TemplateSelector from "./TemplateSelector";
 
 interface ChatHeaderProps {
@@ -6,17 +7,20 @@ interface ChatHeaderProps {
   onTemplateChange: (template: any) => void;
 }
 
-const ChatHeader = ({ 
+const ChatHeader = memo(({ 
   isSidebarOpen = true, 
   currentChatId,
   onTemplateChange 
 }: ChatHeaderProps) => {
+  console.log('ChatHeader rendering with currentChatId:', currentChatId);
+  
   return (
     <div className="fixed top-0 z-30 w-full border-b border-white/20 bg-chatgpt-main/95 backdrop-blur">
       <div className="flex h-[60px] items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <span className={`${!isSidebarOpen ? 'ml-24' : ''}`}>
             <TemplateSelector 
+              key={currentChatId || 'default'}
               currentChatId={currentChatId}
               onTemplateChange={onTemplateChange}
             />
@@ -31,6 +35,8 @@ const ChatHeader = ({
       </div>
     </div>
   );
-};
+});
+
+ChatHeader.displayName = 'ChatHeader';
 
 export default ChatHeader;
