@@ -90,7 +90,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         onError('Recording failed');
       };
 
-      recorder.start(1000); // Chunk every second for more responsive transcription
+      recorder.start(5000); // Chunk every 5 seconds for optimal processing
       mediaRecorderRef.current = recorder;
       console.log('MediaRecorder started with mime type:', mimeType);
 
