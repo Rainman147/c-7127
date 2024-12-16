@@ -15,6 +15,7 @@ export type Database = {
           created_at: string
           id: string
           original_filename: string
+          session_id: string | null
           status: string | null
           storage_path: string
           total_chunks: number
@@ -27,6 +28,7 @@ export type Database = {
           created_at?: string
           id?: string
           original_filename: string
+          session_id?: string | null
           status?: string | null
           storage_path: string
           total_chunks: number
@@ -39,6 +41,7 @@ export type Database = {
           created_at?: string
           id?: string
           original_filename?: string
+          session_id?: string | null
           status?: string | null
           storage_path?: string
           total_chunks?: number

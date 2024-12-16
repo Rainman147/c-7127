@@ -1,17 +1,11 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
-
   try {
+    console.log('Received request to transcribe chunks')
+    
+    // Parse request body
     const { sessionId, userId } = await req.json()
     
     if (!sessionId || !userId) {
@@ -19,8 +13,9 @@ serve(async (req) => {
       throw new Error('Session ID and User ID are required')
     }
 
-    console.log('Processing chunks for session:', sessionId, 'and user:', userId)
+    console.log('Processing chunks for session:', sessionId)
 
+    // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -36,17 +31,18 @@ serve(async (req) => {
 
     if (chunksError) {
       console.error('Error fetching chunks:', chunksError)
-      throw chunksError
+      throw new Error('Failed to fetch audio chunks')
     }
 
     if (!chunks || chunks.length === 0) {
       console.error('No chunks found for session:', sessionId)
-      throw new Error('No chunks found for session')
+      throw new Error('No audio chunks found')
     }
 
     console.log(`Found ${chunks.length} chunks to process`)
 
-    // Download and combine all chunks
+    // Combine audio chunks
+    let totalLength = 0
     const audioChunks: Uint8Array[] = []
     
     for (const chunk of chunks) {
@@ -61,18 +57,18 @@ serve(async (req) => {
 
       if (downloadError) {
         console.error('Error downloading chunk:', downloadError)
-        throw downloadError
+        throw new Error(`Failed to download chunk ${chunk.chunk_number}`)
       }
 
       const arrayBuffer = await data.arrayBuffer()
-      audioChunks.push(new Uint8Array(arrayBuffer))
+      const uint8Array = new Uint8Array(arrayBuffer)
+      audioChunks.push(uint8Array)
+      totalLength += uint8Array.length
     }
 
-    // Combine chunks
-    const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.length, 0)
+    // Combine all chunks into a single Uint8Array
     const combinedArray = new Uint8Array(totalLength)
     let offset = 0
-    
     for (const chunk of audioChunks) {
       combinedArray.set(chunk, offset)
       offset += chunk.length
@@ -91,7 +87,7 @@ serve(async (req) => {
 
     if (transcriptionError) {
       console.error('Transcription error:', transcriptionError)
-      throw transcriptionError
+      throw new Error('Failed to transcribe audio')
     }
 
     console.log('Transcription completed successfully')
@@ -109,30 +105,23 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        transcription: transcription.text,
-        metadata: transcription.metadata
+        success: true,
+        transcription: transcription.transcription
       }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
-      }
+      { headers: { 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
     console.error('Error processing chunks:', error)
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: 'Failed to process audio chunks'
+      JSON.stringify({
+        success: false,
+        error: 'Failed to process audio chunks',
+        details: error.message
       }),
       { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        },
-        status: 400
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
       }
     )
   }
