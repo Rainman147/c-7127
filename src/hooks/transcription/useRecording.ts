@@ -2,6 +2,7 @@ import { useCallback, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useMediaRecorder } from './useMediaRecorder';
 import { useAudioStream } from './useAudioStream';
+import { convertWebMToWav } from '@/utils/audio/conversion';
 
 interface RecordingOptions {
   onError: (error: string) => void;
@@ -13,10 +14,23 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
   const { getStream, cleanupStream } = useAudioStream();
 
   const handleDataAvailable = useCallback(async (data: Blob) => {
-    console.log('Recording chunk received, size:', data.size);
+    console.log('Recording chunk received:', {
+      size: data.size,
+      type: data.type,
+      timestamp: new Date().toISOString()
+    });
     
     try {
-      // Convert blob to base64
+      // Convert WebM to WAV
+      console.log('Starting WebM to WAV conversion');
+      const wavBlob = await convertWebMToWav(data);
+      console.log('WAV conversion complete:', {
+        originalSize: data.size,
+        wavSize: wavBlob.size,
+        wavType: wavBlob.type
+      });
+
+      // Convert WAV blob to base64
       const reader = new FileReader();
       const base64Promise = new Promise<string>((resolve, reject) => {
         reader.onloadend = () => {
@@ -27,14 +41,19 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         reader.onerror = reject;
       });
 
-      reader.readAsDataURL(data);
+      reader.readAsDataURL(wavBlob);
       const base64Data = await base64Promise;
+      
+      console.log('Sending audio to transcription service:', {
+        dataLength: base64Data.length,
+        mimeType: wavBlob.type
+      });
 
       // Send to transcription service
       const { data: transcriptionData, error } = await supabase.functions.invoke('transcribe', {
         body: { 
           audioData: base64Data,
-          mimeType: data.type
+          mimeType: wavBlob.type
         }
       });
 
@@ -45,7 +64,10 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       }
 
       if (transcriptionData?.transcription) {
-        console.log('Transcription received:', transcriptionData.transcription);
+        console.log('Transcription received:', {
+          length: transcriptionData.transcription.length,
+          preview: transcriptionData.transcription.substring(0, 50)
+        });
         onTranscriptionComplete(transcriptionData.transcription);
       } else {
         onError('No transcription received from the service');
@@ -70,7 +92,6 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     onError: handleError
   });
 
-  // Cleanup effect
   useEffect(() => {
     return () => {
       if (currentStream) {
@@ -81,7 +102,13 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
   const startRec = useCallback(async () => {
     try {
+      console.log('Requesting audio stream');
       const stream = await getStream();
+      console.log('Audio stream obtained:', {
+        tracks: stream.getTracks().length,
+        settings: stream.getTracks()[0].getSettings()
+      });
+      
       setCurrentStream(stream);
       await startRecording(stream);
     } catch (error: any) {
@@ -91,6 +118,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
   }, [getStream, startRecording, onError]);
 
   const stopRec = useCallback(() => {
+    console.log('Stopping recording');
     stopRecording();
     if (currentStream) {
       cleanupStream(currentStream);
