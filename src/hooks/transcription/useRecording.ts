@@ -109,9 +109,10 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
   }, [getStream, startRecording, onError]);
 
   const stopRec = useCallback(() => {
-    console.log('Stopping recording');
+    console.log('Stopping recording...');
     stopRecording();
     if (currentStream) {
+      console.log('Cleaning up media stream');
       cleanupStream(currentStream);
       setCurrentStream(null);
     }
@@ -121,6 +122,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
   useEffect(() => {
     return () => {
       if (currentStream) {
+        console.log('Cleaning up media stream on unmount');
         cleanupStream(currentStream);
       }
     };
