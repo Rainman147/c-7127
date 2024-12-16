@@ -15,6 +15,7 @@ export const useTemplateSelection = (
   useEffect(() => {
     const loadTemplateForChat = async () => {
       if (!currentChatId) {
+        console.log('No chat ID, using default template');
         setSelectedTemplate(templates[0]);
         return;
       }
@@ -54,7 +55,10 @@ export const useTemplateSelection = (
 
   const handleTemplateChange = async (template: Template) => {
     console.log('Handling template change to:', template.name);
-    if (!currentChatId || template.id === selectedTemplate.id) return;
+    if (!currentChatId || template.id === selectedTemplate.id) {
+      console.log('No changes needed - same template or no chat ID');
+      return;
+    }
 
     setIsLoading(true);
     try {

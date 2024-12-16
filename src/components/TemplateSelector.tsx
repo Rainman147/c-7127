@@ -20,6 +20,8 @@ const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorP
     onTemplateChange
   );
 
+  console.log('Current selected template:', selectedTemplate?.name);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger 
