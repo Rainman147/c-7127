@@ -21,13 +21,14 @@ serve(async (req) => {
     const audioChunk = formData.get('chunk') as File
     const sessionId = formData.get('sessionId')?.toString()
     const chunkNumber = parseInt(formData.get('chunkNumber')?.toString() || '0')
+    const totalChunks = parseInt(formData.get('totalChunks')?.toString() || '1')  // Default to 1 if not provided
     const userId = formData.get('userId')?.toString()
 
     if (!audioChunk || !sessionId || !userId) {
       throw new Error('Missing required fields')
     }
 
-    console.log(`Processing chunk ${chunkNumber} for session ${sessionId}`)
+    console.log(`Processing chunk ${chunkNumber} of ${totalChunks} for session ${sessionId}`)
 
     // Upload chunk to storage
     const chunkPath = `chunks/${sessionId}/${chunkNumber}.webm`
@@ -49,6 +50,7 @@ serve(async (req) => {
         user_id: userId,
         original_filename: `recording_${sessionId}_chunk${chunkNumber}`,
         chunk_number: chunkNumber,
+        total_chunks: totalChunks,  // Now we always provide this value
         storage_path: chunkPath,
         status: 'stored'
       })
@@ -61,7 +63,8 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true,
         chunkNumber,
-        sessionId
+        sessionId,
+        totalChunks
       }),
       { 
         headers: { 

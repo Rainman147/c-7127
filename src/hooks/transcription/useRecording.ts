@@ -17,6 +17,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
   const { getStream, cleanupStream } = useAudioStream();
   const { toast } = useToast();
   const chunks = useRef<Blob[]>([]);
+  const estimatedTotalChunks = useRef(0);
 
   const handleDataAvailable = useCallback(async (data: Blob) => {
     console.log('Recording chunk received:', {
@@ -33,6 +34,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       formData.append('chunk', data);
       formData.append('sessionId', recordingSessionId);
       formData.append('chunkNumber', chunkCount.toString());
+      formData.append('totalChunks', estimatedTotalChunks.current.toString());
       formData.append('userId', (await supabase.auth.getUser()).data.user?.id || '');
 
       const { error: backupError } = await supabase.functions.invoke('backup-audio-chunk', {
@@ -63,11 +65,6 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     onError(error.message);
   }, [currentStream, cleanupStream, onError]);
 
-  const handleTranscriptionSuccess = useCallback((text: string) => {
-    console.log('Transcription completed successfully:', text);
-    onTranscriptionComplete(text);
-  }, [onTranscriptionComplete]);
-
   const { isRecording, startRecording, stopRecording } = useMediaRecorder({
     onDataAvailable: handleDataAvailable,
     onError: handleError
@@ -79,6 +76,8 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       setRecordingSessionId(crypto.randomUUID());
       setChunkCount(0);
       chunks.current = [];
+      // Estimate total chunks based on expected recording duration (e.g., 30 seconds with 5-second chunks)
+      estimatedTotalChunks.current = 6; // 30 seconds / 5 seconds per chunk
       
       const stream = await getStream();
       console.log('Audio stream obtained');
@@ -140,7 +139,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
       if (transcriptionData?.transcription) {
         console.log('Transcription complete');
-        handleTranscriptionSuccess(transcriptionData.transcription);
+        onTranscriptionComplete(transcriptionData.transcription);
       }
     } catch (error: any) {
       console.error('Error processing recording:', error);
@@ -151,7 +150,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       });
       onError(error.message);
     }
-  }, [stopRecording, currentStream, cleanupStream, handleTranscriptionSuccess, onError, toast]);
+  }, [stopRecording, currentStream, cleanupStream, onTranscriptionComplete, onError, toast]);
 
   return {
     isRecording: Boolean(currentStream),
