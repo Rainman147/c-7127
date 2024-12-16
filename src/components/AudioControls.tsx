@@ -15,9 +15,9 @@ const RecordingIndicator = () => (
     <span className="hidden sm:inline">Recording in session</span>
     <span className="inline sm:hidden">Recording</span>
     <span className="flex gap-0.5">
-      <span className="w-1 h-1 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-      <span className="w-1 h-1 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-      <span className="w-1 h-1 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+      <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+      <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+      <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
     </span>
   </div>
 );
@@ -48,7 +48,7 @@ const AudioControls = ({
               className={`p-2 rounded-full transition-all duration-300 ${
                 isRecording 
                   ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
-                  : 'bg-white hover:bg-gray-100'
+                  : 'bg-gray-200 hover:bg-gray-300'
               }`}
               aria-label={isRecording ? "Stop recording" : "Start recording"}
             >
