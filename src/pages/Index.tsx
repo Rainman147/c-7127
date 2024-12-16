@@ -6,7 +6,7 @@ import ChatInput from '@/components/ChatInput';
 import MessageList from '@/components/MessageList';
 import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
-import type { Template } from '@/components/TemplateSelector';
+import type { Template } from '@/components/template/types';
 
 const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
