@@ -81,6 +81,8 @@ const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorP
           if (template) {
             console.log('Setting template from database:', template.name);
             setSelectedTemplate(template);
+            // Also notify parent component of the loaded template
+            onTemplateChange(template);
           }
         }
       } catch (error) {
@@ -94,7 +96,7 @@ const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorP
     };
 
     loadTemplateForChat();
-  }, [currentChatId]);
+  }, [currentChatId, onTemplateChange]);
 
   const handleTemplateChange = async (template: Template) => {
     console.log('Handling template change to:', template.name);
