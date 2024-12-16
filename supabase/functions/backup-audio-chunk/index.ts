@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,108 +7,81 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
     const formData = await req.formData()
-    const audioChunk = formData.get('chunk') as File
-    const sessionId = formData.get('sessionId')?.toString()
-    const chunkNumber = parseInt(formData.get('chunkNumber')?.toString() || '0')
-    const totalChunks = parseInt(formData.get('totalChunks')?.toString() || '1')
-    const userId = formData.get('userId')?.toString()
+    const chunk = formData.get('chunk') as Blob
+    const sessionId = formData.get('sessionId') as string
 
-    console.log('Received backup request:', {
-      hasAudioChunk: !!audioChunk,
-      sessionId,
-      chunkNumber,
-      totalChunks,
-      userId,
-    })
-
-    // Validate session ID first
-    if (!sessionId || sessionId.trim() === '') {
-      console.error('Missing or empty session ID')
-      return new Response(
-        JSON.stringify({ 
-          error: 'Missing session ID',
-          details: 'A valid session ID is required'
-        }),
-        { 
-          status: 400,
-          headers: { 
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
-        }
-      )
+    if (!sessionId) {
+      throw new Error('Missing session ID')
     }
 
-    // Validate other required fields
-    if (!audioChunk) {
-      throw new Error('Missing audio chunk')
-    }
-    if (!userId) {
-      throw new Error('Missing user ID')
+    if (!chunk) {
+      throw new Error('No audio chunk provided')
     }
 
-    console.log(`Processing chunk ${chunkNumber} of ${totalChunks} for session ${sessionId}`)
+    console.log('Processing chunk for session:', sessionId)
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    // Get current chunk number
+    const { data: existingChunks, error: countError } = await supabase
+      .from('audio_chunks')
+      .select('chunk_number')
+      .eq('storage_path', `chunks/${sessionId}/%`)
+      .order('chunk_number', { ascending: false })
+      .limit(1)
+
+    if (countError) {
+      throw countError
+    }
+
+    const chunkNumber = existingChunks && existingChunks.length > 0 
+      ? existingChunks[0].chunk_number + 1 
+      : 0
+
+    const storagePath = `chunks/${sessionId}/${chunkNumber}.webm`
+
     // Upload chunk to storage
-    const chunkPath = `chunks/${sessionId}/${chunkNumber}.webm`
-    const { error: uploadError, data: uploadData } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('audio_files')
-      .upload(chunkPath, audioChunk, {
+      .upload(storagePath, chunk, {
         contentType: 'audio/webm',
-        upsert: true
+        upsert: false
       })
 
     if (uploadError) {
-      console.error('Upload error:', uploadError)
       throw uploadError
     }
 
-    console.log('Successfully uploaded chunk to storage:', chunkPath)
-
-    // Update audio chunks table
-    const { error: dbError } = await supabase
+    // Save chunk metadata
+    const { error: insertError } = await supabase
       .from('audio_chunks')
       .insert({
-        user_id: userId,
-        original_filename: `recording_${sessionId}_chunk${chunkNumber}`,
+        storage_path: storagePath,
         chunk_number: chunkNumber,
-        total_chunks: totalChunks,
-        storage_path: chunkPath,
-        status: 'stored'
+        status: 'stored',
+        user_id: (await supabase.auth.getUser()).data.user?.id
       })
 
-    if (dbError) {
-      console.error('Database error:', dbError)
-      throw dbError
+    if (insertError) {
+      throw insertError
     }
-
-    console.log('Successfully updated database record for chunk')
 
     return new Response(
       JSON.stringify({ 
-        success: true,
-        chunkNumber,
-        sessionId,
-        totalChunks,
-        path: chunkPath
+        message: 'Chunk processed successfully',
+        chunkNumber
       }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
@@ -116,13 +89,10 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error.message,
-        details: error.toString()
+        details: 'Failed to process audio chunk'
       }),
       { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400
       }
     )
