@@ -17,20 +17,28 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
   const [networkType, setNetworkType] = useState<string>('unknown');
   const { toast } = useToast();
   const { isIOS } = getDeviceType();
-  const { isSafari } = getBrowserType();
+  const { isChrome, isSafari } = getBrowserType();
 
   useEffect(() => {
     // Check for microphone permission on mount
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: 'microphone' as PermissionName })
-        .then(result => {
+    const checkMicrophonePermission = async () => {
+      try {
+        const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        setHasPermission(result.state === 'granted');
+        
+        result.onchange = () => {
           setHasPermission(result.state === 'granted');
-          
-          result.onchange = () => {
-            setHasPermission(result.state === 'granted');
-          };
-        });
-    }
+        };
+      } catch (error) {
+        console.error('Error checking microphone permission:', error);
+        // On iOS, permissions API might not be available
+        if (isIOS) {
+          setHasPermission(null); // We'll handle iOS permissions differently
+        }
+      }
+    };
+
+    checkMicrophonePermission();
 
     // Monitor network conditions
     const checkNetwork = async () => {
@@ -47,7 +55,7 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
       connection.addEventListener('change', checkNetwork);
       return () => connection.removeEventListener('change', checkNetwork);
     }
-  }, []);
+  }, [isIOS]);
 
   const handleError = (error: string) => {
     console.error('Audio processing error:', error);
@@ -59,7 +67,8 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
         toast({
           title: "Microphone Access Required",
           description: "Please enable microphone access in your iOS Settings > Safari > Microphone",
-          variant: "destructive"
+          variant: "destructive",
+          duration: 5000
         });
       } else {
         toast({
@@ -79,6 +88,14 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
 
   const handleTranscriptionSuccess = (text: string) => {
     console.log('Transcription completed successfully:', text);
+    if (!text || text.trim() === 'you' || text.trim().length < 2) {
+      toast({
+        title: "No Speech Detected",
+        description: "Please try speaking more clearly or check your microphone",
+        variant: "destructive"
+      });
+      return;
+    }
     onTranscriptionComplete(text);
     setIsRecording(false);
     onRecordingStateChange?.(false);
@@ -86,7 +103,22 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
 
   const { startRecording: startRec, stopRecording: stopRec } = useRecording({
     onError: handleError,
-    onTranscriptionComplete: handleTranscriptionSuccess
+    onTranscriptionComplete: handleTranscriptionSuccess,
+    audioConfig: {
+      sampleRate: isIOS ? 44100 : 16000, // iOS prefers 44.1kHz
+      channelCount: 1,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+      // Chrome-specific settings
+      ...(isChrome && {
+        latencyHint: 'interactive',
+        googEchoCancellation: true,
+        googAutoGainControl: true,
+        googNoiseSuppression: true,
+        googHighpassFilter: true
+      })
+    }
   });
 
   const { handleFileUpload } = useAudioProcessing({

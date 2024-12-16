@@ -5,9 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 interface RecordingOptions {
   onError: (error: string) => void;
   onTranscriptionComplete: (text: string) => void;
+  audioConfig?: MediaTrackConstraints;
 }
 
-export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOptions) => {
+export const useRecording = ({ onError, onTranscriptionComplete, audioConfig }: RecordingOptions) => {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const { toast } = useToast();
@@ -15,9 +16,9 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
   const startRecording = useCallback(async () => {
     try {
-      console.log('Requesting microphone access...');
+      console.log('Requesting microphone access with config:', audioConfig);
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
+        audio: audioConfig || {
           sampleRate: 16000,
           channelCount: 1,
           echoCancellation: true,
@@ -26,18 +27,27 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         }
       });
 
-      const recorder = new MediaRecorder(stream);
+      const recorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+      });
       
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           chunks.push(e.data);
+          console.log('Received audio chunk, size:', e.data.size);
         }
       };
 
       recorder.onstop = async () => {
         try {
-          const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-          console.log('Recording stopped, blob created:', { size: audioBlob.size });
+          if (chunks.length === 0) {
+            console.error('No audio data recorded');
+            onError('No audio data recorded');
+            return;
+          }
+
+          const audioBlob = new Blob(chunks, { type: recorder.mimeType });
+          console.log('Recording stopped, final blob size:', audioBlob.size);
 
           // Convert blob to base64
           const reader = new FileReader();
@@ -48,7 +58,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
             const { data, error } = await supabase.functions.invoke('transcribe', {
               body: { 
                 audioData: base64Audio,
-                mimeType: 'audio/webm'
+                mimeType: recorder.mimeType
               }
             });
 
@@ -79,7 +89,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       };
 
       setMediaRecorder(recorder);
-      recorder.start();
+      recorder.start(1000); // Start recording in 1-second chunks
       setIsRecording(true);
       console.log('Started recording with enhanced audio settings');
 
@@ -87,7 +97,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       console.error('Error starting recording:', error);
       onError('Could not access microphone. Please check permissions.');
     }
-  }, [onError, onTranscriptionComplete]);
+  }, [onError, onTranscriptionComplete, audioConfig]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
