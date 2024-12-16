@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import Sidebar from '@/components/Sidebar';
 import ChatContainer from '@/components/chat/ChatContainer';
 import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
+import { useChatSessions } from '@/hooks/useChatSessions';
 import type { Template } from '@/components/template/types';
 
 const Index = () => {
@@ -12,6 +13,7 @@ const Index = () => {
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
   
   const { session } = useSessionManagement();
+  const { createSession } = useChatSessions();
   
   const { 
     messages, 
@@ -24,6 +26,22 @@ const Index = () => {
 
   // Initialize audio recovery
   useAudioRecovery();
+
+  // Create a new session when the page loads if there isn't one
+  useEffect(() => {
+    const initializeSession = async () => {
+      if (!currentChatId) {
+        console.log('No active chat session, creating new one for homepage');
+        const sessionId = await createSession('New Session');
+        if (sessionId) {
+          console.log('Created new session:', sessionId);
+          setCurrentChatId(sessionId);
+        }
+      }
+    };
+
+    initializeSession();
+  }, [currentChatId, createSession, setCurrentChatId]);
 
   const handleSessionSelect = async (chatId: string) => {
     setCurrentChatId(chatId);
