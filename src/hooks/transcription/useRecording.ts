@@ -53,6 +53,12 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       // Clear any existing chunks
       chunksRef.current = [];
       
+      // Get the current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('User not authenticated');
+      }
+      
       const sessionId = createSession();
       console.log('[useRecording] Starting recording with session:', sessionId);
 
@@ -66,7 +72,8 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
       console.log('[useRecording] MediaRecorder configured with:', {
         state: recorder.state,
-        sessionId
+        sessionId,
+        userId: user.id
       });
 
     } catch (error: any) {
@@ -94,8 +101,13 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
     cleanupStream();
 
-    // Wait a short moment to ensure all chunks are processed
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error('[useRecording] User not authenticated');
+      onError('User not authenticated');
+      return;
+    }
 
     if (!sessionId || chunksRef.current.length === 0) {
       console.warn('[useRecording] No chunks recorded or no active session');
@@ -106,7 +118,10 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     try {
       console.log('[useRecording] Processing transcription');
       const { data: transcriptionData, error: transcriptionError } = await supabase.functions.invoke('transcribe-chunks', {
-        body: { sessionId }
+        body: { 
+          sessionId,
+          userId: user.id
+        }
       });
 
       if (transcriptionError) throw transcriptionError;
