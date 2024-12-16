@@ -14,6 +14,7 @@ interface RecordingOptions {
 export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOptions) => {
   const [isRecording, setIsRecording] = useState(false);
   const chunksRef = useRef<Blob[]>([]);
+  const uploadedChunksCount = useRef(0);
   const { toast } = useToast();
   const { createSession, clearSession, getSessionId } = useRecordingSession();
   const { uploadChunk } = useChunkUpload();
@@ -33,6 +34,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
       try {
         await uploadChunk(event.data, sessionId, chunkNumber);
+        uploadedChunksCount.current++;
         console.log(`[useRecording] Chunk ${chunkNumber} uploaded successfully`);
       } catch (error: any) {
         console.error('[useRecording] Error handling audio chunk:', error);
@@ -52,6 +54,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     try {
       // Clear any existing chunks
       chunksRef.current = [];
+      uploadedChunksCount.current = 0;
       
       // Get the current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -115,6 +118,21 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       return;
     }
 
+    // Wait for all chunks to be uploaded
+    const maxAttempts = 10;
+    let attempts = 0;
+    while (uploadedChunksCount.current < chunksRef.current.length && attempts < maxAttempts) {
+      console.log(`[useRecording] Waiting for chunks to upload: ${uploadedChunksCount.current}/${chunksRef.current.length}`);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      attempts++;
+    }
+
+    if (uploadedChunksCount.current < chunksRef.current.length) {
+      console.error('[useRecording] Not all chunks were uploaded');
+      onError('Failed to upload all audio chunks');
+      return;
+    }
+
     try {
       console.log('[useRecording] Processing transcription');
       const { data: transcriptionData, error: transcriptionError } = await supabase.functions.invoke('transcribe-chunks', {
@@ -149,6 +167,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       });
     } finally {
       chunksRef.current = [];
+      uploadedChunksCount.current = 0;
       clearSession();
       setIsRecording(false);
     }
