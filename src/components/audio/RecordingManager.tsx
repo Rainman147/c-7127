@@ -23,14 +23,12 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
   const { toast } = useToast();
 
   const encodeAudioData = (float32Array: Float32Array): string => {
-    // Convert to 16-bit PCM
     const int16Array = new Int16Array(float32Array.length);
     for (let i = 0; i < float32Array.length; i++) {
       const s = Math.max(-1, Math.min(1, float32Array[i]));
       int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
     }
     
-    // Convert to base64
     const uint8Array = new Uint8Array(int16Array.buffer);
     let binary = '';
     const chunkSize = 0x8000;
@@ -46,34 +44,36 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
   const handleStartRecording = useCallback(async () => {
     try {
       console.log('Requesting microphone access...');
+      
+      // More permissive audio constraints for mobile devices
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          sampleRate: 16000, // Required by Gemini
-          channelCount: 1,   // Mono audio
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
+          echoCancellation: { ideal: true },
+          noiseSuppression: { ideal: true },
+          autoGainControl: { ideal: true }
         }
       });
 
       console.log('Microphone access granted, initializing audio context...');
-      audioContext.current = new AudioContext({ sampleRate: 16000 });
+      
+      // Create AudioContext only after user interaction
+      audioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       const source = audioContext.current.createMediaStreamSource(stream);
-      processor.current = audioContext.current.createScriptProcessor(4096, 1, 1);
+      
+      // Use a more compatible buffer size for mobile
+      processor.current = audioContext.current.createScriptProcessor(2048, 1, 1);
 
       let accumulatedData = new Float32Array(0);
-      const CHUNK_SIZE = 16000; // 1 second of audio at 16kHz
+      const CHUNK_SIZE = 16000;
 
       processor.current.onaudioprocess = (e) => {
         const inputData = e.inputBuffer.getChannelData(0);
         
-        // Accumulate data
         const newData = new Float32Array(accumulatedData.length + inputData.length);
         newData.set(accumulatedData);
         newData.set(inputData, accumulatedData.length);
         accumulatedData = newData;
 
-        // If we have enough data for a chunk, process it
         if (accumulatedData.length >= CHUNK_SIZE) {
           const chunk = accumulatedData.slice(0, CHUNK_SIZE);
           accumulatedData = accumulatedData.slice(CHUNK_SIZE);
@@ -89,19 +89,33 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
       source.connect(processor.current);
       processor.current.connect(audioContext.current.destination);
 
-      mediaRecorder.current = new MediaRecorder(stream);
+      // Try different MIME types based on browser support
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+          ? 'audio/mp4'
+          : 'audio/wav';
+
+      console.log('Using MIME type:', mimeType);
+      
+      mediaRecorder.current = new MediaRecorder(stream, {
+        mimeType,
+        audioBitsPerSecond: 128000
+      });
+      
       chunks.current = [];
 
       mediaRecorder.current.ondataavailable = (e) => {
+        console.log('Data available event fired, chunk size:', e.data.size);
         if (e.data.size > 0) {
           chunks.current.push(e.data);
         }
       };
 
-      mediaRecorder.current.start();
+      mediaRecorder.current.start(1000); // Collect data every second
       setIsRecording(true);
 
-      console.log('Started recording with enhanced audio settings');
+      console.log('Started recording with mobile-compatible settings');
     } catch (error) {
       console.error('Error starting recording:', error);
       toast({
@@ -117,7 +131,10 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
     
     if (mediaRecorder.current && mediaRecorder.current.state === 'recording') {
       mediaRecorder.current.stop();
-      mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
+      mediaRecorder.current.stream.getTracks().forEach(track => {
+        console.log('Stopping track:', track.kind);
+        track.stop();
+      });
     }
 
     if (processor.current) {
@@ -133,7 +150,9 @@ const RecordingManager = ({ onRecordingComplete, onAudioData }: RecordingManager
     setIsRecording(false);
 
     if (chunks.current.length > 0) {
+      console.log('Creating final audio blob from chunks:', chunks.current.length);
       const audioBlob = new Blob(chunks.current, { type: 'audio/wav' });
+      console.log('Final blob size:', audioBlob.size);
       onRecordingComplete(audioBlob);
       chunks.current = [];
     }
