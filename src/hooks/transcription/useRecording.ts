@@ -19,6 +19,74 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
   const chunks = useRef<Blob[]>([]);
   const estimatedTotalChunks = useRef(0);
 
+  // Check for interrupted sessions on mount
+  useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: pendingChunks, error } = await supabase
+        .from('audio_chunks')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .order('chunk_number', { ascending: true });
+
+      if (error) throw error;
+
+      if (pendingChunks && pendingChunks.length > 0) {
+        console.log('Found interrupted recording session:', pendingChunks.length, 'chunks');
+        toast({
+          title: "Interrupted Session Found",
+          description: "Recovering your previous recording...",
+          duration: 5000,
+        });
+
+        // Process pending chunks
+        await processInterruptedSession(pendingChunks);
+      }
+    } catch (error) {
+      console.error('Error checking for interrupted sessions:', error);
+    }
+  }, [toast]);
+
+  const processInterruptedSession = async (pendingChunks: any[]) => {
+    try {
+      // Combine all chunks and send for transcription
+      const sessionId = pendingChunks[0].storage_path.split('/')[1];
+      console.log('Processing interrupted session:', sessionId);
+
+      const { data: transcriptionData, error: transcriptionError } = await supabase.functions.invoke('transcribe-chunks', {
+        body: { 
+          sessionId,
+          userId: pendingChunks[0].user_id
+        }
+      });
+
+      if (transcriptionError) throw transcriptionError;
+
+      if (transcriptionData?.transcription) {
+        console.log('Recovered transcription:', transcriptionData.transcription);
+        onTranscriptionComplete(transcriptionData.transcription);
+
+        // Update chunks status
+        await supabase
+          .from('audio_chunks')
+          .update({ status: 'processed' })
+          .eq('storage_path', 'like', `%${sessionId}%`);
+
+        toast({
+          title: "Recovery Complete",
+          description: "Your previous recording has been restored.",
+          duration: 5000,
+        });
+      }
+    } catch (error) {
+      console.error('Error processing interrupted session:', error);
+      onError('Failed to recover interrupted session');
+    }
+  };
+
   const handleDataAvailable = useCallback(async (data: Blob) => {
     console.log('Recording chunk received:', {
       size: data.size,
@@ -143,7 +211,8 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       const { data: transcriptionData, error } = await supabase.functions.invoke('transcribe', {
         body: { 
           audioData: base64Data,
-          mimeType: wavBlob.type
+          mimeType: wavBlob.type,
+          sessionId: recordingSessionId
         }
       });
 
@@ -154,6 +223,12 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       if (transcriptionData?.transcription) {
         console.log('Transcription complete');
         onTranscriptionComplete(transcriptionData.transcription);
+
+        // Update chunks status to processed
+        await supabase
+          .from('audio_chunks')
+          .update({ status: 'processed' })
+          .eq('storage_path', 'like', `%${recordingSessionId}%`);
       }
     } catch (error: any) {
       console.error('Error processing recording:', error);
@@ -169,7 +244,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       setChunkCount(0);
       chunks.current = [];
     }
-  }, [stopRecording, currentStream, cleanupStream, onTranscriptionComplete, onError, toast]);
+  }, [stopRecording, currentStream, cleanupStream, onTranscriptionComplete, onError, toast, recordingSessionId]);
 
   return {
     isRecording: Boolean(currentStream),
