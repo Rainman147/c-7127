@@ -1,52 +1,62 @@
-import { useState, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useRef } from 'react';
+import { getDeviceType, getBrowserType } from '@/utils/deviceDetection';
 
 interface RecordingOptions {
   onError: (error: string) => void;
   onTranscriptionComplete: (text: string) => void;
-  audioConfig?: MediaTrackConstraints;
 }
 
-export const useRecording = ({ onError, onTranscriptionComplete, audioConfig }: RecordingOptions) => {
+export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOptions) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const { toast } = useToast();
-  const chunks: Blob[] = [];
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
+  const chunks = useRef<Blob[]>([]);
+  const { isIOS } = getDeviceType();
+  const { isChrome } = getBrowserType();
 
-  const startRecording = useCallback(async () => {
+  const getAudioConfig = () => ({
+    sampleRate: isIOS ? 44100 : 16000,
+    channelCount: 1,
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+    ...(isChrome && {
+      latencyHint: 'interactive',
+      googEchoCancellation: true,
+      googAutoGainControl: true,
+      googNoiseSuppression: true,
+      googHighpassFilter: true
+    })
+  });
+
+  const startRecording = async () => {
     try {
+      const audioConfig = getAudioConfig();
       console.log('Requesting microphone access with config:', audioConfig);
+      
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: audioConfig || {
-          sampleRate: 16000,
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
+        audio: audioConfig
       });
 
-      const recorder = new MediaRecorder(stream, {
+      mediaRecorder.current = new MediaRecorder(stream, {
         mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
       });
-      
-      recorder.ondataavailable = (e) => {
+
+      mediaRecorder.current.ondataavailable = (e) => {
         if (e.data.size > 0) {
-          chunks.push(e.data);
+          chunks.current.push(e.data);
           console.log('Received audio chunk, size:', e.data.size);
         }
       };
 
-      recorder.onstop = async () => {
+      mediaRecorder.current.onstop = async () => {
         try {
-          if (chunks.length === 0) {
+          if (chunks.current.length === 0) {
             console.error('No audio data recorded');
             onError('No audio data recorded');
             return;
           }
 
-          const audioBlob = new Blob(chunks, { type: recorder.mimeType });
+          const audioBlob = new Blob(chunks.current, { type: mediaRecorder.current?.mimeType });
           console.log('Recording stopped, final blob size:', audioBlob.size);
 
           // Convert blob to base64
@@ -58,7 +68,7 @@ export const useRecording = ({ onError, onTranscriptionComplete, audioConfig }: 
             const { data, error } = await supabase.functions.invoke('transcribe', {
               body: { 
                 audioData: base64Audio,
-                mimeType: recorder.mimeType
+                mimeType: mediaRecorder.current?.mimeType
               }
             });
 
@@ -76,11 +86,6 @@ export const useRecording = ({ onError, onTranscriptionComplete, audioConfig }: 
             }
           };
 
-          reader.onerror = () => {
-            console.error('Error reading audio file:', reader.error);
-            onError('Failed to process audio file');
-          };
-
           reader.readAsDataURL(audioBlob);
         } catch (error: any) {
           console.error('Error processing recording:', error);
@@ -88,8 +93,7 @@ export const useRecording = ({ onError, onTranscriptionComplete, audioConfig }: 
         }
       };
 
-      setMediaRecorder(recorder);
-      recorder.start(1000); // Start recording in 1-second chunks
+      mediaRecorder.current.start(1000);
       setIsRecording(true);
       console.log('Started recording with enhanced audio settings');
 
@@ -97,17 +101,17 @@ export const useRecording = ({ onError, onTranscriptionComplete, audioConfig }: 
       console.error('Error starting recording:', error);
       onError('Could not access microphone. Please check permissions.');
     }
-  }, [onError, onTranscriptionComplete, audioConfig]);
+  };
 
-  const stopRecording = useCallback(() => {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
+  const stopRecording = async () => {
+    if (mediaRecorder.current && mediaRecorder.current.state === 'recording') {
       console.log('Stopping recording...');
-      mediaRecorder.stop();
-      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+      mediaRecorder.current.stop();
+      mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
       setIsRecording(false);
-      setMediaRecorder(null);
+      chunks.current = [];
     }
-  }, [mediaRecorder]);
+  };
 
   return {
     isRecording,
