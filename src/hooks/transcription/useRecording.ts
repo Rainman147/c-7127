@@ -3,6 +3,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRecordingSession } from './useRecordingSession';
 import { useChunkUpload } from './useChunkUpload';
 import { supabase } from '@/integrations/supabase/client';
+import { getDeviceType } from '@/utils/deviceDetection';
 
 interface RecordingOptions {
   onError: (error: string) => void;
@@ -16,6 +17,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
   const { toast } = useToast();
   const { createSession, clearSession, getSessionId } = useRecordingSession();
   const { uploadChunk } = useChunkUpload();
+  const { isIOS } = getDeviceType();
   
   const handleDataAvailable = useCallback(async (event: BlobEvent) => {
     if (event.data.size > 0) {
@@ -47,26 +49,40 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       const sessionId = createSession();
       console.log('[useRecording] Starting recording with session:', sessionId);
 
+      // Configure audio constraints based on device
+      const audioConstraints: MediaTrackConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+        sampleRate: isIOS ? 44100 : 16000, // iOS requires 44.1kHz
+      };
+
+      console.log('[useRecording] Requesting media with constraints:', audioConstraints);
+
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-          sampleRate: 44100
-        } 
+        audio: audioConstraints
       });
 
+      // Verify we have an active audio track
+      const audioTrack = stream.getAudioTracks()[0];
+      if (!audioTrack) {
+        throw new Error('No audio track available');
+      }
+      console.log('[useRecording] Audio track obtained:', audioTrack.label);
+
+      // Set up MediaRecorder with appropriate MIME type
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
         ? 'audio/webm;codecs=opus' 
         : 'audio/webm';
-      console.log('[useRecording] Using supported MIME type:', mimeType);
+      console.log('[useRecording] Using MIME type:', mimeType);
 
       const recorder = new MediaRecorder(stream, {
         mimeType,
         audioBitsPerSecond: 128000
       });
 
+      // Set up event handlers before starting
       recorder.ondataavailable = handleDataAvailable;
       
       recorder.onerror = (event: ErrorEvent) => {
@@ -75,10 +91,21 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         stopRec();
       };
 
+      recorder.onstart = () => {
+        console.log('[useRecording] MediaRecorder started successfully');
+        setIsRecording(true);
+      };
+
+      recorder.onstop = () => {
+        console.log('[useRecording] MediaRecorder stopped');
+        setIsRecording(false);
+      };
+
+      // Start recording with a reasonable chunk interval
       recorder.start(5000); // Chunk every 5 seconds
       mediaRecorderRef.current = recorder;
-      setIsRecording(true);
-      console.log('[useRecording] MediaRecorder started with configuration:', {
+
+      console.log('[useRecording] MediaRecorder configured with:', {
         mimeType,
         audioBitsPerSecond: 128000,
         sessionId
@@ -93,15 +120,21 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         variant: "destructive"
       });
     }
-  }, [createSession, handleDataAvailable, onError, toast]);
+  }, [createSession, handleDataAvailable, onError, toast, isIOS]);
 
   const stopRec = useCallback(async () => {
     const sessionId = getSessionId();
     console.log('[useRecording] Stopping recording session:', sessionId);
     
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      console.log('[useRecording] Stopping MediaRecorder');
       mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      
+      // Stop all tracks
+      mediaRecorderRef.current.stream.getTracks().forEach(track => {
+        console.log('[useRecording] Stopping track:', track.label);
+        track.stop();
+      });
     }
 
     // Wait a short moment to ensure all chunks are processed
@@ -114,7 +147,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     }
 
     try {
-      // Transcribe the complete audio
+      console.log('[useRecording] Sending chunks for transcription');
       const { data: transcriptionData, error: transcriptionError } = await supabase.functions.invoke('transcribe-chunks', {
         body: { 
           sessionId,
