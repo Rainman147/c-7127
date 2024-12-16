@@ -15,8 +15,7 @@ export const useTemplateSelection = (
   useEffect(() => {
     const loadTemplateForChat = async () => {
       if (!currentChatId) {
-        console.log('No chat ID, using default template');
-        setSelectedTemplate(templates[0]);
+        console.log('No chat ID, using current template');
         return;
       }
 
@@ -64,8 +63,13 @@ export const useTemplateSelection = (
 
     setIsLoading(true);
     try {
-      // If we have a currentChatId, save the template selection to the database
+      // Update local state immediately
+      setSelectedTemplate(template);
+      onTemplateChange(template);
+
+      // If we have a currentChatId, also save the template selection to the database
       if (currentChatId) {
+        console.log('Saving template selection to database for chat:', currentChatId);
         const { error } = await supabase
           .from('chats')
           .update({ template_type: template.id })
@@ -73,9 +77,6 @@ export const useTemplateSelection = (
 
         if (error) throw error;
       }
-
-      setSelectedTemplate(template);
-      onTemplateChange(template);
 
       toast({
         title: "Template Changed",
