@@ -59,7 +59,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
       if (error) {
         console.error('Transcription error:', error);
-        onError(error.message);
+        // Don't stop recording on transcription error
         return;
       }
 
@@ -69,14 +69,13 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
           preview: transcriptionData.transcription.substring(0, 50)
         });
         onTranscriptionComplete(transcriptionData.transcription);
-      } else {
-        onError('No transcription received from the service');
       }
     } catch (error: any) {
       console.error('Error processing recording:', error);
-      onError(error.message || 'Failed to process recording');
+      // Don't stop recording on conversion error, just log it
+      console.warn('Continuing recording despite conversion error');
     }
-  }, [onTranscriptionComplete, onError]);
+  }, [onTranscriptionComplete]);
 
   const handleError = useCallback((error: Error) => {
     console.error('Recording error:', error);
@@ -91,14 +90,6 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     onDataAvailable: handleDataAvailable,
     onError: handleError
   });
-
-  useEffect(() => {
-    return () => {
-      if (currentStream) {
-        cleanupStream(currentStream);
-      }
-    };
-  }, [currentStream, cleanupStream]);
 
   const startRec = useCallback(async () => {
     try {
@@ -125,6 +116,15 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       setCurrentStream(null);
     }
   }, [stopRecording, currentStream, cleanupStream]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (currentStream) {
+        cleanupStream(currentStream);
+      }
+    };
+  }, [currentStream, cleanupStream]);
 
   return {
     isRecording,
