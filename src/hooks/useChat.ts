@@ -32,7 +32,6 @@ export const useChat = () => {
         throw new Error('You must be logged in to send messages');
       }
 
-      // Create a new chat if no chatId is provided
       if (!chatId) {
         const { data: chatData, error: chatError } = await supabase
           .from('chats')
@@ -48,7 +47,6 @@ export const useChat = () => {
         setCurrentChatId(chatId);
       }
 
-      // Insert the message
       const { error: messageError } = await supabase
         .from('messages')
         .insert({
@@ -66,7 +64,7 @@ export const useChat = () => {
     }
   };
 
-  const handleSendMessage = async (content: string, type: 'text' | 'audio' = 'text') => {
+  const handleSendMessage = async (content: string, type: 'text' | 'audio' = 'text', systemInstructions?: string) => {
     if (!content.trim()) {
       toast({
         title: "Error",
@@ -103,9 +101,12 @@ export const useChat = () => {
       };
       setMessages([...newMessages, assistantMessage]);
 
-      // Call Gemini function
+      // Call Gemini function with system instructions
       const { data, error } = await supabase.functions.invoke('gemini', {
-        body: { messages: newMessages }
+        body: { 
+          messages: newMessages,
+          systemInstructions: systemInstructions 
+        }
       });
 
       if (error) {

@@ -81,7 +81,11 @@ const Index = () => {
   };
 
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
-    await handleSendMessage(message, type);
+    await handleSendMessage(
+      message, 
+      type, 
+      currentTemplate?.systemInstructions
+    );
   };
 
   return (
