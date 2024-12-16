@@ -55,19 +55,24 @@ export const useTemplateSelection = (
 
   const handleTemplateChange = async (template: Template) => {
     console.log('Handling template change to:', template.name);
-    if (!currentChatId || template.id === selectedTemplate.id) {
-      console.log('No changes needed - same template or no chat ID');
+    
+    // Don't update if it's the same template
+    if (template.id === selectedTemplate.id) {
+      console.log('No changes needed - same template');
       return;
     }
 
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('chats')
-        .update({ template_type: template.id })
-        .eq('id', currentChatId);
+      // If we have a currentChatId, save the template selection to the database
+      if (currentChatId) {
+        const { error } = await supabase
+          .from('chats')
+          .update({ template_type: template.id })
+          .eq('id', currentChatId);
 
-      if (error) throw error;
+        if (error) throw error;
+      }
 
       setSelectedTemplate(template);
       onTemplateChange(template);
