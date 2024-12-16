@@ -40,10 +40,15 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
     if (validateTranscription(text)) {
       setIsRecording(false);
       onRecordingStateChange?.(false);
+      toast({
+        title: "Success",
+        description: "Recording completed successfully",
+        duration: 3000,
+      });
     }
-  }, [validateTranscription, onRecordingStateChange]);
+  }, [validateTranscription, onRecordingStateChange, toast]);
 
-  const { startRecording: startRec, stopRecording: stopRec } = useRecording({
+  const { startRecording: startRec, stopRecording: stopRec, isRecording: recorderIsRecording } = useRecording({
     onError: handleError,
     onTranscriptionComplete: handleTranscriptionSuccess
   });
@@ -54,16 +59,37 @@ const AudioRecorder = ({ onTranscriptionComplete, onRecordingStateChange }: Audi
   });
 
   const handleStartRecording = useCallback(async () => {
+    if (!hasPermission) {
+      handlePermissionError();
+      return;
+    }
+
     console.log('Starting recording with network type:', networkType);
-    setIsRecording(true);
-    onRecordingStateChange?.(true);
-    await startRec();
-  }, [networkType, onRecordingStateChange, startRec]);
+    try {
+      setIsRecording(true);
+      onRecordingStateChange?.(true);
+      await startRec();
+    } catch (error) {
+      handleError(error as string);
+    }
+  }, [networkType, onRecordingStateChange, startRec, hasPermission, handlePermissionError, handleError]);
 
   const handleStopRecording = useCallback(async () => {
     console.log('Stopping recording...');
-    await stopRec();
-  }, [stopRec]);
+    try {
+      await stopRec();
+    } catch (error) {
+      handleError(error as string);
+    }
+  }, [stopRec, handleError]);
+
+  // Sync recording state with the recorder
+  useState(() => {
+    if (isRecording !== recorderIsRecording) {
+      setIsRecording(recorderIsRecording);
+      onRecordingStateChange?.(recorderIsRecording);
+    }
+  });
 
   return (
     <AudioControls

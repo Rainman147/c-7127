@@ -31,6 +31,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
       try {
         await uploadChunk(event.data, sessionId, chunkNumber);
+        console.log(`Chunk ${chunkNumber} uploaded successfully`);
       } catch (error: any) {
         console.error('Error handling audio chunk:', error);
         onError(error.message);
@@ -40,6 +41,9 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
   const startRec = useCallback(async () => {
     try {
+      // Clear any existing chunks
+      chunksRef.current = [];
+      
       const sessionId = createSession();
       console.log('Starting recording with session:', sessionId);
 
@@ -47,13 +51,15 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
+          autoGainControl: true,
+          channelCount: 1,
+          sampleRate: 44100
         } 
       });
 
-      chunksRef.current = []; // Reset chunks array
-      
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+        ? 'audio/webm;codecs=opus' 
+        : 'audio/webm';
       console.log('Using supported MIME type:', mimeType);
 
       const recorder = new MediaRecorder(stream, {
@@ -65,12 +71,18 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       
       recorder.onerror = (event) => {
         console.error('MediaRecorder error:', event);
-        onError('Recording failed');
+        onError('Recording failed: ' + event.error.message);
+        stopRec();
       };
 
-      recorder.start(5000); // Chunk every 5 seconds for optimal processing
+      recorder.start(5000); // Chunk every 5 seconds
       mediaRecorderRef.current = recorder;
-      console.log('MediaRecorder started');
+      setIsRecording(true);
+      console.log('MediaRecorder started with configuration:', {
+        mimeType,
+        audioBitsPerSecond: 128000,
+        sessionId
+      });
 
     } catch (error: any) {
       console.error('Failed to start recording:', error);
@@ -92,6 +104,9 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
     }
 
+    // Wait a short moment to ensure all chunks are processed
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     if (!sessionId || chunksRef.current.length === 0) {
       console.warn('No chunks recorded or no active session');
       onError('No audio recorded');
@@ -107,7 +122,10 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         }
       });
 
-      if (transcriptionError) throw transcriptionError;
+      if (transcriptionError) {
+        console.error('Transcription error:', transcriptionError);
+        throw transcriptionError;
+      }
 
       if (transcriptionData?.transcription) {
         console.log('Transcription complete:', transcriptionData.transcription);
@@ -136,6 +154,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       chunksRef.current = [];
       clearSession();
       mediaRecorderRef.current = null;
+      setIsRecording(false);
     }
   }, [getSessionId, clearSession, onError, onTranscriptionComplete, toast]);
 
