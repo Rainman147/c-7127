@@ -7,6 +7,7 @@ interface AudioChunk {
   storage_path: string;
   chunk_number: number;
   status: string;
+  id: string;
 }
 
 export const useAudioRecovery = () => {
@@ -57,17 +58,38 @@ export const useAudioRecovery = () => {
             // Download and combine chunks
             const audioBlobs = await Promise.all(
               sessionChunks.map(async (chunk) => {
-                const { data, error } = await supabase.storage
-                  .from('audio_files')
-                  .download(chunk.storage_path);
-                
-                if (error) throw error;
-                return data;
+                try {
+                  const { data, error } = await supabase.storage
+                    .from('audio_files')
+                    .download(chunk.storage_path);
+                  
+                  if (error) {
+                    console.warn(`Failed to download chunk ${chunk.storage_path}:`, error);
+                    // Mark chunk as failed
+                    await supabase
+                      .from('audio_chunks')
+                      .update({ status: 'failed' })
+                      .eq('id', chunk.id);
+                    return null;
+                  }
+                  return data;
+                } catch (error) {
+                  console.error(`Error downloading chunk ${chunk.storage_path}:`, error);
+                  return null;
+                }
               })
             );
 
+            // Filter out failed chunks
+            const validBlobs = audioBlobs.filter(blob => blob !== null) as Blob[];
+
+            if (validBlobs.length === 0) {
+              console.warn(`No valid chunks found for session ${sessionId}`);
+              continue;
+            }
+
             // Combine blobs
-            const combinedBlob = new Blob(audioBlobs, { type: 'audio/webm' });
+            const combinedBlob = new Blob(validBlobs, { type: 'audio/webm' });
 
             // Convert to base64
             const reader = new FileReader();
@@ -99,10 +121,12 @@ export const useAudioRecovery = () => {
               await handleSendMessage(transcriptionData.transcription, 'audio');
 
               // Update chunks status
-              await supabase
-                .from('audio_chunks')
-                .update({ status: 'processed' })
-                .eq('storage_path', sessionChunks[0].storage_path);
+              await Promise.all(sessionChunks.map(chunk => 
+                supabase
+                  .from('audio_chunks')
+                  .update({ status: 'processed' })
+                  .eq('id', chunk.id)
+              ));
 
               toast({
                 title: "Audio Recovery",
@@ -112,6 +136,14 @@ export const useAudioRecovery = () => {
             }
           } catch (error) {
             console.error(`Error processing session ${sessionId}:`, error);
+            
+            // Mark chunks as failed
+            await Promise.all(sessionChunks.map(chunk => 
+              supabase
+                .from('audio_chunks')
+                .update({ status: 'failed' })
+                .eq('id', chunk.id)
+            ));
           }
         }
       } catch (error) {
