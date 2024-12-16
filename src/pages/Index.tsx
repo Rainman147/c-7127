@@ -11,6 +11,8 @@ import type { Template } from '@/components/TemplateSelector';
 const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [session, setSession] = useState<any>(null);
+  const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
+  
   const { 
     messages, 
     isLoading, 
@@ -63,8 +65,8 @@ const Index = () => {
 
   const handleTemplateChange = (template: Template) => {
     console.log('Template changed:', template);
-    // Update AI behavior based on template
-    // This will be used by the chat system to adjust its responses
+    setCurrentTemplate(template);
+    // The template's system instructions will be used in the next API call
   };
 
   const handleTranscriptionComplete = async (text: string) => {
@@ -77,6 +79,12 @@ const Index = () => {
         chatInput.dispatchEvent(event);
       }
     }
+  };
+
+  const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
+    // Include template instructions in the API call
+    const systemInstructions = currentTemplate?.systemInstructions;
+    await handleSendMessage(message, type, systemInstructions);
   };
 
   return (
@@ -101,7 +109,7 @@ const Index = () => {
               <div>
                 <h1 className="mb-8 text-4xl font-semibold text-center">What can I help with?</h1>
                 <ChatInput 
-                  onSend={handleSendMessage} 
+                  onSend={handleMessageSend}
                   onTranscriptionComplete={handleTranscriptionComplete}
                   isLoading={isLoading} 
                 />
@@ -112,7 +120,7 @@ const Index = () => {
               <MessageList messages={messages} />
               <div className="w-full max-w-3xl mx-auto px-4 py-2">
                 <ChatInput 
-                  onSend={handleSendMessage} 
+                  onSend={handleMessageSend}
                   onTranscriptionComplete={handleTranscriptionComplete}
                   isLoading={isLoading} 
                 />

@@ -57,11 +57,15 @@ interface TemplateSelectorProps {
 
 const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
   const [selectedTemplate, setSelectedTemplate] = useState<Template>(templates[0]);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     const loadTemplateForChat = async () => {
-      if (!currentChatId) return;
+      if (!currentChatId) {
+        setSelectedTemplate(templates[0]);
+        return;
+      }
 
       try {
         const { data, error } = await supabase
@@ -80,6 +84,11 @@ const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorP
         }
       } catch (error) {
         console.error('Error loading template:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load template settings",
+          variant: "destructive",
+        });
       }
     };
 
@@ -87,37 +96,43 @@ const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorP
   }, [currentChatId]);
 
   const handleTemplateChange = async (template: Template) => {
-    if (currentChatId && template.id !== selectedTemplate.id) {
-      try {
-        const { error } = await supabase
-          .from('chats')
-          .update({ template_type: template.id })
-          .eq('id', currentChatId);
+    if (!currentChatId || template.id === selectedTemplate.id) return;
 
-        if (error) throw error;
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('chats')
+        .update({ template_type: template.id })
+        .eq('id', currentChatId);
 
-        setSelectedTemplate(template);
-        onTemplateChange(template);
+      if (error) throw error;
 
-        toast({
-          title: "Template Changed",
-          description: `Now using: ${template.name}`,
-          duration: 3000,
-        });
-      } catch (error: any) {
-        console.error('Error updating template:', error);
-        toast({
-          title: "Error",
-          description: "Failed to update template",
-          variant: "destructive",
-        });
-      }
+      setSelectedTemplate(template);
+      onTemplateChange(template);
+
+      toast({
+        title: "Template Changed",
+        description: `Now using: ${template.name}`,
+        duration: 3000,
+      });
+    } catch (error: any) {
+      console.error('Error updating template:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update template",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-1 font-semibold text-sm hover:bg-gray-700/50 rounded-md transition-colors">
+      <DropdownMenuTrigger 
+        className="flex items-center gap-2 px-3 py-1 font-semibold text-sm hover:bg-gray-700/50 rounded-md transition-colors disabled:opacity-50"
+        disabled={isLoading}
+      >
         {selectedTemplate.name}
         <ChevronDown className="h-4 w-4" />
       </DropdownMenuTrigger>
@@ -133,11 +148,15 @@ const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorP
                   selectedTemplate.id === template.id ? 'bg-gray-700' : ''
                 }`}
                 onClick={() => handleTemplateChange(template)}
+                disabled={isLoading}
               >
                 <span className="flex-1 text-sm font-medium">{template.name}</span>
                 <div className="flex items-center gap-2">
                   <TooltipTrigger asChild>
-                    <button className="p-1 rounded-full hover:bg-gray-600/50 transition-colors">
+                    <button 
+                      className="p-1 rounded-full hover:bg-gray-600/50 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Info className="h-4 w-4 text-gray-400" />
                     </button>
                   </TooltipTrigger>
