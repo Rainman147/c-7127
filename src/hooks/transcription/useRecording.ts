@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSessionManagement } from './useSessionManagement';
 import { useChunkProcessing } from './useChunkProcessing';
-import { convertWebMToWav } from '@/utils/audio/conversion';
 import { useToast } from '@/hooks/use-toast';
 
 interface RecordingOptions {
@@ -35,25 +34,25 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     return '';
   };
 
-  const handleDataAvailable = useCallback(async (data: Blob) => {
+  const handleDataAvailable = useCallback(async (data: Blob, sessionId: string) => {
     console.log('Recording chunk received:', {
       size: data.size,
       type: data.type,
-      sessionId: recordingSessionId
+      sessionId
     });
 
-    if (!recordingSessionId) {
+    if (!sessionId) {
       console.error('No active recording session');
       return;
     }
 
     try {
-      await processChunk(data, recordingSessionId);
+      await processChunk(data, sessionId);
     } catch (error: any) {
       console.error('Error handling audio chunk:', error);
       onError(error.message);
     }
-  }, [recordingSessionId, processChunk, onError]);
+  }, [processChunk, onError]);
 
   const startRec = useCallback(async () => {
     try {
@@ -78,7 +77,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
-          handleDataAvailable(e.data);
+          handleDataAvailable(e.data, sessionId);
         }
       };
 
@@ -129,15 +128,22 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         throw new Error('No audio chunks found for transcription');
       }
 
+      console.log(`Found ${chunks.length} chunks for transcription`);
+
       const { data: transcriptionData, error: transcriptionError } = await supabase.functions.invoke('transcribe-chunks', {
-        body: { sessionId: recordingSessionId }
+        body: { 
+          sessionId: recordingSessionId,
+          userId: (await supabase.auth.getUser()).data.user?.id
+        }
       });
 
       if (transcriptionError) throw transcriptionError;
 
       if (transcriptionData?.transcription) {
-        console.log('Transcription complete');
+        console.log('Transcription complete:', transcriptionData.transcription);
         onTranscriptionComplete(transcriptionData.transcription);
+      } else {
+        throw new Error('No transcription received');
       }
 
     } catch (error: any) {
