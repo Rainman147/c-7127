@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSessionManagement } from './useSessionManagement';
 import { useChunkProcessing } from './useChunkProcessing';
@@ -11,11 +11,10 @@ interface RecordingOptions {
 
 export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOptions) => {
   const [currentStream, setCurrentStream] = useState<MediaStream | null>(null);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [chunks, setChunks] = useState<Blob[]>([]);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
   const { recordingSessionId, createSession, clearSession, handleSessionError } = useSessionManagement();
-  const { processChunk } = useChunkProcessing();
 
   const getSupportedMimeType = () => {
     const types = [
@@ -43,12 +42,12 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         type: event.data.type
       });
       
-      setChunks(prevChunks => [...prevChunks, event.data]);
+      chunksRef.current = [...chunksRef.current, event.data];
 
       try {
         const formData = new FormData();
         formData.append('chunk', event.data);
-        formData.append('totalChunks', '1'); // We'll update this when stopping
+        formData.append('totalChunks', '1');
 
         const { error } = await supabase.functions.invoke('backup-audio-chunk', {
           body: formData
@@ -79,7 +78,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       });
 
       setCurrentStream(stream);
-      setChunks([]); // Reset chunks array
+      chunksRef.current = []; // Reset chunks array
       
       const mimeType = getSupportedMimeType();
       const recorder = new MediaRecorder(stream, {
@@ -95,7 +94,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       };
 
       recorder.start(5000); // Chunk every 5 seconds
-      setMediaRecorder(recorder);
+      mediaRecorderRef.current = recorder;
       console.log('MediaRecorder started with mime type:', mimeType);
 
     } catch (error: any) {
@@ -113,8 +112,8 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
   const stopRec = useCallback(async () => {
     console.log('Stopping recording session:', recordingSessionId);
     
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-      mediaRecorder.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
     }
 
     if (currentStream) {
@@ -122,7 +121,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       setCurrentStream(null);
     }
 
-    if (!recordingSessionId || chunks.length === 0) {
+    if (!recordingSessionId || chunksRef.current.length === 0) {
       console.warn('No chunks recorded or no active session');
       onError('No audio recorded');
       return;
@@ -178,11 +177,11 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         duration: 5000,
       });
     } finally {
-      setChunks([]);
+      chunksRef.current = [];
       clearSession();
-      setMediaRecorder(null);
+      mediaRecorderRef.current = null;
     }
-  }, [recordingSessionId, chunks, clearSession, onError, onTranscriptionComplete, toast]);
+  }, [recordingSessionId, clearSession, onError, onTranscriptionComplete, toast]);
 
   return {
     isRecording: Boolean(currentStream),
