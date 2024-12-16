@@ -23,7 +23,7 @@ serve(async (req) => {
       throw new Error('Session ID and User ID are required')
     }
 
-    console.log('Processing chunks for session:', sessionId)
+    console.log('Processing chunks for session:', { sessionId, userId })
 
     // Initialize Supabase client
     const supabase = createClient(
@@ -46,7 +46,7 @@ serve(async (req) => {
     }
 
     if (!chunks || chunks.length === 0) {
-      console.error('No chunks found for session:', sessionId)
+      console.error('No chunks found for session:', { sessionId, userId })
       throw new Error('No audio chunks found')
     }
 
@@ -59,7 +59,8 @@ serve(async (req) => {
     for (const chunk of chunks) {
       console.log('Processing chunk:', {
         chunkNumber: chunk.chunk_number,
-        storagePath: chunk.storage_path
+        storagePath: chunk.storage_path,
+        totalChunks: chunk.total_chunks
       })
       
       const { data, error: downloadError } = await supabase.storage
@@ -87,10 +88,24 @@ serve(async (req) => {
 
     console.log('Combined audio size:', totalLength, 'bytes')
 
+    // Create audio blob with proper MIME type
+    const audioBlob = new Blob([combinedArray], { type: 'audio/webm' })
+
+    // Convert to base64
+    const base64Data = await new Promise<string>((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const base64 = (reader.result as string).split(',')[1]
+        resolve(base64)
+      }
+      reader.readAsDataURL(audioBlob)
+    })
+
     // Send to Whisper API for transcription
     const { data: transcription, error: transcriptionError } = await supabase.functions.invoke('transcribe', {
       body: { 
-        audioData: Array.from(combinedArray),
+        audioData: base64Data,
+        mimeType: 'audio/webm',
         userId,
         sessionId
       }
@@ -101,12 +116,20 @@ serve(async (req) => {
       throw new Error('Failed to transcribe audio')
     }
 
+    if (!transcription?.transcription) {
+      console.error('No transcription received from Whisper API')
+      throw new Error('No transcription received')
+    }
+
     console.log('Transcription completed successfully')
 
     // Update chunks status
     const { error: updateError } = await supabase
       .from('audio_chunks')
-      .update({ status: 'processed' })
+      .update({ 
+        status: 'processed',
+        transcription: transcription.transcription
+      })
       .eq('session_id', sessionId)
 
     if (updateError) {
