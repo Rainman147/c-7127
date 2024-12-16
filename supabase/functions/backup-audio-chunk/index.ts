@@ -50,6 +50,23 @@ serve(async (req) => {
 
     const storagePath = `chunks/${sessionId}/${chunkNumber}.webm`
 
+    // Check if file already exists
+    const { data: existingFile } = await supabase.storage
+      .from('audio_files')
+      .list(`chunks/${sessionId}`)
+
+    const fileExists = existingFile?.some(file => file.name === `${chunkNumber}.webm`)
+    if (fileExists) {
+      console.log('Chunk already exists, skipping upload:', storagePath)
+      return new Response(
+        JSON.stringify({ 
+          message: 'Chunk already processed',
+          chunkNumber 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Upload chunk to storage
     const { error: uploadError } = await supabase.storage
       .from('audio_files')
@@ -59,7 +76,8 @@ serve(async (req) => {
       })
 
     if (uploadError) {
-      throw uploadError
+      console.error('Upload error:', uploadError)
+      throw new Error('Failed to upload audio chunk')
     }
 
     // Save chunk metadata
@@ -69,17 +87,26 @@ serve(async (req) => {
         storage_path: storagePath,
         chunk_number: chunkNumber,
         status: 'stored',
-        user_id: (await supabase.auth.getUser()).data.user?.id
+        user_id: (await supabase.auth.getUser()).data.user?.id,
+        original_filename: `chunk_${chunkNumber}.webm`
       })
 
     if (insertError) {
-      throw insertError
+      console.error('Insert error:', insertError)
+      throw new Error('Failed to save chunk metadata')
     }
+
+    console.log('Successfully processed chunk:', {
+      sessionId,
+      chunkNumber,
+      storagePath
+    })
 
     return new Response(
       JSON.stringify({ 
         message: 'Chunk processed successfully',
-        chunkNumber
+        chunkNumber,
+        storagePath
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
