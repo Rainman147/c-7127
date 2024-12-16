@@ -115,44 +115,46 @@ export const getAudioMetadata = async (audioBlob: Blob): Promise<{
 };
 
 // Helper function to create WAV blob
-const createWavBlob = (chunks: Float32Array[], options: {
+const createWavBlob = async (chunks: Float32Array[], options: {
   sampleRate: number;
   bitsPerSample: number;
   channels: number;
 }): Promise<Blob> => {
-  const { sampleRate, bitsPerSample, channels } = options;
-  const bytesPerSample = bitsPerSample / 8;
-  const length = chunks[0].length;
+  return new Promise((resolve) => {
+    const { sampleRate, bitsPerSample, channels } = options;
+    const bytesPerSample = bitsPerSample / 8;
+    const length = chunks[0].length;
 
-  const buffer = new ArrayBuffer(44 + length * bytesPerSample * channels);
-  const view = new DataView(buffer);
+    const buffer = new ArrayBuffer(44 + length * bytesPerSample * channels);
+    const view = new DataView(buffer);
 
-  // Write WAV header
-  writeString(view, 0, 'RIFF');
-  view.setUint32(4, 36 + length * bytesPerSample * channels, true);
-  writeString(view, 8, 'WAVE');
-  writeString(view, 12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, channels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * channels * bytesPerSample, true);
-  view.setUint16(32, channels * bytesPerSample, true);
-  view.setUint16(34, bitsPerSample, true);
-  writeString(view, 36, 'data');
-  view.setUint32(40, length * bytesPerSample * channels, true);
+    // Write WAV header
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + length * bytesPerSample * channels, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, channels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * channels * bytesPerSample, true);
+    view.setUint16(32, channels * bytesPerSample, true);
+    view.setUint16(34, bitsPerSample, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, length * bytesPerSample * channels, true);
 
-  // Write audio data
-  const offset = 44;
-  for (let i = 0; i < length; i++) {
-    for (let channel = 0; channel < channels; channel++) {
-      const sample = Math.max(-1, Math.min(1, chunks[channel][i]));
-      const value = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-      view.setInt16(offset + (i * channels + channel) * bytesPerSample, value, true);
+    // Write audio data
+    const offset = 44;
+    for (let i = 0; i < length; i++) {
+      for (let channel = 0; channel < channels; channel++) {
+        const sample = Math.max(-1, Math.min(1, chunks[channel][i]));
+        const value = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+        view.setInt16(offset + (i * channels + channel) * bytesPerSample, value, true);
+      }
     }
-  }
 
-  return new Blob([buffer], { type: 'audio/wav' });
+    resolve(new Blob([buffer], { type: 'audio/wav' }));
+  });
 };
 
 const writeString = (view: DataView, offset: number, string: string) => {
