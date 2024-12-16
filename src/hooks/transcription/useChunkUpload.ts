@@ -17,27 +17,53 @@ export const useChunkUpload = () => {
         throw new Error('User not authenticated');
       }
 
-      // Create FormData for the chunk
-      const formData = new FormData();
-      formData.append('chunk', chunk);
-      formData.append('sessionId', sessionId);
-      formData.append('chunkNumber', chunkNumber.toString());
-      formData.append('userId', user.id);
-
-      console.log('Processing chunk for session:', sessionId);
-
-      const { data, error } = await supabase.functions.invoke('backup-audio-chunk', {
-        body: formData
+      // Create a storage path for the chunk
+      const storagePath = `chunks/${user.id}/${sessionId}/${chunkNumber}.webm`;
+      console.log('[useChunkUpload] Uploading chunk to storage:', {
+        path: storagePath,
+        size: chunk.size,
+        chunkNumber
       });
 
-      if (error) {
-        console.error('Error processing chunk:', error);
-        throw error;
+      // Upload chunk to storage
+      const { error: uploadError } = await supabase.storage
+        .from('audio_files')
+        .upload(storagePath, chunk, {
+          contentType: 'audio/webm',
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error('[useChunkUpload] Storage upload error:', uploadError);
+        throw uploadError;
       }
 
-      return data;
+      // Store chunk metadata in database
+      const { error: insertError } = await supabase
+        .from('audio_chunks')
+        .insert({
+          user_id: user.id,
+          session_id: sessionId,
+          storage_path: storagePath,
+          chunk_number: chunkNumber,
+          original_filename: `chunk_${chunkNumber}.webm`,
+          status: 'stored'
+        });
+
+      if (insertError) {
+        console.error('[useChunkUpload] Database insert error:', insertError);
+        throw insertError;
+      }
+
+      console.log('[useChunkUpload] Successfully uploaded chunk:', {
+        chunkNumber,
+        sessionId,
+        storagePath
+      });
+
+      return { success: true, storagePath };
     } catch (error: any) {
-      console.error('Failed to process chunk:', error);
+      console.error('[useChunkUpload] Failed to process chunk:', error);
       toast({
         title: "Error",
         description: "Failed to process audio chunk. Please try again.",

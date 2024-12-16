@@ -37,6 +37,7 @@ serve(async (req) => {
       .select('*')
       .eq('user_id', userId)
       .eq('session_id', sessionId)
+      .eq('status', 'stored')
       .order('chunk_number', { ascending: true })
 
     if (chunksError) {
@@ -102,14 +103,14 @@ serve(async (req) => {
 
     console.log('Transcription completed successfully')
 
-    // Clean up chunks after successful transcription
-    const { error: cleanupError } = await supabase
+    // Update chunks status
+    const { error: updateError } = await supabase
       .from('audio_chunks')
       .update({ status: 'processed' })
       .eq('session_id', sessionId)
 
-    if (cleanupError) {
-      console.error('Error cleaning up chunks:', cleanupError)
+    if (updateError) {
+      console.error('Error updating chunks status:', updateError)
       // Don't throw here as transcription was successful
     }
 
