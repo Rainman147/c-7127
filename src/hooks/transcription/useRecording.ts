@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useRecordingSession } from './useRecordingSession';
 import { useChunkUpload } from './useChunkUpload';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RecordingOptions {
   onError: (error: string) => void;
