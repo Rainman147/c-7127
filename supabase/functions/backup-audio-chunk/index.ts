@@ -16,6 +16,7 @@ serve(async (req) => {
     const formData = await req.formData()
     const chunk = formData.get('chunk') as Blob
     const sessionId = formData.get('sessionId') as string
+    const totalChunks = formData.get('totalChunks') as string || '1'
 
     if (!sessionId) {
       throw new Error('Missing session ID')
@@ -80,14 +81,21 @@ serve(async (req) => {
       throw new Error('Failed to upload audio chunk')
     }
 
+    // Get user ID
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      throw new Error('Failed to get user ID')
+    }
+
     // Save chunk metadata
     const { error: insertError } = await supabase
       .from('audio_chunks')
       .insert({
         storage_path: storagePath,
         chunk_number: chunkNumber,
+        total_chunks: parseInt(totalChunks),
         status: 'stored',
-        user_id: (await supabase.auth.getUser()).data.user?.id,
+        user_id: user.id,
         original_filename: `chunk_${chunkNumber}.webm`
       })
 
