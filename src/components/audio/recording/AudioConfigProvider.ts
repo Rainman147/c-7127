@@ -1,4 +1,5 @@
-import { getDeviceType, getBrowserType, getOptimalAudioConfig } from '@/utils/deviceDetection';
+import { getDeviceType, getBrowserType } from '@/utils/deviceDetection';
+import { getOptimalAudioConfig } from '@/utils/networkUtils';
 
 export interface AudioConfig {
   sampleRate: number;
