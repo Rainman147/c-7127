@@ -79,6 +79,7 @@ const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorP
         if (data?.template_type) {
           const template = templates.find(t => t.id === data.template_type);
           if (template) {
+            console.log('Setting template from database:', template.name);
             setSelectedTemplate(template);
           }
         }
@@ -96,6 +97,7 @@ const TemplateSelector = ({ currentChatId, onTemplateChange }: TemplateSelectorP
   }, [currentChatId]);
 
   const handleTemplateChange = async (template: Template) => {
+    console.log('Handling template change to:', template.name);
     if (!currentChatId || template.id === selectedTemplate.id) return;
 
     setIsLoading(true);
