@@ -21,11 +21,25 @@ serve(async (req) => {
     const audioChunk = formData.get('chunk') as File
     const sessionId = formData.get('sessionId')?.toString()
     const chunkNumber = parseInt(formData.get('chunkNumber')?.toString() || '0')
-    const totalChunks = parseInt(formData.get('totalChunks')?.toString() || '1')  // Default to 1 if not provided
+    const totalChunks = parseInt(formData.get('totalChunks')?.toString() || '1')
     const userId = formData.get('userId')?.toString()
 
-    if (!audioChunk || !sessionId || !userId) {
-      throw new Error('Missing required fields')
+    console.log('Received backup request:', {
+      hasAudioChunk: !!audioChunk,
+      sessionId,
+      chunkNumber,
+      totalChunks,
+      userId,
+    })
+
+    if (!audioChunk) {
+      throw new Error('Missing audio chunk')
+    }
+    if (!sessionId) {
+      throw new Error('Missing session ID')
+    }
+    if (!userId) {
+      throw new Error('Missing user ID')
     }
 
     console.log(`Processing chunk ${chunkNumber} of ${totalChunks} for session ${sessionId}`)
@@ -50,7 +64,7 @@ serve(async (req) => {
         user_id: userId,
         original_filename: `recording_${sessionId}_chunk${chunkNumber}`,
         chunk_number: chunkNumber,
-        total_chunks: totalChunks,  // Now we always provide this value
+        total_chunks: totalChunks,
         storage_path: chunkPath,
         status: 'stored'
       })

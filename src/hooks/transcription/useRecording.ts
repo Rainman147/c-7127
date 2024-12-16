@@ -27,15 +27,31 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     });
     
     chunks.current.push(data);
+    console.log('Audio chunk captured:', data.size, 'bytes');
     
     try {
+      // Get current user before attempting backup
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('Auth error:', userError);
+        throw new Error('Authentication required for backup');
+      }
+
       // Back up the chunk
       const formData = new FormData();
       formData.append('chunk', data);
       formData.append('sessionId', recordingSessionId);
       formData.append('chunkNumber', chunkCount.toString());
       formData.append('totalChunks', estimatedTotalChunks.current.toString());
-      formData.append('userId', (await supabase.auth.getUser()).data.user?.id || '');
+      formData.append('userId', user.id);
+
+      console.log('Backing up chunk with data:', {
+        sessionId: recordingSessionId,
+        chunkNumber: chunkCount,
+        totalChunks: estimatedTotalChunks.current,
+        userId: user.id
+      });
 
       const { error: backupError } = await supabase.functions.invoke('backup-audio-chunk', {
         body: formData
@@ -76,7 +92,6 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       setRecordingSessionId(crypto.randomUUID());
       setChunkCount(0);
       chunks.current = [];
-      // Estimate total chunks based on expected recording duration (e.g., 30 seconds with 5-second chunks)
       estimatedTotalChunks.current = 6; // 30 seconds / 5 seconds per chunk
       
       const stream = await getStream();
