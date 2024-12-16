@@ -15,6 +15,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
   const chunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
   const { recordingSessionId, createSession, clearSession, handleSessionError } = useSessionManagement();
+  const { processChunk } = useChunkProcessing();
 
   const getSupportedMimeType = () => {
     const types = [
@@ -42,27 +43,23 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         type: event.data.type
       });
       
-      chunksRef.current = [...chunksRef.current, event.data];
+      chunksRef.current.push(event.data);
 
       try {
         const formData = new FormData();
         formData.append('chunk', event.data);
-        formData.append('totalChunks', '1');
+        formData.append('sessionId', recordingSessionId || '');
+        formData.append('chunkNumber', chunksRef.current.length.toString());
+        formData.append('totalChunks', '0'); // Will be updated when stopping
 
-        const { error } = await supabase.functions.invoke('backup-audio-chunk', {
-          body: formData
-        });
+        await processChunk(event.data, recordingSessionId || '');
 
-        if (error) {
-          console.error('Error saving chunk:', error);
-          throw error;
-        }
       } catch (error: any) {
         console.error('Error handling audio chunk:', error);
         onError(error.message);
       }
     }
-  }, [onError]);
+  }, [recordingSessionId, onError, processChunk]);
 
   const startRec = useCallback(async () => {
     try {
@@ -93,7 +90,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         onError('Recording failed');
       };
 
-      recorder.start(5000); // Chunk every 5 seconds
+      recorder.start(1000); // Chunk every second for more responsive transcription
       mediaRecorderRef.current = recorder;
       console.log('MediaRecorder started with mime type:', mimeType);
 
@@ -158,8 +155,8 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         onTranscriptionComplete(transcriptionData.transcription);
         
         toast({
-          title: "Transcription complete",
-          description: "Your audio has been transcribed successfully.",
+          title: "Success",
+          description: "Audio transcribed successfully",
           duration: 3000,
         });
       } else {
