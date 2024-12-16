@@ -68,6 +68,11 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     onTranscriptionComplete(text);
   }, [onTranscriptionComplete]);
 
+  const { isRecording, startRecording, stopRecording } = useMediaRecorder({
+    onDataAvailable: handleDataAvailable,
+    onError: handleError
+  });
+
   const startRec = useCallback(async () => {
     try {
       console.log('Starting new recording session');
