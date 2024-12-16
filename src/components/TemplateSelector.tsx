@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useCallback, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -16,18 +16,32 @@ interface TemplateSelectorProps {
 }
 
 const TemplateSelector = memo(({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
+  console.log('[TemplateSelector] Initializing with currentChatId:', currentChatId);
+  
   const { selectedTemplate, isLoading, handleTemplateChange } = useTemplateSelection(
     currentChatId,
     onTemplateChange
   );
 
-  console.log('TemplateSelector rendering with template:', selectedTemplate?.name);
+  useEffect(() => {
+    console.log('[TemplateSelector] Selected template updated:', selectedTemplate?.name);
+  }, [selectedTemplate]);
+
+  useEffect(() => {
+    console.log('[TemplateSelector] Loading state changed:', isLoading);
+  }, [isLoading]);
+
+  const handleTemplateSelect = useCallback((template: Template) => {
+    console.log('[TemplateSelector] Template selection triggered:', template.name);
+    handleTemplateChange(template);
+  }, [handleTemplateChange]);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger 
         className="flex items-center gap-2 px-3 py-1 font-semibold text-sm text-white hover:bg-gray-700/50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={isLoading}
+        onClick={() => console.log('[TemplateSelector] Dropdown trigger clicked')}
       >
         <span className="whitespace-nowrap">{selectedTemplate?.name || 'Live Patient Session'}</span>
         <ChevronDown className="h-4 w-4" />
@@ -35,13 +49,14 @@ const TemplateSelector = memo(({ currentChatId, onTemplateChange }: TemplateSele
       <DropdownMenuContent 
         className="w-72 bg-gray-800 border border-gray-700 rounded-md shadow-lg z-50"
         align="start"
+        onCloseAutoFocus={() => console.log('[TemplateSelector] Dropdown closed')}
       >
         {templates.map((template) => (
           <TemplateItem
             key={template.id}
             template={template}
             isSelected={selectedTemplate?.id === template.id}
-            onSelect={handleTemplateChange}
+            onSelect={handleTemplateSelect}
             isLoading={isLoading}
           />
         ))}
@@ -51,5 +66,3 @@ const TemplateSelector = memo(({ currentChatId, onTemplateChange }: TemplateSele
 });
 
 TemplateSelector.displayName = 'TemplateSelector';
-
-export default TemplateSelector;

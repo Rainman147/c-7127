@@ -29,13 +29,27 @@ const AudioControls = ({
   onFileUpload,
   onTranscriptionComplete
 }: AudioControlsProps) => {
+  console.log('[AudioControls] Rendering with isRecording:', isRecording);
+  
   const { isIOS } = getDeviceType();
   const { isSafari } = getBrowserType();
+  console.log('[AudioControls] Device detection:', { isIOS, isSafari });
 
   const getTooltipContent = () => {
     if (isRecording) return "Stop recording";
     if (isIOS && isSafari) return "Tap to start recording (Safari requires permission)";
     return "Start recording";
+  };
+
+  const handleRecordingClick = () => {
+    console.log('[AudioControls] Record button clicked, current state:', { isRecording });
+    if (isRecording) {
+      console.log('[AudioControls] Stopping recording...');
+      onStopRecording();
+    } else {
+      console.log('[AudioControls] Starting recording...');
+      onStartRecording();
+    }
   };
 
   return (
@@ -44,7 +58,7 @@ const AudioControls = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <button
-              onClick={isRecording ? onStopRecording : onStartRecording}
+              onClick={handleRecordingClick}
               className={`p-2 rounded-full transition-all duration-300 ${
                 isRecording 
                   ? 'bg-red-500 hover:bg-red-600 animate-pulse' 

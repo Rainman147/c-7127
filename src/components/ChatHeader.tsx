@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect } from "react";
 import TemplateSelector from "./TemplateSelector";
 
 interface ChatHeaderProps {
@@ -12,8 +12,21 @@ const ChatHeader = memo(({
   currentChatId,
   onTemplateChange 
 }: ChatHeaderProps) => {
-  console.log('ChatHeader rendering with currentChatId:', currentChatId);
+  console.log('[ChatHeader] Rendering with:', { 
+    isSidebarOpen, 
+    currentChatId,
+    hasTemplateChangeHandler: !!onTemplateChange 
+  });
+
+  useEffect(() => {
+    console.log('[ChatHeader] Current chat ID changed to:', currentChatId);
+  }, [currentChatId]);
   
+  const handleTemplateChange = (template: any) => {
+    console.log('[ChatHeader] Template change requested:', template);
+    onTemplateChange(template);
+  };
+
   return (
     <div className="fixed top-0 z-30 w-full border-b border-white/20 bg-chatgpt-main/95 backdrop-blur">
       <div className="flex h-[60px] items-center justify-between px-4">
@@ -22,7 +35,7 @@ const ChatHeader = memo(({
             <TemplateSelector 
               key={currentChatId || 'default'}
               currentChatId={currentChatId}
-              onTemplateChange={onTemplateChange}
+              onTemplateChange={handleTemplateChange}
             />
           </span>
         </div>
@@ -38,5 +51,3 @@ const ChatHeader = memo(({
 });
 
 ChatHeader.displayName = 'ChatHeader';
-
-export default ChatHeader;

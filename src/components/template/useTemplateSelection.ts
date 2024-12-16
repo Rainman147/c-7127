@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Template } from "./types";
@@ -8,6 +8,8 @@ export const useTemplateSelection = (
   currentChatId: string | null,
   onTemplateChange: (template: Template) => void
 ) => {
+  console.log('[useTemplateSelection] Hook initialized with chatId:', currentChatId);
+  
   const [selectedTemplate, setSelectedTemplate] = useState<Template>(templates[0]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -15,10 +17,11 @@ export const useTemplateSelection = (
   useEffect(() => {
     const loadTemplateForChat = async () => {
       if (!currentChatId) {
-        console.log('No chat ID, using current template');
+        console.log('[useTemplateSelection] No chat ID provided, using default template');
         return;
       }
 
+      console.log('[useTemplateSelection] Loading template for chat:', currentChatId);
       try {
         setIsLoading(true);
         const { data, error } = await supabase
@@ -27,18 +30,21 @@ export const useTemplateSelection = (
           .eq('id', currentChatId)
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('[useTemplateSelection] Error loading template:', error);
+          throw error;
+        }
 
         if (data?.template_type) {
           const template = templates.find(t => t.id === data.template_type);
           if (template) {
-            console.log('Setting template from database:', template.name);
+            console.log('[useTemplateSelection] Found template in database:', template.name);
             setSelectedTemplate(template);
             onTemplateChange(template);
           }
         }
       } catch (error) {
-        console.error('Error loading template:', error);
+        console.error('[useTemplateSelection] Failed to load template:', error);
         toast({
           title: "Error",
           description: "Failed to load template settings",
@@ -46,36 +52,41 @@ export const useTemplateSelection = (
         });
       } finally {
         setIsLoading(false);
+        console.log('[useTemplateSelection] Template loading completed');
       }
     };
 
     loadTemplateForChat();
   }, [currentChatId, onTemplateChange, toast]);
 
-  const handleTemplateChange = async (template: Template) => {
-    console.log('Handling template change to:', template.name);
+  const handleTemplateChange = useCallback(async (template: Template) => {
+    console.log('[useTemplateSelection] Template change requested:', template.name);
     
-    // Don't update if it's the same template
     if (template.id === selectedTemplate.id) {
-      console.log('No changes needed - same template');
+      console.log('[useTemplateSelection] Same template selected, no changes needed');
       return;
     }
 
     setIsLoading(true);
     try {
-      // Update local state immediately
       setSelectedTemplate(template);
       onTemplateChange(template);
 
-      // If we have a currentChatId, also save the template selection to the database
       if (currentChatId) {
-        console.log('Saving template selection to database for chat:', currentChatId);
+        console.log('[useTemplateSelection] Saving template selection to database:', {
+          chatId: currentChatId,
+          templateId: template.id
+        });
+        
         const { error } = await supabase
           .from('chats')
           .update({ template_type: template.id })
           .eq('id', currentChatId);
 
-        if (error) throw error;
+        if (error) {
+          console.error('[useTemplateSelection] Error saving template:', error);
+          throw error;
+        }
       }
 
       toast({
@@ -83,8 +94,10 @@ export const useTemplateSelection = (
         description: `Now using: ${template.name}`,
         duration: 3000,
       });
+      
+      console.log('[useTemplateSelection] Template change completed successfully');
     } catch (error: any) {
-      console.error('Error updating template:', error);
+      console.error('[useTemplateSelection] Failed to update template:', error);
       toast({
         title: "Error",
         description: "Failed to update template",
@@ -93,7 +106,7 @@ export const useTemplateSelection = (
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentChatId, selectedTemplate.id, onTemplateChange, toast]);
 
   return {
     selectedTemplate,
