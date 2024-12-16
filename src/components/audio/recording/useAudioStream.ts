@@ -8,11 +8,17 @@ export const useAudioStream = () => {
   const getStream = useCallback(async () => {
     try {
       console.log('Requesting audio stream with device-specific configuration');
-      const audioConfig = getDeviceAudioConfig();
+      const audioConfig = await getDeviceAudioConfig();
       console.log('Using audio configuration:', audioConfig);
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: audioConfig
+        audio: {
+          sampleRate: { ideal: audioConfig.sampleRate },
+          channelCount: { ideal: audioConfig.channelCount },
+          echoCancellation: audioConfig.echoCancellation,
+          noiseSuppression: audioConfig.noiseSuppression,
+          autoGainControl: audioConfig.autoGainControl
+        }
       });
 
       console.log('Audio stream obtained successfully');
