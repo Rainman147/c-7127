@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSessionManagement } from './useSessionManagement';
 import { useChunkProcessing } from './useChunkProcessing';
@@ -10,7 +10,6 @@ interface RecordingOptions {
 }
 
 export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOptions) => {
-  const [currentStream, setCurrentStream] = useState<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
@@ -40,26 +39,60 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     if (event.data.size > 0) {
       console.log('Recording chunk received:', {
         size: event.data.size,
-        type: event.data.type
+        type: event.data.type,
+        sessionId: recordingSessionId
       });
       
       chunksRef.current.push(event.data);
+      const chunkNumber = chunksRef.current.length;
 
       try {
+        // Get the current user's ID
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
+
+        // Create a file path with user ID and session ID
+        const timestamp = Date.now();
+        const fileName = `${user.id}/${recordingSessionId}/${chunkNumber}.webm`;
+        
+        console.log('Uploading chunk to storage path:', fileName);
+
+        // Upload to Supabase Storage
+        const { error: uploadError } = await supabase.storage
+          .from('audio_files')
+          .upload(fileName, event.data, {
+            contentType: 'audio/webm',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw new Error('Failed to upload audio chunk');
+        }
+
+        console.log('Successfully uploaded chunk:', fileName);
+
+        // Process the chunk
         const formData = new FormData();
         formData.append('chunk', event.data);
         formData.append('sessionId', recordingSessionId || '');
-        formData.append('chunkNumber', chunksRef.current.length.toString());
-        formData.append('totalChunks', '0'); // Will be updated when stopping
+        formData.append('chunkNumber', chunkNumber.toString());
 
         await processChunk(event.data, recordingSessionId || '');
 
       } catch (error: any) {
         console.error('Error handling audio chunk:', error);
         onError(error.message);
+        toast({
+          title: "Error",
+          description: "Failed to process audio chunk. Please try again.",
+          variant: "destructive"
+        });
       }
     }
-  }, [recordingSessionId, onError, processChunk]);
+  }, [recordingSessionId, onError, processChunk, toast]);
 
   const startRec = useCallback(async () => {
     try {
@@ -74,7 +107,6 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
         } 
       });
 
-      setCurrentStream(stream);
       chunksRef.current = []; // Reset chunks array
       
       const mimeType = getSupportedMimeType();
@@ -98,24 +130,20 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
       console.error('Failed to start recording:', error);
       handleSessionError(error);
       onError(error.message);
-      
-      if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-        setCurrentStream(null);
-      }
+      toast({
+        title: "Error",
+        description: "Failed to start recording. Please check your microphone permissions.",
+        variant: "destructive"
+      });
     }
-  }, [createSession, handleDataAvailable, handleSessionError, onError]);
+  }, [createSession, handleDataAvailable, handleSessionError, onError, toast]);
 
   const stopRec = useCallback(async () => {
     console.log('Stopping recording session:', recordingSessionId);
     
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
-    }
-
-    if (currentStream) {
-      currentStream.getTracks().forEach(track => track.stop());
-      setCurrentStream(null);
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
     }
 
     if (!recordingSessionId || chunksRef.current.length === 0) {
@@ -125,21 +153,6 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
     }
 
     try {
-      // Update the total chunks count for all saved chunks
-      const { data: savedChunks, error: fetchError } = await supabase
-        .from('audio_chunks')
-        .select('*')
-        .eq('storage_path', `chunks/${recordingSessionId}/%`)
-        .order('chunk_number', { ascending: true });
-
-      if (fetchError) throw fetchError;
-
-      if (!savedChunks || savedChunks.length === 0) {
-        throw new Error('No audio chunks found for transcription');
-      }
-
-      console.log(`Found ${savedChunks.length} chunks for transcription`);
-
       // Transcribe the complete audio
       const { data: transcriptionData, error: transcriptionError } = await supabase.functions.invoke('transcribe-chunks', {
         body: { 
@@ -181,7 +194,7 @@ export const useRecording = ({ onError, onTranscriptionComplete }: RecordingOpti
   }, [recordingSessionId, clearSession, onError, onTranscriptionComplete, toast]);
 
   return {
-    isRecording: Boolean(currentStream),
+    isRecording: Boolean(mediaRecorderRef.current?.state === 'recording'),
     startRecording: startRec,
     stopRecording: stopRec
   };
