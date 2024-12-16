@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { getDeviceType, getBrowserType } from '@/utils/deviceDetection';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RecordingOptions {
   onError: (error: string) => void;
