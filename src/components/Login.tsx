@@ -12,8 +12,8 @@ const Login = () => {
       switch (event) {
         case 'SIGNED_IN':
           toast({
-            title: "Welcome!",
-            description: "Successfully signed in with Google.",
+            title: "Welcome back!",
+            description: "Successfully signed in.",
           });
           break;
         case 'SIGNED_OUT':
@@ -26,6 +26,12 @@ const Login = () => {
           toast({
             title: "Profile updated",
             description: "Your profile has been updated.",
+          });
+          break;
+        case 'PASSWORD_RECOVERY':
+          toast({
+            title: "Password recovery",
+            description: "Check your email for password reset instructions.",
           });
           break;
       }
@@ -51,8 +57,8 @@ const Login = () => {
             variables: {
               default: {
                 colors: {
-                  brand: '#4285f4', // Google blue
-                  brandAccent: '#1a73e8', // Darker Google blue
+                  brand: '#2563eb',
+                  brandAccent: '#1d4ed8',
                 },
                 borderWidths: {
                   buttonBorderWidth: '1px',
@@ -67,15 +73,11 @@ const Login = () => {
             },
             style: {
               button: {
-                padding: '10px 16px',
+                padding: '8px 16px',
                 fontSize: '14px',
-                fontFamily: 'Google Sans, Roboto, sans-serif',
-                fontWeight: '500',
-                height: '40px',
-                textTransform: 'none',
               },
-              anchor: {
-                color: '#4285f4',
+              input: {
+                padding: '8px 12px',
                 fontSize: '14px',
               },
             },
@@ -83,7 +85,7 @@ const Login = () => {
           theme="dark"
           providers={['google']}
           redirectTo={window.location.origin}
-          onlyThirdPartyProviders={true}
+          magicLink={false}
         />
       </div>
     </div>
