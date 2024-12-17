@@ -65,7 +65,7 @@ const Index = () => {
     }
   };
 
-  const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
+  const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text', model: 'gemini' | 'gpt4o' | 'gpt4o-mini' = 'gemini') => {
     // Create a new session only when sending the first message
     if (!currentChatId) {
       console.log('Creating new session for first message');
@@ -80,7 +80,8 @@ const Index = () => {
 
     await handleSendMessage(
       message, 
-      type, 
+      type,
+      model,
       currentTemplate?.systemInstructions
     );
   };
