@@ -7,11 +7,34 @@ type MessageActionsProps = {
   content: string;
 };
 
+// Maximum length for each text chunk (characters)
+const MAX_CHUNK_LENGTH = 4000;
+
 const MessageActions = ({ content }: MessageActionsProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const audioRef = useState<HTMLAudioElement | null>(null);
+
+  const splitTextIntoChunks = (text: string): string[] => {
+    const chunks: string[] = [];
+    let currentChunk = '';
+    
+    // Split by sentences to maintain natural breaks
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+    
+    for (const sentence of sentences) {
+      if ((currentChunk + sentence).length <= MAX_CHUNK_LENGTH) {
+        currentChunk += sentence;
+      } else {
+        if (currentChunk) chunks.push(currentChunk.trim());
+        currentChunk = sentence;
+      }
+    }
+    
+    if (currentChunk) chunks.push(currentChunk.trim());
+    return chunks;
+  };
 
   const handleTextToSpeech = async () => {
     try {
@@ -25,31 +48,50 @@ const MessageActions = ({ content }: MessageActionsProps) => {
       }
 
       setIsLoading(true);
-      console.log('Sending text to speech request:', content);
+      const textChunks = splitTextIntoChunks(content);
+      console.log(`Processing ${textChunks.length} chunks of text`);
 
-      const { data, error } = await supabase.functions.invoke('text-to-speech', {
-        body: { text: content }
+      // Process all chunks and combine their audio
+      const audioChunks: ArrayBuffer[] = [];
+
+      for (let i = 0; i < textChunks.length; i++) {
+        console.log(`Processing chunk ${i + 1}/${textChunks.length}`);
+        const { data, error } = await supabase.functions.invoke('text-to-speech', {
+          body: { text: textChunks[i] }
+        });
+
+        if (error) {
+          console.error('Supabase function error:', error);
+          throw error;
+        }
+
+        if (!data?.audio) {
+          throw new Error('No audio data received');
+        }
+
+        // Convert base64 to audio buffer
+        const audioData = atob(data.audio);
+        const arrayBuffer = new ArrayBuffer(audioData.length);
+        const view = new Uint8Array(arrayBuffer);
+        for (let j = 0; j < audioData.length; j++) {
+          view[j] = audioData.charCodeAt(j);
+        }
+        audioChunks.push(arrayBuffer);
+      }
+
+      console.log('Combining audio chunks');
+      // Combine all audio chunks
+      const combinedBuffer = new Uint8Array(
+        audioChunks.reduce((acc, chunk) => acc + chunk.byteLength, 0)
+      );
+      
+      let offset = 0;
+      audioChunks.forEach(chunk => {
+        combinedBuffer.set(new Uint8Array(chunk), offset);
+        offset += chunk.byteLength;
       });
 
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw error;
-      }
-
-      if (!data?.audio) {
-        throw new Error('No audio data received');
-      }
-
-      console.log('Received audio data, creating blob');
-
-      // Convert base64 to audio
-      const audioData = atob(data.audio);
-      const arrayBuffer = new ArrayBuffer(audioData.length);
-      const view = new Uint8Array(arrayBuffer);
-      for (let i = 0; i < audioData.length; i++) {
-        view[i] = audioData.charCodeAt(i);
-      }
-      const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+      const blob = new Blob([combinedBuffer], { type: 'audio/mp3' });
       const audioUrl = URL.createObjectURL(blob);
 
       // Create and play audio
