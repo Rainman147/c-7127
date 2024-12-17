@@ -12,7 +12,7 @@ serve(async (req) => {
 
   try {
     console.log('Received request to Gemini function');
-    const { messages } = await req.json();
+    const { messages, systemInstructions } = await req.json();
     
     if (!messages || !Array.isArray(messages)) {
       throw new Error('Invalid messages format');
@@ -24,13 +24,24 @@ serve(async (req) => {
       throw new Error('Google API key not configured');
     }
 
-    // Convert messages to Gemini format
-    const contents = messages.map(msg => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-    }));
+    // Add system instructions to the conversation if provided
+    const contents = [
+      // Add system message if instructions are provided
+      ...(systemInstructions ? [{
+        role: 'user',
+        parts: [{ 
+          text: `System Instructions: ${systemInstructions}
+          Please follow these instructions carefully for all your responses.`
+        }]
+      }] : []),
+      // Add user messages
+      ...messages.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      }))
+    ];
 
-    console.log('Sending request to Gemini experimental model');
+    console.log('Sending request to Gemini with system instructions:', systemInstructions);
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
       {
@@ -38,7 +49,15 @@ serve(async (req) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ contents })
+        body: JSON.stringify({ 
+          contents,
+          generationConfig: {
+            temperature: 0.7,
+            topK: 1,
+            topP: 1,
+            maxOutputTokens: 2048,
+          }
+        })
       }
     );
 
