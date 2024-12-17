@@ -17,7 +17,7 @@ const Message = ({ role, content, id }: MessageProps) => {
       !isUser && "bg-secondary/20"
     )}>
       <div className="flex gap-4 max-w-3xl mx-auto">
-        <MessageAvatar role={role} />
+        <MessageAvatar isAssistant={!isUser} />
         <div className="flex-1 space-y-4 overflow-hidden">
           <div className="prose prose-neutral dark:prose-invert max-w-none">
             <p className="whitespace-pre-wrap">{content}</p>
