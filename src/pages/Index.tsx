@@ -11,7 +11,11 @@ import type { Template } from '@/components/template/types';
 
 const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [currentTemplate, setCurrentTemplate] = useState<Template | null>(() => getDefaultTemplate());
+  const [currentTemplate, setCurrentTemplate] = useState<Template | null>(() => {
+    const defaultTemplate = getDefaultTemplate();
+    console.log('[Index] Initializing with default template:', defaultTemplate.name);
+    return defaultTemplate;
+  });
   
   const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
@@ -51,7 +55,7 @@ const Index = () => {
   };
 
   const handleTemplateChange = (template: Template) => {
-    console.log('Template changed:', template);
+    console.log('[Index] Template changed to:', template.name);
     setCurrentTemplate(template);
   };
 
@@ -70,7 +74,7 @@ const Index = () => {
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
     // Only create a new session when sending the first message
     if (!currentChatId) {
-      console.log('Creating new session for first message');
+      console.log('[Index] Creating new session for first message with template:', currentTemplate?.name);
       const sessionId = await createSession('New Chat');
       if (sessionId) {
         console.log('Created new session:', sessionId);
