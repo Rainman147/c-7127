@@ -3,6 +3,7 @@ import Message from './Message';
 type Message = {
   role: 'user' | 'assistant';
   content: string;
+  id?: string;
 };
 
 const MessageList = ({ messages }: { messages: Message[] }) => {
