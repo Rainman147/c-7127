@@ -65,21 +65,15 @@ const Index = () => {
     }
   };
 
-  const handleNewChat = async () => {
-    const sessionId = await createSession(messages);
-    if (sessionId) {
-      setCurrentChatId(sessionId);
-      setMessages([]);
-    }
-  };
-
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
+    // Create a new session only when sending the first message
     if (!currentChatId) {
       console.log('Creating new session for first message');
-      const sessionId = await createSession([{ role: 'user', content: message }]);
+      const sessionId = await createSession('New Chat');
       if (sessionId) {
         console.log('Created new session:', sessionId);
         setCurrentChatId(sessionId);
+        // Wait a brief moment for the session to be properly created
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
@@ -91,19 +85,13 @@ const Index = () => {
     );
   };
 
-  const toggleSidebar = () => {
-    console.log('Toggling sidebar from', isSidebarOpen, 'to', !isSidebarOpen);
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
   return (
     <div className="flex h-screen">
       <Sidebar 
         isOpen={isSidebarOpen} 
-        onToggle={toggleSidebar}
+        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         onApiKeyChange={() => {}} 
         onSessionSelect={handleSessionSelect}
-        onNewChat={handleNewChat}
       />
       
       <ChatContainer 
@@ -114,8 +102,6 @@ const Index = () => {
         onTemplateChange={handleTemplateChange}
         onTranscriptionComplete={handleTranscriptionComplete}
         isSidebarOpen={isSidebarOpen}
-        onNewChat={handleNewChat}
-        onToggleSidebar={toggleSidebar}
       />
     </div>
   );

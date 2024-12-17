@@ -11,10 +11,9 @@ interface SidebarProps {
   onToggle: () => void;
   onApiKeyChange: (apiKey: string) => void;
   onSessionSelect: (sessionId: string) => void;
-  onNewChat: () => void;
 }
 
-const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect, onNewChat }: SidebarProps) => {
+const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarProps) => {
   const [apiKey, setApiKey] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -25,6 +24,7 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect, onNewChat 
     activeSessionId,
     setActiveSessionId,
     isLoading,
+    createSession,
     deleteSession,
     renameSession,
   } = useChatSessions();
@@ -32,10 +32,10 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect, onNewChat 
   // Check if device is mobile
   useEffect(() => {
     const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      setIsMobile(window.innerWidth < 768); // 768px is a common breakpoint for mobile devices
     };
 
-    checkIfMobile();
+    checkIfMobile(); // Check on initial load
     window.addEventListener('resize', checkIfMobile);
 
     return () => window.removeEventListener('resize', checkIfMobile);
@@ -47,9 +47,18 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect, onNewChat 
     onApiKeyChange(newApiKey);
   };
 
+  const handleNewChat = async () => {
+    const sessionId = await createSession();
+    if (sessionId) {
+      setActiveSessionId(sessionId);
+      onSessionSelect(sessionId);
+    }
+  };
+
   const handleSessionClick = (sessionId: string) => {
     setActiveSessionId(sessionId);
     onSessionSelect(sessionId);
+    // Close sidebar on mobile when selecting a session
     if (isMobile) {
       onToggle();
     }
@@ -72,18 +81,10 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect, onNewChat 
       isOpen ? "w-64" : "w-0"
     )}>
       <nav className="flex h-full w-full flex-col px-3" aria-label="Chat history">
-        <div className="flex justify-between items-center h-[60px]">
+        <div className="flex justify-between flex h-[60px] items-center">
           <button onClick={onToggle} className="h-10 rounded-lg px-2 text-token-text-secondary hover:bg-token-sidebar-surface-secondary">
             <Menu className="h-5 w-5" />
           </button>
-          <Button
-            onClick={onNewChat}
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10"
-          >
-            <Plus className="h-5 w-5" />
-          </Button>
         </div>
 
         <div className="flex-col flex-1 transition-opacity duration-500 relative -mr-2 pr-2 overflow-y-auto">
@@ -101,6 +102,16 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect, onNewChat 
                   onChange={handleApiKeyChange}
                   className="bg-[#2F2F2F] border-none"
                 />
+              </div>
+
+              <div className="mb-4">
+                <Button
+                  onClick={handleNewChat}
+                  className="w-full flex items-center gap-2 bg-[#2F2F2F] hover:bg-[#404040]"
+                >
+                  <Plus className="h-4 w-4" />
+                  New Chat
+                </Button>
               </div>
 
               <div className="space-y-2">
