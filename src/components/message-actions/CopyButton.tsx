@@ -36,11 +36,11 @@ export const CopyButton = ({ content }: CopyButtonProps) => {
         console.log('[CopyButton] Error triggering haptic feedback:', error);
       }
       
-      // Show toast near the button
+      // Show toast near the button with updated positioning and styling
       toast({
-        description: "Copied to clipboard!",
+        description: "Copied!",
         duration: 2000,
-        className: "fixed bottom-16 left-1/2 -translate-x-1/2 w-auto min-w-0 z-[100]",
+        className: "fixed bottom-0 left-1/2 -translate-x-1/2 mb-20 w-auto min-w-0 z-[9999] bg-black/80 text-white px-3 py-2 rounded-md text-sm",
       });
       console.log('[CopyButton] Toast notification triggered');
     } else {
