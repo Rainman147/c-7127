@@ -28,7 +28,7 @@ export const useTemplateSelection = (
           .from('chats')
           .select('template_type')
           .eq('id', currentChatId)
-          .single();
+          .maybeSingle(); // Changed from single() to maybeSingle()
 
         if (error) {
           console.error('[useTemplateSelection] Error loading template:', error);
@@ -42,6 +42,11 @@ export const useTemplateSelection = (
             setSelectedTemplate(template);
             onTemplateChange(template);
           }
+        } else {
+          console.log('[useTemplateSelection] No template found, using default');
+          // Use default template if none is found
+          setSelectedTemplate(templates[0]);
+          onTemplateChange(templates[0]);
         }
       } catch (error) {
         console.error('[useTemplateSelection] Failed to load template:', error);
