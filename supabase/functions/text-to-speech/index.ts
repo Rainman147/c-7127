@@ -13,7 +13,7 @@ const corsHeaders = {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('Handling CORS preflight request');
+    console.log('[TTS-Edge] Handling CORS preflight request');
     return new Response(null, { 
       headers: corsHeaders,
       status: 204
@@ -22,27 +22,34 @@ serve(async (req) => {
 
   try {
     if (!openAIApiKey) {
-      console.error('OpenAI API key not configured');
+      console.error('[TTS-Edge] OpenAI API key not configured');
       throw new Error('OpenAI API key is not configured');
     }
 
     if (req.method !== 'POST') {
+      console.error('[TTS-Edge] Invalid method:', req.method);
       throw new Error('Method not allowed');
     }
 
-    const { text } = await req.json();
-    console.log('Processing text:', text?.substring(0, 50) + '...');
+    const requestBody = await req.json();
+    const { text } = requestBody;
+    
+    console.log('[TTS-Edge] Processing text:', text?.substring(0, 50) + '...');
 
     if (!text) {
+      console.error('[TTS-Edge] No text provided in request');
       throw new Error('Text is required');
     }
 
     // Validate text length
     if (text.length > 4096) {
+      console.error('[TTS-Edge] Text length exceeds limit:', text.length);
       throw new Error('Text length exceeds maximum limit of 4096 characters');
     }
 
-    console.log('Sending request to OpenAI TTS API');
+    console.log('[TTS-Edge] Sending request to OpenAI TTS API');
+    const startTime = Date.now();
+    
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: {
@@ -57,19 +64,22 @@ serve(async (req) => {
       }),
     });
 
+    const processingTime = Date.now() - startTime;
+    console.log('[TTS-Edge] OpenAI API response time:', processingTime, 'ms');
+
     if (!response.ok) {
       const error = await response.json();
-      console.error('OpenAI API error:', error);
+      console.error('[TTS-Edge] OpenAI API error:', error);
       throw new Error(`OpenAI API error: ${error.error?.message || 'Failed to generate speech'}`);
     }
 
-    console.log('Received audio response from OpenAI');
+    console.log('[TTS-Edge] Received audio response from OpenAI');
     const audioData = await response.arrayBuffer();
     
     // Convert to base64
     const uint8Array = new Uint8Array(audioData);
-    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioData)));
-    console.log('Successfully converted audio to base64, sending response');
+    const base64Audio = btoa(String.fromCharCode(...uint8Array));
+    console.log('[TTS-Edge] Successfully converted audio to base64, size:', base64Audio.length);
 
     return new Response(
       JSON.stringify({ audio: base64Audio }),
@@ -81,7 +91,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error in text-to-speech function:', error);
+    console.error('[TTS-Edge] Error in text-to-speech function:', error);
     return new Response(
       JSON.stringify({ 
         error: error.message,
