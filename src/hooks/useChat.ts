@@ -72,6 +72,8 @@ export const useChat = () => {
     model: ModelType = 'gemini',
     systemInstructions?: string
   ) => {
+    console.log('Sending message with model:', model, 'and system instructions:', systemInstructions);
+    
     if (!content.trim()) {
       toast({
         title: "Error",
@@ -111,6 +113,7 @@ export const useChat = () => {
       // Call the appropriate API based on the selected model
       let response;
       if (model === 'gemini') {
+        console.log('Using Gemini model with system instructions:', systemInstructions);
         response = await supabase.functions.invoke('gemini', {
           body: { 
             messages: newMessages,
@@ -119,6 +122,7 @@ export const useChat = () => {
         });
       } else {
         // Call OpenAI function for GPT models
+        console.log('Using OpenAI model with system instructions:', systemInstructions);
         response = await supabase.functions.invoke('chat', {
           body: { 
             messages: newMessages,

@@ -20,6 +20,7 @@ serve(async (req) => {
     }
 
     console.log('Processing chat request with model:', model);
+    console.log('System instructions:', systemInstructions);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
