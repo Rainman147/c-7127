@@ -1,4 +1,5 @@
 import { Info } from "lucide-react";
+import { useState } from "react";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { 
   Tooltip, 
@@ -6,6 +7,7 @@ import {
   TooltipProvider, 
   TooltipTrigger 
 } from "@/components/ui/tooltip";
+import { getDeviceType } from "@/utils/deviceDetection";
 import type { Template } from "./types";
 
 interface TemplateItemProps {
@@ -21,9 +23,20 @@ export const TemplateItem = ({
   onSelect, 
   isLoading 
 }: TemplateItemProps) => {
+  const [isTooltipOpen, setIsTooltipOpen] = useState(false);
+  const { isIOS } = getDeviceType();
+
+  const handleInfoClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log('[TemplateItem] Info button clicked for:', template.name);
+    if (isIOS) {
+      setIsTooltipOpen(!isTooltipOpen);
+    }
+  };
+
   return (
     <TooltipProvider delayDuration={0}>
-      <Tooltip>
+      <Tooltip open={isIOS ? isTooltipOpen : undefined}>
         <DropdownMenuItem
           className={`flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-chatgpt-hover transition-colors rounded-[2px] ${
             isSelected ? 'bg-chatgpt-secondary' : ''
@@ -36,10 +49,7 @@ export const TemplateItem = ({
             <TooltipTrigger asChild>
               <button 
                 className="p-1 rounded-full hover:bg-chatgpt-hover/50 transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  console.log('[TemplateItem] Info button clicked for:', template.name);
-                }}
+                onClick={handleInfoClick}
               >
                 <Info className="h-4 w-4 text-gray-400" />
               </button>
@@ -48,6 +58,7 @@ export const TemplateItem = ({
               side="right" 
               className="max-w-sm bg-chatgpt-main border border-chatgpt-border p-3 rounded-[2px] shadow-lg"
               sideOffset={5}
+              onPointerDownOutside={() => isIOS && setIsTooltipOpen(false)}
             >
               <div className="space-y-2">
                 <p className="font-medium text-sm text-white">{template.name}</p>
