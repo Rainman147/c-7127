@@ -76,48 +76,7 @@ Patient Education and Safety Netting (if applicable):
 7. Model Behavior and Quality Assurance
 - Accuracy and Relevance: Focus on precision in medical transcription.
 - Conciseness and Clarity: Avoid overly verbose content.
-- Practical Utility: Consider real-world workflow needs.
-
-Example Output Format:
-
-Chief Complaint:
-• [Main complaint with duration]
-
-Symptom Timeline & Details:
-• Onset: [When symptoms began]
-• Duration: [How long symptoms have persisted]
-• Associated Symptoms: [Related symptoms]
-
-Relevant History:
-• Past Medical History: [Relevant conditions]
-• Family History: [Relevant family conditions]
-• Risk Factors: [Important risk factors]
-
-Vital Signs:
-• BP: [value]
-• HR: [value]
-• RR: [value]
-• SpO2: [value]
-• Temp: [value]
-
-Physical Exam:
-• [Relevant findings organized by system]
-
-Assessment:
-1. Primary diagnosis consideration
-2. Secondary diagnosis consideration
-3. Other possibilities to consider
-
-Plan:
-1. Immediate steps
-2. Tests ordered
-3. Referrals
-4. Follow-up timing
-
-Patient Education:
-• Key instructions
-• Warning signs
-• Follow-up instructions`
+- Practical Utility: Consider real-world workflow needs.`
   },
   {
     id: "soap-standard",

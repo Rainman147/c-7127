@@ -7,12 +7,10 @@ import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import type { Template } from '@/components/template/types';
-import type { ModelType } from '@/components/chat/ModelSelector';
 
 const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
-  const [currentModel, setCurrentModel] = useState<ModelType>('gemini');
   
   const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
@@ -55,11 +53,6 @@ const Index = () => {
     setCurrentTemplate(template);
   };
 
-  const handleModelChange = (model: ModelType) => {
-    console.log('Model changed:', model);
-    setCurrentModel(model);
-  };
-
   const handleTranscriptionComplete = async (text: string) => {
     console.log('Transcription complete in Index, ready for user to edit:', text);
     if (text) {
@@ -87,8 +80,7 @@ const Index = () => {
 
     await handleSendMessage(
       message, 
-      type,
-      currentModel,
+      type, 
       currentTemplate?.systemInstructions
     );
   };
@@ -110,8 +102,6 @@ const Index = () => {
         onTemplateChange={handleTemplateChange}
         onTranscriptionComplete={handleTranscriptionComplete}
         isSidebarOpen={isSidebarOpen}
-        currentModel={currentModel}
-        onModelChange={handleModelChange}
       />
     </div>
   );

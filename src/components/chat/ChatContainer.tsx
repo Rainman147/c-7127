@@ -3,7 +3,6 @@ import { ChatHeader } from '@/components/ChatHeader';
 import ChatInput from '@/components/ChatInput';
 import MessageList from '@/components/MessageList';
 import type { Template } from '@/components/template/types';
-import type { ModelType } from '@/components/chat/ModelSelector';
 
 interface ChatContainerProps {
   messages: Array<{ role: 'user' | 'assistant'; content: string; type?: 'text' | 'audio' }>;
@@ -13,8 +12,6 @@ interface ChatContainerProps {
   onTemplateChange: (template: Template) => void;
   onTranscriptionComplete: (text: string) => void;
   isSidebarOpen: boolean;
-  currentModel: ModelType;
-  onModelChange: (model: ModelType) => void;
 }
 
 const ChatContainer = ({
@@ -24,9 +21,7 @@ const ChatContainer = ({
   onMessageSend,
   onTemplateChange,
   onTranscriptionComplete,
-  isSidebarOpen,
-  currentModel,
-  onModelChange
+  isSidebarOpen
 }: ChatContainerProps) => {
   return (
     <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
@@ -34,8 +29,6 @@ const ChatContainer = ({
         isSidebarOpen={isSidebarOpen}
         currentChatId={currentChatId}
         onTemplateChange={onTemplateChange}
-        currentModel={currentModel}
-        onModelChange={onModelChange}
       />
       
       <div className={`flex h-full flex-col ${messages.length === 0 ? 'items-center justify-center' : 'justify-between'} pt-[60px] pb-4`}>
@@ -46,8 +39,7 @@ const ChatContainer = ({
               <ChatInput 
                 onSend={onMessageSend}
                 onTranscriptionComplete={onTranscriptionComplete}
-                isLoading={isLoading}
-                currentModel={currentModel}
+                isLoading={isLoading} 
               />
             </div>
           </div>
@@ -58,8 +50,7 @@ const ChatContainer = ({
               <ChatInput 
                 onSend={onMessageSend}
                 onTranscriptionComplete={onTranscriptionComplete}
-                isLoading={isLoading}
-                currentModel={currentModel}
+                isLoading={isLoading} 
               />
             </div>
             <div className="text-xs text-center text-gray-500 py-2">

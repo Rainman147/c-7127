@@ -2,29 +2,26 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import ChatInputField from "./chat/ChatInputField";
 import ChatInputActions from "./chat/ChatInputActions";
-import type { ModelType } from "./chat/ModelSelector";
 
 interface ChatInputProps {
-  onSend: (message: string, type?: 'text' | 'audio', model?: ModelType) => void;
+  onSend: (message: string, type?: 'text' | 'audio') => void;
   onTranscriptionComplete: (text: string) => void;
   onTranscriptionUpdate?: (text: string) => void;
   isLoading?: boolean;
-  currentModel: ModelType;
 }
 
 const ChatInput = ({ 
   onSend, 
   onTranscriptionComplete,
   onTranscriptionUpdate,
-  isLoading = false,
-  currentModel
+  isLoading = false 
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const { toast } = useToast();
 
   const handleSubmit = () => {
     if (message.trim() && !isLoading) {
-      onSend(message, 'text', currentModel);
+      onSend(message);
       setMessage("");
     }
   };
@@ -61,15 +58,13 @@ const ChatInput = ({
           handleKeyDown={handleKeyDown}
           isLoading={isLoading}
         />
-        <div className="flex items-center justify-between px-4 py-2 border-t border-gray-700">
-          <ChatInputActions
-            isLoading={isLoading}
-            message={message}
-            handleSubmit={handleSubmit}
-            onTranscriptionComplete={handleTranscriptionComplete}
-            handleFileUpload={handleFileUpload}
-          />
-        </div>
+        <ChatInputActions
+          isLoading={isLoading}
+          message={message}
+          handleSubmit={handleSubmit}
+          onTranscriptionComplete={handleTranscriptionComplete}
+          handleFileUpload={handleFileUpload}
+        />
       </div>
     </div>
   );

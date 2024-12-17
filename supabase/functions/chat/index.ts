@@ -1,78 +1,64 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-// Map our custom model names to actual OpenAI model names
-const MODEL_MAPPING = {
-  'gpt4o': 'gpt-4',
-  'gpt4o-mini': 'gpt-4-turbo-preview'
-};
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const { messages, model, systemInstructions } = await req.json();
-    
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
+    const { messages, apiKey } = await req.json()
+
+    if (!apiKey) {
+      throw new Error('API key is required')
     }
 
-    console.log('Processing chat request with model:', model);
-    console.log('System instructions:', systemInstructions);
+    // Convert messages to Anthropic format
+    const anthropicMessages = messages.map((msg: any) => ({
+      role: msg.role === 'user' ? 'user' : 'assistant',
+      content: msg.content
+    }))
 
-    // Map the custom model name to actual OpenAI model name
-    const openAIModel = MODEL_MAPPING[model] || 'gpt-4-turbo-preview';
-    console.log('Using OpenAI model:', openAIModel);
+    console.log('Sending request to Anthropic:', { messages: anthropicMessages })
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: openAIModel,
-        messages: [
-          ...(systemInstructions ? [{
-            role: 'system',
-            content: systemInstructions
-          }] : []),
-          ...messages.map((msg: any) => ({
-            role: msg.role,
-            content: msg.content
-          }))
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
+        model: 'claude-3-sonnet-20240229',
+        messages: anthropicMessages,
+        max_tokens: 1024,
       }),
-    });
+    })
+
+    const data = await response.json()
+    console.log('Received response from Anthropic:', data)
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error('OpenAI API error:', error);
-      throw new Error(`OpenAI API error: ${response.status} ${error}`);
+      throw new Error(data.error?.message || 'Error calling Anthropic API')
     }
 
-    const data = await response.json();
-    const content = data.choices[0].message.content;
+    // Extract just the text content from the response
+    const content = data.content[0].text
 
     return new Response(
       JSON.stringify({ content }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    )
   } catch (error) {
-    console.error('Error in chat function:', error);
+    console.error('Error in chat function:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    )
   }
-});
+})
