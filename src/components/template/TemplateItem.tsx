@@ -25,7 +25,7 @@ export const TemplateItem = ({
     <TooltipProvider delayDuration={0}>
       <Tooltip>
         <DropdownMenuItem
-          className={`flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-chatgpt-hover transition-colors rounded-sm ${
+          className={`flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-chatgpt-hover transition-colors rounded-[2px] ${
             isSelected ? 'bg-chatgpt-secondary' : ''
           }`}
           onClick={() => !isLoading && onSelect(template)}
@@ -46,7 +46,7 @@ export const TemplateItem = ({
             </TooltipTrigger>
             <TooltipContent 
               side="right" 
-              className="max-w-sm bg-chatgpt-main border border-chatgpt-border p-3 rounded-sm shadow-lg"
+              className="max-w-sm bg-chatgpt-main border border-chatgpt-border p-3 rounded-[2px] shadow-lg"
               sideOffset={5}
             >
               <div className="space-y-2">
