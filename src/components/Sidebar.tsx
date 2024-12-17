@@ -90,20 +90,6 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
         <div className="flex-col flex-1 transition-opacity duration-500 relative -mr-2 pr-2 overflow-y-auto sidebar-scrollbar">
           {isOpen && (
             <>
-              <div className="p-2 mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Key className="h-4 w-4" />
-                  <span className="text-sm">API Key</span>
-                </div>
-                <Input
-                  type="password"
-                  placeholder="Enter your API key"
-                  value={apiKey}
-                  onChange={handleApiKeyChange}
-                  className="bg-[#2F2F2F] border-none rounded-xl"
-                />
-              </div>
-
               <div className="mb-4">
                 <Button
                   onClick={handleNewChat}
@@ -189,6 +175,25 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
             </>
           )}
         </div>
+
+        {/* Footer section with API Key input */}
+        {isOpen && (
+          <div className="mt-auto border-t border-chatgpt-border pt-4 pb-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Key className="h-4 w-4" />
+                <span className="text-sm">API Key</span>
+              </div>
+              <Input
+                type="password"
+                placeholder="Enter your API key"
+                value={apiKey}
+                onChange={handleApiKeyChange}
+                className="bg-[#2F2F2F] border-none rounded-xl"
+              />
+            </div>
+          </div>
+        )}
       </nav>
     </div>
   );
