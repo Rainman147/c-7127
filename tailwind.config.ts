@@ -65,10 +65,31 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            color: 'white',
+            a: {
+              color: '#3b82f6',
+              '&:hover': {
+                color: '#60a5fa',
+              },
+            },
+            h1: { color: 'white' },
+            h2: { color: 'white' },
+            h3: { color: 'white' },
+            h4: { color: 'white' },
+            p: { color: 'white' },
+            strong: { color: 'white' },
+            code: { color: 'white' },
+          },
+        },
+      },
     },
   },
   plugins: [
     require("tailwindcss-animate"),
     require('tailwind-scrollbar')({ nocompatible: true }),
+    require('@tailwindcss/typography'),
   ],
 } satisfies Config;
