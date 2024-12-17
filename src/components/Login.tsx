@@ -39,13 +39,6 @@ const Login = () => {
         case 'TOKEN_REFRESHED':
           console.log('Auth token refreshed successfully');
           break;
-        case 'GOOGLE_SIGN_IN_ERROR':
-          toast({
-            title: "Google Sign In Error",
-            description: "There was a problem signing in with Google.",
-            variant: "destructive",
-          });
-          break;
       }
     };
 
@@ -108,15 +101,8 @@ const Login = () => {
           }}
           theme="dark"
           providers={['google']}
-          redirectTo={`${window.location.origin}/auth/callback`}
-          onError={(error) => {
-            console.error('Auth error:', error);
-            toast({
-              title: "Authentication Error",
-              description: error.message,
-              variant: "destructive",
-            });
-          }}
+          redirectTo={window.location.origin}
+          magicLink={false}
         />
       </div>
     </div>
