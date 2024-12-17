@@ -25,12 +25,22 @@ const MessageActions = ({ content }: MessageActionsProps) => {
       }
 
       setIsLoading(true);
+      console.log('Sending text to speech request:', content);
 
       const { data, error } = await supabase.functions.invoke('text-to-speech', {
         body: { text: content }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
+
+      if (!data?.audio) {
+        throw new Error('No audio data received');
+      }
+
+      console.log('Received audio data, creating blob');
 
       // Convert base64 to audio
       const audioData = atob(data.audio);
@@ -46,12 +56,19 @@ const MessageActions = ({ content }: MessageActionsProps) => {
       const audio = new Audio(audioUrl);
       audioRef[0] = audio;
 
-      audio.onplay = () => setIsPlaying(true);
+      audio.onplay = () => {
+        console.log('Audio started playing');
+        setIsPlaying(true);
+      };
+
       audio.onended = () => {
+        console.log('Audio finished playing');
         setIsPlaying(false);
         URL.revokeObjectURL(audioUrl);
       };
-      audio.onerror = () => {
+
+      audio.onerror = (e) => {
+        console.error('Audio playback error:', e);
         setIsPlaying(false);
         setIsLoading(false);
         toast({
@@ -61,12 +78,13 @@ const MessageActions = ({ content }: MessageActionsProps) => {
         });
       };
 
+      console.log('Starting audio playback');
       await audio.play();
     } catch (error) {
       console.error('Text-to-speech error:', error);
       toast({
         title: "Error",
-        description: "Failed to generate speech",
+        description: error instanceof Error ? error.message : "Failed to generate speech",
         variant: "destructive",
       });
     } finally {

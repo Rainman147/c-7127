@@ -32,6 +32,7 @@ serve(async (req) => {
         model: 'tts-1',
         voice: 'alloy',
         input: text,
+        response_format: 'mp3',
       }),
     });
 
@@ -46,6 +47,7 @@ serve(async (req) => {
     
     // Convert to base64
     const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioData)));
+    console.log('Successfully generated audio, sending response');
 
     return new Response(
       JSON.stringify({ audio: base64Audio }),
