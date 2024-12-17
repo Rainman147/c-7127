@@ -6,6 +6,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Map our custom model names to actual OpenAI model names
+const MODEL_MAPPING = {
+  'gpt4o': 'gpt-4',
+  'gpt4o-mini': 'gpt-4-turbo-preview'
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -22,6 +28,10 @@ serve(async (req) => {
     console.log('Processing chat request with model:', model);
     console.log('System instructions:', systemInstructions);
 
+    // Map the custom model name to actual OpenAI model name
+    const openAIModel = MODEL_MAPPING[model] || 'gpt-4-turbo-preview';
+    console.log('Using OpenAI model:', openAIModel);
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -29,7 +39,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: model,
+        model: openAIModel,
         messages: [
           ...(systemInstructions ? [{
             role: 'system',
