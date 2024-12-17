@@ -1,57 +1,75 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import "https://deno.land/x/xhr@0.1.0/mod.ts"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders } from "../transcribe/utils/cors.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { messages } = await req.json()
+    const { messages } = await req.json();
 
-    // Format messages for the LLM
-    const chatContext = messages.map((msg: any) => 
-      `${msg.role}: ${msg.content}`
-    ).join('\n')
+    if (!messages || !Array.isArray(messages)) {
+      throw new Error('Invalid messages array');
+    }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Format messages for the model
+    const formattedMessages = messages.map(msg => ({
+      role: msg.role,
+      parts: [{ text: msg.content }],
+    }));
+
+    // Add system message for title generation
+    formattedMessages.unshift({
+      role: 'user',
+      parts: [{ text: 'Generate a concise title (max 50 characters) that summarizes the main topic or purpose of this conversation. Respond with just the title, no additional text.' }],
+    });
+
+    // Call Gemini API
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
+        'x-goog-api-key': GOOGLE_API_KEY,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'Generate a brief, descriptive title (maximum 50 characters) for this chat conversation. Focus on the main topic or purpose of the discussion.'
-          },
-          {
-            role: 'user',
-            content: chatContext
-          }
-        ],
+        contents: formattedMessages,
+        generationConfig: {
+          maxOutputTokens: 50,
+          temperature: 0.7,
+        },
       }),
-    })
+    });
 
-    const data = await response.json()
-    const title = data.choices[0].message.content.trim()
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const title = data.candidates[0].content.parts[0].text.trim();
 
     return new Response(
-      JSON.stringify({ title }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+      JSON.stringify({ title: title.substring(0, 50) }),
+      {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   } catch (error) {
-    console.error('Error generating chat title:', error)
+    console.error('Error generating title:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   }
-})
+});
