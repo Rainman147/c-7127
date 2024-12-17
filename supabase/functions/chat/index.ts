@@ -12,43 +12,54 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, apiKey } = await req.json()
+    const { messages, systemInstructions } = await req.json()
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY')
 
-    if (!apiKey) {
-      throw new Error('API key is required')
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key is required')
     }
 
-    // Convert messages to Anthropic format
-    const anthropicMessages = messages.map((msg: any) => ({
+    console.log('Processing chat request with system instructions:', systemInstructions ? 'Present' : 'Not provided')
+
+    // Prepare messages array with system instructions if provided
+    const messageArray = []
+    if (systemInstructions) {
+      messageArray.push({
+        role: 'system',
+        content: systemInstructions
+      })
+    }
+
+    // Add user messages
+    messageArray.push(...messages.map((msg: any) => ({
       role: msg.role === 'user' ? 'user' : 'assistant',
       content: msg.content
-    }))
+    })))
 
-    console.log('Sending request to Anthropic:', { messages: anthropicMessages })
+    console.log('Sending request to OpenAI with message count:', messageArray.length)
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
+        'Authorization': `Bearer ${openAIApiKey}`,
       },
       body: JSON.stringify({
-        model: 'claude-3-sonnet-20240229',
-        messages: anthropicMessages,
-        max_tokens: 1024,
+        model: 'gpt-4o-mini',
+        messages: messageArray,
       }),
     })
 
-    const data = await response.json()
-    console.log('Received response from Anthropic:', data)
-
     if (!response.ok) {
-      throw new Error(data.error?.message || 'Error calling Anthropic API')
+      const error = await response.json()
+      console.error('OpenAI API error:', error)
+      throw new Error(error.error?.message || 'Error calling OpenAI API')
     }
 
-    // Extract just the text content from the response
-    const content = data.content[0].text
+    const data = await response.json()
+    console.log('Received response from OpenAI')
+
+    const content = data.choices[0].message.content
 
     return new Response(
       JSON.stringify({ content }),
