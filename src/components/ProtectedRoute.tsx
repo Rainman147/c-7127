@@ -1,40 +1,25 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { checkSession, clearSession } from '@/utils/auth/sessionManager';
+import { supabase } from '@/integrations/supabase/client';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Session error:', error);
-          // Clear any existing session data
-          await supabase.auth.signOut();
-          throw error;
-        }
+    const validateSession = async () => {
+      const { session, error } = await checkSession();
 
-        if (!session) {
-          console.log('No active session, redirecting to auth');
-          navigate('/auth');
-        }
-      } catch (error: any) {
-        console.error('Auth error:', error);
-        
-        // Handle refresh token errors specifically
-        if (error.message?.includes('refresh_token_not_found')) {
+      if (error) {
+        if (error.isRefreshTokenError) {
           toast({
             title: "Session expired",
             description: "Please sign in again",
             variant: "destructive",
           });
-          // Ensure we clear any invalid session data
-          await supabase.auth.signOut();
+          await clearSession();
         } else {
           toast({
             title: "Authentication Error",
@@ -42,12 +27,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
             variant: "destructive",
           });
         }
-        
+        navigate('/auth');
+        return;
+      }
+
+      if (!session) {
+        console.log('No active session, redirecting to auth');
         navigate('/auth');
       }
     };
 
-    checkSession();
+    validateSession();
 
     const {
       data: { subscription },
