@@ -2,6 +2,7 @@ import { useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAudioRecordingState } from './useAudioRecordingState';
+import { getDeviceType } from '@/utils/deviceDetection';
 
 interface RecordingHookProps {
   onTranscriptionComplete: (text: string) => void;
@@ -15,6 +16,7 @@ export const useSimplifiedRecording = ({
   const { toast } = useToast();
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
+  const { isIOS } = getDeviceType();
   const {
     isRecording,
     isProcessing,
@@ -27,24 +29,43 @@ export const useSimplifiedRecording = ({
 
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      console.log('[useSimplifiedRecording] Starting recording with device type:', { isIOS });
+      
+      const constraints = {
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
+          ...(isIOS && {
+            sampleRate: 44100,
+            channelCount: 1
+          })
         }
-      });
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('[useSimplifiedRecording] Got media stream:', stream.getAudioTracks()[0].label);
 
       chunks.current = [];
 
-      mediaRecorder.current = new MediaRecorder(stream, {
-        mimeType: 'audio/webm',
+      const options: MediaRecorderOptions = {
+        mimeType: isIOS ? 'audio/mp4' : 'audio/webm',
         audioBitsPerSecond: 128000
-      });
+      };
+
+      if (MediaRecorder.isTypeSupported(options.mimeType)) {
+        console.log(`[useSimplifiedRecording] Using supported MIME type: ${options.mimeType}`);
+      } else {
+        console.log('[useSimplifiedRecording] Falling back to default MIME type');
+        delete options.mimeType;
+      }
+
+      mediaRecorder.current = new MediaRecorder(stream, options);
 
       mediaRecorder.current.ondataavailable = (e) => {
         if (e.data.size > 0) {
           chunks.current.push(e.data);
+          console.log('[useSimplifiedRecording] Received chunk:', e.data.size, 'bytes');
         }
       };
 
@@ -62,12 +83,12 @@ export const useSimplifiedRecording = ({
 
       mediaRecorder.current.start(1000);
       updateState({ isRecording: true });
-      console.log('Started recording');
+      console.log('[useSimplifiedRecording] Started recording');
     } catch (error) {
-      console.error('Error starting recording:', error);
+      console.error('[useSimplifiedRecording] Error starting recording:', error);
       onError('Failed to start recording. Please check microphone permissions.');
     }
-  }, [isRecording, onError, toast, updateState]);
+  }, [isRecording, onError, toast, updateState, isIOS]);
 
   const stopRecording = useCallback(async () => {
     if (!mediaRecorder.current) {

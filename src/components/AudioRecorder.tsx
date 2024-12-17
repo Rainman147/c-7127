@@ -3,6 +3,7 @@ import AudioControls from './AudioControls';
 import { useSimplifiedRecording } from '@/hooks/transcription/useSimplifiedRecording';
 import { useAudioPermissions } from '@/hooks/transcription/useAudioPermissions';
 import { useToast } from '@/hooks/use-toast';
+import { getDeviceType } from '@/utils/deviceDetection';
 
 interface AudioRecorderProps {
   onTranscriptionComplete: (text: string) => void;
@@ -12,6 +13,7 @@ interface AudioRecorderProps {
 const AudioRecorder = memo(({ onTranscriptionComplete, onRecordingStateChange }: AudioRecorderProps) => {
   const { toast } = useToast();
   const { hasPermission, requestPermission, handlePermissionError } = useAudioPermissions();
+  const { isIOS } = getDeviceType();
 
   const handleError = useCallback((error: string) => {
     console.error('[AudioRecorder] Error:', error);
@@ -43,6 +45,7 @@ const AudioRecorder = memo(({ onTranscriptionComplete, onRecordingStateChange }:
 
   const handleStartRecording = useCallback(async () => {
     console.log('[AudioRecorder] Starting recording attempt');
+    console.log('[AudioRecorder] Device type:', { isIOS });
     
     if (isProcessing || isRecording) {
       console.log('[AudioRecorder] Already processing or recording, ignoring start request');
@@ -55,6 +58,11 @@ const AudioRecorder = memo(({ onTranscriptionComplete, onRecordingStateChange }:
         const granted = await requestPermission();
         if (!granted) {
           throw new Error('Microphone permission denied');
+        }
+        
+        // On iOS, we need to wait a moment after permission is granted
+        if (isIOS) {
+          await new Promise(resolve => setTimeout(resolve, 300));
         }
       }
 
@@ -70,7 +78,7 @@ const AudioRecorder = memo(({ onTranscriptionComplete, onRecordingStateChange }:
       console.error('[AudioRecorder] Start recording error:', error);
       handleError(error instanceof Error ? error.message : 'Failed to start recording');
     }
-  }, [isProcessing, isRecording, hasPermission, requestPermission, startRec, onRecordingStateChange, handleError, toast]);
+  }, [isProcessing, isRecording, hasPermission, requestPermission, startRec, onRecordingStateChange, handleError, toast, isIOS]);
 
   const handleStopRecording = useCallback(async () => {
     console.log('[AudioRecorder] Stopping recording...');
