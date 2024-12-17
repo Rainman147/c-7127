@@ -30,8 +30,10 @@ const AudioRecorder = memo(({ onTranscriptionComplete, onRecordingStateChange }:
 
   const { 
     isRecording, 
-    isProcessing, 
-    progress, 
+    isProcessing,
+    progress,
+    currentChunk,
+    totalChunks,
     startRecording: startRec, 
     stopRecording: stopRec 
   } = useSimplifiedRecording({
@@ -58,11 +60,17 @@ const AudioRecorder = memo(({ onTranscriptionComplete, onRecordingStateChange }:
 
       await startRec();
       onRecordingStateChange?.(true);
+      
+      toast({
+        title: "Recording Started",
+        description: "Recording session is now active",
+        duration: 3000,
+      });
     } catch (error) {
       console.error('[AudioRecorder] Start recording error:', error);
       handleError(error instanceof Error ? error.message : 'Failed to start recording');
     }
-  }, [isProcessing, isRecording, hasPermission, requestPermission, startRec, onRecordingStateChange, handleError]);
+  }, [isProcessing, isRecording, hasPermission, requestPermission, startRec, onRecordingStateChange, handleError, toast]);
 
   const handleStopRecording = useCallback(async () => {
     console.log('[AudioRecorder] Stopping recording...');
@@ -74,11 +82,17 @@ const AudioRecorder = memo(({ onTranscriptionComplete, onRecordingStateChange }:
     try {
       await stopRec();
       onRecordingStateChange?.(false);
+      
+      toast({
+        title: "Recording Stopped",
+        description: "Processing your audio...",
+        duration: 3000,
+      });
     } catch (error) {
       console.error('[AudioRecorder] Stop recording error:', error);
       handleError(error instanceof Error ? error.message : 'Failed to stop recording');
     }
-  }, [stopRec, handleError, isRecording, onRecordingStateChange]);
+  }, [stopRec, handleError, isRecording, onRecordingStateChange, toast]);
 
   return (
     <AudioControls
@@ -86,6 +100,8 @@ const AudioRecorder = memo(({ onTranscriptionComplete, onRecordingStateChange }:
       isInitializing={false}
       isProcessing={isProcessing}
       progress={progress}
+      currentChunk={currentChunk}
+      totalChunks={totalChunks}
       onStartRecording={handleStartRecording}
       onStopRecording={handleStopRecording}
       onFileUpload={() => {}}

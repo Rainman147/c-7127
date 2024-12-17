@@ -9,6 +9,8 @@ interface AudioControlsProps {
   isInitializing: boolean;
   isProcessing: boolean;
   progress: number;
+  currentChunk?: number;
+  totalChunks?: number;
   onStartRecording: () => void;
   onStopRecording: () => void;
   onFileUpload: (file: File) => void;
@@ -20,9 +22,9 @@ const RecordingIndicator = memo(() => (
     <span className="hidden sm:inline">Recording in session</span>
     <span className="inline sm:hidden">Recording</span>
     <span className="flex gap-0.5">
-      <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-      <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-      <span className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+      <span className="w-1 h-1 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+      <span className="w-1 h-1 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+      <span className="w-1 h-1 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
     </span>
   </div>
 ));
@@ -34,12 +36,14 @@ const AudioControls = memo(({
   isInitializing,
   isProcessing,
   progress,
+  currentChunk,
+  totalChunks,
   onStartRecording,
   onStopRecording,
   onFileUpload,
   onTranscriptionComplete
 }: AudioControlsProps) => {
-  console.log('[AudioControls] Rendering with states:', { isRecording, isInitializing, isProcessing });
+  console.log('[AudioControls] Rendering with states:', { isRecording, isInitializing, isProcessing, progress, currentChunk, totalChunks });
   
   const { isIOS } = getDeviceType();
   const { isSafari, isChrome } = getBrowserType();
@@ -117,6 +121,8 @@ const AudioControls = memo(({
         <ProcessingIndicator 
           progress={progress} 
           status="Processing audio..." 
+          currentChunk={currentChunk}
+          totalChunks={totalChunks}
         />
       )}
     </div>
