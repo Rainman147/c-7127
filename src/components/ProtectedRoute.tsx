@@ -14,6 +14,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         
         if (error) {
           console.error('Session error:', error);
+          // Clear any existing session data
+          await supabase.auth.signOut();
           throw error;
         }
 
@@ -23,11 +25,24 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         }
       } catch (error: any) {
         console.error('Auth error:', error);
-        toast({
-          title: "Session expired",
-          description: "Please sign in again",
-          variant: "destructive",
-        });
+        
+        // Handle refresh token errors specifically
+        if (error.message?.includes('refresh_token_not_found')) {
+          toast({
+            title: "Session expired",
+            description: "Please sign in again",
+            variant: "destructive",
+          });
+          // Ensure we clear any invalid session data
+          await supabase.auth.signOut();
+        } else {
+          toast({
+            title: "Authentication Error",
+            description: error.message || "Please sign in again",
+            variant: "destructive",
+          });
+        }
+        
         navigate('/auth');
       }
     };
@@ -41,15 +56,15 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       
       if (event === 'TOKEN_REFRESHED') {
         console.log('Token refreshed successfully');
-      }
-
-      if (event === 'SIGNED_OUT' || !session) {
+      } else if (event === 'SIGNED_OUT' || !session) {
         console.log('No session or signed out, redirecting to auth');
         navigate('/auth');
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [navigate, toast]);
 
   return <>{children}</>;

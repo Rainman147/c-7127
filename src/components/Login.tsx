@@ -8,6 +8,9 @@ const Login = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Clear any existing session data on mount
+    supabase.auth.signOut().catch(console.error);
+
     const handleAuthStateChange = (event: string) => {
       console.log('Auth event:', event);
       
@@ -44,18 +47,6 @@ const Login = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       handleAuthStateChange(event);
-    });
-
-    // Check initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.error('Error checking session:', error);
-        toast({
-          title: "Authentication Error",
-          description: "There was a problem with your session.",
-          variant: "destructive",
-        });
-      }
     });
 
     return () => {
