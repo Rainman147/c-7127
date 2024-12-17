@@ -28,6 +28,10 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
     setIsEditing(false);
   };
 
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
   return (
     <div className="py-6">
       <div className={`flex gap-4 ${role === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -46,7 +50,7 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
               </span>
             )}
             {role === 'assistant' && id ? (
-              <div className="relative group">
+              <div>
                 {isEditing ? (
                   <div className="border border-[#10A37F] rounded-md p-4 bg-[#3A3A3A]">
                     <TiptapEditor 
@@ -59,18 +63,7 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
                   </div>
                 ) : (
                   <>
-                    <div 
-                      className="relative cursor-pointer"
-                      onClick={() => setIsEditing(true)}
-                    >
-                      <div className="text-gray-200 whitespace-pre-wrap">{editedContent}</div>
-                      <button 
-                        className="absolute -right-8 top-0 p-1 opacity-0 group-hover:opacity-100 hover:text-[#10A37F] transition-all"
-                        onClick={() => setIsEditing(true)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                    </div>
+                    <div className="text-gray-200 whitespace-pre-wrap">{editedContent}</div>
                     {wasEdited && (
                       <div className="text-xs text-gray-400 mt-1">
                         (edited)
@@ -78,14 +71,6 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
                     )}
                   </>
                 )}
-                {/* Mobile hint */}
-                <div className="absolute -top-6 left-0 text-xs text-gray-400 opacity-0 group-active:opacity-100 md:hidden">
-                  Tap to edit
-                </div>
-                {/* Desktop hint */}
-                <div className="absolute -top-6 left-0 text-xs text-gray-400 opacity-0 group-hover:opacity-100 hidden md:block">
-                  Click to edit
-                </div>
               </div>
             ) : (
               <div className="text-gray-200 whitespace-pre-wrap">{content}</div>
@@ -97,7 +82,12 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
               </div>
             )}
           </div>
-          {role === 'assistant' && <MessageActions content={editedContent} />}
+          {role === 'assistant' && (
+            <MessageActions 
+              content={editedContent} 
+              onEdit={handleEdit}
+            />
+          )}
         </div>
       </div>
     </div>

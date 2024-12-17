@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { ThumbsUp, ThumbsDown, RotateCcw, MoreHorizontal } from "lucide-react";
+import { ThumbsUp, ThumbsDown, RotateCcw, MoreHorizontal, Copy, Check, Pencil } from "lucide-react";
 import { AudioButton } from "./message-actions/AudioButton";
 import { CopyButton } from "./message-actions/CopyButton";
 
 type MessageActionsProps = {
   content: string;
+  onEdit?: () => void;
 };
 
-const MessageActions = ({ content }: MessageActionsProps) => {
+const MessageActions = ({ content, onEdit }: MessageActionsProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useState<HTMLAudioElement | null>(null);
 
@@ -26,6 +27,12 @@ const MessageActions = ({ content }: MessageActionsProps) => {
         <ThumbsDown className="h-4 w-4" />
       </button>
       <CopyButton content={content} />
+      <button 
+        className="p-1 hover:text-white transition-colors"
+        onClick={onEdit}
+      >
+        <Pencil className="h-4 w-4" />
+      </button>
       <button className="p-1 hover:text-white transition-colors">
         <RotateCcw className="h-4 w-4" />
       </button>

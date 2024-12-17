@@ -1,20 +1,14 @@
 import { useState } from "react";
-import { Copy } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { copyToClipboard } from "@/utils/clipboard";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 type CopyButtonProps = {
   content: string;
 };
 
 export const CopyButton = ({ content }: CopyButtonProps) => {
-  const [showTooltip, setShowTooltip] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
   const { toast } = useToast();
 
   const handleCopy = async () => {
@@ -22,7 +16,8 @@ export const CopyButton = ({ content }: CopyButtonProps) => {
     const success = await copyToClipboard(content);
     
     if (success) {
-      console.log('[CopyButton] Copy successful, attempting haptic feedback');
+      console.log('[CopyButton] Copy successful, showing checkmark');
+      setIsCopied(true);
       
       try {
         // Try to trigger haptic feedback
@@ -42,7 +37,12 @@ export const CopyButton = ({ content }: CopyButtonProps) => {
         duration: 2000,
         className: "fixed bottom-0 left-1/2 -translate-x-1/2 mb-20 w-auto min-w-0 z-[9999] bg-black/80 text-white px-3 py-2 rounded-md text-sm",
       });
-      console.log('[CopyButton] Toast notification triggered');
+
+      // Reset the icon after 1 second
+      setTimeout(() => {
+        setIsCopied(false);
+        console.log('[CopyButton] Reset copy icon');
+      }, 1000);
     } else {
       console.log('[CopyButton] Copy failed');
       toast({
@@ -54,20 +54,15 @@ export const CopyButton = ({ content }: CopyButtonProps) => {
   };
 
   return (
-    <TooltipProvider>
-      <Tooltip open={showTooltip} onOpenChange={setShowTooltip}>
-        <TooltipTrigger asChild>
-          <button
-            className="p-1 hover:text-white transition-colors relative"
-            onClick={handleCopy}
-          >
-            <Copy className="h-4 w-4" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Copy response</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <button
+      className="p-1 hover:text-white transition-colors"
+      onClick={handleCopy}
+    >
+      {isCopied ? (
+        <Check className="h-4 w-4" />
+      ) : (
+        <Copy className="h-4 w-4" />
+      )}
+    </button>
   );
 };
