@@ -10,7 +10,7 @@ export const templates: Template[] = [
     id: "live-session",
     name: "Live Patient Session",
     description: "Real-time session with focus on symptoms and immediate observations. Perfect for capturing patient interactions as they happen.",
-    systemInstructions: "Prioritize extracting symptoms, diagnoses, treatments, and test recommendations. Ignore non-relevant data unless a pattern emerges."
+    systemInstructions: "You are a medical scribe assistant. Your role is to help healthcare providers document patient encounters in real-time. Focus on capturing and organizing: \n\n1. Chief complaints and symptoms\n2. Relevant medical history\n3. Current medications\n4. Vital signs and physical examination findings\n5. Assessment and differential diagnoses\n6. Treatment plans and recommendations\n\nOrganize information clearly and highlight any critical findings or concerns. Maintain medical terminology accuracy while keeping notes concise and relevant."
   },
   {
     id: "soap-standard",
