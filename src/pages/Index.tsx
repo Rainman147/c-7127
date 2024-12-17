@@ -27,22 +27,6 @@ const Index = () => {
   // Initialize audio recovery
   useAudioRecovery();
 
-  // Create a new session when the page loads if there isn't one
-  useEffect(() => {
-    const initializeSession = async () => {
-      if (!currentChatId) {
-        console.log('No active chat session, creating new one for homepage');
-        const sessionId = await createSession('New Session');
-        if (sessionId) {
-          console.log('Created new session:', sessionId);
-          setCurrentChatId(sessionId);
-        }
-      }
-    };
-
-    initializeSession();
-  }, [currentChatId, createSession, setCurrentChatId]);
-
   const handleSessionSelect = async (chatId: string) => {
     setCurrentChatId(chatId);
     try {
@@ -82,6 +66,18 @@ const Index = () => {
   };
 
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
+    // Create a new session only when sending the first message
+    if (!currentChatId) {
+      console.log('Creating new session for first message');
+      const sessionId = await createSession('New Chat');
+      if (sessionId) {
+        console.log('Created new session:', sessionId);
+        setCurrentChatId(sessionId);
+        // Wait a brief moment for the session to be properly created
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
     await handleSendMessage(
       message, 
       type, 
