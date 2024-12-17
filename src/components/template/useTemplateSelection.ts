@@ -17,7 +17,7 @@ export const useTemplateSelection = (
   useEffect(() => {
     const loadTemplateForChat = async () => {
       if (!currentChatId) {
-        console.log('[useTemplateSelection] No chat ID provided, using default template');
+        console.log('[useTemplateSelection] No chat ID provided, using current template');
         return;
       }
 
@@ -32,11 +32,6 @@ export const useTemplateSelection = (
             setSelectedTemplate(template);
             onTemplateChange(template);
           }
-        } else {
-          console.log('[useTemplateSelection] No template found, using default');
-          const defaultTemplate = getDefaultTemplate();
-          setSelectedTemplate(defaultTemplate);
-          onTemplateChange(defaultTemplate);
         }
       } catch (error) {
         console.error('[useTemplateSelection] Failed to load template:', error);
@@ -67,6 +62,7 @@ export const useTemplateSelection = (
       setSelectedTemplate(template);
       onTemplateChange(template);
 
+      // Only save to database if we have a chat ID
       if (currentChatId) {
         await saveTemplateToDb(currentChatId, template.id);
       }
