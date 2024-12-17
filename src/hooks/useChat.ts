@@ -7,6 +7,7 @@ export type Message = {
   content: string;
   isStreaming?: boolean;
   type?: 'text' | 'audio';
+  id?: string;
 };
 
 export const useChat = () => {
@@ -47,17 +48,19 @@ export const useChat = () => {
         setCurrentChatId(chatId);
       }
 
-      const { error: messageError } = await supabase
+      const { data: messageData, error: messageError } = await supabase
         .from('messages')
         .insert({
           chat_id: chatId,
           content: message.content,
           sender: message.role,
           type: message.type || 'text'
-        });
+        })
+        .select()
+        .single();
 
       if (messageError) throw messageError;
-      return chatId;
+      return { chatId, messageId: messageData.id };
     } catch (error: any) {
       console.error('Error saving message:', error);
       throw error;
@@ -82,7 +85,8 @@ export const useChat = () => {
       setMessages(newMessages);
 
       // Save message to Supabase
-      const chatId = await saveMessageToSupabase(userMessage, currentChatId);
+      const { chatId, messageId } = await saveMessageToSupabase(userMessage, currentChatId);
+      userMessage.id = messageId;
       setCurrentChatId(chatId);
 
       // Cancel any ongoing stream
@@ -124,8 +128,12 @@ export const useChat = () => {
           content: data.content,
           isStreaming: false
         };
+        
+        // Save assistant message to Supabase
+        const { messageId: assistantMessageId } = await saveMessageToSupabase(finalAssistantMessage, chatId);
+        finalAssistantMessage.id = assistantMessageId;
+        
         setMessages(prev => [...prev.slice(0, -1), finalAssistantMessage]);
-        await saveMessageToSupabase(finalAssistantMessage, chatId);
       }
 
     } catch (error: any) {

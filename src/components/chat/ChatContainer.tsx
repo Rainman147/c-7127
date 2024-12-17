@@ -5,7 +5,12 @@ import MessageList from '@/components/MessageList';
 import type { Template } from '@/components/template/types';
 
 interface ChatContainerProps {
-  messages: Array<{ role: 'user' | 'assistant'; content: string; type?: 'text' | 'audio' }>;
+  messages: Array<{ 
+    role: 'user' | 'assistant'; 
+    content: string; 
+    type?: 'text' | 'audio';
+    id?: string;
+  }>;
   isLoading: boolean;
   currentChatId: string | null;
   onMessageSend: (message: string, type?: 'text' | 'audio') => Promise<void>;
@@ -23,6 +28,8 @@ const ChatContainer = ({
   onTranscriptionComplete,
   isSidebarOpen
 }: ChatContainerProps) => {
+  console.log('[ChatContainer] Rendering with messages:', messages);
+  
   return (
     <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
       <ChatHeader 
