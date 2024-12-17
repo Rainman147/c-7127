@@ -11,7 +11,3 @@ port = 54322
 [studio]
 enabled = true
 port = 54323
-
-[[functions]]
-name = "transcribe"
-verify_jwt = false
