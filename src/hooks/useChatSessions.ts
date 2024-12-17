@@ -36,10 +36,28 @@ export const useChatSessions = () => {
     }
   };
 
-  const createSession = async (title: string = 'New Chat') => {
+  const generateTitle = async (messages: any[]) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-chat-title', {
+        body: { messages }
+      });
+
+      if (error) throw error;
+      return data.title;
+    } catch (error) {
+      console.error('Error generating title:', error);
+      return 'New Chat';
+    }
+  };
+
+  const createSession = async (messages: any[] = []) => {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not authenticated');
+
+      const title = messages.length > 0 
+        ? await generateTitle(messages)
+        : 'New Chat';
 
       const { data, error } = await supabase
         .from('chats')
