@@ -100,14 +100,14 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
                   placeholder="Enter your API key"
                   value={apiKey}
                   onChange={handleApiKeyChange}
-                  className="bg-[#2F2F2F] border-none"
+                  className="bg-[#2F2F2F] border-none rounded-xl"
                 />
               </div>
 
               <div className="mb-4">
                 <Button
                   onClick={handleNewChat}
-                  className="w-full flex items-center gap-2 bg-[#2F2F2F] hover:bg-[#404040]"
+                  className="w-full flex items-center gap-2 bg-[#2F2F2F] hover:bg-[#404040] rounded-xl"
                 >
                   <Plus className="h-4 w-4" />
                   New Chat
