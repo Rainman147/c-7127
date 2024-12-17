@@ -1,4 +1,4 @@
-import { memo, useEffect } from "react";
+import { memo } from "react";
 import { TemplateSelector } from "./TemplateSelector";
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
 import {
@@ -18,7 +18,7 @@ interface ChatHeaderProps {
   onTemplateChange: (template: any) => void;
 }
 
-export const ChatHeader = memo(({ 
+const ChatHeaderComponent = ({ 
   isSidebarOpen = true, 
   currentChatId,
   onTemplateChange 
@@ -29,10 +29,6 @@ export const ChatHeader = memo(({
     currentChatId,
     hasTemplateChangeHandler: !!onTemplateChange 
   });
-
-  useEffect(() => {
-    console.log('[ChatHeader] Current chat ID changed to:', currentChatId);
-  }, [currentChatId]);
   
   const handleTemplateChange = (template: any) => {
     console.log('[ChatHeader] Template change requested:', template);
@@ -100,6 +96,8 @@ export const ChatHeader = memo(({
       </div>
     </div>
   );
-});
+};
+
+export const ChatHeader = memo(ChatHeaderComponent);
 
 ChatHeader.displayName = 'ChatHeader';
