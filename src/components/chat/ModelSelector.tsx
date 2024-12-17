@@ -1,6 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type ModelType = 'gemini' | 'gpt4o' | 'gpt4o-mini';
+export type ModelType = 'gemini' | 'gpt4o' | 'gpt4o-mini';
 
 interface ModelSelectorProps {
   currentModel: ModelType;
@@ -8,7 +8,7 @@ interface ModelSelectorProps {
   isDisabled?: boolean;
 }
 
-const ModelSelector = ({ currentModel, onModelChange, isDisabled }: ModelSelectorProps) => {
+export const ModelSelector = ({ currentModel, onModelChange, isDisabled }: ModelSelectorProps) => {
   return (
     <div className="flex items-center space-x-2">
       <span className="text-sm text-gray-500">Model:</span>
@@ -29,5 +29,3 @@ const ModelSelector = ({ currentModel, onModelChange, isDisabled }: ModelSelecto
     </div>
   );
 };
-
-export default ModelSelector;
