@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface RecordingHookProps {
   onTranscriptionComplete: (text: string) => void;
@@ -14,6 +15,7 @@ export const useSimplifiedRecording = ({ onTranscriptionComplete, onError }: Rec
   const [totalChunks, setTotalChunks] = useState<number>(0);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
+  const { toast } = useToast();
 
   const startRecording = useCallback(async () => {
     try {
@@ -42,8 +44,13 @@ export const useSimplifiedRecording = ({ onTranscriptionComplete, onError }: Rec
       setTimeout(() => {
         if (isRecording) {
           stopRecording();
+          toast({
+            title: "Recording limit reached",
+            description: "Maximum recording duration of 10 minutes reached.",
+            duration: 3000,
+          });
         }
-      }, 600000); // 10 minutes
+      }, 600000);
 
       mediaRecorder.current.start(1000); // Collect data every second
       setIsRecording(true);
@@ -52,7 +59,7 @@ export const useSimplifiedRecording = ({ onTranscriptionComplete, onError }: Rec
       console.error('Error starting recording:', error);
       onError('Failed to start recording. Please check microphone permissions.');
     }
-  }, [isRecording, onError]);
+  }, [isRecording, onError, toast]);
 
   const stopRecording = useCallback(async () => {
     if (!mediaRecorder.current) {
@@ -66,42 +73,84 @@ export const useSimplifiedRecording = ({ onTranscriptionComplete, onError }: Rec
       setIsRecording(false);
       setIsProcessing(true);
 
+      // Create session ID for this recording
+      const sessionId = crypto.randomUUID();
+      console.log('Processing audio with session:', sessionId);
+
       // Combine all chunks into a single blob
       const audioBlob = new Blob(chunks.current, { type: 'audio/webm' });
       console.log('Processing audio blob:', { size: audioBlob.size });
 
+      // Split into 5-minute chunks if needed
+      const CHUNK_SIZE = 5 * 60 * 1000; // 5 minutes in milliseconds
+      const numberOfChunks = Math.ceil(audioBlob.size / CHUNK_SIZE);
+      setTotalChunks(numberOfChunks);
+
       // Convert blob to base64
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onloadend = () => {
-          const base64String = reader.result as string;
-          const base64Data = base64String.split(',')[1];
-          resolve(base64Data);
-        };
-        reader.onerror = reject;
-      });
+      const processChunk = async (chunk: Blob, chunkNumber: number) => {
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => {
+            const base64String = reader.result as string;
+            const base64Data = base64String.split(',')[1];
+            resolve(base64Data);
+          };
+          reader.onerror = reject;
+        });
 
-      reader.readAsDataURL(audioBlob);
-      const base64Data = await base64Promise;
+        reader.readAsDataURL(chunk);
+        const base64Data = await base64Promise;
 
-      // Process audio using Edge Function
-      const { data, error } = await supabase.functions.invoke('transcribe', {
-        body: { 
-          audioData: base64Data,
-          mimeType: 'audio/webm'
+        setCurrentChunk(chunkNumber);
+        setProgress((chunkNumber / numberOfChunks) * 100);
+
+        // Process chunk using Edge Function
+        const { data, error } = await supabase.functions.invoke('transcribe', {
+          body: { 
+            audioData: base64Data,
+            mimeType: 'audio/webm',
+            chunkNumber,
+            totalChunks: numberOfChunks,
+            sessionId
+          }
+        });
+
+        if (error) {
+          console.error('Processing error:', error);
+          throw error;
         }
-      });
 
-      if (error) {
-        console.error('Processing error:', error);
-        throw error;
+        return data?.transcription || '';
+      };
+
+      // Process chunks sequentially
+      let transcriptions: string[] = [];
+      for (let i = 0; i < numberOfChunks; i++) {
+        const start = i * CHUNK_SIZE;
+        const end = Math.min((i + 1) * CHUNK_SIZE, audioBlob.size);
+        const chunk = audioBlob.slice(start, end);
+        
+        try {
+          const transcription = await processChunk(chunk, i + 1);
+          transcriptions.push(transcription);
+        } catch (error) {
+          console.error(`Error processing chunk ${i + 1}:`, error);
+          toast({
+            title: "Warning",
+            description: `Part of the recording could not be transcribed (chunk ${i + 1}).`,
+            variant: "destructive",
+            duration: 5000,
+          });
+        }
       }
 
-      if (data?.transcription) {
-        console.log('Transcription received:', data.transcription);
-        onTranscriptionComplete(data.transcription);
+      // Combine transcriptions
+      const finalTranscription = transcriptions.join(' ');
+      if (finalTranscription) {
+        console.log('Transcription completed:', finalTranscription.substring(0, 50) + '...');
+        onTranscriptionComplete(finalTranscription);
       } else {
-        throw new Error('No transcription received from the server');
+        throw new Error('No transcription received from any chunks');
       }
 
     } catch (error: any) {
@@ -112,8 +161,9 @@ export const useSimplifiedRecording = ({ onTranscriptionComplete, onError }: Rec
       setProgress(0);
       setCurrentChunk(0);
       setTotalChunks(0);
+      chunks.current = [];
     }
-  }, [onTranscriptionComplete, onError]);
+  }, [onTranscriptionComplete, onError, toast]);
 
   return {
     isRecording,

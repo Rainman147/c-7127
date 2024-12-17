@@ -12,29 +12,29 @@ serve(async (req) => {
   }
 
   try {
-    const { audioData, mimeType } = await req.json()
-    console.log('Received request to transcribe audio:', { mimeType })
+    const { audioData, mimeType, chunkNumber, totalChunks, sessionId } = await req.json()
+    console.log('Processing audio chunk:', { chunkNumber, totalChunks, sessionId, mimeType })
 
     if (!audioData) {
       throw new Error('No audio data provided')
     }
 
     // Convert base64 to blob
-    const binaryData = atob(audioData);
-    const bytes = new Uint8Array(binaryData.length);
+    const binaryData = atob(audioData)
+    const bytes = new Uint8Array(binaryData.length)
     for (let i = 0; i < binaryData.length; i++) {
-      bytes[i] = binaryData.charCodeAt(i);
+      bytes[i] = binaryData.charCodeAt(i)
     }
-    const audioBlob = new Blob([bytes], { type: mimeType || 'audio/webm' });
+    const audioBlob = new Blob([bytes], { type: mimeType || 'audio/wav' })
 
     // Create form data for OpenAI API
     const formData = new FormData()
-    formData.append('file', audioBlob, 'audio.webm')
+    formData.append('file', audioBlob, 'audio.wav')
     formData.append('model', 'whisper-1')
     formData.append('language', 'en')
     formData.append('response_format', 'json')
 
-    console.log('Sending to Whisper API')
+    console.log('Sending chunk to Whisper API:', { size: audioBlob.size })
 
     // Send to Whisper API
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -52,10 +52,33 @@ serve(async (req) => {
     }
 
     const result = await response.json()
-    console.log('Transcription completed successfully')
+    console.log('Transcription completed for chunk:', { chunkNumber, text: result.text.substring(0, 50) + '...' })
+
+    // Store transcription in database
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    const { error: updateError } = await supabase
+      .from('audio_chunks')
+      .update({ 
+        transcription: result.text,
+        status: 'processed'
+      })
+      .eq('session_id', sessionId)
+      .eq('chunk_number', chunkNumber)
+
+    if (updateError) {
+      console.error('Error updating chunk status:', updateError)
+    }
 
     return new Response(
-      JSON.stringify({ transcription: result.text }),
+      JSON.stringify({ 
+        transcription: result.text,
+        chunkNumber,
+        totalChunks 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 

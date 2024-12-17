@@ -120,7 +120,7 @@ const AudioControls = memo(({
       {isProcessing && (
         <ProcessingIndicator 
           progress={progress} 
-          status="Processing audio..." 
+          status={currentChunk && totalChunks ? `Processing chunk ${currentChunk} of ${totalChunks}...` : "Processing audio..."} 
           currentChunk={currentChunk}
           totalChunks={totalChunks}
         />
