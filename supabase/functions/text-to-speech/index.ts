@@ -35,6 +35,11 @@ serve(async (req) => {
       throw new Error('Text is required');
     }
 
+    // Validate text length
+    if (text.length > 4096) {
+      throw new Error('Text length exceeds maximum limit of 4096 characters');
+    }
+
     console.log('Sending request to OpenAI TTS API');
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
@@ -60,7 +65,8 @@ serve(async (req) => {
     const audioData = await response.arrayBuffer();
     
     // Convert to base64
-    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioData)));
+    const uint8Array = new Uint8Array(audioData);
+    const base64Audio = btoa(String.fromCharCode.apply(null, uint8Array));
     console.log('Successfully converted audio to base64, sending response');
 
     return new Response(
