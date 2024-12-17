@@ -87,7 +87,7 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
           </button>
         </div>
 
-        <div className="flex-col flex-1 transition-opacity duration-500 relative -mr-2 pr-2 overflow-y-auto">
+        <div className="flex-col flex-1 transition-opacity duration-500 relative -mr-2 pr-2 overflow-y-auto sidebar-scrollbar">
           {isOpen && (
             <>
               <div className="p-2 mb-4">

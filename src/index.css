@@ -13,3 +13,13 @@ body {
 .action-button {
   @apply flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-chatgpt-hover/50 border border-transparent hover:border-chatgpt-border transition-all duration-200;
 }
+
+/* Sidebar scrollbar */
+.sidebar-scrollbar {
+  @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-sidebar;
+}
+
+/* Main chat area scrollbar */
+.chat-scrollbar {
+  @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-main;
+}
