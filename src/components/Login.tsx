@@ -9,6 +9,8 @@ const Login = () => {
 
   useEffect(() => {
     const handleAuthStateChange = (event: string) => {
+      console.log('Auth event:', event);
+      
       switch (event) {
         case 'SIGNED_IN':
           toast({
@@ -34,11 +36,26 @@ const Login = () => {
             description: "Check your email for password reset instructions.",
           });
           break;
+        case 'TOKEN_REFRESHED':
+          console.log('Auth token refreshed successfully');
+          break;
       }
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       handleAuthStateChange(event);
+    });
+
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('Error checking session:', error);
+        toast({
+          title: "Authentication Error",
+          description: "There was a problem with your session.",
+          variant: "destructive",
+        });
+      }
     });
 
     return () => {
