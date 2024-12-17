@@ -39,7 +39,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
   return (
     <DropdownMenu>
       <DropdownMenuTrigger 
-        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-chatgpt-secondary hover:bg-chatgpt-hover rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-chatgpt-border/50"
+        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white hover:text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={isLoading}
         onClick={() => console.log('[TemplateSelector] Dropdown trigger clicked')}
       >
