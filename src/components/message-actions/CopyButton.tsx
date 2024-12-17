@@ -20,14 +20,21 @@ export const CopyButton = ({ content }: CopyButtonProps) => {
   const handleCopy = async () => {
     const success = await copyToClipboard(content);
     if (success) {
+      // Trigger haptic feedback if available
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+      
+      // Show toast near the button
       toast({
-        description: "Response copied to clipboard!",
+        description: "Copied to clipboard!",
         duration: 2000,
+        className: "absolute bottom-8 left-1/2 -translate-x-1/2 w-auto min-w-0",
       });
     } else {
       toast({
         title: "Error",
-        description: "Failed to copy response",
+        description: "Failed to copy",
         variant: "destructive",
       });
     }
@@ -38,7 +45,7 @@ export const CopyButton = ({ content }: CopyButtonProps) => {
       <Tooltip open={showTooltip} onOpenChange={setShowTooltip}>
         <TooltipTrigger asChild>
           <button
-            className="p-1 hover:text-white transition-colors"
+            className="p-1 hover:text-white transition-colors relative"
             onClick={handleCopy}
           >
             <Copy className="h-4 w-4" />
