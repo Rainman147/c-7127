@@ -9,6 +9,8 @@ export type Message = {
   type?: 'text' | 'audio';
 };
 
+type ModelType = 'gemini' | 'gpt4o' | 'gpt4o-mini';
+
 export const useChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,7 +66,12 @@ export const useChat = () => {
     }
   };
 
-  const handleSendMessage = async (content: string, type: 'text' | 'audio' = 'text', systemInstructions?: string) => {
+  const handleSendMessage = async (
+    content: string, 
+    type: 'text' | 'audio' = 'text',
+    model: ModelType = 'gemini',
+    systemInstructions?: string
+  ) => {
     if (!content.trim()) {
       toast({
         title: "Error",
@@ -101,32 +108,42 @@ export const useChat = () => {
       };
       setMessages([...newMessages, assistantMessage]);
 
-      // Call Gemini function with system instructions
-      const { data, error } = await supabase.functions.invoke('gemini', {
-        body: { 
-          messages: newMessages,
-          systemInstructions: systemInstructions 
-        }
-      });
-
-      if (error) {
-        throw error;
+      // Call the appropriate API based on the selected model
+      let response;
+      if (model === 'gemini') {
+        response = await supabase.functions.invoke('gemini', {
+          body: { 
+            messages: newMessages,
+            systemInstructions: systemInstructions 
+          }
+        });
+      } else {
+        // Call OpenAI function for GPT models
+        response = await supabase.functions.invoke('chat', {
+          body: { 
+            messages: newMessages,
+            model: model,
+            systemInstructions: systemInstructions 
+          }
+        });
       }
 
-      if (!data) {
-        throw new Error('No response from Gemini API');
+      if (response.error) {
+        throw response.error;
+      }
+
+      if (!response.data) {
+        throw new Error('No response from API');
       }
 
       // Update the assistant message with the response
-      if (data.content) {
-        const finalAssistantMessage: Message = {
-          role: 'assistant',
-          content: data.content,
-          isStreaming: false
-        };
-        setMessages(prev => [...prev.slice(0, -1), finalAssistantMessage]);
-        await saveMessageToSupabase(finalAssistantMessage, chatId);
-      }
+      const finalAssistantMessage: Message = {
+        role: 'assistant',
+        content: response.data.content,
+        isStreaming: false
+      };
+      setMessages(prev => [...prev.slice(0, -1), finalAssistantMessage]);
+      await saveMessageToSupabase(finalAssistantMessage, chatId);
 
     } catch (error: any) {
       console.error('Error sending message:', error);

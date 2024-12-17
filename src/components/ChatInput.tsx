@@ -2,9 +2,12 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import ChatInputField from "./chat/ChatInputField";
 import ChatInputActions from "./chat/ChatInputActions";
+import ModelSelector from "./chat/ModelSelector";
+
+type ModelType = 'gemini' | 'gpt4o' | 'gpt4o-mini';
 
 interface ChatInputProps {
-  onSend: (message: string, type?: 'text' | 'audio') => void;
+  onSend: (message: string, type?: 'text' | 'audio', model?: ModelType) => void;
   onTranscriptionComplete: (text: string) => void;
   onTranscriptionUpdate?: (text: string) => void;
   isLoading?: boolean;
@@ -17,11 +20,12 @@ const ChatInput = ({
   isLoading = false 
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
+  const [currentModel, setCurrentModel] = useState<ModelType>('gemini');
   const { toast } = useToast();
 
   const handleSubmit = () => {
     if (message.trim() && !isLoading) {
-      onSend(message);
+      onSend(message, 'text', currentModel);
       setMessage("");
     }
   };
@@ -58,13 +62,20 @@ const ChatInput = ({
           handleKeyDown={handleKeyDown}
           isLoading={isLoading}
         />
-        <ChatInputActions
-          isLoading={isLoading}
-          message={message}
-          handleSubmit={handleSubmit}
-          onTranscriptionComplete={handleTranscriptionComplete}
-          handleFileUpload={handleFileUpload}
-        />
+        <div className="flex items-center justify-between px-4 py-2 border-t border-gray-700">
+          <ModelSelector
+            currentModel={currentModel}
+            onModelChange={setCurrentModel}
+            isDisabled={isLoading}
+          />
+          <ChatInputActions
+            isLoading={isLoading}
+            message={message}
+            handleSubmit={handleSubmit}
+            onTranscriptionComplete={handleTranscriptionComplete}
+            handleFileUpload={handleFileUpload}
+          />
+        </div>
       </div>
     </div>
   );
