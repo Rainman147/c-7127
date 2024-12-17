@@ -6,11 +6,12 @@ import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
+import { getDefaultTemplate } from '@/utils/template/templateStateManager';
 import type { Template } from '@/components/template/types';
 
 const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
+  const [currentTemplate, setCurrentTemplate] = useState<Template | null>(() => getDefaultTemplate());
   
   const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
@@ -28,6 +29,7 @@ const Index = () => {
   useAudioRecovery();
 
   const handleSessionSelect = async (chatId: string) => {
+    console.log('Selecting session:', chatId);
     setCurrentChatId(chatId);
     try {
       const { data: messages, error } = await supabase
@@ -66,7 +68,7 @@ const Index = () => {
   };
 
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
-    // Create a new session only when sending the first message
+    // Only create a new session when sending the first message
     if (!currentChatId) {
       console.log('Creating new session for first message');
       const sessionId = await createSession('New Chat');
