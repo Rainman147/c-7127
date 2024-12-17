@@ -11,67 +11,60 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Received request to Gemini function');
+    console.log('Received request to OpenAI function');
     const { messages, systemInstructions } = await req.json();
     
     if (!messages || !Array.isArray(messages)) {
       throw new Error('Invalid messages format');
     }
 
-    const apiKey = Deno.env.get('GOOGLE_API_KEY');
+    const apiKey = Deno.env.get('OPENAI_API_KEY');
     if (!apiKey) {
-      console.error('Google API key not found');
-      throw new Error('Google API key not configured');
+      console.error('OpenAI API key not found');
+      throw new Error('OpenAI API key not configured');
     }
 
-    // Add system instructions to the conversation if provided
-    const contents = [
-      // Add system message if instructions are provided
+    // Prepare messages array for OpenAI
+    const openAiMessages = [
+      // Add system instructions if provided
       ...(systemInstructions ? [{
-        role: 'user',
-        parts: [{ 
-          text: `System Instructions: ${systemInstructions}
-          Please follow these instructions carefully for all your responses.`
-        }]
+        role: 'system',
+        content: systemInstructions
       }] : []),
-      // Add user messages
+      // Add conversation messages
       ...messages.map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }]
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
       }))
     ];
 
-    console.log('Sending request to Gemini with system instructions:', systemInstructions);
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          contents,
-          generationConfig: {
-            temperature: 0.7,
-            topK: 1,
-            topP: 1,
-            maxOutputTokens: 2048,
-          }
-        })
-      }
-    );
+    console.log('Sending request to OpenAI with system instructions:', systemInstructions);
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4-turbo-preview", // Using the correct model ID for gpt-4o-mini
+        messages: openAiMessages,
+        temperature: 0.7,
+        max_tokens: 2048,
+      })
+    });
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('Gemini API error:', error);
-      throw new Error(`Gemini API error: ${response.status} ${error}`);
+      console.error('OpenAI API error:', error);
+      throw new Error(`OpenAI API error: ${response.status} ${error}`);
     }
 
     const data = await response.json();
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const content = data.choices[0]?.message?.content;
 
     if (!content) {
-      throw new Error('No content in Gemini response');
+      throw new Error('No content in OpenAI response');
     }
 
     return new Response(
@@ -82,7 +75,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in gemini function:', error);
+    console.error('Error in OpenAI function:', error);
     return new Response(
       JSON.stringify({
         error: error.message || 'An unexpected error occurred',
