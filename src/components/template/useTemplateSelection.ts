@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { loadTemplateFromDb, saveTemplateToDb } from "@/utils/template/templateDbOperations";
+import { getDefaultTemplate, findTemplateById, isTemplateChange } from "@/utils/template/templateStateManager";
 import type { Template } from "./types";
-import { templates } from "./types";
 
 export const useTemplateSelection = (
   currentChatId: string | null,
@@ -10,7 +10,7 @@ export const useTemplateSelection = (
 ) => {
   console.log('[useTemplateSelection] Hook initialized with chatId:', currentChatId);
   
-  const [selectedTemplate, setSelectedTemplate] = useState<Template>(templates[0]);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template>(getDefaultTemplate());
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -21,22 +21,12 @@ export const useTemplateSelection = (
         return;
       }
 
-      console.log('[useTemplateSelection] Loading template for chat:', currentChatId);
       try {
         setIsLoading(true);
-        const { data, error } = await supabase
-          .from('chats')
-          .select('template_type')
-          .eq('id', currentChatId)
-          .maybeSingle(); // Changed from single() to maybeSingle()
-
-        if (error) {
-          console.error('[useTemplateSelection] Error loading template:', error);
-          throw error;
-        }
-
-        if (data?.template_type) {
-          const template = templates.find(t => t.id === data.template_type);
+        const templateType = await loadTemplateFromDb(currentChatId);
+        
+        if (templateType) {
+          const template = findTemplateById(templateType);
           if (template) {
             console.log('[useTemplateSelection] Found template in database:', template.name);
             setSelectedTemplate(template);
@@ -44,9 +34,9 @@ export const useTemplateSelection = (
           }
         } else {
           console.log('[useTemplateSelection] No template found, using default');
-          // Use default template if none is found
-          setSelectedTemplate(templates[0]);
-          onTemplateChange(templates[0]);
+          const defaultTemplate = getDefaultTemplate();
+          setSelectedTemplate(defaultTemplate);
+          onTemplateChange(defaultTemplate);
         }
       } catch (error) {
         console.error('[useTemplateSelection] Failed to load template:', error);
@@ -67,7 +57,7 @@ export const useTemplateSelection = (
   const handleTemplateChange = useCallback(async (template: Template) => {
     console.log('[useTemplateSelection] Template change requested:', template.name);
     
-    if (template.id === selectedTemplate.id) {
+    if (!isTemplateChange(selectedTemplate.id, template)) {
       console.log('[useTemplateSelection] Same template selected, no changes needed');
       return;
     }
@@ -78,20 +68,7 @@ export const useTemplateSelection = (
       onTemplateChange(template);
 
       if (currentChatId) {
-        console.log('[useTemplateSelection] Saving template selection to database:', {
-          chatId: currentChatId,
-          templateId: template.id
-        });
-        
-        const { error } = await supabase
-          .from('chats')
-          .update({ template_type: template.id })
-          .eq('id', currentChatId);
-
-        if (error) {
-          console.error('[useTemplateSelection] Error saving template:', error);
-          throw error;
-        }
+        await saveTemplateToDb(currentChatId, template.id);
       }
 
       toast({
@@ -101,7 +78,7 @@ export const useTemplateSelection = (
       });
       
       console.log('[useTemplateSelection] Template change completed successfully');
-    } catch (error: any) {
+    } catch (error) {
       console.error('[useTemplateSelection] Failed to update template:', error);
       toast({
         title: "Error",
