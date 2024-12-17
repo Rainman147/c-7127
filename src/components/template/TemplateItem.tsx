@@ -55,15 +55,15 @@ export const TemplateItem = ({
               </button>
             </TooltipTrigger>
             <TooltipContent 
-              side="right" 
-              className="max-w-[calc(100vw-32px)] md:max-w-sm bg-chatgpt-main border border-chatgpt-border p-3 rounded-[2px] shadow-lg"
+              side="left" 
+              className="w-[280px] max-w-[80vw] bg-chatgpt-main border border-chatgpt-border p-2.5 rounded-[2px] shadow-lg"
               sideOffset={5}
-              align="start"
+              align="center"
               onPointerDownOutside={() => isIOS && setIsTooltipOpen(false)}
             >
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <p className="font-medium text-sm text-white">{template.name}</p>
-                <p className="text-sm text-gray-300">{template.description}</p>
+                <p className="text-xs text-gray-300 leading-relaxed">{template.description}</p>
               </div>
             </TooltipContent>
           </div>
