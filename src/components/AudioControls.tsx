@@ -1,11 +1,7 @@
-import { memo, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { memo } from 'react';
 import { useAudioRecordingState } from '@/hooks/audio/useAudioRecordingState';
-import { useAudioUpload } from '@/hooks/audio/useAudioUpload';
-import { useRecordingSession } from '@/hooks/audio/useRecordingSession';
-import RecordButton from './audio/RecordButton';
-import ProcessingStatus from './audio/ProcessingStatus';
-import RecordingIndicator from './audio/RecordingIndicator';
+import { useRecordingHandler } from '@/hooks/audio/useRecordingHandler';
+import RecordingControls from './audio/RecordingControls';
 
 interface AudioControlsProps {
   onTranscriptionComplete: (text: string) => void;
@@ -34,71 +30,22 @@ const AudioControls = memo(({
   onStopRecording,
   onFileUpload
 }: AudioControlsProps) => {
-  const { toast } = useToast();
   const {
     isRecording: internalIsRecording,
     isProcessing: internalIsProcessing,
     progress: internalProgress,
     currentChunk: internalCurrentChunk,
-    totalChunks: internalTotalChunks,
-    updateState,
-    resetState
+    totalChunks: internalTotalChunks
   } = useAudioRecordingState();
-  
-  const { uploadAudioChunk } = useAudioUpload();
-  const { createSession, clearSession, getSessionId } = useRecordingSession();
 
-  const handleRecordingClick = useCallback(async (event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    
-    const actualIsRecording = isRecording || internalIsRecording;
-    const actualIsProcessing = isProcessing || internalIsProcessing;
-    
-    if (actualIsProcessing) {
-      console.log('Ignoring click while processing');
-      return;
-    }
-
-    try {
-      if (actualIsRecording) {
-        console.log('Stopping recording...');
-        onStopRecording?.();
-        updateState({ isRecording: false, isProcessing: true });
-        
-        const sessionId = getSessionId();
-        if (!sessionId) {
-          throw new Error('No active recording session');
-        }
-        
-        toast({
-          title: "Recording Complete",
-          description: "Processing your audio...",
-          duration: 3000,
-        });
-      } else {
-        console.log('Starting recording...');
-        const sessionId = createSession();
-        updateState({ isRecording: true });
-        onStartRecording?.();
-        
-        toast({
-          title: "Recording Started",
-          description: "Recording session is now active",
-          duration: 3000,
-        });
-      }
-    } catch (error) {
-      console.error('Error handling recording:', error);
-      toast({
-        title: "Recording Error",
-        description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive"
-      });
-      resetState();
-      clearSession();
-    }
-  }, [isRecording, internalIsRecording, isProcessing, internalIsProcessing, updateState, resetState, createSession, clearSession, getSessionId, onStartRecording, onStopRecording, toast]);
+  const { handleRecordingClick } = useRecordingHandler({
+    isRecording,
+    internalIsRecording,
+    isProcessing,
+    internalIsProcessing,
+    onStartRecording,
+    onStopRecording
+  });
 
   const actualIsRecording = isRecording || internalIsRecording;
   const actualIsProcessing = isProcessing || internalIsProcessing;
@@ -107,21 +54,14 @@ const AudioControls = memo(({
   const actualTotalChunks = totalChunks || internalTotalChunks;
 
   return (
-    <div className="flex items-center gap-2">
-      <RecordButton
-        isRecording={actualIsRecording}
-        isProcessing={actualIsProcessing}
-        onClick={handleRecordingClick}
-      />
-      {actualIsRecording && <RecordingIndicator />}
-      {actualIsProcessing && (
-        <ProcessingStatus
-          progress={actualProgress}
-          currentChunk={actualCurrentChunk}
-          totalChunks={actualTotalChunks}
-        />
-      )}
-    </div>
+    <RecordingControls
+      isRecording={actualIsRecording}
+      isProcessing={actualIsProcessing}
+      progress={actualProgress}
+      currentChunk={actualCurrentChunk}
+      totalChunks={actualTotalChunks}
+      onRecordingClick={handleRecordingClick}
+    />
   );
 });
 
