@@ -33,11 +33,21 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
               </span>
             )}
             {role === 'assistant' && id ? (
-              <TiptapEditor 
-                content={editedContent} 
-                messageId={id}
-                onSave={setEditedContent}
-              />
+              <div className="relative group">
+                <TiptapEditor 
+                  content={editedContent} 
+                  messageId={id}
+                  onSave={setEditedContent}
+                />
+                {/* Mobile hint */}
+                <div className="absolute -top-6 left-0 text-xs text-gray-400 opacity-0 group-active:opacity-100 md:hidden">
+                  Tap to edit
+                </div>
+                {/* Desktop hint */}
+                <div className="absolute -top-6 left-0 text-xs text-gray-400 opacity-0 group-hover:opacity-100 hidden md:block">
+                  Click to edit
+                </div>
+              </div>
             ) : (
               <div className="text-gray-200 whitespace-pre-wrap">{content}</div>
             )}

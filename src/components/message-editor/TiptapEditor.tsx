@@ -20,7 +20,7 @@ const TiptapEditor = ({ content, messageId, onSave, editable = true }: TiptapEdi
     editable,
     editorProps: {
       attributes: {
-        class: 'prose prose-invert max-w-none focus:outline-none min-h-[100px]',
+        class: 'prose prose-invert max-w-none focus:outline-none min-h-[100px] cursor-text touch-manipulation',
       },
     },
     onUpdate: ({ editor }) => {
@@ -66,7 +66,7 @@ const TiptapEditor = ({ content, messageId, onSave, editable = true }: TiptapEdi
   return (
     <EditorContent 
       editor={editor} 
-      className="prose-headings:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2"
+      className="prose-headings:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 touch-manipulation"
     />
   );
 };
