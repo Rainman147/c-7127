@@ -1,5 +1,4 @@
 import { Info } from "lucide-react";
-import { useState } from "react";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { 
   Tooltip, 
@@ -15,28 +14,34 @@ interface TemplateItemProps {
   isSelected: boolean;
   onSelect: (template: Template) => void;
   isLoading: boolean;
+  isTooltipOpen: boolean;
+  onTooltipChange: (isOpen: boolean) => void;
 }
 
 export const TemplateItem = ({ 
   template, 
   isSelected, 
   onSelect, 
-  isLoading 
+  isLoading,
+  isTooltipOpen,
+  onTooltipChange
 }: TemplateItemProps) => {
-  const [isTooltipOpen, setIsTooltipOpen] = useState(false);
   const { isIOS } = getDeviceType();
 
   const handleInfoClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     console.log('[TemplateItem] Info button clicked for:', template.name);
     if (isIOS) {
-      setIsTooltipOpen(!isTooltipOpen);
+      onTooltipChange(!isTooltipOpen);
     }
   };
 
   return (
     <TooltipProvider delayDuration={0}>
-      <Tooltip open={isIOS ? isTooltipOpen : undefined}>
+      <Tooltip 
+        open={isIOS ? isTooltipOpen : undefined}
+        onOpenChange={onTooltipChange}
+      >
         <DropdownMenuItem
           className={`flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-chatgpt-hover transition-colors rounded-[2px] ${
             isSelected ? 'bg-chatgpt-secondary' : ''
@@ -59,7 +64,7 @@ export const TemplateItem = ({
               className="w-[280px] max-w-[80vw] bg-chatgpt-main border border-chatgpt-border p-2.5 rounded-[2px] shadow-lg"
               sideOffset={5}
               align="center"
-              onPointerDownOutside={() => isIOS && setIsTooltipOpen(false)}
+              onPointerDownOutside={() => isIOS && onTooltipChange(false)}
             >
               <div className="space-y-1.5">
                 <p className="font-medium text-sm text-white">{template.name}</p>

@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -23,6 +23,9 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     onTemplateChange
   );
 
+  // Add state to track which tooltip is currently open
+  const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
+
   useEffect(() => {
     console.log('[TemplateSelector] Selected template updated:', selectedTemplate?.name);
   }, [selectedTemplate]);
@@ -35,6 +38,12 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     console.log('[TemplateSelector] Template selection triggered:', template.name);
     handleTemplateChange(template);
   }, [handleTemplateChange]);
+
+  // Handler for tooltip state changes
+  const handleTooltipChange = useCallback((templateId: string | null) => {
+    console.log('[TemplateSelector] Tooltip state changed for template:', templateId);
+    setOpenTooltipId(templateId);
+  }, []);
 
   return (
     <DropdownMenu>
@@ -58,6 +67,8 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
             isSelected={selectedTemplate?.id === template.id}
             onSelect={handleTemplateSelect}
             isLoading={isLoading}
+            isTooltipOpen={openTooltipId === template.id}
+            onTooltipChange={(isOpen) => handleTooltipChange(isOpen ? template.id : null)}
           />
         ))}
       </DropdownMenuContent>
