@@ -10,8 +10,8 @@ interface RecordingControlsProps {
 }
 
 export const useRecordingControls = ({
-  onTransordingStateChange,
-  onTranscriptionComplete
+  onTranscriptionComplete,
+  onRecordingStateChange
 }: RecordingControlsProps) => {
   const { isIOS } = getDeviceType();
   const { ensurePermission, handlePermissionError } = useAudioPermissionsWithDelay();
