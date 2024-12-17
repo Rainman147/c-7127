@@ -22,6 +22,11 @@ serve(async (req) => {
       throw new Error('Text is required');
     }
 
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key is not configured');
+    }
+
+    console.log('Sending request to OpenAI TTS API');
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: {
@@ -42,12 +47,14 @@ serve(async (req) => {
       throw new Error('Failed to generate speech');
     }
 
+    console.log('Received audio response from OpenAI');
+
     // Get the audio data as an ArrayBuffer
     const audioData = await response.arrayBuffer();
     
     // Convert to base64
     const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioData)));
-    console.log('Successfully generated audio, sending response');
+    console.log('Successfully converted audio to base64, sending response');
 
     return new Response(
       JSON.stringify({ audio: base64Audio }),
