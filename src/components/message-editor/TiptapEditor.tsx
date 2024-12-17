@@ -3,15 +3,17 @@ import StarterKit from '@tiptap/starter-kit';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Save, X } from 'lucide-react';
 
 interface TiptapEditorProps {
   content: string;
   messageId: string;
   onSave?: (content: string) => void;
+  onCancel?: () => void;
   editable?: boolean;
 }
 
-const TiptapEditor = ({ content, messageId, onSave, editable = true }: TiptapEditorProps) => {
+const TiptapEditor = ({ content, messageId, onSave, onCancel, editable = true }: TiptapEditorProps) => {
   const { toast } = useToast();
   
   const editor = useEditor({
@@ -23,9 +25,6 @@ const TiptapEditor = ({ content, messageId, onSave, editable = true }: TiptapEdi
         class: 'prose prose-invert max-w-none focus:outline-none min-h-[100px] cursor-text touch-manipulation',
       },
     },
-    onUpdate: ({ editor }) => {
-      handleSave(editor.getHTML());
-    },
   });
 
   useEffect(() => {
@@ -34,7 +33,10 @@ const TiptapEditor = ({ content, messageId, onSave, editable = true }: TiptapEdi
     }
   }, [content, editor]);
 
-  const handleSave = async (newContent: string) => {
+  const handleSave = async () => {
+    if (!editor) return;
+    
+    const newContent = editor.getHTML();
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
@@ -53,6 +55,11 @@ const TiptapEditor = ({ content, messageId, onSave, editable = true }: TiptapEdi
       
       if (onSave) onSave(newContent);
       
+      toast({
+        description: "Changes saved successfully",
+        duration: 2000,
+        className: "bg-[#10A37F] text-white",
+      });
     } catch (error: any) {
       console.error('Error saving edit:', error);
       toast({
@@ -64,10 +71,28 @@ const TiptapEditor = ({ content, messageId, onSave, editable = true }: TiptapEdi
   };
 
   return (
-    <EditorContent 
-      editor={editor} 
-      className="prose-headings:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 touch-manipulation"
-    />
+    <div>
+      <EditorContent 
+        editor={editor} 
+        className="prose-headings:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 touch-manipulation"
+      />
+      <div className="flex justify-end gap-2 mt-4">
+        <button
+          onClick={onCancel}
+          className="inline-flex items-center gap-2 px-3 py-1 text-sm text-gray-400 hover:text-white transition-colors"
+        >
+          <X className="h-4 w-4" />
+          Cancel
+        </button>
+        <button
+          onClick={handleSave}
+          className="inline-flex items-center gap-2 px-3 py-1 text-sm bg-[#10A37F] text-white rounded hover:bg-[#0D8A6A] transition-colors"
+        >
+          <Save className="h-4 w-4" />
+          Save
+        </button>
+      </div>
+    </div>
   );
 };
 
