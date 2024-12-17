@@ -39,15 +39,15 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
   return (
     <DropdownMenu>
       <DropdownMenuTrigger 
-        className="flex items-center gap-2 px-3 py-1 font-semibold text-sm text-white hover:bg-gray-700/50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-chatgpt-secondary hover:bg-chatgpt-hover rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-chatgpt-border/50"
         disabled={isLoading}
         onClick={() => console.log('[TemplateSelector] Dropdown trigger clicked')}
       >
         <span className="whitespace-nowrap">{selectedTemplate?.name || 'Live Patient Session'}</span>
-        <ChevronDown className="h-4 w-4" />
+        <ChevronDown className="h-4 w-4 opacity-70" />
       </DropdownMenuTrigger>
       <DropdownMenuContent 
-        className="w-72 bg-gray-800 border border-gray-700 rounded-md shadow-lg z-50"
+        className="w-72 bg-chatgpt-main border border-chatgpt-border rounded-md shadow-lg z-50"
         align="start"
         onCloseAutoFocus={() => console.log('[TemplateSelector] Dropdown closed')}
       >
