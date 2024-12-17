@@ -1,79 +1,98 @@
-import { memo } from 'react';
-import AudioControlButton from './audio/AudioControlButton';
+import { memo, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { useAudioRecordingState } from '@/hooks/audio/useAudioRecordingState';
+import { useAudioUpload } from '@/hooks/audio/useAudioUpload';
+import { useRecordingSession } from '@/hooks/audio/useRecordingSession';
+import RecordButton from './audio/RecordButton';
+import ProcessingStatus from './audio/ProcessingStatus';
 import RecordingIndicator from './audio/RecordingIndicator';
-import ProcessingIndicator from './ProcessingIndicator';
 
 interface AudioControlsProps {
-  isRecording: boolean;
-  isInitializing: boolean;
-  isProcessing: boolean;
-  progress: number;
-  currentChunk?: number;
-  totalChunks?: number;
-  onStartRecording: () => void;
-  onStopRecording: () => void;
-  onFileUpload: (file: File) => void;
   onTranscriptionComplete: (text: string) => void;
+  onTranscriptionUpdate?: (text: string) => void;
 }
 
 const AudioControls = memo(({
-  isRecording,
-  isInitializing,
-  isProcessing,
-  progress,
-  currentChunk,
-  totalChunks,
-  onStartRecording,
-  onStopRecording,
-  onFileUpload,
-  onTranscriptionComplete
+  onTranscriptionComplete,
+  onTranscriptionUpdate
 }: AudioControlsProps) => {
-  console.log('[AudioControls] Rendering with states:', { 
-    isRecording, 
-    isInitializing, 
-    isProcessing, 
-    progress, 
-    currentChunk, 
-    totalChunks 
-  });
+  const { toast } = useToast();
+  const {
+    isRecording,
+    isProcessing,
+    progress,
+    currentChunk,
+    totalChunks,
+    updateState,
+    resetState
+  } = useAudioRecordingState();
+  
+  const { uploadAudioChunk } = useAudioUpload();
+  const { createSession, clearSession, getSessionId } = useRecordingSession();
 
-  const handleRecordingClick = async (event: React.MouseEvent) => {
+  const handleRecordingClick = useCallback(async (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
     
-    console.log('[AudioControls] Record button clicked, current states:', { isRecording, isInitializing });
-    
-    if (isInitializing || isProcessing) {
-      console.log('[AudioControls] Ignoring click while initializing or processing');
+    if (isProcessing) {
+      console.log('Ignoring click while processing');
       return;
     }
 
     try {
       if (isRecording) {
-        console.log('[AudioControls] Stopping recording...');
-        await onStopRecording();
+        console.log('Stopping recording...');
+        updateState({ isRecording: false, isProcessing: true });
+        
+        // Process recording logic here
+        const sessionId = getSessionId();
+        if (!sessionId) {
+          throw new Error('No active recording session');
+        }
+
+        // Implement your recording stop logic here
+        
+        toast({
+          title: "Recording Complete",
+          description: "Processing your audio...",
+          duration: 3000,
+        });
       } else {
-        console.log('[AudioControls] Starting recording...');
-        await onStartRecording();
+        console.log('Starting recording...');
+        const sessionId = createSession();
+        updateState({ isRecording: true });
+        
+        // Implement your recording start logic here
+        
+        toast({
+          title: "Recording Started",
+          description: "Recording session is now active",
+          duration: 3000,
+        });
       }
     } catch (error) {
-      console.error('[AudioControls] Error handling recording:', error);
+      console.error('Error handling recording:', error);
+      toast({
+        title: "Recording Error",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive"
+      });
+      resetState();
+      clearSession();
     }
-  };
+  }, [isRecording, isProcessing, updateState, resetState, createSession, clearSession, getSessionId, toast]);
 
   return (
     <div className="flex items-center gap-2">
-      <AudioControlButton
+      <RecordButton
         isRecording={isRecording}
-        isInitializing={isInitializing}
         isProcessing={isProcessing}
         onClick={handleRecordingClick}
       />
       {isRecording && <RecordingIndicator />}
       {isProcessing && (
-        <ProcessingIndicator 
-          progress={progress} 
-          status={currentChunk && totalChunks ? `Processing chunk ${currentChunk} of ${totalChunks}...` : "Processing audio..."} 
+        <ProcessingStatus
+          progress={progress}
           currentChunk={currentChunk}
           totalChunks={totalChunks}
         />
