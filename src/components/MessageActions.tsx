@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { ThumbsUp, ThumbsDown, RotateCcw, MoreHorizontal, Copy, Check, Pencil } from "lucide-react";
+import { ThumbsUp, ThumbsDown, RotateCcw, MoreHorizontal, Pencil } from "lucide-react";
 import { AudioButton } from "./message-actions/AudioButton";
 import { CopyButton } from "./message-actions/CopyButton";
 
@@ -9,17 +8,11 @@ type MessageActionsProps = {
 };
 
 const MessageActions = ({ content, onEdit }: MessageActionsProps) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useState<HTMLAudioElement | null>(null);
-
+  console.log('[MessageActions] Rendering actions');
+  
   return (
     <div className="flex items-center gap-2 text-gray-400">
-      <AudioButton 
-        content={content}
-        isPlaying={isPlaying}
-        setIsPlaying={setIsPlaying}
-        audioRef={audioRef}
-      />
+      <AudioButton content={content} />
       <button className="p-1 hover:text-white transition-colors">
         <ThumbsUp className="h-4 w-4" />
       </button>
