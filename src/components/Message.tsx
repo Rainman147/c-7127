@@ -35,7 +35,7 @@ const Message = ({ role, content, isStreaming, type }: MessageProps) => {
               </div>
             )}
           </div>
-          {role === 'assistant' && <MessageActions />}
+          {role === 'assistant' && <MessageActions content={content} />}
         </div>
       </div>
     </div>
