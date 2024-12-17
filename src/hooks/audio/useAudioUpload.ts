@@ -32,7 +32,8 @@ export const useAudioUpload = () => {
           chunk_number: chunkNumber,
           total_chunks: totalChunks,
           storage_path: filePath,
-          status: 'stored'
+          status: 'stored',
+          original_filename: `chunk_${chunkNumber}_of_${totalChunks}.webm`
         });
 
       if (dbError) throw dbError;

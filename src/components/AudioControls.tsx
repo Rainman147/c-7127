@@ -10,19 +10,37 @@ import RecordingIndicator from './audio/RecordingIndicator';
 interface AudioControlsProps {
   onTranscriptionComplete: (text: string) => void;
   onTranscriptionUpdate?: (text: string) => void;
+  isRecording?: boolean;
+  isInitializing?: boolean;
+  isProcessing?: boolean;
+  progress?: number;
+  currentChunk?: number;
+  totalChunks?: number;
+  onStartRecording?: () => Promise<void>;
+  onStopRecording?: () => Promise<void>;
+  onFileUpload?: () => void;
 }
 
 const AudioControls = memo(({
   onTranscriptionComplete,
-  onTranscriptionUpdate
+  onTranscriptionUpdate,
+  isRecording = false,
+  isInitializing = false,
+  isProcessing = false,
+  progress = 0,
+  currentChunk = 0,
+  totalChunks = 0,
+  onStartRecording,
+  onStopRecording,
+  onFileUpload
 }: AudioControlsProps) => {
   const { toast } = useToast();
   const {
-    isRecording,
-    isProcessing,
-    progress,
-    currentChunk,
-    totalChunks,
+    isRecording: internalIsRecording,
+    isProcessing: internalIsProcessing,
+    progress: internalProgress,
+    currentChunk: internalCurrentChunk,
+    totalChunks: internalTotalChunks,
     updateState,
     resetState
   } = useAudioRecordingState();
@@ -34,23 +52,24 @@ const AudioControls = memo(({
     event.preventDefault();
     event.stopPropagation();
     
-    if (isProcessing) {
+    const actualIsRecording = isRecording || internalIsRecording;
+    const actualIsProcessing = isProcessing || internalIsProcessing;
+    
+    if (actualIsProcessing) {
       console.log('Ignoring click while processing');
       return;
     }
 
     try {
-      if (isRecording) {
+      if (actualIsRecording) {
         console.log('Stopping recording...');
+        onStopRecording?.();
         updateState({ isRecording: false, isProcessing: true });
         
-        // Process recording logic here
         const sessionId = getSessionId();
         if (!sessionId) {
           throw new Error('No active recording session');
         }
-
-        // Implement your recording stop logic here
         
         toast({
           title: "Recording Complete",
@@ -61,8 +80,7 @@ const AudioControls = memo(({
         console.log('Starting recording...');
         const sessionId = createSession();
         updateState({ isRecording: true });
-        
-        // Implement your recording start logic here
+        onStartRecording?.();
         
         toast({
           title: "Recording Started",
@@ -80,21 +98,27 @@ const AudioControls = memo(({
       resetState();
       clearSession();
     }
-  }, [isRecording, isProcessing, updateState, resetState, createSession, clearSession, getSessionId, toast]);
+  }, [isRecording, internalIsRecording, isProcessing, internalIsProcessing, updateState, resetState, createSession, clearSession, getSessionId, onStartRecording, onStopRecording, toast]);
+
+  const actualIsRecording = isRecording || internalIsRecording;
+  const actualIsProcessing = isProcessing || internalIsProcessing;
+  const actualProgress = progress || internalProgress;
+  const actualCurrentChunk = currentChunk || internalCurrentChunk;
+  const actualTotalChunks = totalChunks || internalTotalChunks;
 
   return (
     <div className="flex items-center gap-2">
       <RecordButton
-        isRecording={isRecording}
-        isProcessing={isProcessing}
+        isRecording={actualIsRecording}
+        isProcessing={actualIsProcessing}
         onClick={handleRecordingClick}
       />
-      {isRecording && <RecordingIndicator />}
-      {isProcessing && (
+      {actualIsRecording && <RecordingIndicator />}
+      {actualIsProcessing && (
         <ProcessingStatus
-          progress={progress}
-          currentChunk={currentChunk}
-          totalChunks={totalChunks}
+          progress={actualProgress}
+          currentChunk={actualCurrentChunk}
+          totalChunks={actualTotalChunks}
         />
       )}
     </div>
