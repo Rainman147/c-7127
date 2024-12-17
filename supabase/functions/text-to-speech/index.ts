@@ -11,8 +11,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log('Received request:', req.method);
-  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     console.log('Handling CORS preflight request');
@@ -26,6 +24,10 @@ serve(async (req) => {
     if (!openAIApiKey) {
       console.error('OpenAI API key not configured');
       throw new Error('OpenAI API key is not configured');
+    }
+
+    if (req.method !== 'POST') {
+      throw new Error('Method not allowed');
     }
 
     const { text } = await req.json();
@@ -66,7 +68,7 @@ serve(async (req) => {
     
     // Convert to base64
     const uint8Array = new Uint8Array(audioData);
-    const base64Audio = btoa(String.fromCharCode.apply(null, uint8Array));
+    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioData)));
     console.log('Successfully converted audio to base64, sending response');
 
     return new Response(
