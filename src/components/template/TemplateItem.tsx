@@ -56,8 +56,9 @@ export const TemplateItem = ({
             </TooltipTrigger>
             <TooltipContent 
               side="right" 
-              className="max-w-sm bg-chatgpt-main border border-chatgpt-border p-3 rounded-[2px] shadow-lg"
+              className="max-w-[calc(100vw-32px)] md:max-w-sm bg-chatgpt-main border border-chatgpt-border p-3 rounded-[2px] shadow-lg"
               sideOffset={5}
+              align="start"
               onPointerDownOutside={() => isIOS && setIsTooltipOpen(false)}
             >
               <div className="space-y-2">
