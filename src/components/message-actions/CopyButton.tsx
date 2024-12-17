@@ -18,20 +18,33 @@ export const CopyButton = ({ content }: CopyButtonProps) => {
   const { toast } = useToast();
 
   const handleCopy = async () => {
+    console.log('[CopyButton] Attempting to copy content');
     const success = await copyToClipboard(content);
+    
     if (success) {
-      // Trigger haptic feedback if available
-      if (navigator.vibrate) {
-        navigator.vibrate(50);
+      console.log('[CopyButton] Copy successful, attempting haptic feedback');
+      
+      try {
+        // Try to trigger haptic feedback
+        if ('vibrate' in navigator) {
+          navigator.vibrate(50);
+          console.log('[CopyButton] Haptic feedback triggered');
+        } else {
+          console.log('[CopyButton] Haptic feedback not available');
+        }
+      } catch (error) {
+        console.log('[CopyButton] Error triggering haptic feedback:', error);
       }
       
       // Show toast near the button
       toast({
         description: "Copied to clipboard!",
         duration: 2000,
-        className: "absolute bottom-8 left-1/2 -translate-x-1/2 w-auto min-w-0",
+        className: "fixed bottom-16 left-1/2 -translate-x-1/2 w-auto min-w-0 z-[100]",
       });
+      console.log('[CopyButton] Toast notification triggered');
     } else {
+      console.log('[CopyButton] Copy failed');
       toast({
         title: "Error",
         description: "Failed to copy",
