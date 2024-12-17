@@ -1,7 +1,6 @@
 import { memo } from 'react';
-import { Mic, Square, Loader2 } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { getDeviceType, getBrowserType } from '@/utils/deviceDetection';
+import AudioControlButton from './audio/AudioControlButton';
+import RecordingIndicator from './audio/RecordingIndicator';
 import ProcessingIndicator from './ProcessingIndicator';
 
 interface AudioControlsProps {
@@ -17,20 +16,6 @@ interface AudioControlsProps {
   onTranscriptionComplete: (text: string) => void;
 }
 
-const RecordingIndicator = memo(() => (
-  <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
-    <span className="hidden sm:inline">Recording in session</span>
-    <span className="inline sm:hidden">Recording</span>
-    <span className="flex gap-0.5">
-      <span className="w-1 h-1 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-      <span className="w-1 h-1 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-      <span className="w-1 h-1 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-    </span>
-  </div>
-));
-
-RecordingIndicator.displayName = 'RecordingIndicator';
-
 const AudioControls = memo(({
   isRecording,
   isInitializing,
@@ -43,22 +28,14 @@ const AudioControls = memo(({
   onFileUpload,
   onTranscriptionComplete
 }: AudioControlsProps) => {
-  console.log('[AudioControls] Rendering with states:', { isRecording, isInitializing, isProcessing, progress, currentChunk, totalChunks });
-  
-  const { isIOS } = getDeviceType();
-  const { isSafari, isChrome } = getBrowserType();
-  console.log('[AudioControls] Device detection:', { isIOS, isSafari, isChrome });
-
-  const getTooltipContent = () => {
-    if (isInitializing) return "Initializing...";
-    if (isProcessing) return "Processing audio...";
-    if (isRecording) return "Stop recording";
-    if (isIOS) {
-      if (isChrome) return "Tap to start recording (Chrome iOS)";
-      if (isSafari) return "Tap to start recording (Safari iOS)";
-    }
-    return "Start recording";
-  };
+  console.log('[AudioControls] Rendering with states:', { 
+    isRecording, 
+    isInitializing, 
+    isProcessing, 
+    progress, 
+    currentChunk, 
+    totalChunks 
+  });
 
   const handleRecordingClick = async (event: React.MouseEvent) => {
     event.preventDefault();
@@ -86,36 +63,12 @@ const AudioControls = memo(({
 
   return (
     <div className="flex items-center gap-2">
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={handleRecordingClick}
-              className={`p-2 rounded-full transition-all duration-300 ${
-                isInitializing || isProcessing
-                  ? 'bg-gray-300 cursor-not-allowed'
-                  : isRecording 
-                    ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
-                    : 'bg-white hover:bg-gray-100 dark:bg-gray-200 dark:hover:bg-gray-300'
-              }`}
-              disabled={isInitializing || isProcessing}
-              aria-label={isRecording ? "Stop recording" : "Start recording"}
-              type="button"
-            >
-              {isInitializing || isProcessing ? (
-                <Loader2 className="h-5 w-5 text-gray-500 animate-spin" />
-              ) : isRecording ? (
-                <Square className="h-5 w-5 text-white" />
-              ) : (
-                <Mic className="h-5 w-5 text-gray-700" />
-              )}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{getTooltipContent()}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <AudioControlButton
+        isRecording={isRecording}
+        isInitializing={isInitializing}
+        isProcessing={isProcessing}
+        onClick={handleRecordingClick}
+      />
       {isRecording && <RecordingIndicator />}
       {isProcessing && (
         <ProcessingIndicator 
