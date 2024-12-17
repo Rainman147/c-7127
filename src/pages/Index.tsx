@@ -91,11 +91,16 @@ const Index = () => {
     );
   };
 
+  const toggleSidebar = () => {
+    console.log('Toggling sidebar from', isSidebarOpen, 'to', !isSidebarOpen);
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   return (
     <div className="flex h-screen">
       <Sidebar 
         isOpen={isSidebarOpen} 
-        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+        onToggle={toggleSidebar}
         onApiKeyChange={() => {}} 
         onSessionSelect={handleSessionSelect}
         onNewChat={handleNewChat}
@@ -109,6 +114,8 @@ const Index = () => {
         onTemplateChange={handleTemplateChange}
         onTranscriptionComplete={handleTranscriptionComplete}
         isSidebarOpen={isSidebarOpen}
+        onNewChat={handleNewChat}
+        onToggleSidebar={toggleSidebar}
       />
     </div>
   );

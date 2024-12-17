@@ -13,6 +13,7 @@ interface ChatContainerProps {
   onTranscriptionComplete: (text: string) => void;
   isSidebarOpen: boolean;
   onNewChat?: () => void;
+  onToggleSidebar: () => void;
 }
 
 const ChatContainer = ({
@@ -23,7 +24,8 @@ const ChatContainer = ({
   onTemplateChange,
   onTranscriptionComplete,
   isSidebarOpen,
-  onNewChat
+  onNewChat,
+  onToggleSidebar
 }: ChatContainerProps) => {
   return (
     <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
@@ -32,6 +34,7 @@ const ChatContainer = ({
         currentChatId={currentChatId}
         onTemplateChange={onTemplateChange}
         onNewChat={onNewChat}
+        onToggleSidebar={onToggleSidebar}
       />
       
       <div className={`flex h-full flex-col ${messages.length === 0 ? 'items-center justify-center' : 'justify-between'} pt-[60px] pb-4`}>

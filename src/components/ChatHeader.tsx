@@ -7,13 +7,15 @@ interface ChatHeaderProps {
   currentChatId: string | null;
   onTemplateChange: (template: Template) => void;
   onNewChat?: () => void;
+  onToggleSidebar: () => void;
 }
 
 export const ChatHeader = ({ 
   isSidebarOpen,
   currentChatId,
   onTemplateChange,
-  onNewChat
+  onNewChat,
+  onToggleSidebar
 }: ChatHeaderProps) => {
   return (
     <header className="fixed top-0 z-50 w-full bg-background border-b">
@@ -23,22 +25,20 @@ export const ChatHeader = ({
             variant="ghost"
             size="icon"
             className="md:hidden"
-            onClick={() => document.dispatchEvent(new CustomEvent('toggle-sidebar'))}
+            onClick={onToggleSidebar}
           >
             <Menu className="h-6 w-6" />
             <span className="sr-only">Toggle Sidebar</span>
           </Button>
-          {onNewChat && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onNewChat}
-              className="shrink-0"
-            >
-              <Plus className="h-6 w-6" />
-              <span className="sr-only">New Chat</span>
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onNewChat}
+            className="shrink-0"
+          >
+            <Plus className="h-6 w-6" />
+            <span className="sr-only">New Chat</span>
+          </Button>
         </div>
       </div>
     </header>
