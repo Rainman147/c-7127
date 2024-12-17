@@ -94,48 +94,6 @@ export type Database = {
           },
         ]
       }
-      feedback: {
-        Row: {
-          comments: string | null
-          created_at: string
-          feedback_type: string
-          id: string
-          message_id: string
-          user_id: string
-        }
-        Insert: {
-          comments?: string | null
-          created_at?: string
-          feedback_type: string
-          id?: string
-          message_id: string
-          user_id: string
-        }
-        Update: {
-          comments?: string | null
-          created_at?: string
-          feedback_type?: string
-          id?: string
-          message_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedback_message_id_fkey"
-            columns: ["message_id"]
-            isOneToOne: false
-            referencedRelation: "messages"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedback_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       file_upload_sessions: {
         Row: {
           chunks_uploaded: number | null
