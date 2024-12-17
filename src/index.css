@@ -23,3 +23,8 @@ body {
 .chat-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-main;
 }
+
+/* Chat input area scrollbar */
+.chat-input-scrollbar {
+  @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-[#2F2F2F];
+}
