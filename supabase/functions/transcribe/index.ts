@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
 const corsHeaders = {
@@ -13,8 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    const { audioData, mimeType, sessionId, chunkNumber, totalChunks } = await req.json()
-    console.log('Received request to transcribe audio chunk:', { sessionId, chunkNumber, totalChunks })
+    const { audioData, mimeType } = await req.json()
+    console.log('Received request to transcribe audio:', { mimeType })
 
     if (!audioData) {
       throw new Error('No audio data provided')
@@ -35,7 +34,7 @@ serve(async (req) => {
     formData.append('language', 'en')
     formData.append('response_format', 'json')
 
-    console.log('Sending chunk to Whisper API:', { chunkNumber, totalChunks })
+    console.log('Sending to Whisper API')
 
     // Send to Whisper API
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -53,14 +52,10 @@ serve(async (req) => {
     }
 
     const result = await response.json()
-    console.log('Transcription completed for chunk:', { chunkNumber, totalChunks })
+    console.log('Transcription completed successfully')
 
     return new Response(
-      JSON.stringify({ 
-        transcription: result.text,
-        chunkNumber,
-        totalChunks
-      }),
+      JSON.stringify({ transcription: result.text }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
