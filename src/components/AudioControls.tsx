@@ -2,10 +2,13 @@ import { memo } from 'react';
 import { Mic, Square, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { getDeviceType, getBrowserType } from '@/utils/deviceDetection';
+import ProcessingIndicator from './ProcessingIndicator';
 
 interface AudioControlsProps {
   isRecording: boolean;
   isInitializing: boolean;
+  isProcessing: boolean;
+  progress: number;
   onStartRecording: () => void;
   onStopRecording: () => void;
   onFileUpload: (file: File) => void;
@@ -29,12 +32,14 @@ RecordingIndicator.displayName = 'RecordingIndicator';
 const AudioControls = memo(({
   isRecording,
   isInitializing,
+  isProcessing,
+  progress,
   onStartRecording,
   onStopRecording,
   onFileUpload,
   onTranscriptionComplete
 }: AudioControlsProps) => {
-  console.log('[AudioControls] Rendering with states:', { isRecording, isInitializing });
+  console.log('[AudioControls] Rendering with states:', { isRecording, isInitializing, isProcessing });
   
   const { isIOS } = getDeviceType();
   const { isSafari, isChrome } = getBrowserType();
@@ -42,6 +47,7 @@ const AudioControls = memo(({
 
   const getTooltipContent = () => {
     if (isInitializing) return "Initializing...";
+    if (isProcessing) return "Processing audio...";
     if (isRecording) return "Stop recording";
     if (isIOS) {
       if (isChrome) return "Tap to start recording (Chrome iOS)";
@@ -56,8 +62,8 @@ const AudioControls = memo(({
     
     console.log('[AudioControls] Record button clicked, current states:', { isRecording, isInitializing });
     
-    if (isInitializing) {
-      console.log('[AudioControls] Ignoring click while initializing');
+    if (isInitializing || isProcessing) {
+      console.log('[AudioControls] Ignoring click while initializing or processing');
       return;
     }
 
@@ -82,17 +88,17 @@ const AudioControls = memo(({
             <button
               onClick={handleRecordingClick}
               className={`p-2 rounded-full transition-all duration-300 ${
-                isInitializing 
+                isInitializing || isProcessing
                   ? 'bg-gray-300 cursor-not-allowed'
                   : isRecording 
                     ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
                     : 'bg-white hover:bg-gray-100 dark:bg-gray-200 dark:hover:bg-gray-300'
               }`}
-              disabled={isInitializing}
+              disabled={isInitializing || isProcessing}
               aria-label={isRecording ? "Stop recording" : "Start recording"}
               type="button"
             >
-              {isInitializing ? (
+              {isInitializing || isProcessing ? (
                 <Loader2 className="h-5 w-5 text-gray-500 animate-spin" />
               ) : isRecording ? (
                 <Square className="h-5 w-5 text-white" />
@@ -107,6 +113,12 @@ const AudioControls = memo(({
         </Tooltip>
       </TooltipProvider>
       {isRecording && <RecordingIndicator />}
+      {isProcessing && (
+        <ProcessingIndicator 
+          progress={progress} 
+          status="Processing audio..." 
+        />
+      )}
     </div>
   );
 });

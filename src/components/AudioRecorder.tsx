@@ -1,12 +1,8 @@
-import { useState, useCallback, useRef, memo } from 'react';
+import { useCallback, memo } from 'react';
 import AudioControls from './AudioControls';
-import { useRecording } from '@/hooks/transcription/useRecording';
-import { useAudioProcessing } from '@/hooks/transcription/useAudioProcessing';
+import { useSimplifiedRecording } from '@/hooks/transcription/useSimplifiedRecording';
 import { useAudioPermissions } from '@/hooks/transcription/useAudioPermissions';
-import { useNetworkMonitor } from '@/hooks/transcription/useNetworkMonitor';
-import { useTranscriptionValidation } from '@/hooks/transcription/useTranscriptionValidation';
 import { useToast } from '@/hooks/use-toast';
-import { getDeviceType } from '@/utils/deviceDetection';
 
 interface AudioRecorderProps {
   onTranscriptionComplete: (text: string) => void;
@@ -14,20 +10,11 @@ interface AudioRecorderProps {
 }
 
 const AudioRecorder = memo(({ onTranscriptionComplete, onRecordingStateChange }: AudioRecorderProps) => {
-  const [isRecording, setIsRecording] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(false);
-  const recordingStateRef = useRef(false);
-  const { hasPermission, requestPermission, handlePermissionError } = useAudioPermissions();
-  const networkType = useNetworkMonitor();
-  const validateTranscription = useTranscriptionValidation(onTranscriptionComplete);
   const { toast } = useToast();
-  const { isIOS } = getDeviceType();
+  const { hasPermission, requestPermission, handlePermissionError } = useAudioPermissions();
 
   const handleError = useCallback((error: string) => {
     console.error('[AudioRecorder] Error:', error);
-    setIsRecording(false);
-    setIsInitializing(false);
-    recordingStateRef.current = false;
     onRecordingStateChange?.(false);
 
     if (error.includes('Permission denied')) {
@@ -41,39 +28,24 @@ const AudioRecorder = memo(({ onTranscriptionComplete, onRecordingStateChange }:
     }
   }, [handlePermissionError, onRecordingStateChange, toast]);
 
-  const handleTranscriptionSuccess = useCallback((text: string) => {
-    console.log('[AudioRecorder] Transcription completed:', text);
-    if (validateTranscription(text)) {
-      setIsRecording(false);
-      recordingStateRef.current = false;
-      onRecordingStateChange?.(false);
-      toast({
-        title: "Success",
-        description: "Recording completed successfully",
-        duration: 3000,
-      });
-    }
-  }, [validateTranscription, onRecordingStateChange, toast]);
-
-  const { startRecording: startRec, stopRecording: stopRec } = useRecording({
-    onError: handleError,
-    onTranscriptionComplete: handleTranscriptionSuccess
-  });
-
-  const { handleFileUpload } = useAudioProcessing({
-    onTranscriptionComplete: handleTranscriptionSuccess,
+  const { 
+    isRecording, 
+    isProcessing, 
+    progress, 
+    startRecording: startRec, 
+    stopRecording: stopRec 
+  } = useSimplifiedRecording({
+    onTranscriptionComplete,
     onError: handleError
   });
 
   const handleStartRecording = useCallback(async () => {
     console.log('[AudioRecorder] Starting recording attempt');
     
-    if (isInitializing || isRecording) {
-      console.log('[AudioRecorder] Already initializing or recording, ignoring start request');
+    if (isProcessing || isRecording) {
+      console.log('[AudioRecorder] Already processing or recording, ignoring start request');
       return;
     }
-
-    setIsInitializing(true);
 
     try {
       if (!hasPermission) {
@@ -84,18 +56,13 @@ const AudioRecorder = memo(({ onTranscriptionComplete, onRecordingStateChange }:
         }
       }
 
-      console.log('[AudioRecorder] Starting recording with network:', networkType);
       await startRec();
-      recordingStateRef.current = true;
-      setIsRecording(true);
       onRecordingStateChange?.(true);
     } catch (error) {
       console.error('[AudioRecorder] Start recording error:', error);
       handleError(error instanceof Error ? error.message : 'Failed to start recording');
-    } finally {
-      setIsInitializing(false);
     }
-  }, [networkType, onRecordingStateChange, startRec, hasPermission, requestPermission, handleError, isInitializing, isRecording]);
+  }, [isProcessing, isRecording, hasPermission, requestPermission, startRec, onRecordingStateChange, handleError]);
 
   const handleStopRecording = useCallback(async () => {
     console.log('[AudioRecorder] Stopping recording...');
@@ -106,19 +73,22 @@ const AudioRecorder = memo(({ onTranscriptionComplete, onRecordingStateChange }:
 
     try {
       await stopRec();
+      onRecordingStateChange?.(false);
     } catch (error) {
       console.error('[AudioRecorder] Stop recording error:', error);
       handleError(error instanceof Error ? error.message : 'Failed to stop recording');
     }
-  }, [stopRec, handleError, isRecording]);
+  }, [stopRec, handleError, isRecording, onRecordingStateChange]);
 
   return (
     <AudioControls
       isRecording={isRecording}
-      isInitializing={isInitializing}
+      isInitializing={false}
+      isProcessing={isProcessing}
+      progress={progress}
       onStartRecording={handleStartRecording}
       onStopRecording={handleStopRecording}
-      onFileUpload={handleFileUpload}
+      onFileUpload={() => {}}
       onTranscriptionComplete={onTranscriptionComplete}
     />
   );

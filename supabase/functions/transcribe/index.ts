@@ -8,14 +8,13 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const { audioData, mimeType } = await req.json()
-    console.log('Received request to transcribe audio chunk')
+    const { audioData, mimeType, sessionId, chunkNumber, totalChunks } = await req.json()
+    console.log('Received request to transcribe audio chunk:', { sessionId, chunkNumber, totalChunks })
 
     if (!audioData) {
       throw new Error('No audio data provided')
@@ -27,16 +26,16 @@ serve(async (req) => {
     for (let i = 0; i < binaryData.length; i++) {
       bytes[i] = binaryData.charCodeAt(i);
     }
-    const audioBlob = new Blob([bytes], { type: mimeType || 'audio/wav' });
+    const audioBlob = new Blob([bytes], { type: mimeType || 'audio/webm' });
 
     // Create form data for OpenAI API
     const formData = new FormData()
-    formData.append('file', audioBlob, 'audio.wav')
+    formData.append('file', audioBlob, 'audio.webm')
     formData.append('model', 'whisper-1')
     formData.append('language', 'en')
     formData.append('response_format', 'json')
 
-    console.log('Sending request to Whisper API')
+    console.log('Sending chunk to Whisper API:', { chunkNumber, totalChunks })
 
     // Send to Whisper API
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -54,10 +53,14 @@ serve(async (req) => {
     }
 
     const result = await response.json()
-    console.log('Transcription completed successfully')
+    console.log('Transcription completed for chunk:', { chunkNumber, totalChunks })
 
     return new Response(
-      JSON.stringify({ transcription: result.text }),
+      JSON.stringify({ 
+        transcription: result.text,
+        chunkNumber,
+        totalChunks
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
