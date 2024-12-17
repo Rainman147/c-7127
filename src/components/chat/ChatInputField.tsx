@@ -41,7 +41,7 @@ const ChatInputField = ({
         }}
         onKeyDown={handleKeyDown}
         placeholder="Message DocTation"
-        className="w-full min-h-[40px] max-h-[200px] resize-none bg-transparent px-4 py-3 focus:outline-none overflow-y-auto transition-all duration-150 ease-in-out scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 hover:scrollbar-thumb-gray-500"
+        className="w-full min-h-[40px] max-h-[200px] resize-none bg-transparent px-4 py-3 focus:outline-none overflow-y-auto transition-all duration-150 ease-in-out chat-scrollbar"
         disabled={isLoading}
       />
     </div>
