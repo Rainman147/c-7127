@@ -30,9 +30,9 @@ const RecordButton = memo(({
       disabled={isProcessing}
     >
       {isRecording ? (
-        <Square className="h-5 w-5" />
+        <Square className="h-7 w-7" />
       ) : (
-        <Mic className="h-5 w-5" />
+        <Mic className="h-7 w-7" />
       )}
     </Button>
   );
