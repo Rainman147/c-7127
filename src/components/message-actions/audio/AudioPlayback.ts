@@ -3,6 +3,7 @@ interface AudioContextType extends AudioContext {
 }
 
 interface WindowWithAudioContext extends Window {
+  AudioContext: typeof AudioContext;
   webkitAudioContext?: typeof AudioContext;
 }
 
