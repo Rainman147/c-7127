@@ -6,7 +6,7 @@ export const functionExamples: Record<string, AIFunction> = {
     description: "Create a new template",
     parameters: [
       {
-        name: "templateName",
+        name: "name",
         type: "string",
         description: "What would you like to name this template?",
         required: true

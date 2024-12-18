@@ -1,10 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from '../transcribe/utils/cors.ts'
 
 interface FunctionCallPayload {
   function: string;
@@ -49,17 +45,17 @@ serve(async (req) => {
 
     // Handle createTemplate function
     if (functionName === 'createTemplate') {
-      const { templateName, content } = parameters
+      const { name, content } = parameters as { name: string; content: string }
       
-      if (!templateName || !content) {
-        throw new Error('Missing required parameters: templateName and content are required')
+      if (!name || !content) {
+        throw new Error('Missing required parameters: name and content are required')
       }
 
       const { data, error: insertError } = await supabaseClient
         .from('templates')
         .insert({
           user_id: user.id,
-          name: templateName,
+          name: name,
           content: content,
         })
         .select()

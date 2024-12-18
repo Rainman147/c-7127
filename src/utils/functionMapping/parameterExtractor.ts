@@ -15,7 +15,7 @@ export const extractParameters = (
 ): ExtractedParameters => {
   console.log('Extracting parameters from:', userInput);
   
-  // Identify the function based on natural language patterns
+  // Identify the function based on keywords
   const identifiedFunction = identifyFunction(userInput);
   
   if (!identifiedFunction) {
@@ -64,37 +64,25 @@ export const extractParameters = (
 const identifyFunction = (input: string): string | null => {
   const normalizedInput = input.toLowerCase();
   
-  for (const [funcName, config] of Object.entries(functionExamples)) {
-    // Check if input contains function name or description keywords
-    if (
-      normalizedInput.includes(funcName.toLowerCase()) ||
-      normalizedInput.includes(config.description.toLowerCase())
-    ) {
-      console.log(`Identified function: ${funcName}`);
-      return funcName;
-    }
+  // Check for template creation
+  if (normalizedInput.includes('create template') || normalizedInput.includes('new template')) {
+    return 'createTemplate';
+  }
+  
+  // Check for live session start
+  if (normalizedInput.includes('start session') || normalizedInput.includes('begin session')) {
+    return 'startLiveSession';
   }
   
   return null;
 };
 
 const extractParameterValue = (input: string, paramName: string): string | null => {
-  // Enhanced parameter extraction patterns
   const patterns: Record<string, RegExp> = {
-    templateName: /(?:template|called|named)[:\s]+([a-zA-Z0-9\s]+?)(?=\s*(?:with|$))/i,
-    content: /content[:\s]+([^\.]+)/i,
-    instructions: /instructions[:\s]+([^\.]+)/i,
-    schema: /schema[:\s]+([^\.]+)/i,
-    firstName: /first name[:\s]+([a-zA-Z]+)/i,
-    lastName: /last name[:\s]+([a-zA-Z]+)/i,
+    name: /(?:template|called|named)[:\s]+([a-zA-Z0-9\s]+?)(?=\s*(?:with|content|$))/i,
+    content: /(?:content|with)[:\s]+([^\.]+)/i,
     patientName: /(?:patient|for|with)\s+([a-zA-Z]+\s+[a-zA-Z]+)/i,
-    dateOfBirth: /(\d{4}-\d{2}-\d{2})/,
-    medicalRecordNumber: /mrn[:\s]+([a-zA-Z0-9]+)/i,
-    patientId: /patient[:\s]+([a-zA-Z0-9-]+)/i,
-    query: /search[:\s]+([^,\.]+)/i,
-    visitType: /visit type[:\s]+([a-zA-Z\s]+)/i,
-    format: /format[:\s]+([a-zA-Z\s]+)/i,
-    destination: /destination[:\s]+([a-zA-Z\s]+)/i
+    visitType: /visit type[:\s]+([a-zA-Z\s]+)/i
   };
 
   const pattern = patterns[paramName];
