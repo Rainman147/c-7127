@@ -31,7 +31,11 @@ export const AudioButton = ({ content, isPlaying, setIsPlaying, audioRef }: Audi
       // Create audio context with user interaction
       let audioContext;
       try {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        // Define the AudioContext constructor with proper typing
+        const AudioContextConstructor = window.AudioContext || 
+          (window as any).webkitAudioContext;
+          
+        audioContext = new AudioContextConstructor();
         if (audioContext.state === 'suspended') {
           await audioContext.resume();
         }

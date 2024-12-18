@@ -1,7 +1,11 @@
 export const createAudioContext = async (): Promise<AudioContext> => {
   console.log('[TTS-Playback] Creating AudioContext');
   
-  const audioContext = new (window.AudioContext || window.webkitAudioContext)({
+  // Define the AudioContext constructor with proper typing
+  const AudioContextConstructor = window.AudioContext || 
+    (window as any).webkitAudioContext;
+  
+  const audioContext = new AudioContextConstructor({
     latencyHint: 'interactive',
     sampleRate: 44100
   });
