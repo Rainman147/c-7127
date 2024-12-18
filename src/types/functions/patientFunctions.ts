@@ -2,69 +2,63 @@ import type { AIFunction } from './types';
 
 export const patientFunctions: AIFunction[] = [
   {
-    name: "addNewPatient",
+    name: "addPatient",
     description: "Adds a new patient to the system with basic demographic information",
     parameters: [
       {
-        name: "firstName",
+        name: "name",
         type: "string",
-        description: "Patient's first name",
+        description: "Patient's full name",
         required: true
       },
       {
-        name: "lastName",
-        type: "string",
-        description: "Patient's last name",
-        required: true
-      },
-      {
-        name: "dateOfBirth",
+        name: "dob",
         type: "string",
         description: "Patient's date of birth in YYYY-MM-DD format",
         required: true
       },
       {
-        name: "medicalRecordNumber",
-        type: "string",
-        description: "Unique medical record number",
-        required: true
+        name: "contactInfo",
+        type: "object",
+        description: "Optional contact information for the patient",
+        required: false
       }
     ],
     expectedOutput: {
       type: "object",
       description: "Created patient object with ID and confirmation",
       example: {
-        patientId: "uuid",
-        mrn: "MRN123456",
-        success: true
+        success: true,
+        patient: {
+          id: "uuid",
+          name: "John Doe",
+          dob: "1980-01-01"
+        }
       }
     }
   },
   {
-    name: "getLastVisitDate",
-    description: "Retrieves the date of the patient's last visit",
+    name: "searchPatients",
+    description: "Search for patients by name",
     parameters: [
       {
-        name: "patientId",
+        name: "query",
         type: "string",
-        description: "ID of the patient",
+        description: "Search query to match against patient names",
         required: true
-      },
-      {
-        name: "visitType",
-        type: "string",
-        description: "Type of visit to filter by",
-        required: false,
-        enum: ["all", "in-person", "telehealth"]
       }
     ],
     expectedOutput: {
       type: "object",
-      description: "Last visit information",
+      description: "List of matching patients",
       example: {
-        lastVisitDate: "2024-01-15T09:30:00Z",
-        visitType: "in-person",
-        providerId: "uuid"
+        patients: [
+          {
+            id: "uuid",
+            name: "John Doe",
+            dob: "1980-01-01"
+          }
+        ]
       }
     }
   }
