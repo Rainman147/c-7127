@@ -24,6 +24,8 @@ const ChatInputComponent = ({
 
   const handleSubmit = async () => {
     if (message.trim() && !isLoading && !isProcessing) {
+      console.log('[ChatInput] Submitting message:', message);
+      
       // Try to extract function call parameters
       const extracted = extractParameters(message);
       console.log('[ChatInput] Extracted parameters:', extracted);
@@ -35,8 +37,10 @@ const ChatInputComponent = ({
           console.log('[ChatInput] Function call result:', result);
           
           // Send both the original message and function result to chat
-          onSend(message);
-          onSend(JSON.stringify(result, null, 2), 'text');
+          onSend(message, 'text');
+          if (result) {
+            onSend(JSON.stringify(result, null, 2), 'text');
+          }
         } catch (error: any) {
           console.error('[ChatInput] Function call error:', error);
           toast({
@@ -44,6 +48,8 @@ const ChatInputComponent = ({
             description: error.message,
             variant: "destructive"
           });
+          // Still send the original message to chat even if function call fails
+          onSend(message, 'text');
         }
       } else if (extracted.clarificationNeeded) {
         // Handle missing parameters
@@ -53,10 +59,14 @@ const ChatInputComponent = ({
           description: `Please provide: ${missingParams}`,
           duration: 5000,
         });
+        // Still send the message to chat
+        onSend(message, 'text');
       } else {
         // Regular message, no function call detected
-        onSend(message);
+        console.log('[ChatInput] Sending regular message');
+        onSend(message, 'text');
       }
+      
       setMessage("");
     }
   };
