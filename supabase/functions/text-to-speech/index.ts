@@ -104,7 +104,7 @@ serve(async (req) => {
     return new Response(audioData, { 
       headers: { 
         ...corsHeaders,
-        'Content-Type': 'audio/mp3',
+        'Content-Type': 'audio/mpeg',
         'Content-Length': audioData.byteLength.toString(),
       },
     });

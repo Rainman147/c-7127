@@ -22,9 +22,18 @@ class AudioEngine {
   }
 
   async loadAudio(arrayBuffer: ArrayBuffer): Promise<AudioBuffer> {
-    console.log('[AudioEngine] Loading audio data:', { size: arrayBuffer.byteLength });
+    console.log('[AudioEngine] Loading audio data:', { 
+      size: arrayBuffer.byteLength,
+      type: Object.prototype.toString.call(arrayBuffer)
+    });
+    
     if (!this.context) {
       throw new Error('Audio context not initialized');
+    }
+
+    if (!(arrayBuffer instanceof ArrayBuffer)) {
+      console.error('[AudioEngine] Invalid input: not an ArrayBuffer');
+      throw new Error('Invalid audio data format');
     }
 
     try {
@@ -34,12 +43,17 @@ class AudioEngine {
         await this.context.resume();
       }
 
-      const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
+      // Create a copy of the ArrayBuffer to ensure it's not modified during decoding
+      const bufferCopy = arrayBuffer.slice(0);
+      console.log('[AudioEngine] Attempting to decode audio data');
+      
+      const audioBuffer = await this.context.decodeAudioData(bufferCopy);
       console.log('[AudioEngine] Audio data decoded successfully:', {
         duration: audioBuffer.duration,
         numberOfChannels: audioBuffer.numberOfChannels,
         sampleRate: audioBuffer.sampleRate
       });
+      
       return audioBuffer;
     } catch (error) {
       console.error('[AudioEngine] Failed to decode audio data:', error);

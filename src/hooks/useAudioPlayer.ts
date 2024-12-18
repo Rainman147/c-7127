@@ -57,7 +57,7 @@ export const useAudioPlayer = (options?: { onError?: (error: string) => void }) 
 
       console.log('[useAudioPlayer] Received audio data, preparing playback');
 
-      // Convert the response data to Uint8Array and create AudioBuffer
+      // Convert the response data to ArrayBuffer
       const uint8Array = new Uint8Array(Object.values(response.data));
       const audioBuffer = await audioEngine.loadAudio(uint8Array.buffer);
       
