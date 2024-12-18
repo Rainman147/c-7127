@@ -1,153 +1,100 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import type { AudioPlayerState, AudioPlayerOptions } from '@/types/audio';
+import { audioEngine } from '@/utils/audio/audioEngine';
 
-const MAX_TEXT_LENGTH = 4096;
+interface AudioPlayerState {
+  isLoading: boolean;
+  isPlaying: boolean;
+  error: string | null;
+}
 
-export const useAudioPlayer = (options?: AudioPlayerOptions) => {
+export const useAudioPlayer = (options?: { onError?: (error: string) => void }) => {
   const [state, setState] = useState<AudioPlayerState>({
     isLoading: false,
     isPlaying: false,
     error: null
   });
   
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
 
-  // Cleanup function to handle audio resources
-  const cleanup = useCallback(() => {
-    console.log('[AudioPlayer] Cleaning up resources');
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = '';
-      audioRef.current.load();
-      audioRef.current = null;
-    }
-    setState(prev => ({ ...prev, isPlaying: false, isLoading: false }));
-  }, []);
-
-  // Effect to clean up audio resources on unmount
+  // Cleanup function
   useEffect(() => {
     return () => {
-      cleanup();
+      console.log('[useAudioPlayer] Cleaning up resources');
+      audioEngine.cleanup();
     };
-  }, [cleanup]);
+  }, []);
 
   const handlePlayback = useCallback(async (text: string) => {
+    console.log('[useAudioPlayer] Handling playback request:', { textLength: text.length });
+
+    // If already playing, stop current playback
+    if (state.isPlaying) {
+      console.log('[useAudioPlayer] Stopping current playback');
+      audioEngine.stop();
+      setState(prev => ({ ...prev, isPlaying: false, isLoading: false }));
+      return;
+    }
+
     try {
-      // Prevent multiple requests
-      if (state.isLoading || state.isPlaying) {
-        console.log('[AudioPlayer] Stopping current playback');
-        cleanup();
-        return;
-      }
-
-      // Check browser compatibility
-      if (!window.Audio) {
-        throw new Error('Your browser does not support audio playback');
-      }
-
-      // Validate and truncate text
-      if (!text?.trim()) {
-        throw new Error('No text provided for audio playback');
-      }
-
-      const truncatedText = text.slice(0, MAX_TEXT_LENGTH);
-      if (text.length > MAX_TEXT_LENGTH) {
-        toast({
-          title: "Text truncated",
-          description: `Text was truncated to ${MAX_TEXT_LENGTH} characters`,
-          variant: "default"
-        });
-      }
-
       setState(prev => ({ ...prev, isLoading: true, error: null }));
-      console.log('[AudioPlayer] Starting text-to-speech process');
+      console.log('[useAudioPlayer] Requesting audio from TTS API');
 
+      // Request audio data from our TTS endpoint
       const response = await supabase.functions.invoke('text-to-speech', {
-        body: { text: truncatedText }
+        body: { text: text.slice(0, 4096) }
       });
 
       if (!response.data) {
-        throw new Error('No audio data received from server');
+        throw new Error('No audio data received from TTS API');
       }
 
-      console.log('[AudioPlayer] Received audio data, preparing playback');
+      console.log('[useAudioPlayer] Received audio data from API');
 
-      // Create new audio instance
-      cleanup();
-      const audio = new Audio();
-      audioRef.current = audio;
-
-      // Convert response data to audio blob
+      // Convert the response data to ArrayBuffer
       const uint8Array = new Uint8Array(Object.values(response.data));
-      const blob = new Blob([uint8Array], { type: 'audio/mp3' });
-      const audioUrl = URL.createObjectURL(blob);
+      const arrayBuffer = uint8Array.buffer;
 
-      // Set up audio event handlers before setting src
-      const handleCanPlayThrough = () => {
-        console.log('[AudioPlayer] Audio ready to play');
-        setState(prev => ({ ...prev, isLoading: false, isPlaying: true }));
-        options?.onPlaybackStart?.();
-        audio.play().catch(error => {
-          console.error('[AudioPlayer] Play error:', error);
-          cleanup();
-          URL.revokeObjectURL(audioUrl);
-          throw new Error('Failed to start audio playback');
-        });
-      };
+      // Load and decode the audio data
+      console.log('[useAudioPlayer] Loading audio data into engine');
+      const audioBuffer = await audioEngine.loadAudio(arrayBuffer);
 
-      const handleEnded = () => {
-        console.log('[AudioPlayer] Playback completed');
-        options?.onPlaybackEnd?.();
-        cleanup();
-        URL.revokeObjectURL(audioUrl);
-      };
+      // Start playback
+      console.log('[useAudioPlayer] Starting audio playback');
+      audioEngine.play(audioBuffer);
+      
+      setState(prev => ({ ...prev, isPlaying: true, isLoading: false }));
 
-      const handleError = (e: Event) => {
-        console.error('[AudioPlayer] Audio error:', e);
-        cleanup();
-        URL.revokeObjectURL(audioUrl);
-        setState(prev => ({ ...prev, error: 'Audio playback failed' }));
-        toast({
-          title: "Error",
-          description: "Failed to play audio",
-          variant: "destructive"
-        });
-      };
-
-      audio.addEventListener('canplaythrough', handleCanPlayThrough);
-      audio.addEventListener('ended', handleEnded);
-      audio.addEventListener('error', handleError);
-
-      // Set audio properties
-      audio.preload = 'auto';
-      audio.src = audioUrl;
-      audio.load();
-
-      // Cleanup event listeners when done
-      return () => {
-        audio.removeEventListener('canplaythrough', handleCanPlayThrough);
-        audio.removeEventListener('ended', handleEnded);
-        audio.removeEventListener('error', handleError);
-      };
+      // Set up a timeout to update state when audio finishes
+      const duration = audioBuffer.duration * 1000; // Convert to milliseconds
+      setTimeout(() => {
+        setState(prev => ({ ...prev, isPlaying: false }));
+      }, duration);
 
     } catch (error: any) {
-      console.error('[AudioPlayer] Error:', error);
-      cleanup();
-      setState(prev => ({ ...prev, error: error.message }));
+      console.error('[useAudioPlayer] Playback error:', error);
+      const errorMessage = error.message || 'Failed to play audio';
+      
+      setState(prev => ({ 
+        ...prev, 
+        isLoading: false, 
+        isPlaying: false,
+        error: errorMessage 
+      }));
+
+      options?.onError?.(errorMessage);
+      
       toast({
-        title: "Error",
-        description: error.message || "Failed to play audio",
+        title: "Audio Playback Error",
+        description: errorMessage,
         variant: "destructive"
       });
     }
-  }, [state.isLoading, state.isPlaying, cleanup, toast, options]);
+  }, [state.isPlaying, toast, options]);
 
   return {
     ...state,
-    handlePlayback,
-    cleanup
+    handlePlayback
   };
 };
