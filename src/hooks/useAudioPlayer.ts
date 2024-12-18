@@ -17,6 +17,7 @@ export const useAudioPlayer = (options?: AudioPlayerOptions) => {
 
   // Cleanup function to handle audio resources
   const cleanup = useCallback(() => {
+    console.log('[AudioPlayer] Cleaning up resources');
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.removeAttribute('src');
@@ -36,6 +37,7 @@ export const useAudioPlayer = (options?: AudioPlayerOptions) => {
     try {
       // Prevent multiple requests
       if (state.isLoading || state.isPlaying) {
+        console.log('[AudioPlayer] Stopping current playback');
         cleanup();
         return;
       }
@@ -83,7 +85,7 @@ export const useAudioPlayer = (options?: AudioPlayerOptions) => {
       const audioUrl = URL.createObjectURL(blob);
 
       // Set up audio event handlers
-      audio.oncanplaythrough = () => {
+      audio.addEventListener('canplaythrough', () => {
         console.log('[AudioPlayer] Audio ready to play');
         setState(prev => ({ ...prev, isLoading: false, isPlaying: true }));
         options?.onPlaybackStart?.();
@@ -92,23 +94,25 @@ export const useAudioPlayer = (options?: AudioPlayerOptions) => {
           cleanup();
           throw new Error('Failed to start audio playback');
         });
-      };
+      });
 
-      audio.onended = () => {
+      audio.addEventListener('ended', () => {
         console.log('[AudioPlayer] Playback completed');
         options?.onPlaybackEnd?.();
         cleanup();
         URL.revokeObjectURL(audioUrl);
-      };
+      });
 
-      audio.onerror = (e) => {
+      audio.addEventListener('error', (e) => {
         console.error('[AudioPlayer] Audio error:', e);
         cleanup();
         URL.revokeObjectURL(audioUrl);
         throw new Error('Audio playback error');
-      };
+      });
 
+      // Load the audio
       audio.src = audioUrl;
+      audio.load();
 
     } catch (error: any) {
       console.error('[AudioPlayer] Error:', error);
