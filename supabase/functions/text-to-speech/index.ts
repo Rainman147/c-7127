@@ -20,6 +20,7 @@ const measureTime = (startTime: number): string => {
 // Function to validate audio data
 const validateAudioData = (audioData: ArrayBuffer): boolean => {
   if (!audioData || audioData.byteLength === 0) {
+    console.error('[TTS-Edge] Empty audio data received from OpenAI');
     throw new Error('Empty audio data received from OpenAI');
   }
 
@@ -43,6 +44,11 @@ async function fetchWithTimeout(text: string, timeout: number): Promise<Response
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
+    if (!openAIApiKey) {
+      console.error('[TTS-Edge] OpenAI API key not configured');
+      throw new Error('OpenAI API key is not configured');
+    }
+
     console.log('[TTS-Edge] Making request to OpenAI TTS API');
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
