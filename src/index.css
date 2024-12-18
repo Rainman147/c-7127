@@ -42,7 +42,7 @@ body {
 
 /* Message Content Layout */
 .message-content {
-  @apply mx-auto flex w-full max-w-3xl gap-6 px-4;
+  @apply mx-auto flex w-full gap-6 px-4;
 }
 
 /* Message Bubble Styles */
@@ -78,7 +78,7 @@ body {
 }
 
 .message-text.assistant {
-  @apply text-left w-full;
+  @apply text-left;
 }
 
 .message-text.assistant > div {
