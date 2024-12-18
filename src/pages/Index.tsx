@@ -56,10 +56,10 @@ const Index = () => {
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
     // Only create a new session when sending the first message
     if (!currentChatId) {
-      console.log('[Index] Creating new session for first message with template:', currentTemplate?.name);
+      console.log('[Index] Creating new session for first message');
       const sessionId = await createSession('New Chat');
       if (sessionId) {
-        console.log('Created new session:', sessionId);
+        console.log('[Index] Created new session:', sessionId);
         setCurrentChatId(sessionId);
         // Wait a brief moment for the session to be properly created
         await new Promise(resolve => setTimeout(resolve, 100));

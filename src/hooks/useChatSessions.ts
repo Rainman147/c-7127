@@ -17,15 +17,29 @@ export const useChatSessions = () => {
 
   const fetchSessions = async () => {
     try {
+      console.log('[useChatSessions] Fetching chat sessions');
       const { data: sessions, error } = await supabase
         .from('chats')
         .select('*')
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      setSessions(sessions || []);
+      
+      // Filter out sessions with no messages
+      const { data: sessionsWithMessages, error: messagesError } = await supabase
+        .from('messages')
+        .select('chat_id')
+        .in('chat_id', sessions?.map(s => s.id) || []);
+        
+      if (messagesError) throw messagesError;
+      
+      const validSessionIds = new Set(sessionsWithMessages?.map(m => m.chat_id));
+      const validSessions = sessions?.filter(s => validSessionIds.has(s.id)) || [];
+      
+      console.log('[useChatSessions] Filtered sessions:', validSessions);
+      setSessions(validSessions);
     } catch (error: any) {
-      console.error('Error fetching sessions:', error);
+      console.error('[useChatSessions] Error fetching sessions:', error);
       toast({
         title: 'Error',
         description: 'Failed to load chat sessions',
@@ -38,6 +52,7 @@ export const useChatSessions = () => {
 
   const createSession = async (title: string = 'New Chat') => {
     try {
+      console.log('[useChatSessions] Creating new session:', title);
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not authenticated');
 
@@ -52,11 +67,12 @@ export const useChatSessions = () => {
 
       if (error) throw error;
       
+      console.log('[useChatSessions] Created session:', data);
       setSessions(prev => [data, ...prev]);
       setActiveSessionId(data.id);
       return data.id;
     } catch (error: any) {
-      console.error('Error creating session:', error);
+      console.error('[useChatSessions] Error creating session:', error);
       toast({
         title: 'Error',
         description: 'Failed to create new chat',
@@ -68,6 +84,7 @@ export const useChatSessions = () => {
 
   const deleteSession = async (id: string) => {
     try {
+      console.log('[useChatSessions] Deleting session:', id);
       const { error } = await supabase
         .from('chats')
         .delete()
@@ -85,7 +102,7 @@ export const useChatSessions = () => {
         description: 'Chat deleted successfully',
       });
     } catch (error: any) {
-      console.error('Error deleting session:', error);
+      console.error('[useChatSessions] Error deleting session:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete chat',
@@ -96,6 +113,7 @@ export const useChatSessions = () => {
 
   const renameSession = async (id: string, newTitle: string) => {
     try {
+      console.log('[useChatSessions] Renaming session:', id, 'to:', newTitle);
       const { error } = await supabase
         .from('chats')
         .update({ title: newTitle })
@@ -114,7 +132,7 @@ export const useChatSessions = () => {
         description: 'Chat renamed successfully',
       });
     } catch (error: any) {
-      console.error('Error renaming session:', error);
+      console.error('[useChatSessions] Error renaming session:', error);
       toast({
         title: 'Error',
         description: 'Failed to rename chat',
@@ -125,13 +143,14 @@ export const useChatSessions = () => {
 
   // Set up real-time subscription
   useEffect(() => {
+    console.log('[useChatSessions] Setting up real-time subscription');
     const channel = supabase
       .channel('chat-changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'chats' },
         (payload) => {
-          console.log('Chat change received:', payload);
+          console.log('[useChatSessions] Chat change received:', payload);
           fetchSessions();
         }
       )
@@ -140,6 +159,7 @@ export const useChatSessions = () => {
     fetchSessions();
 
     return () => {
+      console.log('[useChatSessions] Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
   }, []);
