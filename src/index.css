@@ -78,7 +78,7 @@ body {
 }
 
 .message-text.assistant {
-  @apply text-left w-[90%];
+  @apply text-left w-full;
 }
 
 .message-text.assistant > div {
