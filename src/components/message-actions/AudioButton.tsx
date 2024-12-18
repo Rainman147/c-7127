@@ -18,7 +18,7 @@ export const AudioButton = ({ content }: { content: string }) => {
     console.log('[AudioButton] Cleaning up audio resources');
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.src = '';
+      audioRef.current.removeAttribute('src');
       audioRef.current = null;
     }
     setIsPlaying(false);
@@ -77,19 +77,37 @@ export const AudioButton = ({ content }: { content: string }) => {
 
       console.log('[AudioButton] Received audio data, preparing playback');
 
-      // Create new audio element
+      // Create new audio element with proper initialization
       cleanup(); // Clean up any existing audio
       const audio = new Audio();
       audioRef.current = audio;
 
-      // Create blob from the response data
-      const blob = new Blob([response.data], { type: 'audio/mp3' });
+      // Convert the response data to a Blob
+      const audioData = atob(response.data);
+      const arrayBuffer = new Uint8Array(audioData.length);
+      for (let i = 0; i < audioData.length; i++) {
+        arrayBuffer[i] = audioData.charCodeAt(i);
+      }
+      const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
       const audioUrl = URL.createObjectURL(blob);
       
       // Set up audio element
       audio.src = audioUrl;
       
       // Set up event listeners
+      audio.oncanplaythrough = () => {
+        console.log('[AudioButton] Audio ready to play');
+        audio.play().catch((e) => {
+          console.error('[AudioButton] Play error:', e);
+          cleanup();
+          toast({
+            title: "Playback Error",
+            description: "Unable to play audio. Please try again.",
+            variant: "destructive",
+          });
+        });
+      };
+
       audio.onplay = () => {
         console.log('[AudioButton] Audio playback started');
         setIsPlaying(true);
@@ -113,8 +131,6 @@ export const AudioButton = ({ content }: { content: string }) => {
         });
       };
 
-      await audio.play();
-      
     } catch (error: any) {
       console.error('[AudioButton] Error in text-to-speech process:', error);
       cleanup();
