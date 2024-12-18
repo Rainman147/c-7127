@@ -106,7 +106,7 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
                 <Link 
                   to="/templates"
                   className={cn(
-                    "flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-[#2F2F2F] cursor-pointer",
+                    "flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-[#2F2F2F] cursor-pointer",
                     location.pathname === '/templates' && "bg-[#2F2F2F]"
                   )}
                 >
@@ -120,7 +120,7 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
                     <div
                       key={session.id}
                       className={cn(
-                        "group flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-[#2F2F2F] cursor-pointer",
+                        "group flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-[#2F2F2F] cursor-pointer menu-box",
                         activeSessionId === session.id && "bg-[#2F2F2F]"
                       )}
                     >
@@ -134,7 +134,7 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
                               handleEditSave(session.id);
                             }
                           }}
-                          className="flex-1 bg-[#404040] border-none"
+                          className="flex-1 bg-[#404040] border-none rounded-xl"
                           autoFocus
                         />
                       ) : (
@@ -149,7 +149,7 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6"
+                              className="h-6 w-6 rounded-xl"
                               onClick={() => handleEditStart(session)}
                             >
                               <Pencil className="h-3 w-3" />
@@ -159,12 +159,12 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-6 w-6"
+                                  className="h-6 w-6 rounded-xl"
                                 >
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent>
+                              <AlertDialogContent className="rounded-xl">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Delete Chat</AlertDialogTitle>
                                   <AlertDialogDescription>
@@ -172,8 +172,9 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
                                   <AlertDialogAction
+                                    className="rounded-xl"
                                     onClick={() => deleteSession(session.id)}
                                   >
                                     Delete
