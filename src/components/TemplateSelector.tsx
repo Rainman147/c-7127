@@ -28,10 +28,6 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     console.log('[TemplateSelector] Selected template updated:', selectedTemplate?.name);
   }, [selectedTemplate]);
 
-  useEffect(() => {
-    console.log('[TemplateSelector] Loading state changed:', isLoading);
-  }, [isLoading]);
-
   const handleTemplateSelect = useCallback((template: Template) => {
     console.log('[TemplateSelector] Template selection triggered:', template.name);
     handleTemplateChange(template);
@@ -42,9 +38,6 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     setOpenTooltipId(templateId);
   }, []);
 
-  // Ensure we always display the current template name
-  const displayName = selectedTemplate?.name || 'Live Patient Session';
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger 
@@ -52,7 +45,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         disabled={isLoading}
         onClick={() => console.log('[TemplateSelector] Dropdown trigger clicked')}
       >
-        <span className="whitespace-nowrap">{displayName}</span>
+        <span className="whitespace-nowrap">{selectedTemplate?.name}</span>
         <ChevronDown className="h-4 w-4 opacity-70" />
       </DropdownMenuTrigger>
       <DropdownMenuContent 
