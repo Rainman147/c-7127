@@ -3,16 +3,19 @@ import type { FunctionMapping } from './types';
 export const functionExamples: FunctionMapping = {
   createTemplate: {
     naturalLanguage: [
-      "Create a new template for patient visits",
-      "Make a custom SOAP note template",
-      "Set up a new documentation template"
+      "Create a new template",
+      "Create template",
+      "Make a new template",
+      "Add template",
+      "Create a custom template"
     ],
-    requiredParameters: ["templateName", "sections"],
-    optionalParameters: ["systemInstructions"],
+    requiredParameters: ["templateName", "content"],
+    optionalParameters: ["instructions", "schema"],
     clarificationPrompts: {
       templateName: "What would you like to name this template?",
-      sections: "Which sections should be included in the template? (e.g., Subjective, Objective, Assessment, Plan)",
-      systemInstructions: "Are there any specific instructions for the AI when using this template?"
+      content: "What content should be included in the template?",
+      instructions: "Are there any specific instructions for using this template?",
+      schema: "Would you like to specify any schema requirements?"
     }
   },
   

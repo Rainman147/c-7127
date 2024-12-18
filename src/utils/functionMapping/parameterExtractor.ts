@@ -78,12 +78,15 @@ const identifyFunction = (input: string): string | null => {
 const extractParameterValue = (input: string, paramName: string): string | null => {
   // Enhanced parameter extraction patterns
   const patterns: Record<string, RegExp> = {
+    templateName: /(?:template|called|named)[:\s]+([a-zA-Z0-9\s]+?)(?=\s*(?:with|$))/i,
+    content: /content[:\s]+([^\.]+)/i,
+    instructions: /instructions[:\s]+([^\.]+)/i,
+    schema: /schema[:\s]+([^\.]+)/i,
     firstName: /first name[:\s]+([a-zA-Z]+)/i,
     lastName: /last name[:\s]+([a-zA-Z]+)/i,
     patientName: /(?:patient|for|with)\s+([a-zA-Z]+\s+[a-zA-Z]+)/i,
     dateOfBirth: /(\d{4}-\d{2}-\d{2})/,
     medicalRecordNumber: /mrn[:\s]+([a-zA-Z0-9]+)/i,
-    templateName: /template[:\s]+([a-zA-Z\s]+)/i,
     patientId: /patient[:\s]+([a-zA-Z0-9-]+)/i,
     query: /search[:\s]+([^,\.]+)/i,
     visitType: /visit type[:\s]+([a-zA-Z\s]+)/i,
