@@ -9,14 +9,18 @@ const Login = () => {
   useAuthStateChange();
 
   useEffect(() => {
-    // Clear any existing session data on mount
     clearSession();
+    console.log('Session cleared on Login component mount');
   }, []);
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-md p-8 bg-[#2F2F2F] rounded-lg">
-        <h1 className="text-2xl font-bold mb-6 text-center">Welcome</h1>
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="w-full max-w-md space-y-6 rounded-lg bg-card p-8 shadow-lg">
+        <div className="space-y-2 text-center">
+          <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
+          <p className="text-sm text-muted-foreground">Sign in to your account</p>
+        </div>
+        
         <Auth
           supabaseClient={supabase}
           appearance={{ 
@@ -46,6 +50,9 @@ const Login = () => {
               input: {
                 padding: '8px 12px',
                 fontSize: '14px',
+              },
+              container: {
+                gap: '16px',
               },
             },
           }}

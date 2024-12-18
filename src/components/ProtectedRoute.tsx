@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { checkSession, clearSession } from '@/utils/auth/sessionManager';
+import { checkSession } from '@/utils/auth/sessionManager';
 import { supabase } from '@/integrations/supabase/client';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -10,29 +10,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const validateSession = async () => {
+      console.log('Validating session...');
       const { session, error } = await checkSession();
 
-      if (error) {
-        if (error.isRefreshTokenError) {
-          toast({
-            title: "Session expired",
-            description: "Please sign in again",
-            variant: "destructive",
-          });
-          await clearSession();
-        } else {
-          toast({
-            title: "Authentication Error",
-            description: error.message || "Please sign in again",
-            variant: "destructive",
-          });
-        }
-        navigate('/auth');
-        return;
-      }
-
-      if (!session) {
-        console.log('No active session, redirecting to auth');
+      if (error || !session) {
+        console.log('Session validation failed:', error?.message || 'No session found');
+        toast({
+          title: error ? "Authentication Error" : "Session Expired",
+          description: error?.message || "Please sign in to continue",
+          variant: "destructive",
+        });
         navigate('/auth');
       }
     };
@@ -41,18 +28,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event);
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed in protected route:', event);
       
-      if (event === 'TOKEN_REFRESHED') {
-        console.log('Token refreshed successfully');
-      } else if (event === 'SIGNED_OUT' || !session) {
-        console.log('No session or signed out, redirecting to auth');
+      if (event === 'SIGNED_OUT' || !session) {
+        console.log('User signed out or session expired, redirecting to auth');
         navigate('/auth');
       }
     });
 
     return () => {
+      console.log('Cleaning up protected route subscription');
       subscription.unsubscribe();
     };
   }, [navigate, toast]);
