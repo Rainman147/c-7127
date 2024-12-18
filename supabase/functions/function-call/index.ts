@@ -1,14 +1,14 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
-import { handleCreateTemplate } from './handlers/templateHandler.ts'
-import { handleAddPatient } from './handlers/patientHandler.ts'
-import { handleStartLiveSession, handleFetchLastVisit } from './handlers/sessionHandler.ts'
-import { handleSearchHistory } from './handlers/searchHandler.ts'
-import type { FunctionCallPayload, FunctionResponse } from './types.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+interface FunctionCallPayload {
+  function: string;
+  parameters: Record<string, unknown>;
 }
 
 serve(async (req) => {
@@ -41,36 +41,45 @@ serve(async (req) => {
 
     // Parse request body
     const { function: functionName, parameters } = await req.json() as FunctionCallPayload
+    console.log('Function call received:', { functionName, parameters })
 
-    // Execute requested function
-    let result: FunctionResponse
-    switch (functionName) {
-      case 'createTemplate':
-        result = await handleCreateTemplate(parameters, user.id, supabaseClient)
-        break
-      case 'addPatient':
-        result = await handleAddPatient(parameters, user.id, supabaseClient)
-        break
-      case 'startLiveSession':
-        result = await handleStartLiveSession(parameters, user.id, supabaseClient)
-        break
-      case 'searchHistory':
-        result = await handleSearchHistory(parameters, user.id, supabaseClient)
-        break
-      case 'fetchLastVisit':
-        result = await handleFetchLastVisit(parameters, user.id, supabaseClient)
-        break
-      default:
-        throw new Error(`Unknown function: ${functionName}`)
+    if (!functionName) {
+      throw new Error('Missing function name')
     }
 
-    return new Response(
-      JSON.stringify(result),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
+    // Handle createTemplate function
+    if (functionName === 'createTemplate') {
+      const { templateName, content } = parameters
+      
+      if (!templateName || !content) {
+        throw new Error('Missing required parameters: templateName and content are required')
       }
-    )
+
+      const { data, error: insertError } = await supabaseClient
+        .from('templates')
+        .insert({
+          user_id: user.id,
+          name: templateName,
+          content: content,
+        })
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+
+      console.log('Template created:', data)
+      return new Response(
+        JSON.stringify(data),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      )
+    }
+
+    // Handle other functions here...
+    throw new Error(`Unknown function: ${functionName}`)
+
   } catch (error) {
     console.error('Error:', error.message)
     return new Response(
