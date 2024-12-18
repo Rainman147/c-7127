@@ -1,10 +1,10 @@
-import { templates } from "../../components/template/types";
+import { defaultTemplates } from "../../components/template/types";
 import type { Template } from "../../components/template/types";
 
-export const getDefaultTemplate = (): Template => templates[0];
+export const getDefaultTemplate = (): Template => defaultTemplates[0];
 
 export const findTemplateById = (templateId: string): Template | undefined => {
-  return templates.find(t => t.id === templateId);
+  return defaultTemplates.find(t => t.id === templateId);
 };
 
 export const isTemplateChange = (currentId: string, newTemplate: Template): boolean => {
