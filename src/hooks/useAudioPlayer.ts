@@ -8,24 +8,26 @@ export const useAudioPlayer = (options?: { onError?: (error: string) => void }) 
   
   // Initialize speech synthesis
   const synth = window.speechSynthesis;
-  let utterance: SpeechSynthesisUtterance | null = null;
+  const [utterance, setUtterance] = useState<SpeechSynthesisUtterance | null>(null);
 
   // Cleanup function to stop any ongoing speech
   const cleanup = useCallback(() => {
     if (utterance) {
       synth.cancel();
-      utterance = null;
+      setUtterance(null);
     }
     setIsPlaying(false);
     setIsLoading(false);
-  }, [synth]);
+  }, [synth, utterance]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      cleanup();
+      if (utterance) {
+        synth.cancel();
+      }
     };
-  }, [cleanup]);
+  }, [synth, utterance]);
 
   const handlePlayback = useCallback((text: string) => {
     console.log('[useAudioPlayer] Starting playback request:', { textLength: text.length });
@@ -38,20 +40,20 @@ export const useAudioPlayer = (options?: { onError?: (error: string) => void }) 
 
     try {
       setIsLoading(true);
-      utterance = new SpeechSynthesisUtterance(text);
+      const newUtterance = new SpeechSynthesisUtterance(text);
       
-      utterance.onstart = () => {
+      newUtterance.onstart = () => {
         console.log('[useAudioPlayer] Speech playback started');
         setIsPlaying(true);
         setIsLoading(false);
       };
 
-      utterance.onend = () => {
+      newUtterance.onend = () => {
         console.log('[useAudioPlayer] Speech playback completed');
         cleanup();
       };
 
-      utterance.onerror = (event) => {
+      newUtterance.onerror = (event) => {
         console.error('[useAudioPlayer] Speech playback error:', event.error);
         cleanup();
         
@@ -64,7 +66,8 @@ export const useAudioPlayer = (options?: { onError?: (error: string) => void }) 
         options?.onError?.(event.error);
       };
 
-      synth.speak(utterance);
+      setUtterance(newUtterance);
+      synth.speak(newUtterance);
 
     } catch (error: any) {
       console.error('[useAudioPlayer] Error in speech synthesis:', error);
@@ -78,7 +81,7 @@ export const useAudioPlayer = (options?: { onError?: (error: string) => void }) 
       
       options?.onError?.(error.message);
     }
-  }, [cleanup, isPlaying, toast, options]);
+  }, [cleanup, isPlaying, toast, options, synth]);
 
   return {
     isLoading,
