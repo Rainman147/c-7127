@@ -37,16 +37,16 @@ export const AudioButton = ({ content }: { content: string }) => {
 
       console.log('[AudioButton] Received audio data, preparing playback');
 
-      // Convert base64 to audio
-      const audioData = atob(data.audio);
-      const arrayBuffer = new ArrayBuffer(audioData.length);
-      const view = new Uint8Array(arrayBuffer);
+      // Create blob from base64
+      const byteCharacters = atob(data.audio);
+      const byteNumbers = new Array(byteCharacters.length);
       
-      for (let i = 0; i < audioData.length; i++) {
-        view[i] = audioData.charCodeAt(i);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
-
-      const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+      
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'audio/mp3' });
       const audioUrl = URL.createObjectURL(blob);
       
       // Set up audio element
