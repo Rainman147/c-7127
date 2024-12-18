@@ -18,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    // Create Supabase client
+    // Get auth user
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -29,18 +29,18 @@ serve(async (req) => {
       }
     )
 
-    // Get user from auth header
     const {
       data: { user },
       error: userError,
     } = await supabaseClient.auth.getUser()
 
-    if (userError || !user) {
-      throw new Error('Unauthorized')
-    }
+    if (userError) throw userError
+    if (!user) throw new Error('Not authenticated')
 
     // Parse request body
-    const { function: functionName, parameters } = await req.json() as FunctionCallPayload
+    const payload = await req.json() as FunctionCallPayload
+    const { function: functionName, parameters } = payload
+
     console.log('Function call received:', { functionName, parameters })
 
     if (!functionName) {
@@ -65,11 +65,14 @@ serve(async (req) => {
         .select()
         .single()
 
-      if (insertError) throw insertError
+      if (insertError) {
+        console.error('Error inserting template:', insertError)
+        throw insertError
+      }
 
       console.log('Template created:', data)
       return new Response(
-        JSON.stringify(data),
+        JSON.stringify({ success: true, data }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200 
@@ -81,14 +84,14 @@ serve(async (req) => {
     throw new Error(`Unknown function: ${functionName}`)
 
   } catch (error) {
-    console.error('Error:', error.message)
+    console.error('Error in function-call:', error)
     return new Response(
       JSON.stringify({
         error: error.message || 'An unexpected error occurred',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: error.message === 'Unauthorized' ? 401 : 400,
+        status: 400,
       }
     )
   }
