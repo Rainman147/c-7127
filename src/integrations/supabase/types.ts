@@ -133,6 +133,67 @@ export type Database = {
           },
         ]
       }
+      ehr_exports: {
+        Row: {
+          chat_id: string | null
+          created_at: string
+          ehr_system: string
+          error_message: string | null
+          export_data: Json
+          id: string
+          patient_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chat_id?: string | null
+          created_at?: string
+          ehr_system: string
+          error_message?: string | null
+          export_data: Json
+          id?: string
+          patient_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chat_id?: string | null
+          created_at?: string
+          ehr_system?: string
+          error_message?: string | null
+          export_data?: Json
+          id?: string
+          patient_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ehr_exports_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ehr_exports_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ehr_exports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedback: {
         Row: {
           comments: string | null
