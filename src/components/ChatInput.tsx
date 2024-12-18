@@ -26,48 +26,45 @@ const ChatInputComponent = ({
     if (message.trim() && !isLoading && !isProcessing) {
       console.log('[ChatInput] Submitting message:', message);
       
+      // Send the message immediately to improve responsiveness
+      onSend(message, 'text');
+      setMessage("");
+      
       // Try to extract function call parameters
       const extracted = extractParameters(message);
       console.log('[ChatInput] Extracted parameters:', extracted);
 
       if (extracted.function && !extracted.clarificationNeeded) {
         try {
-          // Handle function call
-          const result = await handleFunctionCall(extracted.function, extracted.parameters);
-          console.log('[ChatInput] Function call result:', result);
-          
-          // Send both the original message and function result to chat
-          onSend(message, 'text');
-          if (result) {
-            onSend(JSON.stringify(result, null, 2), 'text');
-          }
+          // Handle function call asynchronously without blocking
+          handleFunctionCall(extracted.function, extracted.parameters)
+            .then(result => {
+              console.log('[ChatInput] Function call result:', result);
+              if (result) {
+                // Send function result as a separate message
+                onSend(JSON.stringify(result, null, 2), 'text');
+              }
+            })
+            .catch(error => {
+              console.error('[ChatInput] Function call error:', error);
+              toast({
+                title: "Error",
+                description: error.message,
+                variant: "destructive"
+              });
+            });
         } catch (error: any) {
-          console.error('[ChatInput] Function call error:', error);
-          toast({
-            title: "Error",
-            description: error.message,
-            variant: "destructive"
-          });
-          // Still send the original message to chat even if function call fails
-          onSend(message, 'text');
+          console.error('[ChatInput] Function call setup error:', error);
         }
       } else if (extracted.clarificationNeeded) {
-        // Handle missing parameters
+        // Handle missing parameters with a toast notification
         const missingParams = extracted.missingRequired.join(', ');
         toast({
           title: "Missing Information",
           description: `Please provide: ${missingParams}`,
           duration: 5000,
         });
-        // Still send the message to chat
-        onSend(message, 'text');
-      } else {
-        // Regular message, no function call detected
-        console.log('[ChatInput] Sending regular message');
-        onSend(message, 'text');
       }
-      
-      setMessage("");
     }
   };
 
