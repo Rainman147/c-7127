@@ -12,10 +12,13 @@ export const extractParameters = (
   userInput: string,
   context?: Record<string, any>
 ): ExtractedParameters => {
+  console.log('Extracting parameters from:', userInput);
+  
   // Identify the function based on natural language patterns
   const identifiedFunction = identifyFunction(userInput);
   
   if (!identifiedFunction) {
+    console.log('No function identified for input:', userInput);
     return {
       function: '',
       parameters: {},
@@ -33,8 +36,10 @@ export const extractParameters = (
     const value = extractParameterValue(userInput, param) || context?.[param];
     if (value) {
       extractedParams[param] = value;
+      console.log(`Extracted ${param}:`, value);
     } else {
       missingRequired.push(param);
+      console.log(`Missing required parameter: ${param}`);
     }
   });
 
@@ -43,6 +48,7 @@ export const extractParameters = (
     const value = extractParameterValue(userInput, param) || context?.[param];
     if (value) {
       extractedParams[param] = value;
+      console.log(`Extracted optional ${param}:`, value);
     }
   });
 
@@ -60,6 +66,7 @@ const identifyFunction = (input: string): string | null => {
   for (const [funcName, config] of Object.entries(functionExamples)) {
     for (const example of config.naturalLanguage) {
       if (normalizedInput.includes(example.toLowerCase())) {
+        console.log(`Identified function: ${funcName} from pattern: ${example}`);
         return funcName;
       }
     }
@@ -69,22 +76,31 @@ const identifyFunction = (input: string): string | null => {
 };
 
 const extractParameterValue = (input: string, paramName: string): string | null => {
-  // This is a simple implementation that can be enhanced with more sophisticated NLP
+  // Enhanced parameter extraction patterns
   const patterns: Record<string, RegExp> = {
     firstName: /first name[:\s]+([a-zA-Z]+)/i,
     lastName: /last name[:\s]+([a-zA-Z]+)/i,
+    patientName: /(?:patient|for|with)\s+([a-zA-Z]+\s+[a-zA-Z]+)/i,
     dateOfBirth: /(\d{4}-\d{2}-\d{2})/,
     medicalRecordNumber: /mrn[:\s]+([a-zA-Z0-9]+)/i,
     templateName: /template[:\s]+([a-zA-Z\s]+)/i,
     patientId: /patient[:\s]+([a-zA-Z0-9-]+)/i,
     query: /search[:\s]+([^,\.]+)/i,
+    visitType: /visit type[:\s]+([a-zA-Z\s]+)/i,
+    format: /format[:\s]+([a-zA-Z\s]+)/i,
+    destination: /destination[:\s]+([a-zA-Z\s]+)/i
   };
 
   const pattern = patterns[paramName];
-  if (!pattern) return null;
+  if (!pattern) {
+    console.log(`No pattern defined for parameter: ${paramName}`);
+    return null;
+  }
 
   const match = input.match(pattern);
-  return match ? match[1].trim() : null;
+  const value = match ? match[1].trim() : null;
+  console.log(`Extracting ${paramName}:`, value);
+  return value;
 };
 
 export const getClarificationPrompt = (
