@@ -9,11 +9,7 @@ interface AudioButtonProps {
 }
 
 export const AudioButton = memo(({ content, className }: AudioButtonProps) => {
-  const { isLoading, isPlaying, handlePlayback } = useAudioPlayer({
-    onError: (error) => {
-      console.error('[AudioButton] Playback error:', error);
-    }
-  });
+  const { isLoading, isPlaying, handlePlayback } = useAudioPlayer();
 
   const handleClick = () => {
     if (isPlaying) {

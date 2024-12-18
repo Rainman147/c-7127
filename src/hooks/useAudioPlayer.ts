@@ -1,7 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-export const useAudioPlayer = (options?: { onError?: (error: string) => void }) => {
+interface UseAudioPlayerOptions {
+  onError?: (error: string) => void;
+}
+
+export const useAudioPlayer = (options?: UseAudioPlayerOptions) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const { toast } = useToast();
