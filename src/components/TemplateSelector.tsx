@@ -7,7 +7,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TemplateItem } from "./template/TemplateItem";
 import { useTemplateSelection } from "./template/useTemplateSelection";
-import { templates } from "./template/types";
 import type { Template } from "./template/types";
 
 interface TemplateSelectorProps {
@@ -18,12 +17,11 @@ interface TemplateSelectorProps {
 export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
   console.log('[TemplateSelector] Initializing with currentChatId:', currentChatId);
   
-  const { selectedTemplate, isLoading, handleTemplateChange } = useTemplateSelection(
+  const { selectedTemplate, availableTemplates, isLoading, handleTemplateChange } = useTemplateSelection(
     currentChatId,
     onTemplateChange
   );
 
-  // Add state to track which tooltip is currently open
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,7 +37,6 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     handleTemplateChange(template);
   }, [handleTemplateChange]);
 
-  // Handler for tooltip state changes
   const handleTooltipChange = useCallback((templateId: string | null) => {
     console.log('[TemplateSelector] Tooltip state changed for template:', templateId);
     setOpenTooltipId(templateId);
@@ -60,7 +57,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         align="start"
         onCloseAutoFocus={() => console.log('[TemplateSelector] Dropdown closed')}
       >
-        {templates.map((template) => (
+        {availableTemplates.map((template) => (
           <TemplateItem
             key={template.id}
             template={template}

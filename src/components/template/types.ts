@@ -5,7 +5,8 @@ export type Template = {
   systemInstructions: string;
 };
 
-export const templates: Template[] = [
+// Static templates as fallback
+export const defaultTemplates: Template[] = [
   {
     id: "live-session",
     name: "Live Patient Session",
@@ -103,3 +104,15 @@ Patient Education and Safety Netting (if applicable):
     systemInstructions: "Emphasize reason for referral, relevant history, and specific consultation requests."
   }
 ];
+
+// Function to merge database templates with default ones
+export const mergeTemplates = (dbTemplates: any[]): Template[] => {
+  const converted = dbTemplates.map(template => ({
+    id: template.id,
+    name: template.name,
+    description: template.content, // Using content as description for custom templates
+    systemInstructions: template.content
+  }));
+  
+  return [...defaultTemplates, ...converted];
+};

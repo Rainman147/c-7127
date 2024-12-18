@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { loadTemplateFromDb, saveTemplateToDb } from "@/utils/template/templateDbOperations";
 import { getDefaultTemplate, findTemplateById, isTemplateChange } from "@/utils/template/templateStateManager";
+import { defaultTemplates, mergeTemplates } from "./types";
 import type { Template } from "./types";
 
 export const useTemplateSelection = (
@@ -11,8 +13,30 @@ export const useTemplateSelection = (
   console.log('[useTemplateSelection] Hook initialized with chatId:', currentChatId);
   
   const [selectedTemplate, setSelectedTemplate] = useState<Template>(getDefaultTemplate());
+  const [availableTemplates, setAvailableTemplates] = useState<Template[]>(defaultTemplates);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  // Fetch templates from database
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const { data: dbTemplates, error } = await supabase
+          .from('templates')
+          .select('*');
+
+        if (error) throw error;
+
+        console.log('[useTemplateSelection] Fetched templates from DB:', dbTemplates);
+        const merged = mergeTemplates(dbTemplates || []);
+        setAvailableTemplates(merged);
+      } catch (error) {
+        console.error('[useTemplateSelection] Error fetching templates:', error);
+      }
+    };
+
+    fetchTemplates();
+  }, []);
 
   useEffect(() => {
     const loadTemplateForChat = async () => {
@@ -65,7 +89,6 @@ export const useTemplateSelection = (
       setSelectedTemplate(template);
       onTemplateChange(template);
 
-      // Only save to database if we have a chat ID
       if (currentChatId) {
         await saveTemplateToDb(currentChatId, template.id);
       }
@@ -91,6 +114,7 @@ export const useTemplateSelection = (
 
   return {
     selectedTemplate,
+    availableTemplates,
     isLoading,
     handleTemplateChange
   };
