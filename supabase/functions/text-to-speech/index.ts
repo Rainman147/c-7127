@@ -76,9 +76,22 @@ serve(async (req) => {
     console.log('[TTS-Edge] Received audio response from OpenAI');
     const audioData = await response.arrayBuffer();
     
-    // Convert to base64
+    // Convert to base64 in chunks to avoid stack overflow
+    const chunkSize = 32768; // Process 32KB at a time
     const uint8Array = new Uint8Array(audioData);
-    const base64Audio = btoa(String.fromCharCode(...uint8Array));
+    let base64Audio = '';
+    
+    console.log('[TTS-Edge] Starting base64 conversion of audio data:', uint8Array.length, 'bytes');
+    
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.slice(i, i + chunkSize);
+      base64Audio += btoa(String.fromCharCode.apply(null, chunk));
+      
+      if (i % (chunkSize * 4) === 0) {
+        console.log('[TTS-Edge] Converted', i, 'of', uint8Array.length, 'bytes to base64');
+      }
+    }
+    
     console.log('[TTS-Edge] Successfully converted audio to base64, size:', base64Audio.length);
 
     return new Response(
