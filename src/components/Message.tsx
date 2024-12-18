@@ -16,7 +16,7 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [wasEdited, setWasEdited] = useState(false);
 
-  console.log('[Message] Rendering message with role:', role);
+  console.log('[Message] Rendering message with role:', role, 'isEditing:', isEditing);
 
   const handleSave = (newContent: string) => {
     setEditedContent(newContent);
@@ -30,6 +30,7 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
   };
 
   const handleEdit = () => {
+    console.log('[Message] Edit button clicked, setting isEditing to true');
     setIsEditing(true);
   };
 
