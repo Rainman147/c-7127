@@ -70,17 +70,24 @@ class AudioEngine {
         return new Promise((resolve, reject) => {
           audio.oncanplaythrough = async () => {
             try {
-              // Create an offline context to convert HTML5 Audio to AudioBuffer
+              // Create an offline context with default values
               const offlineCtx = new OfflineAudioContext(
-                audio.channelCount || 1,
-                audio.duration * (this.context?.sampleRate || 44100),
-                this.context?.sampleRate || 44100
+                2, // Default to stereo
+                this.context!.sampleRate * audio.duration,
+                this.context!.sampleRate
               );
               
-              const source = offlineCtx.createMediaElementSource(audio);
-              source.connect(offlineCtx.destination);
+              // Create a temporary online context for media element source
+              const tempContext = new AudioContext();
+              const source = tempContext.createMediaElementSource(audio);
+              const tempGain = tempContext.createGain();
+              source.connect(tempGain);
+              tempGain.connect(tempContext.destination);
+              
+              // Render the audio
               const renderedBuffer = await offlineCtx.startRendering();
               URL.revokeObjectURL(url);
+              await tempContext.close();
               resolve(renderedBuffer);
             } catch (error) {
               reject(error);
