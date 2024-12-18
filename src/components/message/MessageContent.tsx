@@ -36,50 +36,58 @@ const MessageContent = ({
     <div 
       className={`${
         role === 'user' 
-          ? 'bg-[#3A3A3A] rounded-[20px] px-4 py-2 inline-block' 
-          : 'prose prose-invert max-w-none'
+          ? 'flex justify-end w-full' 
+          : 'w-full'
       }`}
     >
-      {type === 'audio' && (
-        <span className="inline-flex items-center gap-2 mr-2 text-gray-400">
-          <Mic className="h-4 w-4" />
-        </span>
-      )}
-      {role === 'assistant' && id ? (
-        <div>
-          {isEditing ? (
-            <div className="border border-[#10A37F] rounded-md p-4 bg-[#3A3A3A]">
-              <TiptapEditor 
-                content={content} 
-                messageId={id}
-                onSave={onSave}
-                onCancel={onCancel}
-                editable={true}
-              />
-            </div>
-          ) : (
-            <>
-              <div 
-                className="text-gray-200"
-                dangerouslySetInnerHTML={{ __html: content }}
-              />
-              {wasEdited && (
-                <div className="text-xs text-gray-400 mt-1">
-                  (edited)
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      ) : (
-        <div className="text-gray-200 whitespace-pre-wrap">{content}</div>
-      )}
-      {isStreaming && (
-        <div className="inline-flex items-center gap-2 ml-2 text-gray-400">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span className="text-xs">Transcribing...</span>
-        </div>
-      )}
+      <div 
+        className={`${
+          role === 'user' 
+            ? 'bg-[#3A3A3A] rounded-2xl px-4 py-3 max-w-[70%] sm:max-w-[90%] text-left' 
+            : 'prose prose-invert max-w-none'
+        }`}
+      >
+        {type === 'audio' && (
+          <span className="inline-flex items-center gap-2 mr-2 text-gray-400">
+            <Mic className="h-4 w-4" />
+          </span>
+        )}
+        {role === 'assistant' && id ? (
+          <div>
+            {isEditing ? (
+              <div className="border border-[#10A37F] rounded-md p-4 bg-[#3A3A3A]">
+                <TiptapEditor 
+                  content={content} 
+                  messageId={id}
+                  onSave={onSave}
+                  onCancel={onCancel}
+                  editable={true}
+                />
+              </div>
+            ) : (
+              <>
+                <div 
+                  className="text-gray-200"
+                  dangerouslySetInnerHTML={{ __html: content }}
+                />
+                {wasEdited && (
+                  <div className="text-xs text-gray-400 mt-1">
+                    (edited)
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="text-gray-200 whitespace-pre-wrap">{content}</div>
+        )}
+        {isStreaming && (
+          <div className="inline-flex items-center gap-2 ml-2 text-gray-400">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span className="text-xs">Transcribing...</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
