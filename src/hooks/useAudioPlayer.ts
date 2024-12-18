@@ -20,7 +20,8 @@ export const useAudioPlayer = (options?: AudioPlayerOptions) => {
     console.log('[AudioPlayer] Cleaning up resources');
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.removeAttribute('src');
+      audioRef.current.src = '';
+      audioRef.current.load();
       audioRef.current = null;
     }
     setState(prev => ({ ...prev, isPlaying: false, isLoading: false }));
@@ -84,41 +85,58 @@ export const useAudioPlayer = (options?: AudioPlayerOptions) => {
       const blob = new Blob([uint8Array], { type: 'audio/mp3' });
       const audioUrl = URL.createObjectURL(blob);
 
-      // Set up audio event handlers
-      audio.addEventListener('canplaythrough', () => {
+      // Set up audio event handlers before setting src
+      const handleCanPlayThrough = () => {
         console.log('[AudioPlayer] Audio ready to play');
         setState(prev => ({ ...prev, isLoading: false, isPlaying: true }));
         options?.onPlaybackStart?.();
         audio.play().catch(error => {
-          console.error('[AudioPlayer] Playback error:', error);
+          console.error('[AudioPlayer] Play error:', error);
           cleanup();
+          URL.revokeObjectURL(audioUrl);
           throw new Error('Failed to start audio playback');
         });
-      });
+      };
 
-      audio.addEventListener('ended', () => {
+      const handleEnded = () => {
         console.log('[AudioPlayer] Playback completed');
         options?.onPlaybackEnd?.();
         cleanup();
         URL.revokeObjectURL(audioUrl);
-      });
+      };
 
-      audio.addEventListener('error', (e) => {
+      const handleError = (e: Event) => {
         console.error('[AudioPlayer] Audio error:', e);
         cleanup();
         URL.revokeObjectURL(audioUrl);
-        throw new Error('Audio playback error');
-      });
+        setState(prev => ({ ...prev, error: 'Audio playback failed' }));
+        toast({
+          title: "Error",
+          description: "Failed to play audio",
+          variant: "destructive"
+        });
+      };
 
-      // Load the audio
+      audio.addEventListener('canplaythrough', handleCanPlayThrough);
+      audio.addEventListener('ended', handleEnded);
+      audio.addEventListener('error', handleError);
+
+      // Set audio properties
+      audio.preload = 'auto';
       audio.src = audioUrl;
       audio.load();
+
+      // Cleanup event listeners when done
+      return () => {
+        audio.removeEventListener('canplaythrough', handleCanPlayThrough);
+        audio.removeEventListener('ended', handleEnded);
+        audio.removeEventListener('error', handleError);
+      };
 
     } catch (error: any) {
       console.error('[AudioPlayer] Error:', error);
       cleanup();
       setState(prev => ({ ...prev, error: error.message }));
-      options?.onError?.(error.message);
       toast({
         title: "Error",
         description: error.message || "Failed to play audio",
