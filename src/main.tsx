@@ -5,6 +5,7 @@ import Auth from './pages/Auth.tsx';
 import Index from './pages/Index.tsx';
 import TemplateManager from './pages/TemplateManager.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
+import { Toaster } from './components/ui/toaster';
 import './index.css';
 
 createRoot(document.getElementById("root")!).render(
@@ -28,5 +29,6 @@ createRoot(document.getElementById("root")!).render(
         }
       />
     </Routes>
+    <Toaster />
   </BrowserRouter>
 );
