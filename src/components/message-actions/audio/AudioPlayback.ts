@@ -1,4 +1,4 @@
-export const createAudioContext = async (chunks: ArrayBuffer[]): Promise<AudioContext> => {
+export const createAudioContext = async (): Promise<AudioContext> => {
   console.log('[TTS-Playback] Creating AudioContext');
   const audioContext = new AudioContext();
   
