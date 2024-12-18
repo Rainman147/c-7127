@@ -28,6 +28,12 @@ class AudioEngine {
     }
 
     try {
+      // Resume context if it's suspended (needed for some browsers)
+      if (this.context.state === 'suspended') {
+        console.log('[AudioEngine] Resuming suspended audio context');
+        await this.context.resume();
+      }
+
       const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
       console.log('[AudioEngine] Audio data decoded successfully:', {
         duration: audioBuffer.duration,
