@@ -36,7 +36,9 @@ const TiptapEditor = ({ content, messageId, onSave, onCancel, editable = true }:
   const handleSave = async () => {
     if (!editor) return;
     
-    const newContent = editor.getHTML();
+    // Get the text content without HTML tags
+    const newContent = editor.getText();
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
