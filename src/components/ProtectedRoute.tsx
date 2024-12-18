@@ -1,10 +1,14 @@
-import { useEffect } from 'react';
+import { FC, ReactNode, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { checkSession, clearSession } from '@/utils/auth/sessionManager';
 import { supabase } from '@/integrations/supabase/client';
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+interface ProtectedRouteProps {
+  children: ReactNode;
+}
+
+const ProtectedRoute: FC<ProtectedRouteProps> = ({ children }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
