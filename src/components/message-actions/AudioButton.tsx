@@ -1,30 +1,70 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { AudioPlaybackButton } from "./audio/AudioPlaybackButton";
 import { supabase } from "@/integrations/supabase/client";
+import { useDebouncedCallback } from "use-debounce";
+
+const MAX_TEXT_LENGTH = 4096;
 
 export const AudioButton = ({ content }: { content: string }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
-  const audioRef = new Audio();
 
-  const handleTextToSpeech = async () => {
+  // Cleanup function for audio resources
+  const cleanup = useCallback(() => {
+    console.log('[AudioButton] Cleaning up audio resources');
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+      audioRef.current = null;
+    }
+    setIsPlaying(false);
+    setIsLoading(false);
+    setIsProcessing(false);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
+
+  const handleTextToSpeech = useDebouncedCallback(async () => {
     // If already playing, stop playback
     if (isPlaying) {
       console.log('[AudioButton] Stopping playback');
-      audioRef.pause();
-      audioRef.currentTime = 0;
-      setIsPlaying(false);
+      cleanup();
+      return;
+    }
+
+    // Prevent multiple concurrent requests
+    if (isProcessing) {
+      console.log('[AudioButton] Request already in progress');
       return;
     }
 
     try {
       setIsLoading(true);
+      setIsProcessing(true);
       console.log('[AudioButton] Starting text-to-speech process');
 
+      // Truncate text if necessary
+      const truncatedText = content.slice(0, MAX_TEXT_LENGTH);
+      if (content.length > MAX_TEXT_LENGTH) {
+        console.warn('[AudioButton] Text truncated to 4096 characters');
+        toast({
+          title: "Text too long",
+          description: "The text has been truncated to fit the maximum length.",
+          variant: "default",
+        });
+      }
+
       const response = await supabase.functions.invoke('text-to-speech', {
-        body: { text: content }
+        body: { text: truncatedText }
       });
 
       if (response.error) {
@@ -37,24 +77,34 @@ export const AudioButton = ({ content }: { content: string }) => {
 
       console.log('[AudioButton] Received audio data, preparing playback');
 
+      // Create new audio element
+      cleanup(); // Clean up any existing audio
+      const audio = new Audio();
+      audioRef.current = audio;
+
       // Create blob from the response data
       const blob = new Blob([response.data], { type: 'audio/mp3' });
       const audioUrl = URL.createObjectURL(blob);
       
       // Set up audio element
-      audioRef.src = audioUrl;
-      audioRef.onplay = () => {
+      audio.src = audioUrl;
+      
+      // Set up event listeners
+      audio.onplay = () => {
         console.log('[AudioButton] Audio playback started');
         setIsPlaying(true);
+        setIsLoading(false);
       };
-      audioRef.onended = () => {
+
+      audio.onended = () => {
         console.log('[AudioButton] Audio playback completed');
-        setIsPlaying(false);
+        cleanup();
         URL.revokeObjectURL(audioUrl);
       };
-      audioRef.onerror = (e) => {
+
+      audio.onerror = (e) => {
         console.error('[AudioButton] Audio playback error:', e);
-        setIsPlaying(false);
+        cleanup();
         URL.revokeObjectURL(audioUrl);
         toast({
           title: "Playback Error",
@@ -63,26 +113,27 @@ export const AudioButton = ({ content }: { content: string }) => {
         });
       };
 
-      await audioRef.play();
+      await audio.play();
       
     } catch (error: any) {
       console.error('[AudioButton] Error in text-to-speech process:', error);
+      cleanup();
       toast({
         title: "Error",
         description: "Unable to generate audio. Please try again later.",
         variant: "destructive",
       });
-      setIsPlaying(false);
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
-  };
+  }, 300); // 300ms debounce
 
   return (
     <AudioPlaybackButton 
       isLoading={isLoading}
       isPlaying={isPlaying}
       onClick={handleTextToSpeech}
+      disabled={isProcessing && !isPlaying}
     />
   );
 };
