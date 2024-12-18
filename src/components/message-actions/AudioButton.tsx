@@ -23,30 +23,22 @@ export const AudioButton = ({ content }: { content: string }) => {
       setIsLoading(true);
       console.log('[AudioButton] Starting text-to-speech process');
 
-      const { data, error } = await supabase.functions.invoke('text-to-speech', {
+      const response = await supabase.functions.invoke('text-to-speech', {
         body: { text: content }
       });
 
-      if (error) {
-        throw new Error(`API Error: ${error.message}`);
+      if (response.error) {
+        throw new Error(`API Error: ${response.error.message}`);
       }
 
-      if (!data?.audio) {
+      if (!response.data) {
         throw new Error('No audio data received');
       }
 
       console.log('[AudioButton] Received audio data, preparing playback');
 
-      // Create blob from base64
-      const byteCharacters = atob(data.audio);
-      const byteNumbers = new Array(byteCharacters.length);
-      
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'audio/mp3' });
+      // Create blob from the response data
+      const blob = new Blob([response.data], { type: 'audio/mp3' });
       const audioUrl = URL.createObjectURL(blob);
       
       // Set up audio element

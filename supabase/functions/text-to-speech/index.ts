@@ -74,20 +74,14 @@ serve(async (req) => {
     }
 
     console.log('[TTS-Edge] Received audio response from OpenAI');
-    const audioBuffer = await response.arrayBuffer();
-    const audioBase64 = btoa(
-      String.fromCharCode(...new Uint8Array(audioBuffer))
-    );
     
-    return new Response(
-      JSON.stringify({ audio: audioBase64 }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    // Return the audio data directly with the correct content type
+    return new Response(response.body, { 
+      headers: { 
+        ...corsHeaders,
+        'Content-Type': 'audio/mp3',
+      },
+    });
   } catch (error) {
     console.error('[TTS-Edge] Error in text-to-speech function:', error);
     return new Response(
