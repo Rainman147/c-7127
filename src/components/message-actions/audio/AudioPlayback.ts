@@ -1,9 +1,20 @@
 export const createAudioContext = async (): Promise<AudioContext> => {
   console.log('[TTS-Playback] Creating AudioContext');
-  const audioContext = new AudioContext();
   
-  console.log('[TTS-Playback] Audio context state:', audioContext.state);
-  console.log('[TTS-Playback] Sample rate:', audioContext.sampleRate);
+  const audioContext = new AudioContext({
+    latencyHint: 'interactive',
+    sampleRate: 44100
+  });
+  
+  if (audioContext.state === 'suspended') {
+    await audioContext.resume();
+  }
+  
+  console.log('[TTS-Playback] Audio context created:', {
+    state: audioContext.state,
+    sampleRate: audioContext.sampleRate,
+    baseLatency: audioContext.baseLatency
+  });
   
   return audioContext;
 };
@@ -18,20 +29,38 @@ export const scheduleAudioPlayback = async (
   console.log('[TTS-Playback] Scheduling audio chunk:', {
     duration: audioBuffer.duration,
     startTime,
-    isFirstChunk
+    isFirstChunk,
+    contextTime: audioContext.currentTime
   });
 
   const source = audioContext.createBufferSource();
   source.buffer = audioBuffer;
-  source.connect(audioContext.destination);
+  
+  // Add a gain node for volume control
+  const gainNode = audioContext.createGain();
+  gainNode.gain.value = 1.0;
+  
+  // Add basic audio processing
+  const compressor = audioContext.createDynamicsCompressor();
+  compressor.threshold.value = -24;
+  compressor.knee.value = 30;
+  compressor.ratio.value = 12;
+  compressor.attack.value = 0.003;
+  compressor.release.value = 0.25;
+  
+  // Connect the audio graph
+  source
+    .connect(gainNode)
+    .connect(compressor)
+    .connect(audioContext.destination);
 
-  if (isFirstChunk) {
-    console.log('[TTS-Playback] Starting first chunk immediately');
-    source.start(0);
-  } else {
-    console.log('[TTS-Playback] Scheduling chunk at:', startTime);
-    source.start(startTime);
-  }
+  const actualStartTime = isFirstChunk ? audioContext.currentTime : startTime;
+  source.start(actualStartTime);
+  
+  console.log('[TTS-Playback] Audio source started:', {
+    actualStartTime,
+    contextTime: audioContext.currentTime
+  });
 
   if (onEnded) {
     source.onended = () => {
@@ -40,5 +69,5 @@ export const scheduleAudioPlayback = async (
     };
   }
 
-  return startTime + audioBuffer.duration;
+  return actualStartTime + audioBuffer.duration;
 };

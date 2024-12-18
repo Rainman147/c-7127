@@ -28,9 +28,7 @@ export const splitIntoChunks = (text: string): string[] => {
 
   console.log('[TTS-Chunking] Final chunks:', {
     numberOfChunks: chunks.length,
-    averageChunkLength: chunks.reduce((acc, chunk) => acc + chunk.length, 0) / chunks.length,
-    smallestChunk: Math.min(...chunks.map(c => c.length)),
-    largestChunk: Math.max(...chunks.map(c => c.length))
+    averageChunkLength: chunks.reduce((acc, chunk) => acc + chunk.length, 0) / chunks.length
   });
 
   return chunks;
@@ -41,7 +39,7 @@ export const processChunk = async (chunk: string, retryCount = 0): Promise<Array
     console.log('[TTS-Processing] Processing chunk:', {
       chunkLength: chunk.length,
       retryCount,
-      preview: chunk.substring(0, 50) + '...'
+      preview: chunk.substring(0, 50)
     });
     
     const startTime = performance.now();
@@ -49,41 +47,39 @@ export const processChunk = async (chunk: string, retryCount = 0): Promise<Array
       body: { text: chunk }
     });
 
-    const processingTime = performance.now() - startTime;
-    console.log('[TTS-Processing] API response time:', processingTime.toFixed(2), 'ms');
-
     if (error) {
       console.error('[TTS-Processing] API error:', {
         error,
-        chunk: chunk.substring(0, 50) + '...',
+        chunk: chunk.substring(0, 50),
         retryCount
       });
       throw error;
     }
 
     if (!data?.audio) {
-      console.error('[TTS-Processing] No audio data received:', {
-        dataReceived: !!data,
-        hasAudioProperty: data ? 'audio' in data : false
-      });
+      console.error('[TTS-Processing] No audio data received');
       throw new Error('No audio data received');
     }
 
-    // Convert base64 to ArrayBuffer
-    console.log('[TTS-Processing] Converting base64 to ArrayBuffer');
-    const audioData = atob(data.audio);
-    const arrayBuffer = new ArrayBuffer(audioData.length);
-    const view = new Uint8Array(arrayBuffer);
-    for (let i = 0; i < audioData.length; i++) {
-      view[i] = audioData.charCodeAt(i);
+    // Safely decode base64
+    try {
+      const binaryString = atob(data.audio);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      const processingTime = performance.now() - startTime;
+      console.log('[TTS-Processing] Chunk processed successfully:', {
+        processingTime: `${processingTime.toFixed(2)}ms`,
+        audioSize: bytes.buffer.byteLength
+      });
+      
+      return bytes.buffer;
+    } catch (decodeError) {
+      console.error('[TTS-Processing] Base64 decode error:', decodeError);
+      throw new Error('Failed to decode audio data');
     }
-    
-    console.log('[TTS-Processing] Chunk processed successfully:', {
-      originalSize: chunk.length,
-      audioSize: arrayBuffer.byteLength
-    });
-    
-    return arrayBuffer;
   } catch (error) {
     console.error('[TTS-Processing] Error processing chunk:', {
       error,

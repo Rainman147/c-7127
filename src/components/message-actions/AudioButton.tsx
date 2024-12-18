@@ -13,11 +13,6 @@ export const AudioButton = ({ content, isPlaying, setIsPlaying, audioRef }: Audi
 
   const handleTextToSpeech = async () => {
     console.log('[TTS] Starting text-to-speech process');
-    console.log('[TTS] Device info:', { 
-      isIOS,
-      userAgent: navigator.userAgent,
-      audioContext: typeof AudioContext !== 'undefined'
-    });
     
     try {
       if (isPlaying) {
@@ -31,24 +26,24 @@ export const AudioButton = ({ content, isPlaying, setIsPlaying, audioRef }: Audi
       }
 
       setIsLoading(true);
-      const chunks = splitIntoChunks(content);
-      console.log('[TTS] Text split into chunks:', {
-        numberOfChunks: chunks.length,
-        totalLength: content.length
+      
+      // Create audio context early to handle user gesture
+      const audioContext = await createAudioContext();
+      
+      // Show initial toast
+      toast({
+        title: "Preparing Audio",
+        description: "Processing your text...",
+        duration: 3000,
       });
 
-      const audioContext = await createAudioContext();
+      const chunks = splitIntoChunks(content);
       let currentTime = 0;
       let isFirstChunk = true;
 
       for (let i = 0; i < chunks.length; i++) {
         try {
-          console.log(`[TTS] Processing chunk ${i + 1}/${chunks.length}`);
-          const startTime = performance.now();
-          
           const arrayBuffer = await processChunk(chunks[i]);
-          console.log(`[TTS] Chunk ${i + 1} processing completed in ${(performance.now() - startTime).toFixed(2)}ms`);
-          
           const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
           
           const newTime = await scheduleAudioPlayback(
@@ -60,43 +55,45 @@ export const AudioButton = ({ content, isPlaying, setIsPlaying, audioRef }: Audi
               console.log('[TTS] Playback completed');
               setIsPlaying(false);
               audioContext.close();
+              
+              toast({
+                title: "Playback Complete",
+                description: "Audio finished playing",
+                duration: 2000,
+              });
             } : undefined
           );
           
           if (isFirstChunk) {
             setIsPlaying(true);
+            toast({
+              title: "Playing Audio",
+              description: "Starting playback...",
+              duration: 2000,
+            });
             isFirstChunk = false;
           }
           
           currentTime = newTime;
           
         } catch (error) {
-          console.error(`[TTS] Error processing chunk ${i + 1}:`, {
-            error,
-            chunk: chunks[i].substring(0, 50) + '...',
-            currentTime,
-            isFirstChunk
-          });
+          console.error(`[TTS] Error processing chunk ${i + 1}:`, error);
           throw error;
         }
       }
 
     } catch (error: any) {
-      console.error('[TTS] Critical error in text-to-speech process:', {
-        error,
-        errorMessage: error.message,
-        errorStack: error.stack,
-        content: content.substring(0, 100) + '...'
-      });
+      console.error('[TTS] Critical error in text-to-speech process:', error);
       
       toast({
-        title: "Error",
-        description: "Audio playback unavailable. Please try again.",
+        title: "Playback Error",
+        description: "Failed to play audio. Please try again.",
         variant: "destructive",
+        duration: 4000,
       });
+      
       setIsPlaying(false);
     } finally {
-      console.log('[TTS] Cleaning up and resetting state');
       setIsLoading(false);
     }
   };
@@ -106,6 +103,7 @@ export const AudioButton = ({ content, isPlaying, setIsPlaying, audioRef }: Audi
       className={`p-1 transition-colors ${isPlaying ? 'text-blue-500' : 'hover:text-white'}`}
       onClick={handleTextToSpeech}
       disabled={isLoading}
+      aria-label={isPlaying ? "Stop audio playback" : "Play text as audio"}
     >
       {isLoading ? (
         <Loader2 className="h-4 w-4 animate-spin" />
