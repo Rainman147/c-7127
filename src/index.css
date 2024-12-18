@@ -47,7 +47,7 @@ body {
 }
 
 .message-bubble {
-  @apply flex-1 space-y-4;
+  @apply flex-1;
 }
 
 .message-bubble.user {
@@ -63,7 +63,7 @@ body {
 }
 
 .message-text.user {
-  @apply text-right;
+  @apply flex justify-end max-w-[80%] ml-auto;
 }
 
 .message-text.assistant {

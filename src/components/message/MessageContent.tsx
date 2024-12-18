@@ -33,13 +33,7 @@ const MessageContent = ({
   });
   
   return (
-    <div 
-      className={`${
-        role === 'user' 
-          ? 'bg-gray-700/50 rounded-[20px] px-4 py-2 inline-block' 
-          : 'prose prose-invert max-w-none'
-      }`}
-    >
+    <div className={`message-text ${role}`}>
       {type === 'audio' && (
         <span className="inline-flex items-center gap-2 mr-2 text-gray-400">
           <Mic className="h-4 w-4" />
@@ -72,7 +66,9 @@ const MessageContent = ({
           )}
         </div>
       ) : (
-        <div className="text-gray-200 whitespace-pre-wrap">{content}</div>
+        <div className={`${role === 'user' ? 'bg-gray-700/50 rounded-[20px] px-4 py-2 inline-block ml-auto' : ''}`}>
+          {content}
+        </div>
       )}
       {isStreaming && (
         <div className="inline-flex items-center gap-2 ml-2 text-gray-400">

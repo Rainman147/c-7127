@@ -47,10 +47,10 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
   };
 
   return (
-    <div className="py-6">
-      <div className={`flex gap-4 ${role === 'user' ? 'flex-row-reverse' : ''}`}>
-        <MessageAvatar isAssistant={role === 'assistant'} />
-        <div className={`flex-1 space-y-2 ${role === 'user' ? 'flex justify-end' : ''}`}>
+    <div className={`message-container ${role}`}>
+      <div className="message-content">
+        {role === 'assistant' && <MessageAvatar isAssistant={true} />}
+        <div className={`message-bubble ${role}`}>
           <MessageContent 
             role={role}
             content={editedContent}
@@ -69,6 +69,7 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
             />
           )}
         </div>
+        {role === 'user' && <MessageAvatar isAssistant={false} />}
       </div>
     </div>
   );
