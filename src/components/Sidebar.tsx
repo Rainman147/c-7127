@@ -1,10 +1,11 @@
-import { Menu, Plus, Pencil, Trash2, ChevronDown, Key } from "lucide-react";
+import { Menu, Plus, Pencil, Trash2, ChevronDown, Key, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useChatSessions } from "@/hooks/useChatSessions";
+import { Link, useLocation } from "react-router-dom";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  const location = useLocation();
   
   const {
     sessions,
@@ -32,10 +34,10 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
   // Check if device is mobile
   useEffect(() => {
     const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768); // 768px is a common breakpoint for mobile devices
+      setIsMobile(window.innerWidth < 768);
     };
 
-    checkIfMobile(); // Check on initial load
+    checkIfMobile();
     window.addEventListener('resize', checkIfMobile);
 
     return () => window.removeEventListener('resize', checkIfMobile);
@@ -58,7 +60,6 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
   const handleSessionClick = (sessionId: string) => {
     setActiveSessionId(sessionId);
     onSessionSelect(sessionId);
-    // Close sidebar on mobile when selecting a session
     if (isMobile) {
       onToggle();
     }
@@ -100,77 +101,92 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
                 </Button>
               </div>
 
-              <div className="space-y-2">
-                {sessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className={cn(
-                      "group flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-[#2F2F2F] cursor-pointer",
-                      activeSessionId === session.id && "bg-[#2F2F2F]"
-                    )}
-                  >
-                    {editingId === session.id ? (
-                      <Input
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        onBlur={() => handleEditSave(session.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleEditSave(session.id);
-                          }
-                        }}
-                        className="flex-1 bg-[#404040] border-none"
-                        autoFocus
-                      />
-                    ) : (
-                      <>
-                        <div
-                          className="flex-1 truncate text-sm"
-                          onClick={() => handleSessionClick(session.id)}
-                        >
-                          {session.title}
-                        </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => handleEditStart(session)}
+              <div className="space-y-4">
+                {/* Template Manager Link */}
+                <Link 
+                  to="/templates"
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-[#2F2F2F] cursor-pointer",
+                    location.pathname === '/templates' && "bg-[#2F2F2F]"
+                  )}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span className="text-sm">Template Manager</span>
+                </Link>
+
+                {/* Chat Sessions */}
+                <div className="space-y-2">
+                  {sessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className={cn(
+                        "group flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-[#2F2F2F] cursor-pointer",
+                        activeSessionId === session.id && "bg-[#2F2F2F]"
+                      )}
+                    >
+                      {editingId === session.id ? (
+                        <Input
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          onBlur={() => handleEditSave(session.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleEditSave(session.id);
+                            }
+                          }}
+                          className="flex-1 bg-[#404040] border-none"
+                          autoFocus
+                        />
+                      ) : (
+                        <>
+                          <div
+                            className="flex-1 truncate text-sm"
+                            onClick={() => handleSessionClick(session.id)}
                           >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Chat</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete this chat? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteSession(session.id)}
+                            {session.title}
+                          </div>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleEditStart(session)}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
                                 >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Chat</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this chat? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteSession(session.id)}
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </>
           )}
