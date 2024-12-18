@@ -1,5 +1,6 @@
 import { functionExamples } from './functionExamples';
 import type { FunctionMapping } from './types';
+import type { AIFunction } from '@/types/functionCalls';
 
 interface ExtractedParameters {
   function: string;
@@ -32,23 +33,23 @@ export const extractParameters = (
   const missingRequired: string[] = [];
 
   // Extract parameters from user input and context
-  functionConfig.requiredParameters.forEach(param => {
-    const value = extractParameterValue(userInput, param) || context?.[param];
-    if (value) {
-      extractedParams[param] = value;
-      console.log(`Extracted ${param}:`, value);
+  functionConfig.parameters.forEach(param => {
+    if (param.required) {
+      const value = extractParameterValue(userInput, param.name) || context?.[param.name];
+      if (value) {
+        extractedParams[param.name] = value;
+        console.log(`Extracted ${param.name}:`, value);
+      } else {
+        missingRequired.push(param.name);
+        console.log(`Missing required parameter: ${param.name}`);
+      }
     } else {
-      missingRequired.push(param);
-      console.log(`Missing required parameter: ${param}`);
-    }
-  });
-
-  // Extract optional parameters if present
-  functionConfig.optionalParameters?.forEach(param => {
-    const value = extractParameterValue(userInput, param) || context?.[param];
-    if (value) {
-      extractedParams[param] = value;
-      console.log(`Extracted optional ${param}:`, value);
+      // Handle optional parameters
+      const value = extractParameterValue(userInput, param.name) || context?.[param.name];
+      if (value) {
+        extractedParams[param.name] = value;
+        console.log(`Extracted optional ${param.name}:`, value);
+      }
     }
   });
 
@@ -64,11 +65,13 @@ const identifyFunction = (input: string): string | null => {
   const normalizedInput = input.toLowerCase();
   
   for (const [funcName, config] of Object.entries(functionExamples)) {
-    for (const example of config.naturalLanguage) {
-      if (normalizedInput.includes(example.toLowerCase())) {
-        console.log(`Identified function: ${funcName} from pattern: ${example}`);
-        return funcName;
-      }
+    // Check if input contains function name or description keywords
+    if (
+      normalizedInput.includes(funcName.toLowerCase()) ||
+      normalizedInput.includes(config.description.toLowerCase())
+    ) {
+      console.log(`Identified function: ${funcName}`);
+      return funcName;
     }
   }
   
@@ -110,6 +113,7 @@ export const getClarificationPrompt = (
   functionName: string,
   missingParam: string
 ): string => {
-  return functionExamples[functionName]?.clarificationPrompts[missingParam] || 
-    `Please provide the ${missingParam}`;
+  const func = functionExamples[functionName];
+  const param = func.parameters.find(p => p.name === missingParam);
+  return param?.description || `Please provide the ${missingParam}`;
 };
