@@ -58,7 +58,7 @@ export const useAudioPlayer = (content: string): AudioPlayerHookReturn => {
         });
       }
 
-      const response = await supabase.functions.invoke<ArrayBuffer>('text-to-speech', {
+      const response = await supabase.functions.invoke('text-to-speech', {
         body: { text: truncatedText }
       });
 
@@ -76,7 +76,9 @@ export const useAudioPlayer = (content: string): AudioPlayerHookReturn => {
       const audio = new Audio();
       audioRef.current = audio;
 
-      const blob = new Blob([response.data], { type: 'audio/mp3' });
+      // Convert the response data to Uint8Array and create a blob
+      const uint8Array = new Uint8Array(Object.values(response.data));
+      const blob = new Blob([uint8Array], { type: 'audio/mp3' });
       const audioUrl = URL.createObjectURL(blob);
       
       audio.src = audioUrl;
