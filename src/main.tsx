@@ -1,12 +1,23 @@
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import App from './App.tsx';
+import Auth from './pages/Auth.tsx';
+import Index from './pages/Index.tsx';
+import ProtectedRoute from './components/ProtectedRoute.tsx';
 import './index.css';
 
-const root = createRoot(document.getElementById("root")!);
-
-root.render(
+createRoot(document.getElementById("root")!).render(
   <BrowserRouter>
-    <App />
+    <Routes>
+      <Route path="/auth" element={<Auth />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Index />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   </BrowserRouter>
 );

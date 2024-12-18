@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
 
 export type ChatSession = {
   id: string;
@@ -15,38 +14,21 @@ export const useChatSessions = () => {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const fetchSessions = async () => {
     try {
-      // First check if we have an authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        console.error('Authentication error:', authError);
-        navigate('/auth');
-        return;
-      }
-
-      console.log('Fetching sessions for user:', user.id);
       const { data: sessions, error } = await supabase
         .from('chats')
         .select('*')
-        .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching sessions:', error);
-        throw error;
-      }
-
-      console.log('Fetched sessions:', sessions);
+      if (error) throw error;
       setSessions(sessions || []);
     } catch (error: any) {
-      console.error('Error in fetchSessions:', error);
+      console.error('Error fetching sessions:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load chat sessions. Please try again.',
+        description: 'Failed to load chat sessions',
         variant: 'destructive',
       });
     } finally {
@@ -57,13 +39,8 @@ export const useChatSessions = () => {
   const createSession = async (title: string = 'New Chat') => {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        console.error('User not authenticated:', userError);
-        navigate('/auth');
-        return null;
-      }
+      if (userError || !user) throw new Error('User not authenticated');
 
-      console.log('Creating new session for user:', user.id);
       const { data, error } = await supabase
         .from('chats')
         .insert({ 
@@ -75,7 +52,6 @@ export const useChatSessions = () => {
 
       if (error) throw error;
       
-      console.log('Created new session:', data);
       setSessions(prev => [data, ...prev]);
       setActiveSessionId(data.id);
       return data.id;
@@ -92,7 +68,6 @@ export const useChatSessions = () => {
 
   const deleteSession = async (id: string) => {
     try {
-      console.log('Deleting session:', id);
       const { error } = await supabase
         .from('chats')
         .delete()
@@ -121,7 +96,6 @@ export const useChatSessions = () => {
 
   const renameSession = async (id: string, newTitle: string) => {
     try {
-      console.log('Renaming session:', id, 'to:', newTitle);
       const { error } = await supabase
         .from('chats')
         .update({ title: newTitle })
@@ -151,7 +125,6 @@ export const useChatSessions = () => {
 
   // Set up real-time subscription
   useEffect(() => {
-    console.log('Setting up real-time subscription for chat changes');
     const channel = supabase
       .channel('chat-changes')
       .on(
@@ -164,11 +137,9 @@ export const useChatSessions = () => {
       )
       .subscribe();
 
-    // Initial fetch
     fetchSessions();
 
     return () => {
-      console.log('Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
   }, []);
