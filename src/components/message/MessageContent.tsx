@@ -36,7 +36,7 @@ const MessageContent = ({
     <div 
       className={`${
         role === 'user' 
-          ? 'bg-gray-700/50 rounded-[20px] px-4 py-2 inline-block' 
+          ? 'bg-[#3A3A3A] rounded-[20px] px-4 py-2 inline-block' 
           : 'prose prose-invert max-w-none'
       }`}
     >
