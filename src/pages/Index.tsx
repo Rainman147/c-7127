@@ -32,6 +32,18 @@ const Index = () => {
   // Initialize audio recovery
   useAudioRecovery();
 
+  // Check authentication on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) {
+        console.log('[Index] No authenticated user, redirecting to auth');
+        window.location.href = '/auth';
+      }
+    };
+    checkAuth();
+  }, []);
+
   const handleSessionSelect = async (chatId: string) => {
     console.log('Selecting session:', chatId);
     setCurrentChatId(chatId);
