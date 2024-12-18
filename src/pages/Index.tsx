@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import Sidebar from '@/components/Sidebar';
 import ChatContainer from '@/components/chat/ChatContainer';
 import { useChat } from '@/hooks/useChat';
@@ -23,8 +22,8 @@ const Index = () => {
   const { 
     messages, 
     isLoading, 
-    handleSendMessage, 
-    setMessages,
+    handleSendMessage,
+    loadChatMessages,
     currentChatId,
     setCurrentChatId
   } = useChat();
@@ -33,26 +32,8 @@ const Index = () => {
   useAudioRecovery();
 
   const handleSessionSelect = async (chatId: string) => {
-    console.log('Selecting session:', chatId);
-    setCurrentChatId(chatId);
-    try {
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('chat_id', chatId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      
-      setMessages(messages.map(msg => ({
-        role: msg.sender as 'user' | 'assistant',
-        content: msg.content,
-        type: msg.type as 'text' | 'audio',
-        id: msg.id // Include the message ID
-      })));
-    } catch (error) {
-      console.error('Error loading chat messages:', error);
-    }
+    console.log('[Index] Selecting session:', chatId);
+    await loadChatMessages(chatId);
   };
 
   const handleTemplateChange = (template: Template) => {
@@ -61,7 +42,7 @@ const Index = () => {
   };
 
   const handleTranscriptionComplete = async (text: string) => {
-    console.log('Transcription complete in Index, ready for user to edit:', text);
+    console.log('[Index] Transcription complete, ready for user to edit:', text);
     if (text) {
       const chatInput = document.querySelector('textarea');
       if (chatInput) {

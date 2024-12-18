@@ -25,6 +25,59 @@ export const useChat = () => {
     };
   }, []);
 
+  const loadChatMessages = async (chatId: string) => {
+    try {
+      console.log('[useChat] Loading messages for chat:', chatId);
+      
+      // First, fetch all messages for this chat
+      const { data: messages, error: messagesError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_id', chatId)
+        .order('created_at', { ascending: true });
+
+      if (messagesError) throw messagesError;
+
+      // Then, fetch all edited versions of these messages
+      const messageIds = messages.map(m => m.id);
+      const { data: editedMessages, error: editsError } = await supabase
+        .from('edited_messages')
+        .select('*')
+        .in('message_id', messageIds)
+        .order('created_at', { ascending: false });  // Get latest edit first
+
+      if (editsError) throw editsError;
+
+      // Create a map of message_id to latest edited content
+      const editedContentMap = editedMessages.reduce((acc: Record<string, string>, edit) => {
+        if (!acc[edit.message_id]) {
+          acc[edit.message_id] = edit.edited_content;
+        }
+        return acc;
+      }, {});
+
+      // Apply edits to messages
+      const processedMessages = messages.map(msg => ({
+        role: msg.sender as 'user' | 'assistant',
+        content: editedContentMap[msg.id] || msg.content, // Use edited content if available
+        type: msg.type as 'text' | 'audio',
+        id: msg.id
+      }));
+
+      console.log('[useChat] Processed messages:', processedMessages.length);
+      setMessages(processedMessages);
+      setCurrentChatId(chatId);
+
+    } catch (error: any) {
+      console.error('[useChat] Error loading chat messages:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load chat messages",
+        variant: "destructive"
+      });
+    }
+  };
+
   const saveMessageToSupabase = async (message: Message, chatId?: string) => {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -151,20 +204,11 @@ export const useChat = () => {
     }
   };
 
-  const handleTranscriptionError = () => {
-    const errorMessage: Message = {
-      role: 'user',
-      content: 'Error processing audio transcription.',
-      type: 'audio'
-    };
-    setMessages(prev => [...prev, errorMessage]);
-  };
-
   return {
     messages,
     isLoading,
     handleSendMessage,
-    handleTranscriptionError,
+    loadChatMessages,
     setMessages,
     currentChatId,
     setCurrentChatId
