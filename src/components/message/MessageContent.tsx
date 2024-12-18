@@ -53,7 +53,10 @@ const MessageContent = ({
             </div>
           ) : (
             <>
-              <div className="text-gray-200 whitespace-pre-wrap">{content}</div>
+              <div 
+                className="text-gray-200"
+                dangerouslySetInnerHTML={{ __html: content }}
+              />
               {wasEdited && (
                 <div className="text-xs text-gray-400 mt-1">
                   (edited)

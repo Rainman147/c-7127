@@ -20,11 +20,11 @@ const TiptapEditor = ({ content, messageId, onSave, onCancel, editable = true }:
   
   const editor = useEditor({
     extensions: [StarterKit],
-    content,
+    content: content,
     editable,
     editorProps: {
       attributes: {
-        class: 'prose prose-invert max-w-none focus:outline-none min-h-[100px] cursor-text touch-manipulation bg-[#3A3A3A] p-4 rounded-md border border-[#10A37F]',
+        class: 'prose prose-invert max-w-none focus:outline-none min-h-[100px] cursor-text touch-manipulation',
       },
     },
   });
@@ -38,7 +38,7 @@ const TiptapEditor = ({ content, messageId, onSave, onCancel, editable = true }:
   const handleSave = async () => {
     if (!editor) return;
     
-    const newContent = editor.getText();
+    const newContent = editor.getHTML();
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -133,7 +133,7 @@ const TiptapEditor = ({ content, messageId, onSave, onCancel, editable = true }:
       
       <EditorContent 
         editor={editor} 
-        className="prose-headings:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 touch-manipulation"
+        className="prose-headings:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2"
       />
       
       <div className="flex justify-end gap-2 mt-4">
