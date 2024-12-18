@@ -262,7 +262,10 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          instructions: Json | null
           name: string
+          priority_rules: Json | null
+          schema: Json | null
           updated_at: string
           user_id: string
         }
@@ -270,7 +273,10 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          instructions?: Json | null
           name: string
+          priority_rules?: Json | null
+          schema?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -278,7 +284,10 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          instructions?: Json | null
           name?: string
+          priority_rules?: Json | null
+          schema?: Json | null
           updated_at?: string
           user_id?: string
         }

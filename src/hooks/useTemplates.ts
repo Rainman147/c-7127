@@ -7,6 +7,16 @@ interface Template {
   id: string;
   name: string;
   content: string;
+  instructions?: {
+    dataFormatting: string;
+    priorityRules: string;
+    specialConditions: string;
+  };
+  schema?: {
+    sections: string[];
+    requiredFields: string[];
+  };
+  priority_rules?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -14,6 +24,15 @@ interface Template {
 interface CreateTemplateInput {
   name: string;
   content: string;
+  instructions?: {
+    dataFormatting: string;
+    priorityRules: string;
+    specialConditions: string;
+  };
+  schema?: {
+    sections: string[];
+    requiredFields: string[];
+  };
 }
 
 interface UpdateTemplateInput {
@@ -47,7 +66,7 @@ export const useTemplates = () => {
 
   // Create template
   const createTemplate = useMutation({
-    mutationFn: async ({ name, content }: CreateTemplateInput) => {
+    mutationFn: async ({ name, content, instructions, schema }: CreateTemplateInput) => {
       console.log('[useTemplates] Creating template:', { name });
       
       // Get the current user's ID
@@ -63,6 +82,8 @@ export const useTemplates = () => {
         .insert([{ 
           name, 
           content,
+          instructions,
+          schema,
           user_id: user.id 
         }])
         .select()
