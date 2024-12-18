@@ -1,12 +1,11 @@
 import { useState, useRef } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/types/chat';
 import { useMessagePersistence } from './useMessagePersistence';
 
 export const useMessageHandling = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   const abortControllerRef = useRef<AbortController | null>(null);
   const { saveMessageToSupabase } = useMessagePersistence();
 
