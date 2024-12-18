@@ -66,7 +66,7 @@ const MessageContent = ({
           )}
         </div>
       ) : (
-        <div className={`${role === 'user' ? 'bg-gray-700/50 rounded-[20px] px-4 py-2 inline-block ml-auto' : ''}`}>
+        <div>
           {content}
         </div>
       )}

@@ -14,24 +14,22 @@ body {
   @apply flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-chatgpt-hover/50 border border-transparent hover:border-chatgpt-border transition-all duration-200;
 }
 
-/* Sidebar scrollbar */
+/* Scrollbar Styles */
 .sidebar-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-sidebar;
 }
 
-/* Main chat area scrollbar */
 .chat-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-main;
 }
 
-/* Chat input area scrollbar */
 .chat-input-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-[#2F2F2F];
 }
 
-/* Message alignment classes */
+/* Message Container Styles */
 .message-container {
-  @apply flex w-full px-4 py-6;
+  @apply w-full py-6 px-4;
 }
 
 .message-container.user {
@@ -42,10 +40,12 @@ body {
   @apply bg-transparent;
 }
 
+/* Message Content Layout */
 .message-content {
   @apply mx-auto flex w-full max-w-3xl gap-6;
 }
 
+/* Message Bubble Styles */
 .message-bubble {
   @apply flex-1;
 }
@@ -58,14 +58,29 @@ body {
   @apply flex justify-start;
 }
 
+/* Message Text Styles */
 .message-text {
-  @apply prose prose-invert max-w-none leading-7;
+  @apply prose prose-invert max-w-none leading-7 font-[14px];
 }
 
 .message-text.user {
-  @apply flex justify-end max-w-[80%] ml-auto;
+  @apply flex justify-end;
+}
+
+.message-text.user > div {
+  @apply max-w-[70%] bg-[#2D2D2D] rounded-2xl px-4 py-3 ml-auto;
+}
+
+@media (max-width: 768px) {
+  .message-text.user > div {
+    @apply max-w-[90%];
+  }
 }
 
 .message-text.assistant {
   @apply text-left;
+}
+
+.message-text.assistant > div {
+  @apply bg-[#3A3A3A] rounded-2xl px-4 py-3;
 }
