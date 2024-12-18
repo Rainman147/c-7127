@@ -1,7 +1,7 @@
 export const createAudioContext = async (): Promise<AudioContext> => {
   console.log('[TTS-Playback] Creating AudioContext');
   
-  const audioContext = new AudioContext({
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)({
     latencyHint: 'interactive',
     sampleRate: 44100
   });
@@ -29,18 +29,16 @@ export const scheduleAudioPlayback = async (
   console.log('[TTS-Playback] Scheduling audio chunk:', {
     duration: audioBuffer.duration,
     startTime,
-    isFirstChunk,
-    contextTime: audioContext.currentTime
+    isFirstChunk
   });
 
   const source = audioContext.createBufferSource();
   source.buffer = audioBuffer;
   
-  // Add a gain node for volume control
+  // Create and configure audio processing nodes
   const gainNode = audioContext.createGain();
   gainNode.gain.value = 1.0;
   
-  // Add basic audio processing
   const compressor = audioContext.createDynamicsCompressor();
   compressor.threshold.value = -24;
   compressor.knee.value = 30;
@@ -57,7 +55,7 @@ export const scheduleAudioPlayback = async (
   const actualStartTime = isFirstChunk ? audioContext.currentTime : startTime;
   source.start(actualStartTime);
   
-  console.log('[TTS-Playback] Audio source started:', {
+  console.log('[TTS-Playback] Audio scheduled:', {
     actualStartTime,
     contextTime: audioContext.currentTime
   });

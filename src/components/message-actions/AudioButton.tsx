@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { Volume2, Loader2, Square } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getDeviceType } from '@/utils/deviceDetection';
@@ -15,6 +15,7 @@ export const AudioButton = ({ content, isPlaying, setIsPlaying, audioRef }: Audi
     console.log('[TTS] Starting text-to-speech process');
     
     try {
+      // Handle stop playback
       if (isPlaying) {
         console.log('[TTS] Stopping current playback');
         if (audioRef[0]) {
@@ -26,10 +27,20 @@ export const AudioButton = ({ content, isPlaying, setIsPlaying, audioRef }: Audi
       }
 
       setIsLoading(true);
-      
-      // Create audio context early to handle user gesture
-      const audioContext = await createAudioContext();
-      
+
+      // Create audio context with user interaction
+      let audioContext;
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+        console.log('[TTS] Audio context created successfully:', audioContext.state);
+      } catch (error) {
+        console.error('[TTS] Failed to create audio context:', error);
+        throw new Error('Failed to initialize audio playback');
+      }
+
       // Show initial toast
       toast({
         title: "Preparing Audio",
@@ -38,14 +49,24 @@ export const AudioButton = ({ content, isPlaying, setIsPlaying, audioRef }: Audi
       });
 
       const chunks = splitIntoChunks(content);
+      console.log('[TTS] Split content into chunks:', chunks.length);
+
       let currentTime = 0;
       let isFirstChunk = true;
 
       for (let i = 0; i < chunks.length; i++) {
         try {
+          console.log(`[TTS] Processing chunk ${i + 1}/${chunks.length}`);
           const arrayBuffer = await processChunk(chunks[i]);
-          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
           
+          if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+            console.error('[TTS] Received empty audio data for chunk:', i + 1);
+            throw new Error('Received empty audio data');
+          }
+
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+          console.log(`[TTS] Successfully decoded audio for chunk ${i + 1}`);
+
           const newTime = await scheduleAudioPlayback(
             audioContext,
             audioBuffer,
@@ -87,7 +108,7 @@ export const AudioButton = ({ content, isPlaying, setIsPlaying, audioRef }: Audi
       
       toast({
         title: "Playback Error",
-        description: "Failed to play audio. Please try again.",
+        description: error.message || "Failed to play audio. Please try again.",
         variant: "destructive",
         duration: 4000,
       });

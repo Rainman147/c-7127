@@ -1,13 +1,13 @@
 import { supabase } from '@/integrations/supabase/client';
 
-const CHUNK_SIZE = 100; // characters
+const CHUNK_SIZE = 250; // Increased for better sentence completeness
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1000;
 
 export const splitIntoChunks = (text: string): string[] => {
   console.log('[TTS-Chunking] Starting text chunking process');
-  console.log('[TTS-Chunking] Input text length:', text.length);
   
+  // Split by sentences while preserving punctuation
   const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
   console.log('[TTS-Chunking] Number of sentences:', sentences.length);
   
@@ -22,13 +22,15 @@ export const splitIntoChunks = (text: string): string[] => {
       currentChunk += sentence;
     }
   }
+  
   if (currentChunk.length > 0) {
     chunks.push(currentChunk.trim());
   }
 
-  console.log('[TTS-Chunking] Final chunks:', {
+  console.log('[TTS-Chunking] Chunks created:', {
     numberOfChunks: chunks.length,
-    averageChunkLength: chunks.reduce((acc, chunk) => acc + chunk.length, 0) / chunks.length
+    averageLength: chunks.reduce((acc, chunk) => acc + chunk.length, 0) / chunks.length,
+    chunkSizes: chunks.map(chunk => chunk.length)
   });
 
   return chunks;
@@ -37,7 +39,7 @@ export const splitIntoChunks = (text: string): string[] => {
 export const processChunk = async (chunk: string, retryCount = 0): Promise<ArrayBuffer> => {
   try {
     console.log('[TTS-Processing] Processing chunk:', {
-      chunkLength: chunk.length,
+      length: chunk.length,
       retryCount,
       preview: chunk.substring(0, 50)
     });
@@ -48,31 +50,29 @@ export const processChunk = async (chunk: string, retryCount = 0): Promise<Array
     });
 
     if (error) {
-      console.error('[TTS-Processing] API error:', {
-        error,
-        chunk: chunk.substring(0, 50),
-        retryCount
-      });
+      console.error('[TTS-Processing] API error:', error);
       throw error;
     }
 
     if (!data?.audio) {
       console.error('[TTS-Processing] No audio data received');
-      throw new Error('No audio data received');
+      throw new Error('No audio data received from server');
     }
 
-    // Safely decode base64
     try {
-      const binaryString = atob(data.audio);
+      // Convert base64 to ArrayBuffer in smaller chunks
+      const base64 = data.audio;
+      const binaryString = atob(base64);
       const bytes = new Uint8Array(binaryString.length);
+      
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
       
       const processingTime = performance.now() - startTime;
-      console.log('[TTS-Processing] Chunk processed successfully:', {
+      console.log('[TTS-Processing] Chunk processed:', {
         processingTime: `${processingTime.toFixed(2)}ms`,
-        audioSize: bytes.buffer.byteLength
+        outputSize: bytes.buffer.byteLength
       });
       
       return bytes.buffer;
@@ -81,18 +81,15 @@ export const processChunk = async (chunk: string, retryCount = 0): Promise<Array
       throw new Error('Failed to decode audio data');
     }
   } catch (error) {
-    console.error('[TTS-Processing] Error processing chunk:', {
-      error,
-      retryCount,
-      maxRetries: MAX_RETRIES
-    });
+    console.error('[TTS-Processing] Error:', error);
 
     if (retryCount < MAX_RETRIES) {
       const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
-      console.log(`[TTS-Processing] Retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+      console.log(`[TTS-Processing] Retrying in ${delay}ms (${retryCount + 1}/${MAX_RETRIES})`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return processChunk(chunk, retryCount + 1);
     }
+    
     throw error;
   }
 };
