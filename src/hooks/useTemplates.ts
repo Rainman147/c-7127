@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Json } from '@/integrations/supabase/types';
 
 interface Template {
   id: string;
@@ -11,14 +12,15 @@ interface Template {
     dataFormatting: string;
     priorityRules: string;
     specialConditions: string;
-  };
+  } | null;
   schema?: {
     sections: string[];
     requiredFields: string[];
-  };
-  priority_rules?: Record<string, unknown>;
+  } | null;
+  priority_rules?: Json | null;
   created_at: string;
   updated_at: string;
+  user_id: string;
 }
 
 interface CreateTemplateInput {
@@ -60,6 +62,7 @@ export const useTemplates = () => {
         throw error;
       }
 
+      // Type assertion to ensure the data matches our Template interface
       return data as Template[];
     },
   });
