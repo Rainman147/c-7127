@@ -12,12 +12,7 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
-// Utility function to measure execution time
-const measureTime = (startTime: number): string => {
-  return `${(Date.now() - startTime).toFixed(2)}ms`;
-};
-
-// Function to validate audio data
+// Function to validate audio data with more detailed checks
 const validateAudioData = (audioData: ArrayBuffer): boolean => {
   if (!audioData || audioData.byteLength === 0) {
     console.error('[TTS-Edge] Empty audio data received from OpenAI');
@@ -27,15 +22,30 @@ const validateAudioData = (audioData: ArrayBuffer): boolean => {
   // Log audio data details
   console.log(`[TTS-Edge] Received audio data size: ${audioData.byteLength} bytes`);
 
-  // Basic MP3 header validation (checking for MP3 sync word)
+  // Basic MP3 frame header validation
   const dataView = new DataView(audioData);
-  const header = dataView.getUint16(0);
-  if ((header & 0xFFFE) !== 0xFFFE) {
-    console.warn('[TTS-Edge] Warning: Audio data may not be valid MP3 format');
+  
+  try {
+    // Check for MP3 sync word (should be 0xFFF* where * can be any value)
+    const syncWord = dataView.getUint16(0);
+    const isValidSync = (syncWord & 0xFFF0) === 0xFFF0;
+    
+    if (!isValidSync) {
+      console.warn('[TTS-Edge] Warning: Data does not start with valid MP3 sync word');
+      // Don't throw here, just log the warning
+    }
+
+    // Additional MP3 frame validation
+    if (audioData.byteLength < 128) { // Minimum size for a valid MP3
+      console.error('[TTS-Edge] Audio data too small to be valid MP3');
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('[TTS-Edge] Error during audio validation:', error);
     return false;
   }
-
-  return true;
 };
 
 // Function to handle OpenAI TTS API request with timeout
@@ -170,3 +180,8 @@ serve(async (req) => {
     );
   }
 });
+
+// Utility function to measure execution time
+const measureTime = (startTime: number): string => {
+  return `${(Date.now() - startTime).toFixed(2)}ms`;
+};
