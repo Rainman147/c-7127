@@ -1,76 +1,74 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useDebouncedCallback } from 'use-debounce';
-import { audioEngine } from '@/utils/audio/audioEngine';
-
-const MAX_TEXT_LENGTH = 4096;
 
 export const useAudioPlayer = (options?: { onError?: (error: string) => void }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  
+  // Initialize speech synthesis
+  const synth = window.speechSynthesis;
+  let utterance: SpeechSynthesisUtterance | null = null;
 
-  const handlePlayback = useDebouncedCallback(async (text: string) => {
+  // Cleanup function to stop any ongoing speech
+  const cleanup = useCallback(() => {
+    if (utterance) {
+      synth.cancel();
+      utterance = null;
+    }
+    setIsPlaying(false);
+    setIsLoading(false);
+  }, [synth]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
+
+  const handlePlayback = useCallback((text: string) => {
     console.log('[useAudioPlayer] Starting playback request:', { textLength: text.length });
 
     if (isPlaying) {
       console.log('[useAudioPlayer] Stopping current playback');
-      audioEngine.stop();
-      setIsPlaying(false);
-      setIsLoading(false);
-      return;
-    }
-
-    if (isProcessing) {
-      console.log('[useAudioPlayer] Request already in progress');
+      cleanup();
       return;
     }
 
     try {
       setIsLoading(true);
-      setIsProcessing(true);
-      console.log('[useAudioPlayer] Starting text-to-speech process');
-
-      const truncatedText = text.slice(0, MAX_TEXT_LENGTH);
-      if (text.length > MAX_TEXT_LENGTH) {
-        console.warn('[useAudioPlayer] Text truncated to 4096 characters');
-        toast({
-          title: "Text too long",
-          description: "The text has been truncated to fit the maximum length.",
-          variant: "default",
-        });
-      }
-
-      const response = await supabase.functions.invoke('text-to-speech', {
-        body: { text: truncatedText }
-      });
-
-      if (response.error) {
-        throw new Error(`API Error: ${response.error.message}`);
-      }
-
-      if (!response.data) {
-        throw new Error('No audio data received');
-      }
-
-      console.log('[useAudioPlayer] Received audio data, preparing playback');
-
-      // Convert the response data to ArrayBuffer
-      const uint8Array = new Uint8Array(Object.values(response.data));
-      const audioBuffer = await audioEngine.loadAudio(uint8Array.buffer);
+      utterance = new SpeechSynthesisUtterance(text);
       
-      // Start playback
-      audioEngine.play(audioBuffer);
-      setIsPlaying(true);
-      setIsLoading(false);
+      utterance.onstart = () => {
+        console.log('[useAudioPlayer] Speech playback started');
+        setIsPlaying(true);
+        setIsLoading(false);
+      };
+
+      utterance.onend = () => {
+        console.log('[useAudioPlayer] Speech playback completed');
+        cleanup();
+      };
+
+      utterance.onerror = (event) => {
+        console.error('[useAudioPlayer] Speech playback error:', event.error);
+        cleanup();
+        
+        toast({
+          title: "Playback Error",
+          description: "Unable to play audio. Please try again.",
+          variant: "destructive",
+        });
+        
+        options?.onError?.(event.error);
+      };
+
+      synth.speak(utterance);
 
     } catch (error: any) {
-      console.error('[useAudioPlayer] Error in text-to-speech process:', error);
-      audioEngine.stop();
-      setIsPlaying(false);
-      setIsLoading(false);
+      console.error('[useAudioPlayer] Error in speech synthesis:', error);
+      cleanup();
       
       toast({
         title: "Error",
@@ -79,15 +77,12 @@ export const useAudioPlayer = (options?: { onError?: (error: string) => void }) 
       });
       
       options?.onError?.(error.message);
-    } finally {
-      setIsProcessing(false);
     }
-  }, 300);
+  }, [cleanup, isPlaying, toast, options]);
 
   return {
     isLoading,
     isPlaying,
-    isProcessing,
     handlePlayback
   };
 };
