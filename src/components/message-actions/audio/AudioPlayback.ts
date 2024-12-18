@@ -1,9 +1,21 @@
+interface AudioContextType extends AudioContext {
+  webkitAudioContext?: typeof AudioContext;
+}
+
+interface WindowWithAudioContext extends Window {
+  webkitAudioContext?: typeof AudioContext;
+}
+
 export const createAudioContext = async (): Promise<AudioContext> => {
   console.log('[TTS-Playback] Creating AudioContext');
   
   // Define the AudioContext constructor with proper typing
-  const AudioContextConstructor = window.AudioContext || 
-    (window as any).webkitAudioContext;
+  const AudioContextConstructor = (window as WindowWithAudioContext).AudioContext || 
+    (window as WindowWithAudioContext).webkitAudioContext;
+  
+  if (!AudioContextConstructor) {
+    throw new Error('AudioContext not supported in this browser');
+  }
   
   const audioContext = new AudioContextConstructor({
     latencyHint: 'interactive',
@@ -11,6 +23,7 @@ export const createAudioContext = async (): Promise<AudioContext> => {
   });
   
   if (audioContext.state === 'suspended') {
+    console.log('[TTS-Playback] Resuming suspended audio context');
     await audioContext.resume();
   }
   

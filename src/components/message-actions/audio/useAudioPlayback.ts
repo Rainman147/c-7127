@@ -14,17 +14,21 @@ export const useAudioPlayback = () => {
     try {
       // Handle stop playback
       if (isPlaying) {
+        console.log('[TTS] Stopping current playback');
         setIsPlaying(false);
         return;
       }
 
       setIsLoading(true);
+      console.log('[TTS] Content to process:', content.substring(0, 50) + '...');
 
       // Create audio context with user interaction
       const audioContext = await createAudioContext();
-      console.log('[TTS] Audio context created successfully:', audioContext.state);
+      console.log('[TTS] Audio context created:', {
+        state: audioContext.state,
+        sampleRate: audioContext.sampleRate
+      });
 
-      // Show initial toast
       toast({
         title: "Preparing Audio",
         description: "Processing your text...",
@@ -47,8 +51,9 @@ export const useAudioPlayback = () => {
             throw new Error('Received empty audio data');
           }
 
+          console.log(`[TTS] Chunk ${i + 1} size:`, arrayBuffer.byteLength, 'bytes');
           const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-          console.log(`[TTS] Successfully decoded audio for chunk ${i + 1}`);
+          console.log(`[TTS] Successfully decoded audio for chunk ${i + 1}, duration:`, audioBuffer.duration);
 
           const newTime = await scheduleAudioPlayback(
             audioContext,
@@ -79,6 +84,7 @@ export const useAudioPlayback = () => {
           }
           
           currentTime = newTime;
+          console.log(`[TTS] Scheduled chunk ${i + 1}, next start time:`, currentTime);
           
         } catch (error) {
           console.error(`[TTS] Error processing chunk ${i + 1}:`, error);
