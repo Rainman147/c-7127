@@ -42,6 +42,9 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     setOpenTooltipId(templateId);
   }, []);
 
+  // Ensure we always display the current template name
+  const displayName = selectedTemplate?.name || 'Live Patient Session';
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger 
@@ -49,7 +52,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         disabled={isLoading}
         onClick={() => console.log('[TemplateSelector] Dropdown trigger clicked')}
       >
-        <span className="whitespace-nowrap">{selectedTemplate?.name || 'Live Patient Session'}</span>
+        <span className="whitespace-nowrap">{displayName}</span>
         <ChevronDown className="h-4 w-4 opacity-70" />
       </DropdownMenuTrigger>
       <DropdownMenuContent 
