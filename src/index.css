@@ -28,3 +28,44 @@ body {
 .chat-input-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-[#2F2F2F];
 }
+
+/* Message alignment classes */
+.message-container {
+  @apply flex w-full px-4 py-6;
+}
+
+.message-container.user {
+  @apply bg-chatgpt-secondary/50;
+}
+
+.message-container.assistant {
+  @apply bg-transparent;
+}
+
+.message-content {
+  @apply mx-auto flex w-full max-w-3xl gap-6;
+}
+
+.message-bubble {
+  @apply flex-1 space-y-4;
+}
+
+.message-bubble.user {
+  @apply flex justify-end;
+}
+
+.message-bubble.assistant {
+  @apply flex justify-start;
+}
+
+.message-text {
+  @apply prose prose-invert max-w-none leading-7;
+}
+
+.message-text.user {
+  @apply text-right;
+}
+
+.message-text.assistant {
+  @apply text-left;
+}
