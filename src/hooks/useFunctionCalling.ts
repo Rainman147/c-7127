@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import type { AIFunction } from '@/types/functionCalls';
 
 interface FunctionCallLog {
@@ -94,35 +95,29 @@ export const useFunctionCalling = () => {
     console.log(`[FunctionCall] Processing function call: ${functionName}`, parameters);
 
     try {
-      const response = await fetch('/api/function-call', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Call the Supabase Edge Function named 'function-call'
+      const { data, error } = await supabase.functions.invoke('function-call', {
+        body: {
           function: functionName,
           parameters,
-        }),
+        }
       });
 
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.message || 'Function call failed');
-      }
+      if (error) throw error;
+      if (!data) throw new Error('No response from function');
 
       // Log successful function call
-      logFunctionCall(functionName, parameters, 'success', result);
+      logFunctionCall(functionName, parameters, 'success', data);
       
       // Show success toast with contextual message
       toast({
         title: "Success",
-        description: getFeedbackMessage(functionName, result, parameters),
+        description: getFeedbackMessage(functionName, data, parameters),
         variant: "default",
       });
 
-      console.log(`[FunctionCall] Function call successful:`, result);
-      return result;
+      console.log(`[FunctionCall] Function call successful:`, data);
+      return data;
     } catch (error: any) {
       // Log failed function call
       logFunctionCall(functionName, parameters, 'error', undefined, error.message);
