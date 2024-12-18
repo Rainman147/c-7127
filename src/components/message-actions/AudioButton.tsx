@@ -64,7 +64,8 @@ export const AudioButton = ({ content }: { content: string }) => {
       }
 
       const response = await supabase.functions.invoke('text-to-speech', {
-        body: { text: truncatedText }
+        body: { text: truncatedText },
+        responseType: 'arrayBuffer'  // Request response as ArrayBuffer
       });
 
       if (response.error) {
@@ -82,13 +83,8 @@ export const AudioButton = ({ content }: { content: string }) => {
       const audio = new Audio();
       audioRef.current = audio;
 
-      // Convert the response data to a Blob
-      const audioData = atob(response.data);
-      const arrayBuffer = new Uint8Array(audioData.length);
-      for (let i = 0; i < audioData.length; i++) {
-        arrayBuffer[i] = audioData.charCodeAt(i);
-      }
-      const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+      // Create blob directly from the ArrayBuffer
+      const blob = new Blob([response.data], { type: 'audio/mp3' });
       const audioUrl = URL.createObjectURL(blob);
       
       // Set up audio element
