@@ -21,6 +21,31 @@ class AudioEngine {
     }
   }
 
+  private validateAudioData(arrayBuffer: ArrayBuffer): void {
+    // Check if the buffer is empty
+    if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+      throw new Error('Empty audio data received');
+    }
+
+    // Log the binary data details
+    console.log('[AudioEngine] Validating audio data:', {
+      size: arrayBuffer.byteLength,
+      type: Object.prototype.toString.call(arrayBuffer)
+    });
+
+    // Check for minimum valid MP3 size (MP3 header is typically 10 bytes)
+    if (arrayBuffer.byteLength < 10) {
+      throw new Error('Invalid audio data: too small to be valid MP3');
+    }
+
+    // Basic MP3 header validation (checking for MP3 sync word: 0xFFFB)
+    const dataView = new DataView(arrayBuffer);
+    const header = dataView.getUint16(0);
+    if ((header & 0xFFFE) !== 0xFFFE) {
+      console.warn('[AudioEngine] Warning: Data may not be valid MP3 format');
+    }
+  }
+
   async loadAudio(arrayBuffer: ArrayBuffer): Promise<AudioBuffer> {
     console.log('[AudioEngine] Loading audio data:', { 
       size: arrayBuffer.byteLength,
@@ -31,30 +56,63 @@ class AudioEngine {
       throw new Error('Audio context not initialized');
     }
 
-    if (!(arrayBuffer instanceof ArrayBuffer)) {
-      console.error('[AudioEngine] Invalid input: not an ArrayBuffer');
-      throw new Error('Invalid audio data format');
-    }
-
     try {
-      // Resume context if it's suspended (needed for some browsers)
-      if (this.context.state === 'suspended') {
-        console.log('[AudioEngine] Resuming suspended audio context');
-        await this.context.resume();
-      }
+      // Validate the incoming audio data
+      this.validateAudioData(arrayBuffer);
 
-      // Create a copy of the ArrayBuffer to ensure it's not modified during decoding
-      const bufferCopy = arrayBuffer.slice(0);
-      console.log('[AudioEngine] Attempting to decode audio data');
-      
-      const audioBuffer = await this.context.decodeAudioData(bufferCopy);
-      console.log('[AudioEngine] Audio data decoded successfully:', {
-        duration: audioBuffer.duration,
-        numberOfChannels: audioBuffer.numberOfChannels,
-        sampleRate: audioBuffer.sampleRate
-      });
-      
-      return audioBuffer;
+      // Create a fallback mechanism using HTML5 Audio API if decoding fails
+      const tryFallbackPlayback = async (): Promise<AudioBuffer> => {
+        console.log('[AudioEngine] Attempting fallback playback method');
+        const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        
+        return new Promise((resolve, reject) => {
+          audio.oncanplaythrough = async () => {
+            try {
+              // Create an offline context to convert HTML5 Audio to AudioBuffer
+              const offlineCtx = new OfflineAudioContext(
+                audio.channelCount || 1,
+                audio.duration * (this.context?.sampleRate || 44100),
+                this.context?.sampleRate || 44100
+              );
+              
+              const source = offlineCtx.createMediaElementSource(audio);
+              source.connect(offlineCtx.destination);
+              const renderedBuffer = await offlineCtx.startRendering();
+              URL.revokeObjectURL(url);
+              resolve(renderedBuffer);
+            } catch (error) {
+              reject(error);
+            }
+          };
+          audio.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('Fallback playback failed'));
+          };
+        });
+      };
+
+      try {
+        // Resume context if it's suspended (needed for some browsers)
+        if (this.context.state === 'suspended') {
+          console.log('[AudioEngine] Resuming suspended audio context');
+          await this.context.resume();
+        }
+
+        // Try primary decoding method
+        console.log('[AudioEngine] Attempting to decode audio data');
+        const audioBuffer = await this.context.decodeAudioData(arrayBuffer.slice(0));
+        console.log('[AudioEngine] Audio data decoded successfully:', {
+          duration: audioBuffer.duration,
+          numberOfChannels: audioBuffer.numberOfChannels,
+          sampleRate: audioBuffer.sampleRate
+        });
+        return audioBuffer;
+      } catch (error) {
+        console.warn('[AudioEngine] Primary decoding failed, attempting fallback:', error);
+        return await tryFallbackPlayback();
+      }
     } catch (error) {
       console.error('[AudioEngine] Failed to decode audio data:', error);
       throw new Error('Failed to decode audio data');

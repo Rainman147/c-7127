@@ -17,6 +17,26 @@ const measureTime = (startTime: number): string => {
   return `${(Date.now() - startTime).toFixed(2)}ms`;
 };
 
+// Function to validate audio data
+const validateAudioData = (audioData: ArrayBuffer): boolean => {
+  if (!audioData || audioData.byteLength === 0) {
+    throw new Error('Empty audio data received from OpenAI');
+  }
+
+  // Log audio data details
+  console.log(`[TTS-Edge] Received audio data size: ${audioData.byteLength} bytes`);
+
+  // Basic MP3 header validation (checking for MP3 sync word)
+  const dataView = new DataView(audioData);
+  const header = dataView.getUint16(0);
+  if ((header & 0xFFFE) !== 0xFFFE) {
+    console.warn('[TTS-Edge] Warning: Audio data may not be valid MP3 format');
+    return false;
+  }
+
+  return true;
+};
+
 // Function to handle OpenAI TTS API request with timeout
 async function fetchWithTimeout(text: string, timeout: number): Promise<Response> {
   const controller = new AbortController();
@@ -98,7 +118,12 @@ serve(async (req) => {
 
     // Get audio data as array buffer
     const audioData = await response.arrayBuffer();
-    console.log(`[TTS-Edge] Audio data processed (${audioData.byteLength} bytes) at ${measureTime(startTime)}`);
+    console.log(`[TTS-Edge] Audio data received (${audioData.byteLength} bytes) at ${measureTime(startTime)}`);
+
+    // Validate audio data
+    if (!validateAudioData(audioData)) {
+      throw new Error('Invalid audio data received from OpenAI');
+    }
 
     // Return the audio data with appropriate headers
     return new Response(audioData, { 
