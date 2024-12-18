@@ -23,6 +23,7 @@ async function fetchWithTimeout(text: string, timeout: number): Promise<Response
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
+    console.log('[TTS-Edge] Making request to OpenAI TTS API');
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: {
@@ -40,9 +41,11 @@ async function fetchWithTimeout(text: string, timeout: number): Promise<Response
 
     if (!response.ok) {
       const error = await response.json();
+      console.error('[TTS-Edge] OpenAI API error:', error);
       throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
     }
 
+    console.log('[TTS-Edge] Successfully received response from OpenAI TTS API');
     return response;
   } finally {
     clearTimeout(timeoutId);
