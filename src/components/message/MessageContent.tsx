@@ -24,7 +24,13 @@ const MessageContent = ({
   onSave,
   onCancel
 }: MessageContentProps) => {
-  console.log('[MessageContent] Rendering with role:', role, 'isEditing:', isEditing);
+  console.log('[MessageContent] Rendering with:', { 
+    role, 
+    id, 
+    isEditing,
+    hasContent: !!content,
+    contentPreview: content.substring(0, 50) + '...'
+  });
   
   return (
     <div 
