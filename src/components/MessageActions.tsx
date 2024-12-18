@@ -30,12 +30,17 @@ const MessageActions = ({ content, onEdit }: MessageActionsProps) => {
         <ThumbsDown className="h-4 w-4" />
       </button>
       <CopyButton content={content} />
-      <button 
-        className="p-1 hover:text-white transition-colors"
-        onClick={onEdit}
-      >
-        <Pencil className="h-4 w-4" />
-      </button>
+      {onEdit && (
+        <button 
+          className="p-1 hover:text-white transition-colors"
+          onClick={() => {
+            console.log('[MessageActions] Edit button clicked');
+            onEdit();
+          }}
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+      )}
       <button className="p-1 hover:text-white transition-colors">
         <RotateCcw className="h-4 w-4" />
       </button>

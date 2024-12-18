@@ -16,7 +16,13 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [wasEdited, setWasEdited] = useState(false);
 
-  console.log('[Message] Rendering message:', { role, id, isEditing, content: content.substring(0, 50) + '...' });
+  console.log('[Message] Rendering message:', { 
+    role, 
+    id, 
+    isEditing, 
+    content: content.substring(0, 50) + '...',
+    hasId: !!id 
+  });
 
   const handleSave = (newContent: string) => {
     console.log('[Message] Saving edited content:', newContent.substring(0, 50) + '...');
@@ -33,6 +39,10 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
 
   const handleEdit = () => {
     console.log('[Message] Starting edit for message:', id);
+    if (!id) {
+      console.error('[Message] Cannot edit message without ID');
+      return;
+    }
     setIsEditing(true);
   };
 
@@ -52,7 +62,7 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
             onSave={handleSave}
             onCancel={handleCancel}
           />
-          {role === 'assistant' && (
+          {role === 'assistant' && id && (
             <MessageActions 
               content={editedContent} 
               onEdit={handleEdit}
