@@ -49,9 +49,22 @@ export const useTemplates = () => {
   const createTemplate = useMutation({
     mutationFn: async ({ name, content }: CreateTemplateInput) => {
       console.log('[useTemplates] Creating template:', { name });
+      
+      // Get the current user's ID
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('[useTemplates] Error getting user:', userError);
+        throw new Error('User not authenticated');
+      }
+
       const { data, error } = await supabase
         .from('templates')
-        .insert([{ name, content }])
+        .insert([{ 
+          name, 
+          content,
+          user_id: user.id 
+        }])
         .select()
         .single();
 
