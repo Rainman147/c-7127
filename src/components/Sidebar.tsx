@@ -42,7 +42,7 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newApiKey = e.target.value;
     setApiKey(newApiKey);
-    onApiKeyChange(newApiKey);
+    onApiKeyChange(newApiKey); // Pass the value, not the event
   };
 
   const handleNewChat = async () => {
