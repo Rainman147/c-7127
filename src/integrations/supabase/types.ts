@@ -97,11 +97,13 @@ export type Database = {
       doctors: {
         Row: {
           address: string
+          business_hours: Json
           clinic_name: string
           created_at: string
           id: string
           license_number: string
           phone: string
+          profile_photo_url: string | null
           specialty: string
           title: string
           updated_at: string
@@ -109,11 +111,13 @@ export type Database = {
         }
         Insert: {
           address: string
+          business_hours?: Json
           clinic_name: string
           created_at?: string
           id?: string
           license_number: string
           phone: string
+          profile_photo_url?: string | null
           specialty: string
           title: string
           updated_at?: string
@@ -121,11 +125,13 @@ export type Database = {
         }
         Update: {
           address?: string
+          business_hours?: Json
           clinic_name?: string
           created_at?: string
           id?: string
           license_number?: string
           phone?: string
+          profile_photo_url?: string | null
           specialty?: string
           title?: string
           updated_at?: string
