@@ -1,3 +1,7 @@
+export type BusinessHours = {
+  [key: string]: { open: string; close: string } | null;
+};
+
 export interface DoctorProfileFormData {
   full_name: string;
   email: string;
@@ -8,7 +12,5 @@ export interface DoctorProfileFormData {
   phone: string;
   license_number: string;
   profile_photo_url?: string;
-  business_hours: {
-    [key: string]: { open: string; close: string } | null;
-  };
+  business_hours: BusinessHours;
 }

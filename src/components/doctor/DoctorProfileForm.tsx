@@ -3,7 +3,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useForm } from "react-hook-form";
-import type { DoctorProfileFormData } from "./types";
+import type { DoctorProfileFormData, BusinessHours } from "./types";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedCallback } from "use-debounce";
@@ -23,15 +23,13 @@ const formSchema = z.object({
   address: z.string().min(1, "Address is required"),
   phone: z.string().min(1, "Phone number is required"),
   license_number: z.string().min(1, "License number is required"),
-  business_hours: z.object({
-    monday: z.object({ open: z.string(), close: z.string() }).nullable(),
-    tuesday: z.object({ open: z.string(), close: z.string() }).nullable(),
-    wednesday: z.object({ open: z.string(), close: z.string() }).nullable(),
-    thursday: z.object({ open: z.string(), close: z.string() }).nullable(),
-    friday: z.object({ open: z.string(), close: z.string() }).nullable(),
-    saturday: z.object({ open: z.string(), close: z.string() }).nullable(),
-    sunday: z.object({ open: z.string(), close: z.string() }).nullable(),
-  })
+  business_hours: z.record(
+    z.string(),
+    z.object({
+      open: z.string(),
+      close: z.string()
+    }).nullable()
+  )
 });
 
 export function DoctorProfileForm({ onSuccess }: DoctorProfileFormProps) {
@@ -73,16 +71,29 @@ export function DoctorProfileForm({ onSuccess }: DoctorProfileFormProps) {
           .maybeSingle();
 
         if (error) throw error;
+        
         if (profile) {
-          form.reset(profile);
+          // Convert the business_hours from Json to our expected format
+          const formattedProfile = {
+            ...profile,
+            business_hours: profile.business_hours as BusinessHours
+          };
+          
+          console.log('Loading profile data:', formattedProfile);
+          form.reset(formattedProfile);
         }
       } catch (error) {
         console.error("Error loading profile:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data",
+          variant: "destructive",
+        });
       }
     };
 
     loadProfile();
-  }, [form]);
+  }, [form, toast]);
 
   // Debounced auto-save function
   const debouncedSave = useDebouncedCallback(async (data: DoctorProfileFormData) => {
