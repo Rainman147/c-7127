@@ -10,50 +10,64 @@ export const useTemplateSelection = (
 ) => {
   console.log('[useTemplateSelection] Hook initialized with chatId:', currentChatId);
   
-  const [selectedTemplate, setSelectedTemplate] = useState<Template>(getDefaultTemplate());
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
   const availableTemplates = useAvailableTemplates();
   const { loadTemplate, saveTemplate } = useTemplatePersistence(currentChatId);
 
+  // Initialize with default template or load saved template
   useEffect(() => {
-    const loadTemplateForChat = async () => {
+    const initializeTemplate = async () => {
+      console.log('[useTemplateSelection] Initializing template...');
+      
       if (!currentChatId) {
-        console.log('[useTemplateSelection] No chat ID provided, using default template');
+        const defaultTemplate = getDefaultTemplate();
+        console.log('[useTemplateSelection] No chat ID, using default template:', defaultTemplate.name);
+        setSelectedTemplate(defaultTemplate);
+        onTemplateChange(defaultTemplate);
         return;
       }
 
       try {
         setIsLoading(true);
-        const template = await loadTemplate();
+        const savedTemplate = await loadTemplate();
         
-        if (template) {
-          console.log('[useTemplateSelection] Loaded template from DB:', template.name);
-          setSelectedTemplate(template);
-          onTemplateChange(template);
+        if (savedTemplate) {
+          console.log('[useTemplateSelection] Loaded saved template:', savedTemplate.name);
+          setSelectedTemplate(savedTemplate);
+          onTemplateChange(savedTemplate);
+        } else {
+          const defaultTemplate = getDefaultTemplate();
+          console.log('[useTemplateSelection] No saved template, using default:', defaultTemplate.name);
+          setSelectedTemplate(defaultTemplate);
+          onTemplateChange(defaultTemplate);
         }
       } catch (error) {
-        console.error('[useTemplateSelection] Failed to load template:', error);
+        console.error('[useTemplateSelection] Error loading template:', error);
+        const defaultTemplate = getDefaultTemplate();
+        setSelectedTemplate(defaultTemplate);
+        onTemplateChange(defaultTemplate);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadTemplateForChat();
+    initializeTemplate();
   }, [currentChatId, onTemplateChange, loadTemplate]);
 
   const handleTemplateChange = useCallback(async (template: Template) => {
     console.log('[useTemplateSelection] Template change requested:', template.name);
     
-    if (isTemplateChange(selectedTemplate.id, template)) {
+    if (!selectedTemplate || template.id !== selectedTemplate.id) {
       setIsLoading(true);
       try {
         setSelectedTemplate(template);
         onTemplateChange(template);
         if (currentChatId) {
           await saveTemplate(template);
+          console.log('[useTemplateSelection] Template saved successfully:', template.name);
         }
-        console.log('[useTemplateSelection] Template updated successfully to:', template.name);
       } catch (error) {
         console.error('[useTemplateSelection] Failed to update template:', error);
       } finally {
@@ -62,10 +76,10 @@ export const useTemplateSelection = (
     } else {
       console.log('[useTemplateSelection] Same template selected, no changes needed');
     }
-  }, [currentChatId, selectedTemplate.id, onTemplateChange, saveTemplate]);
+  }, [currentChatId, selectedTemplate, onTemplateChange, saveTemplate]);
 
   return {
-    selectedTemplate,
+    selectedTemplate: selectedTemplate || getDefaultTemplate(),
     availableTemplates,
     isLoading,
     handleTemplateChange

@@ -40,10 +40,6 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     setOpenTooltipId(templateId);
   }, []);
 
-  if (!selectedTemplate) {
-    return null; // Don't render until we have a template
-  }
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger 
@@ -51,7 +47,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         disabled={isLoading}
         onClick={() => console.log('[TemplateSelector] Dropdown trigger clicked')}
       >
-        <span className="whitespace-nowrap">{selectedTemplate.name}</span>
+        <span className="whitespace-nowrap">{selectedTemplate?.name || 'Select Template'}</span>
         <ChevronDown className="h-4 w-4 opacity-70" />
       </DropdownMenuTrigger>
       <DropdownMenuContent 
