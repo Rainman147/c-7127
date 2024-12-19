@@ -68,11 +68,19 @@ serve(async (req) => {
 })
 
 async function handleAddPatient(
-  { name, dob, contactInfo = {} }: { name: string; dob: string; contactInfo?: Record<string, unknown> },
+  { name, dob, contactInfo = {}, medicalHistory, currentMedications = [], recentTests = [], address }: { 
+    name: string; 
+    dob: string; 
+    contactInfo?: Record<string, unknown>;
+    medicalHistory?: string;
+    currentMedications?: unknown[];
+    recentTests?: unknown[];
+    address?: string;
+  },
   userId: string,
   supabaseClient: any
 ) {
-  console.log('Adding patient:', { name, dob, contactInfo })
+  console.log('Adding patient:', { name, dob, contactInfo, medicalHistory, currentMedications, recentTests, address })
   
   const { data, error } = await supabaseClient
     .from('patients')
@@ -80,7 +88,11 @@ async function handleAddPatient(
       user_id: userId,
       name,
       dob,
-      contact_info: contactInfo
+      contact_info: contactInfo,
+      medical_history: medicalHistory,
+      current_medications: currentMedications,
+      recent_tests: recentTests,
+      address
     })
     .select()
     .single()

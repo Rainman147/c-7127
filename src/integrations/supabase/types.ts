@@ -379,29 +379,41 @@ export type Database = {
       }
       patients: {
         Row: {
+          address: string | null
           contact_info: Json | null
           created_at: string
+          current_medications: Json | null
           dob: string
           id: string
+          medical_history: string | null
           name: string
+          recent_tests: Json | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          address?: string | null
           contact_info?: Json | null
           created_at?: string
+          current_medications?: Json | null
           dob: string
           id?: string
+          medical_history?: string | null
           name: string
+          recent_tests?: Json | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          address?: string | null
           contact_info?: Json | null
           created_at?: string
+          current_medications?: Json | null
           dob?: string
           id?: string
+          medical_history?: string | null
           name?: string
+          recent_tests?: Json | null
           updated_at?: string
           user_id?: string
         }

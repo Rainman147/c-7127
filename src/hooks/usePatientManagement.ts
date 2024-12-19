@@ -1,15 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-interface Patient {
-  id: string;
-  name: string;
-  dob: string;
-  contact_info?: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-}
+import type { Patient, Json } from '@/types/database';
 
 export const usePatientManagement = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -18,7 +10,11 @@ export const usePatientManagement = () => {
   const addPatient = async (
     name: string,
     dob: string,
-    contactInfo?: Record<string, unknown>
+    contactInfo?: Json,
+    medicalHistory?: string,
+    currentMedications?: Json[],
+    recentTests?: Json[],
+    address?: string
   ) => {
     setIsLoading(true);
     try {
@@ -27,7 +23,11 @@ export const usePatientManagement = () => {
           action: 'addPatient',
           name,
           dob,
-          contactInfo
+          contactInfo,
+          medicalHistory,
+          currentMedications,
+          recentTests,
+          address
         }
       });
 
