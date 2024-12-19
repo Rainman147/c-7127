@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { LogOut, Settings, User2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 import {
@@ -11,12 +11,14 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { DoctorProfileDialog } from "../DoctorProfileDialog";
-import { useProfilePhoto } from "@/hooks/useProfilePhoto";
 
-export const ProfileMenu = () => {
+interface ProfileMenuProps {
+  profilePhotoUrl: string | null;
+}
+
+export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
   const { toast } = useToast();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const profilePhotoUrl = useProfilePhoto();
 
   console.log('[ProfileMenu] Rendering with profilePhotoUrl:', profilePhotoUrl);
 

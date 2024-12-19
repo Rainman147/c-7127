@@ -41,7 +41,7 @@ const ChatHeaderComponent = ({
           </span>
         </div>
         
-        <ProfileMenu />
+        <ProfileMenu profilePhotoUrl={profilePhotoUrl} />
       </div>
     </div>
   );

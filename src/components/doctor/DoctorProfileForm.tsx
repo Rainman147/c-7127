@@ -11,10 +11,9 @@ import { useDebouncedCallback } from "use-debounce";
 interface DoctorProfileFormProps {
   onSubmit: (data: DoctorProfileFormData) => void;
   isLoading: boolean;
-  initialData?: Partial<DoctorProfileFormData>;
 }
 
-export function DoctorProfileForm({ onSubmit, isLoading, initialData }: DoctorProfileFormProps) {
+export function DoctorProfileForm({ onSubmit, isLoading }: DoctorProfileFormProps) {
   const { toast } = useToast();
   const form = useForm<DoctorProfileFormData>({
     defaultValues: {
@@ -37,16 +36,6 @@ export function DoctorProfileForm({ onSubmit, isLoading, initialData }: DoctorPr
       },
     },
   });
-
-  // Load initial data when provided
-  useEffect(() => {
-    if (initialData) {
-      console.log("[DoctorProfileForm] Setting initial form data:", initialData);
-      Object.entries(initialData).forEach(([key, value]) => {
-        form.setValue(key as keyof DoctorProfileFormData, value);
-      });
-    }
-  }, [initialData, form]);
 
   // Debounced auto-save function
   const debouncedSave = useDebouncedCallback(async (data: DoctorProfileFormData) => {
@@ -75,7 +64,7 @@ export function DoctorProfileForm({ onSubmit, isLoading, initialData }: DoctorPr
         variant: "destructive",
       });
     }
-  }, 1000);
+  }, 1000); // 1 second delay before saving
 
   // Watch for form changes and trigger auto-save
   useEffect(() => {
