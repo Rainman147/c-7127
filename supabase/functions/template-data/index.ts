@@ -11,13 +11,12 @@ interface GetPatientDataParams {
 }
 
 interface GetDoctorDataParams {
-  doctorId?: string; // Optional - if not provided, will use the current user's doctor profile
+  doctorId?: string;
 }
 
 serve(async (req) => {
   console.log('Template data function called with method:', req.method)
   
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -28,13 +27,11 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get the JWT from the Authorization header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       throw new Error('No authorization header')
     }
 
-    // Verify the JWT and get the user
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(
       authHeader.replace('Bearer ', '')
     )
@@ -52,7 +49,6 @@ serve(async (req) => {
         const { patientId } = params as GetPatientDataParams
         console.log('Getting patient data for ID:', patientId)
 
-        // Get patient basic info
         const { data: patient, error: patientError } = await supabaseClient
           .from('patients')
           .select(`
@@ -72,7 +68,21 @@ serve(async (req) => {
         if (patientError) throw patientError
         if (!patient) throw new Error('Patient not found')
 
-        result = { patient }
+        result = { 
+          patient,
+          timestamp: {
+            date: new Date().toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }),
+            time: new Date().toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit'
+            }),
+            iso: new Date().toISOString()
+          }
+        }
         break
       }
 
@@ -80,7 +90,6 @@ serve(async (req) => {
         const { doctorId } = params as GetDoctorDataParams
         console.log('Getting doctor data for user:', user.id)
 
-        // Get doctor profile
         const { data: doctor, error: doctorError } = await supabaseClient
           .from('doctors')
           .select(`
@@ -101,7 +110,21 @@ serve(async (req) => {
         if (doctorError) throw doctorError
         if (!doctor) throw new Error('Doctor profile not found')
 
-        result = { doctor }
+        result = { 
+          doctor,
+          timestamp: {
+            date: new Date().toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }),
+            time: new Date().toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit'
+            }),
+            iso: new Date().toISOString()
+          }
+        }
         break
       }
 
@@ -109,7 +132,6 @@ serve(async (req) => {
         const { patientId } = params as GetPatientDataParams
         console.log('Getting all template data for patient:', patientId)
 
-        // Get both patient and doctor data in parallel
         const [patientResponse, doctorResponse] = await Promise.all([
           supabaseClient
             .from('patients')
@@ -152,7 +174,19 @@ serve(async (req) => {
 
         result = {
           patient: patientResponse.data,
-          doctor: doctorResponse.data
+          doctor: doctorResponse.data,
+          timestamp: {
+            date: new Date().toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }),
+            time: new Date().toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit'
+            }),
+            iso: new Date().toISOString()
+          }
         }
         break
       }

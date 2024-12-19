@@ -4,9 +4,16 @@ import { useToast } from './use-toast';
 import type { Patient } from '@/types/database/patients';
 import type { Doctor } from '@/types/database/doctors';
 
+interface Timestamp {
+  date: string;    // e.g. "December 19, 2024"
+  time: string;    // e.g. "02:30 PM"
+  iso: string;     // e.g. "2024-12-19T14:30:00.000Z"
+}
+
 interface TemplateData {
   patient?: Patient;
   doctor?: Doctor;
+  timestamp?: Timestamp;
 }
 
 export const useTemplateData = () => {
@@ -27,7 +34,7 @@ export const useTemplateData = () => {
 
       if (error) throw error;
       console.log('[useTemplateData] Retrieved patient data:', data);
-      return data.patient;
+      return data;
     } catch (error: any) {
       console.error('[useTemplateData] Error getting patient data:', error);
       toast({
@@ -54,7 +61,7 @@ export const useTemplateData = () => {
 
       if (error) throw error;
       console.log('[useTemplateData] Retrieved doctor data:', data);
-      return data.doctor;
+      return data;
     } catch (error: any) {
       console.error('[useTemplateData] Error getting doctor data:', error);
       toast({
