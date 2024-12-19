@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { TemplateSelector } from "./TemplateSelector";
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
 import {
@@ -11,6 +11,7 @@ import {
 import { Settings, LogOut, User2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { DoctorProfileDialog } from "./DoctorProfileDialog";
 
 interface ChatHeaderProps {
   isSidebarOpen?: boolean;
@@ -24,6 +25,8 @@ const ChatHeaderComponent = ({
   onTemplateChange 
 }: ChatHeaderProps) => {
   const { toast } = useToast();
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  
   console.log('[ChatHeader] Rendering with:', { 
     isSidebarOpen, 
     currentChatId,
@@ -52,49 +55,59 @@ const ChatHeaderComponent = ({
     }
   };
 
-  const handleAccountSettings = () => {
-    // Implement account settings navigation here
-    console.log('Navigate to account settings');
+  const handleProfileClick = () => {
+    setIsProfileOpen(true);
   };
 
   return (
-    <div className="fixed top-0 z-30 w-full border-b border-white/20 bg-chatgpt-main/95 backdrop-blur">
-      <div className="flex h-[60px] items-center justify-between px-4">
-        <div className="flex items-center gap-2">
-          <span className={`${!isSidebarOpen ? 'ml-24' : ''}`}>
-            <TemplateSelector 
-              key={currentChatId || 'default'}
-              currentChatId={currentChatId}
-              onTemplateChange={handleTemplateChange}
-            />
-          </span>
+    <>
+      <div className="fixed top-0 z-30 w-full border-b border-white/20 bg-chatgpt-main/95 backdrop-blur">
+        <div className="flex h-[60px] items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <span className={`${!isSidebarOpen ? 'ml-24' : ''}`}>
+              <TemplateSelector 
+                key={currentChatId || 'default'}
+                currentChatId={currentChatId}
+                onTemplateChange={handleTemplateChange}
+              />
+            </span>
+          </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="focus:outline-none">
+                <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity">
+                  <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=default" />
+                  <AvatarFallback>
+                    <User2 className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer">
+                <User2 className="mr-2 h-4 w-4" />
+                My Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500 focus:text-red-500">
+                <LogOut className="mr-2 h-4 w-4" />
+                Log Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="focus:outline-none">
-              <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity">
-                <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=default" />
-                <AvatarFallback>
-                  <User2 className="h-4 w-4" />
-                </AvatarFallback>
-              </Avatar>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={handleAccountSettings} className="cursor-pointer">
-              <Settings className="mr-2 h-4 w-4" />
-              Account Settings
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500 focus:text-red-500">
-              <LogOut className="mr-2 h-4 w-4" />
-              Log Out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
-    </div>
+
+      <DoctorProfileDialog 
+        open={isProfileOpen}
+        onOpenChange={setIsProfileOpen}
+      />
+    </>
   );
 };
 
