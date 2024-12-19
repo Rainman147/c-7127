@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-
-type DoctorProfile = {
-  profile_photo_url: string | null;
-  user_id: string;
-};
+import type { DoctorProfile } from '@/components/doctor/types';
 
 type DoctorProfileChanges = RealtimePostgresChangesPayload<{
   old: DoctorProfile | null;
@@ -60,7 +56,7 @@ export const useProfilePhoto = () => {
         },
         (payload: DoctorProfileChanges) => {
           console.log('[useProfilePhoto] Realtime update received:', payload);
-          if (payload.new && payload.new.profile_photo_url) {
+          if (payload.new?.profile_photo_url) {
             setProfilePhotoUrl(payload.new.profile_photo_url);
           }
         }

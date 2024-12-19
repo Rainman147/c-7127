@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfilePhotoUpload } from "./doctor/ProfilePhotoUpload";
 import { DoctorProfileForm } from "./doctor/DoctorProfileForm";
-import type { DoctorProfileFormData } from "./doctor/types";
+import type { DoctorProfileFormData, DoctorProfile } from "./doctor/types";
 
 interface DoctorProfileDialogProps {
   open: boolean;
@@ -35,7 +35,20 @@ export function DoctorProfileDialog({ open, onOpenChange }: DoctorProfileDialogP
         console.log("[DoctorProfileDialog] Fetched profile data:", doctorProfile);
         
         if (doctorProfile) {
-          setProfileData(doctorProfile);
+          // Convert the database profile to form data format
+          const formData: Partial<DoctorProfileFormData> = {
+            full_name: doctorProfile.full_name || '',
+            email: doctorProfile.email || '',
+            title: doctorProfile.title,
+            specialty: doctorProfile.specialty,
+            clinic_name: doctorProfile.clinic_name,
+            address: doctorProfile.address,
+            phone: doctorProfile.phone,
+            license_number: doctorProfile.license_number,
+            profile_photo_url: doctorProfile.profile_photo_url,
+            business_hours: doctorProfile.business_hours as DoctorProfileFormData['business_hours']
+          };
+          setProfileData(formData);
           setProfilePhotoUrl(doctorProfile.profile_photo_url);
         }
       } catch (error) {
