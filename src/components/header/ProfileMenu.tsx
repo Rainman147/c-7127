@@ -50,7 +50,7 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
           <button className="focus:outline-none">
             <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity">
               <AvatarImage 
-                src={profilePhotoUrl || "https://api.dicebear.com/7.x/avataaars/svg?seed=default"} 
+                src={profilePhotoUrl || ""} 
                 alt="Profile" 
               />
               <AvatarFallback>
