@@ -11,34 +11,50 @@ interface PatientCardProps {
 export const PatientCard = ({ patient, onClick, onDelete }: PatientCardProps) => {
   // Calculate age from DOB
   const calculateAge = (dob: string) => {
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+    try {
+      const birthDate = new Date(dob);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
+    } catch (error) {
+      console.error('Error calculating age:', error);
+      return 'N/A';
     }
-    return age;
   };
 
-  // Get patient initials
+  // Safely get patient initials
   const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase();
+    try {
+      return name
+        .split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase();
+    } catch (error) {
+      console.error('Error getting initials:', error);
+      return '';
+    }
   };
+
+  // Early return if patient data is invalid
+  if (!patient || !patient.name || !patient.dob) {
+    console.error('Invalid patient data:', patient);
+    return null;
+  }
 
   return (
     <div 
-      className="menu-box hover:bg-chatgpt-hover/30 transition-all duration-200 cursor-pointer group"
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer group"
       onClick={onClick}
     >
       <div className="p-6">
         {/* Avatar */}
         <div className="flex justify-center mb-4">
-          <div className="w-16 h-16 rounded-full bg-chatgpt-secondary/50 flex items-center justify-center text-xl font-semibold">
+          <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-semibold">
             {patient.contact_info?.avatar ? (
               <img 
                 src={patient.contact_info.avatar} 
@@ -46,19 +62,21 @@ export const PatientCard = ({ patient, onClick, onDelete }: PatientCardProps) =>
                 className="w-full h-full rounded-full object-cover"
               />
             ) : (
-              <User className="w-8 h-8" />
+              <User className="w-8 h-8 text-gray-500 dark:text-gray-400" />
             )}
           </div>
         </div>
 
         {/* Patient Info */}
         <div className="text-center mb-4">
-          <h3 className="text-lg font-semibold mb-1">{patient.name}</h3>
-          <p className="text-sm text-gray-400">
+          <h3 className="text-lg font-semibold mb-1 text-gray-900 dark:text-white">
+            {patient.name}
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Age: {calculateAge(patient.dob)} years
           </p>
           {patient.medical_history && (
-            <p className="text-sm text-gray-400 mt-1 line-clamp-2">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
               {patient.medical_history}
             </p>
           )}
