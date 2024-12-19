@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useDebounce } from "use-debounce";
 import { useToast } from "@/hooks/use-toast";
 import { PatientDialog } from "@/components/patients/PatientDialog";
 import { PatientListHeader } from "@/components/patients/list/PatientListHeader";
@@ -9,30 +10,32 @@ import type { Patient } from "@/types/database/patients";
 
 const PatientsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery] = useDebounce(searchQuery, 500);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { toast } = useToast();
   const { isLoading, searchPatients, deletePatient } = usePatientManagement();
 
-  // Memoize the loadPatients function to prevent unnecessary re-renders
   const loadPatients = useCallback(async () => {
     try {
-      console.log('Fetching patients with query:', searchQuery);
-      const results = await searchPatients(searchQuery);
+      console.log('Fetching patients with query:', debouncedQuery);
+      const results = await searchPatients(debouncedQuery);
       console.log('Patients fetched:', results);
       setPatients(results);
     } catch (error) {
       console.error('Error fetching patients:', error);
       toast({
         title: "Error",
-        description: "Failed to load patients",
+        description: "Failed to load patients. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsInitialLoad(false);
     }
-  }, [searchQuery, searchPatients, toast]);
+  }, [debouncedQuery, searchPatients, toast]);
 
-  // Only run the effect when searchQuery changes or loadPatients is redefined
   useEffect(() => {
     loadPatients();
   }, [loadPatients]);
@@ -87,7 +90,7 @@ const PatientsPage = () => {
 
       <PatientGrid
         patients={patients}
-        isLoading={isLoading}
+        isLoading={isLoading || isInitialLoad}
         onPatientClick={handlePatientClick}
         onPatientDelete={handleDeletePatient}
       />
