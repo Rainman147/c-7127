@@ -57,9 +57,12 @@ export const useProfilePhoto = () => {
           console.log('[useProfilePhoto] Realtime update received:', payload);
           if (payload.new && 'profile_photo_url' in payload.new) {
             const newUrl = payload.new.profile_photo_url;
+            // Ensure newUrl is of type string | null before setting state
             if (typeof newUrl === 'string' || newUrl === null) {
               console.log('[useProfilePhoto] Setting new profile photo URL:', newUrl);
               setProfilePhotoUrl(newUrl);
+            } else {
+              console.warn('[useProfilePhoto] Received invalid profile_photo_url type:', typeof newUrl);
             }
           }
         }
