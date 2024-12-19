@@ -65,8 +65,8 @@ export const PatientForm = ({ patient, onClose, onSubmit }: PatientFormProps) =>
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="menu-dialog-content">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full">
+      <div className="menu-dialog-content flex-grow overflow-y-auto">
         <PatientBasicInfo
           name={name}
           dob={dob}

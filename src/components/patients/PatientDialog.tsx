@@ -24,9 +24,9 @@ export const PatientDialog = ({
 }: PatientDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="menu-dialog">
-        <DialogHeader className="menu-dialog-header">
-          <DialogTitle className="menu-dialog-title">
+      <DialogContent className="menu-dialog max-h-[90vh] w-[95vw] max-w-[600px] overflow-y-auto">
+        <DialogHeader className="menu-dialog-header sticky top-0 z-10">
+          <DialogTitle className="menu-dialog-title px-2">
             {patient ? "Edit Patient" : "Add New Patient"}
           </DialogTitle>
         </DialogHeader>

@@ -20,7 +20,7 @@ body {
 }
 
 .menu-dialog {
-  @apply max-w-[480px] max-h-[85vh] p-0 gap-0 bg-[#2F2F2F] border border-white/[0.05] shadow-[0_0_0_1px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden backdrop-blur-sm;
+  @apply bg-[#2F2F2F] border border-white/[0.05] shadow-[0_0_0_1px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden backdrop-blur-sm;
 }
 
 .menu-dialog-header {
@@ -32,11 +32,11 @@ body {
 }
 
 .menu-dialog-content {
-  @apply p-6 space-y-4;
+  @apply p-6 space-y-6;
 }
 
 .menu-dialog-footer {
-  @apply flex justify-end gap-3 px-6 py-4 border-t border-white/[0.05] bg-chatgpt-secondary/5;
+  @apply flex justify-end gap-3 px-6 py-4 border-t border-white/[0.05] bg-chatgpt-secondary/5 sticky bottom-0;
 }
 
 /* Form styling */
@@ -51,12 +51,13 @@ body {
 
 /* Button styling */
 .btn-primary {
-  @apply px-4 py-2 bg-white/10 hover:bg-white/15 text-white rounded-lg transition-all duration-200 
-  disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply px-6 py-2.5 bg-white/10 hover:bg-white/15 text-white rounded-lg transition-all duration-200 
+  disabled:opacity-50 disabled:cursor-not-allowed relative after:absolute after:inset-0 after:rounded-lg 
+  after:bg-white/5 after:opacity-0 hover:after:opacity-100 after:transition-opacity;
 }
 
 .btn-secondary {
-  @apply px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-all duration-200;
+  @apply px-6 py-2.5 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-all duration-200;
 }
 
 /* Sidebar scrollbar */
