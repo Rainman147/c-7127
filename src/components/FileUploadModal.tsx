@@ -81,29 +81,29 @@ const FileUploadModal = ({ onFileSelected, onTranscriptionComplete }: FileUpload
       </SheetTrigger>
       <SheetContent 
         side="bottom" 
-        className="sm:max-w-[425px] mx-auto rounded-t-xl bg-chatgpt-main border-chatgpt-border"
+        className="menu-dialog sm:max-w-[425px] mx-auto rounded-t-xl"
       >
-        <SheetHeader>
-          <SheetTitle className="text-white">Upload File</SheetTitle>
+        <SheetHeader className="menu-dialog-header">
+          <SheetTitle className="menu-dialog-title">Upload File</SheetTitle>
         </SheetHeader>
         
         <Tabs defaultValue="audio" className="mt-6">
           <TabsList className="bg-chatgpt-secondary/50">
-            <TabsTrigger value="audio" className="data-[state=active]:bg-chatgpt-hover">
+            <TabsTrigger value="audio" className="menu-item data-[state=active]:bg-chatgpt-hover">
               <FileAudio className="h-4 w-4 mr-2" />
               Audio
             </TabsTrigger>
-            <TabsTrigger value="text" className="data-[state=active]:bg-chatgpt-hover" disabled>
+            <TabsTrigger value="text" className="menu-item data-[state=active]:bg-chatgpt-hover" disabled>
               <FileText className="h-4 w-4 mr-2" />
               Text
             </TabsTrigger>
-            <TabsTrigger value="image" className="data-[state=active]:bg-chatgpt-hover" disabled>
+            <TabsTrigger value="image" className="menu-item data-[state=active]:bg-chatgpt-hover" disabled>
               <ImageIcon className="h-4 w-4 mr-2" />
               Image
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="audio" className="mt-4">
+          <TabsContent value="audio" className="menu-dialog-content">
             <div className="space-y-4">
               <div className="text-sm text-white/70">
                 Supported formats: MP3, WAV, FLAC (up to 100MB)
@@ -142,13 +142,13 @@ const FileUploadModal = ({ onFileSelected, onTranscriptionComplete }: FileUpload
             </div>
           </TabsContent>
           
-          <TabsContent value="text" className="mt-4">
+          <TabsContent value="text" className="menu-dialog-content">
             <div className="text-sm text-white/70">
               Text file upload coming soon...
             </div>
           </TabsContent>
           
-          <TabsContent value="image" className="mt-4">
+          <TabsContent value="image" className="menu-dialog-content">
             <div className="text-sm text-white/70">
               Image upload coming soon...
             </div>

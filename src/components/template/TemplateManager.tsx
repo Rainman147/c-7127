@@ -160,70 +160,72 @@ export const TemplateManager = () => {
               New Template
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create New Template</DialogTitle>
+          <DialogContent className="menu-dialog">
+            <DialogHeader className="menu-dialog-header">
+              <DialogTitle className="menu-dialog-title">Create New Template</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Template Name</label>
-                <Input
-                  placeholder="Template Name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-1">Template Content</label>
-                <Textarea
-                  placeholder="Template Content"
-                  value={formData.content}
-                  onChange={(e) => handleInputChange('content', e.target.value)}
-                  rows={5}
-                />
-              </div>
-
+            <div className="menu-dialog-content">
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">Instructions</h3>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Template Name</label>
+                  <Input
+                    placeholder="Template Name"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                  />
+                </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Data Formatting</label>
+                  <label className="block text-sm font-medium mb-1">Template Content</label>
                   <Textarea
-                    placeholder="Specify data formatting requirements..."
-                    value={formData.instructions.dataFormatting}
-                    onChange={(e) => handleInstructionChange('dataFormatting', e.target.value)}
-                    rows={3}
+                    placeholder="Template Content"
+                    value={formData.content}
+                    onChange={(e) => handleInputChange('content', e.target.value)}
+                    rows={5}
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">Priority Rules</label>
-                  <Textarea
-                    placeholder="Define priority rules..."
-                    value={formData.instructions.priorityRules}
-                    onChange={(e) => handleInstructionChange('priorityRules', e.target.value)}
-                    rows={3}
-                  />
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Instructions</h3>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Data Formatting</label>
+                    <Textarea
+                      placeholder="Specify data formatting requirements..."
+                      value={formData.instructions.dataFormatting}
+                      onChange={(e) => handleInstructionChange('dataFormatting', e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Priority Rules</label>
+                    <Textarea
+                      placeholder="Define priority rules..."
+                      value={formData.instructions.priorityRules}
+                      onChange={(e) => handleInstructionChange('priorityRules', e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Special Conditions</label>
+                    <Textarea
+                      placeholder="Specify any special conditions..."
+                      value={formData.instructions.specialConditions}
+                      onChange={(e) => handleInstructionChange('specialConditions', e.target.value)}
+                      rows={3}
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">Special Conditions</label>
-                  <Textarea
-                    placeholder="Specify any special conditions..."
-                    value={formData.instructions.specialConditions}
-                    onChange={(e) => handleInstructionChange('specialConditions', e.target.value)}
-                    rows={3}
-                  />
-                </div>
+                <Button 
+                  onClick={handleCreateTemplate}
+                  className="w-full"
+                >
+                  Create Template
+                </Button>
               </div>
-
-              <Button 
-                onClick={handleCreateTemplate}
-                className="w-full"
-              >
-                Create Template
-              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -233,7 +235,7 @@ export const TemplateManager = () => {
         {templates.map((template) => (
           <div
             key={template.id}
-            className="flex items-center justify-between p-4 bg-chatgpt-secondary rounded-lg"
+            className="menu-box p-4 flex items-center justify-between"
           >
             <div className="flex items-center gap-2">
               <span className="font-medium">{template.name}</span>
@@ -244,7 +246,7 @@ export const TemplateManager = () => {
                       <Info className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
+                  <TooltipContent className="menu-box p-3 max-w-xs">
                     <div className="space-y-2">
                       <p className="font-medium">Instructions:</p>
                       {template.instructions && (
@@ -274,12 +276,12 @@ export const TemplateManager = () => {
                     <Pencil className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Edit Template</DialogTitle>
+                <DialogContent className="menu-dialog">
+                  <DialogHeader className="menu-dialog-header">
+                    <DialogTitle className="menu-dialog-title">Edit Template</DialogTitle>
                   </DialogHeader>
                   {editingTemplate && (
-                    <div className="space-y-4">
+                    <div className="menu-dialog-content">
                       <Textarea
                         value={editingTemplate.content}
                         onChange={(e) => setEditingTemplate({
@@ -288,7 +290,7 @@ export const TemplateManager = () => {
                         })}
                         rows={10}
                       />
-                      <Button onClick={handleUpdateTemplate}>Save Changes</Button>
+                      <Button onClick={handleUpdateTemplate} className="mt-4">Save Changes</Button>
                     </div>
                   )}
                 </DialogContent>
@@ -300,14 +302,14 @@ export const TemplateManager = () => {
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Template</AlertDialogTitle>
-                    <AlertDialogDescription>
+                <AlertDialogContent className="menu-dialog">
+                  <AlertDialogHeader className="menu-dialog-header">
+                    <AlertDialogTitle className="menu-dialog-title">Delete Template</AlertDialogTitle>
+                    <AlertDialogDescription className="text-white/70">
                       Are you sure you want to delete this template? This action cannot be undone.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
-                  <AlertDialogFooter>
+                  <AlertDialogFooter className="menu-dialog-content">
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={() => deleteTemplate(template.id)}>
                       Delete

@@ -61,24 +61,24 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent 
           align="end" 
-          className="menu-box w-56 p-0"
+          className="menu-box w-56"
         >
           <div className="menu-dialog-header">
             <span className="menu-dialog-title">Account</span>
           </div>
           <div className="p-1">
-            <DropdownMenuItem onClick={handleProfileClick} className="sidebar-item">
+            <DropdownMenuItem onClick={handleProfileClick} className="menu-item">
               <User2 className="h-4 w-4" />
               My Profile
             </DropdownMenuItem>
-            <DropdownMenuItem className="sidebar-item">
+            <DropdownMenuItem className="menu-item">
               <Settings className="h-4 w-4" />
               Settings
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="my-1" />
+            <DropdownMenuSeparator className="my-1 bg-white/[0.05]" />
             <DropdownMenuItem 
               onClick={handleLogout} 
-              className="sidebar-item text-red-500 focus:text-red-500"
+              className="menu-item text-red-500 focus:text-red-500"
             >
               <LogOut className="h-4 w-4" />
               Log Out
