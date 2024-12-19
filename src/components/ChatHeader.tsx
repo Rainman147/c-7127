@@ -1,17 +1,7 @@
-import { memo, useState, useEffect } from "react";
+import { memo } from "react";
 import { TemplateSelector } from "./TemplateSelector";
-import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
-import { Settings, LogOut, User2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { DoctorProfileDialog } from "./DoctorProfileDialog";
+import { ProfileMenu } from "./header/ProfileMenu";
+import { useProfilePhoto } from "@/hooks/useProfilePhoto";
 
 interface ChatHeaderProps {
   isSidebarOpen?: boolean;
@@ -24,32 +14,7 @@ const ChatHeaderComponent = ({
   currentChatId,
   onTemplateChange 
 }: ChatHeaderProps) => {
-  const { toast } = useToast();
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
-  
-  useEffect(() => {
-    const fetchDoctorProfile = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data: doctorProfile } = await supabase
-          .from('doctors')
-          .select('profile_photo_url')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (doctorProfile?.profile_photo_url) {
-          setProfilePhotoUrl(doctorProfile.profile_photo_url);
-        }
-      } catch (error) {
-        console.error('Error fetching doctor profile:', error);
-      }
-    };
-
-    fetchDoctorProfile();
-  }, []);
+  const profilePhotoUrl = useProfilePhoto();
   
   console.log('[ChatHeader] Rendering with:', { 
     isSidebarOpen, 
@@ -63,79 +28,22 @@ const ChatHeaderComponent = ({
     onTemplateChange(template);
   };
 
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      toast({
-        title: "Logged out successfully",
-        description: "You have been logged out of your account",
-      });
-    } catch (error) {
-      console.error('Error logging out:', error);
-      toast({
-        title: "Error logging out",
-        description: "There was a problem logging out. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleProfileClick = () => {
-    setIsProfileOpen(true);
-  };
-
   return (
-    <>
-      <div className="fixed top-0 z-30 w-full border-b border-white/20 bg-chatgpt-main/95 backdrop-blur">
-        <div className="flex h-[60px] items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <span className={`${!isSidebarOpen ? 'ml-24' : ''}`}>
-              <TemplateSelector 
-                key={currentChatId || 'default'}
-                currentChatId={currentChatId}
-                onTemplateChange={handleTemplateChange}
-              />
-            </span>
-          </div>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="focus:outline-none">
-                <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity">
-                  <AvatarImage 
-                    src={profilePhotoUrl || "https://api.dicebear.com/7.x/avataaars/svg?seed=default"} 
-                    alt="Profile" 
-                  />
-                  <AvatarFallback>
-                    <User2 className="h-4 w-4" />
-                  </AvatarFallback>
-                </Avatar>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer">
-                <User2 className="mr-2 h-4 w-4" />
-                My Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer">
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500 focus:text-red-500">
-                <LogOut className="mr-2 h-4 w-4" />
-                Log Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+    <div className="fixed top-0 z-30 w-full border-b border-white/20 bg-chatgpt-main/95 backdrop-blur">
+      <div className="flex h-[60px] items-center justify-between px-4">
+        <div className="flex items-center gap-2">
+          <span className={`${!isSidebarOpen ? 'ml-24' : ''}`}>
+            <TemplateSelector 
+              key={currentChatId || 'default'}
+              currentChatId={currentChatId}
+              onTemplateChange={handleTemplateChange}
+            />
+          </span>
         </div>
+        
+        <ProfileMenu profilePhotoUrl={profilePhotoUrl} />
       </div>
-
-      <DoctorProfileDialog 
-        open={isProfileOpen}
-        onOpenChange={setIsProfileOpen}
-      />
-    </>
+    </div>
   );
 };
 
