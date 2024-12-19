@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -16,25 +16,27 @@ const PatientsPage = () => {
   const { toast } = useToast();
   const { isLoading, searchPatients, deletePatient } = usePatientManagement();
 
-  useEffect(() => {
-    const loadPatients = async () => {
-      try {
-        console.log('Fetching patients...');
-        const results = await searchPatients(searchQuery);
-        console.log('Patients fetched:', results);
-        setPatients(results);
-      } catch (error) {
-        console.error('Error fetching patients:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load patients",
-          variant: "destructive",
-        });
-      }
-    };
+  // Memoize the loadPatients function to prevent unnecessary re-renders
+  const loadPatients = useCallback(async () => {
+    try {
+      console.log('Fetching patients with query:', searchQuery);
+      const results = await searchPatients(searchQuery);
+      console.log('Patients fetched:', results);
+      setPatients(results);
+    } catch (error) {
+      console.error('Error fetching patients:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load patients",
+        variant: "destructive",
+      });
+    }
+  }, [searchQuery, searchPatients, toast]);
 
+  // Only run the effect when searchQuery changes or loadPatients is redefined
+  useEffect(() => {
     loadPatients();
-  }, [searchQuery, toast, searchPatients]);
+  }, [loadPatients]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -64,21 +66,11 @@ const PatientsPage = () => {
   };
 
   const handlePatientAdded = async () => {
-    try {
-      const results = await searchPatients("");
-      setPatients(results);
-      toast({
-        title: "Success",
-        description: "Patient added successfully",
-      });
-    } catch (error) {
-      console.error('Error refreshing patients:', error);
-      toast({
-        title: "Error",
-        description: "Failed to refresh patient list",
-        variant: "destructive",
-      });
-    }
+    await loadPatients();
+    toast({
+      title: "Success",
+      description: "Patient added successfully",
+    });
   };
 
   return (
