@@ -10,19 +10,26 @@ export const useTemplateSelection = (
 ) => {
   console.log('[useTemplateSelection] Hook initialized with chatId:', currentChatId);
   
-  const [selectedTemplate, setSelectedTemplate] = useState<Template>(getDefaultTemplate());
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
   const availableTemplates = useAvailableTemplates();
   const { loadTemplate, saveTemplate } = useTemplatePersistence(currentChatId);
 
+  // Initialize with default template only if no template is selected
+  useEffect(() => {
+    if (!selectedTemplate) {
+      const defaultTemplate = getDefaultTemplate();
+      console.log('[useTemplateSelection] Initializing with default template:', defaultTemplate.name);
+      setSelectedTemplate(defaultTemplate);
+      onTemplateChange(defaultTemplate);
+    }
+  }, [selectedTemplate, onTemplateChange]);
+
   useEffect(() => {
     const loadTemplateForChat = async () => {
       if (!currentChatId) {
-        console.log('[useTemplateSelection] No chat ID provided, using default template');
-        const defaultTemplate = getDefaultTemplate();
-        setSelectedTemplate(defaultTemplate);
-        onTemplateChange(defaultTemplate);
+        console.log('[useTemplateSelection] No chat ID provided');
         return;
       }
 
@@ -48,7 +55,7 @@ export const useTemplateSelection = (
   const handleTemplateChange = useCallback(async (template: Template) => {
     console.log('[useTemplateSelection] Template change requested:', template.name);
     
-    if (!isTemplateChange(selectedTemplate.id, template)) {
+    if (selectedTemplate && !isTemplateChange(selectedTemplate.id, template)) {
       console.log('[useTemplateSelection] Same template selected, no changes needed');
       return;
     }
@@ -66,10 +73,10 @@ export const useTemplateSelection = (
     } finally {
       setIsLoading(false);
     }
-  }, [currentChatId, selectedTemplate.id, onTemplateChange, saveTemplate]);
+  }, [currentChatId, selectedTemplate, onTemplateChange, saveTemplate]);
 
   return {
-    selectedTemplate,
+    selectedTemplate: selectedTemplate || getDefaultTemplate(), // Ensure we always return a template
     availableTemplates,
     isLoading,
     handleTemplateChange
