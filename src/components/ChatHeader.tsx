@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useState, useEffect } from "react";
 import { TemplateSelector } from "./TemplateSelector";
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
 import {
@@ -26,11 +26,36 @@ const ChatHeaderComponent = ({
 }: ChatHeaderProps) => {
   const { toast } = useToast();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const fetchDoctorProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: doctorProfile } = await supabase
+          .from('doctors')
+          .select('profile_photo_url')
+          .eq('user_id', user.id)
+          .single();
+
+        if (doctorProfile?.profile_photo_url) {
+          setProfilePhotoUrl(doctorProfile.profile_photo_url);
+        }
+      } catch (error) {
+        console.error('Error fetching doctor profile:', error);
+      }
+    };
+
+    fetchDoctorProfile();
+  }, []);
   
   console.log('[ChatHeader] Rendering with:', { 
     isSidebarOpen, 
     currentChatId,
-    hasTemplateChangeHandler: !!onTemplateChange 
+    hasTemplateChangeHandler: !!onTemplateChange,
+    profilePhotoUrl 
   });
   
   const handleTemplateChange = (template: any) => {
@@ -77,7 +102,10 @@ const ChatHeaderComponent = ({
             <DropdownMenuTrigger asChild>
               <button className="focus:outline-none">
                 <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity">
-                  <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=default" />
+                  <AvatarImage 
+                    src={profilePhotoUrl || "https://api.dicebear.com/7.x/avataaars/svg?seed=default"} 
+                    alt="Profile" 
+                  />
                   <AvatarFallback>
                     <User2 className="h-4 w-4" />
                   </AvatarFallback>
