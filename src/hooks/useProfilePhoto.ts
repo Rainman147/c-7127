@@ -3,15 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { DoctorProfile } from '@/components/doctor/types';
 
-type DoctorProfileChanges = RealtimePostgresChangesPayload<{
-  old: DoctorProfile | null;
-  new: DoctorProfile | null;
-}>;
-
-type DoctorProfileUpdate = {
-  profile_photo_url: string | null;
-};
-
 export const useProfilePhoto = () => {
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
   
@@ -47,24 +38,17 @@ export const useProfilePhoto = () => {
 
     const channel = supabase
       .channel('doctors_profile_changes')
-      .on(
+      .on<DoctorProfile>(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'doctors'
         },
-        (payload: DoctorProfileChanges) => {
+        (payload: RealtimePostgresChangesPayload<DoctorProfile>) => {
           console.log('[useProfilePhoto] Realtime update received:', payload);
-          const newProfile = payload.new;
-          
-          // Type guard to ensure newProfile has the correct shape
-          function isProfileUpdate(profile: any): profile is DoctorProfileUpdate {
-            return profile && typeof profile === 'object' && 'profile_photo_url' in profile;
-          }
-
-          if (newProfile && isProfileUpdate(newProfile)) {
-            setProfilePhotoUrl(newProfile.profile_photo_url);
+          if (payload.new) {
+            setProfilePhotoUrl(payload.new.profile_photo_url);
           }
         }
       )
