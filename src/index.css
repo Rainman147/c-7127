@@ -16,7 +16,7 @@ body {
 }
 
 .menu-dialog-header {
-  @apply px-6 py-4 border-b border-white/[0.05] bg-chatgpt-secondary/10;
+  @apply px-6 py-4 border-b border-white/[0.05] bg-chatgpt-secondary/10 sticky top-0 z-10;
 }
 
 .menu-dialog-title {
@@ -31,8 +31,12 @@ body {
   @apply flex justify-end gap-3 px-6 py-4 border-t border-white/[0.05] bg-chatgpt-secondary/5 sticky bottom-0;
 }
 
-/* Form styling */
-.form-input {
+/* Form styling with higher specificity */
+.form-input, 
+input[type="text"].form-input,
+input[type="email"].form-input,
+input[type="tel"].form-input,
+input[type="date"].form-input {
   @apply w-full px-4 py-3 bg-[#1F1F1F] border border-white/[0.05] rounded-md text-white placeholder:text-white/30 
   focus:outline-none focus:ring-2 focus:ring-white/10 focus:border-transparent transition-all duration-200;
 }
@@ -41,14 +45,14 @@ body {
   @apply block text-sm font-medium text-white/70 mb-2;
 }
 
-/* Button styling */
-.btn-primary {
+/* Button styling with higher specificity */
+button.btn-primary {
   @apply px-6 py-2.5 bg-white/10 hover:bg-white/15 text-white rounded-lg transition-all duration-200 
   disabled:opacity-50 disabled:cursor-not-allowed relative after:absolute after:inset-0 after:rounded-lg 
   after:bg-white/5 after:opacity-0 hover:after:opacity-100 after:transition-opacity;
 }
 
-.btn-secondary {
+button.btn-secondary {
   @apply px-6 py-2.5 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-all duration-200;
 }
 
