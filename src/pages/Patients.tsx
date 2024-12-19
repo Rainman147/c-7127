@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { PatientCard } from "@/components/patients/PatientCard";
 import { PatientDialog } from "@/components/patients/PatientDialog";
+import { PatientListHeader } from "@/components/patients/list/PatientListHeader";
 import type { Patient } from "@/types/database/patients";
 
 const PatientsPage = () => {
@@ -55,21 +56,38 @@ const PatientsPage = () => {
     setIsDialogOpen(true);
   };
 
+  const handlePatientAdded = async () => {
+    // Refresh the patient list after adding a new patient
+    try {
+      const results = await searchPatients(searchQuery);
+      setPatients(results);
+      toast({
+        title: "Success",
+        description: "Patient added successfully",
+      });
+    } catch (error) {
+      console.error('Error refreshing patients:', error);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
-      {/* Search Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-6">Patients</h1>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-          <Input
-            type="text"
-            placeholder="Search patients..."
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10 bg-chatgpt-secondary/10 border-white/10 w-full"
-          />
-        </div>
+      <PatientListHeader
+        searchQuery={searchQuery}
+        onSearchChange={handleSearch}
+        onPatientAdded={handlePatientAdded}
+      />
+
+      {/* Search Bar */}
+      <div className="relative mb-8">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+        <Input
+          type="text"
+          placeholder="Search patients..."
+          value={searchQuery}
+          onChange={(e) => handleSearch(e.target.value)}
+          className="pl-10 bg-chatgpt-secondary/10 border-white/10 w-full rounded-xl h-12"
+        />
       </div>
 
       {/* Patient Grid */}

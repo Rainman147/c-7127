@@ -1,6 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Search, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -26,12 +25,12 @@ export const PatientListHeader = ({
       <h1 className="text-2xl font-bold">Patient List</h1>
       <Dialog>
         <DialogTrigger asChild>
-          <Button className="flex items-center gap-2">
+          <Button className="flex items-center gap-2 bg-[#2F2F2F] hover:bg-[#404040]">
             <Plus className="h-4 w-4" />
             Add Patient
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="menu-dialog">
           <DialogHeader>
             <DialogTitle>Add New Patient</DialogTitle>
           </DialogHeader>
