@@ -56,8 +56,9 @@ export const useProfilePhoto = () => {
         },
         (payload: DoctorProfileChanges) => {
           console.log('[useProfilePhoto] Realtime update received:', payload);
-          if (payload.new?.profile_photo_url) {
-            setProfilePhotoUrl(payload.new.profile_photo_url);
+          const newProfile = payload.new;
+          if (newProfile && 'profile_photo_url' in newProfile) {
+            setProfilePhotoUrl(newProfile.profile_photo_url);
           }
         }
       )

@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfilePhotoUpload } from "./doctor/ProfilePhotoUpload";
 import { DoctorProfileForm } from "./doctor/DoctorProfileForm";
-import type { DoctorProfileFormData, DoctorProfile } from "./doctor/types";
+import type { DoctorProfileFormData, DoctorProfile, BusinessHours } from "./doctor/types";
 
 interface DoctorProfileDialogProps {
   open: boolean;
@@ -35,19 +35,40 @@ export function DoctorProfileDialog({ open, onOpenChange }: DoctorProfileDialogP
         console.log("[DoctorProfileDialog] Fetched profile data:", doctorProfile);
         
         if (doctorProfile) {
+          // Parse business_hours from JSON if it's a string
+          let parsedBusinessHours: BusinessHours;
+          try {
+            parsedBusinessHours = typeof doctorProfile.business_hours === 'string' 
+              ? JSON.parse(doctorProfile.business_hours) 
+              : doctorProfile.business_hours as BusinessHours;
+          } catch (e) {
+            console.error("[DoctorProfileDialog] Error parsing business hours:", e);
+            parsedBusinessHours = {
+              monday: { open: "09:00", close: "17:00" },
+              tuesday: { open: "09:00", close: "17:00" },
+              wednesday: { open: "09:00", close: "17:00" },
+              thursday: { open: "09:00", close: "17:00" },
+              friday: { open: "09:00", close: "17:00" },
+              saturday: null,
+              sunday: null,
+            };
+          }
+
           // Convert the database profile to form data format
           const formData: Partial<DoctorProfileFormData> = {
             full_name: doctorProfile.full_name || '',
             email: doctorProfile.email || '',
-            title: doctorProfile.title,
-            specialty: doctorProfile.specialty,
-            clinic_name: doctorProfile.clinic_name,
-            address: doctorProfile.address,
-            phone: doctorProfile.phone,
-            license_number: doctorProfile.license_number,
+            title: doctorProfile.title || '',
+            specialty: doctorProfile.specialty || '',
+            clinic_name: doctorProfile.clinic_name || '',
+            address: doctorProfile.address || '',
+            phone: doctorProfile.phone || '',
+            license_number: doctorProfile.license_number || '',
             profile_photo_url: doctorProfile.profile_photo_url,
-            business_hours: doctorProfile.business_hours as DoctorProfileFormData['business_hours']
+            business_hours: parsedBusinessHours
           };
+
+          console.log("[DoctorProfileDialog] Converted form data:", formData);
           setProfileData(formData);
           setProfilePhotoUrl(doctorProfile.profile_photo_url);
         }
