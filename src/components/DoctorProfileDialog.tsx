@@ -1,12 +1,19 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import { DoctorProfileForm } from "./doctor/DoctorProfileForm";
-import { ScrollArea } from "./ui/scroll-area";
+import { Dialog, DialogContent } from "./ui/dialog";
+import { DoctorProfileHeader } from "./doctor/profile/DoctorProfileHeader";
+import { DoctorProfileContent } from "./doctor/profile/DoctorProfileContent";
 
 interface DoctorProfileDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * Dialog component for editing doctor profile information
+ * Follows ChatGPT styling guidelines with a compact, scrollable layout
+ * 
+ * @param open - Controls dialog visibility
+ * @param onOpenChange - Callback for handling dialog open/close state
+ */
 export const DoctorProfileDialog = ({ 
   open, 
   onOpenChange 
@@ -16,12 +23,8 @@ export const DoctorProfileDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[380px] max-h-[85vh] p-0 gap-0 bg-chatgpt-main border-chatgpt-border">
-        <DialogHeader className="px-4 py-3 border-b border-chatgpt-border">
-          <DialogTitle className="text-base">My Profile</DialogTitle>
-        </DialogHeader>
-        <ScrollArea className="px-4 py-4 max-h-[calc(85vh-120px)] chat-scrollbar">
-          <DoctorProfileForm onSuccess={() => onOpenChange(false)} />
-        </ScrollArea>
+        <DoctorProfileHeader />
+        <DoctorProfileContent onSuccess={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
   );
