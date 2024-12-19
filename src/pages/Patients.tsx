@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { PatientCard } from "@/components/patients/PatientCard";
 import { PatientDialog } from "@/components/patients/PatientDialog";
 import { PatientListHeader } from "@/components/patients/list/PatientListHeader";
+import { usePatientManagement } from "@/hooks/usePatientManagement";
 import type { Patient } from "@/types/database/patients";
 
 const PatientsPage = () => {
@@ -13,26 +14,27 @@ const PatientsPage = () => {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { isLoading, searchPatients, deletePatient } = usePatientManagement();
 
   useEffect(() => {
-    // Fetch patients from the API or database
-    const fetchPatients = async () => {
+    const loadPatients = async () => {
       try {
-        const response = await fetch('/api/patients'); // Adjust the API endpoint as needed
-        const data = await response.json();
-        setPatients(data);
+        console.log('Fetching patients...');
+        const results = await searchPatients(searchQuery);
+        console.log('Patients fetched:', results);
+        setPatients(results);
       } catch (error) {
         console.error('Error fetching patients:', error);
         toast({
           title: "Error",
-          description: "Failed to load patients.",
+          description: "Failed to load patients",
           variant: "destructive",
         });
       }
     };
 
-    fetchPatients();
-  }, [toast]);
+    loadPatients();
+  }, [searchQuery, toast, searchPatients]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -45,41 +47,35 @@ const PatientsPage = () => {
 
   const handleDeletePatient = async (patientId: string) => {
     try {
-      await fetch(`/api/patients/${patientId}`, { method: 'DELETE' });
+      await deletePatient(patientId);
       setPatients(patients.filter(patient => patient.id !== patientId));
       toast({
         title: "Success",
-        description: "Patient deleted successfully.",
+        description: "Patient deleted successfully",
       });
     } catch (error) {
       console.error('Error deleting patient:', error);
       toast({
         title: "Error",
-        description: "Failed to delete patient.",
+        description: "Failed to delete patient",
         variant: "destructive",
       });
     }
   };
 
-  const handlePatientAdded = () => {
-    toast({
-      title: "Success",
-      description: "Patient added successfully.",
-    });
-    // Refresh the patients list
-    fetchPatients();
-  };
-
-  const fetchPatients = async () => {
+  const handlePatientAdded = async () => {
     try {
-      const response = await fetch('/api/patients');
-      const data = await response.json();
-      setPatients(data);
+      const results = await searchPatients("");
+      setPatients(results);
+      toast({
+        title: "Success",
+        description: "Patient added successfully",
+      });
     } catch (error) {
-      console.error('Error fetching patients:', error);
+      console.error('Error refreshing patients:', error);
       toast({
         title: "Error",
-        description: "Failed to load patients.",
+        description: "Failed to refresh patient list",
         variant: "destructive",
       });
     }
@@ -107,7 +103,11 @@ const PatientsPage = () => {
 
       {/* Patient Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {patients.length > 0 ? (
+        {isLoading ? (
+          <div className="col-span-full text-center text-gray-400">
+            Loading patients...
+          </div>
+        ) : patients.length > 0 ? (
           patients.map((patient) => (
             <PatientCard
               key={patient.id}
