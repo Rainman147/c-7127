@@ -61,12 +61,28 @@ const PatientsPage = () => {
     }
   };
 
-  const handlePatientAdded = (newPatient: Patient) => {
-    setPatients([...patients, newPatient]);
+  const handlePatientAdded = () => {
     toast({
       title: "Success",
       description: "Patient added successfully.",
     });
+    // Refresh the patients list
+    fetchPatients();
+  };
+
+  const fetchPatients = async () => {
+    try {
+      const response = await fetch('/api/patients');
+      const data = await response.json();
+      setPatients(data);
+    } catch (error) {
+      console.error('Error fetching patients:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load patients.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -97,7 +113,7 @@ const PatientsPage = () => {
               key={patient.id}
               patient={patient}
               onClick={() => handlePatientClick(patient)}
-              onDelete={handleDeletePatient}
+              onDelete={() => handleDeletePatient(patient.id)}
             />
           ))
         ) : (
@@ -109,9 +125,11 @@ const PatientsPage = () => {
 
       {/* Patient Details Dialog */}
       <PatientDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
         patient={selectedPatient}
-        isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
+        onSubmit={handlePatientAdded}
       />
     </div>
   );
