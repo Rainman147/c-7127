@@ -15,7 +15,7 @@ export const SidebarNavigation = () => {
         )}
       >
         <FileText className="h-4 w-4" />
-        <span className="text-sm">Template Manager</span>
+        <span className="text-sm">Templates</span>
       </Link>
 
       <Link 
@@ -26,7 +26,7 @@ export const SidebarNavigation = () => {
         )}
       >
         <Users className="h-4 w-4" />
-        <span className="text-sm">Patients Manager</span>
+        <span className="text-sm">Patients</span>
       </Link>
     </div>
   );
