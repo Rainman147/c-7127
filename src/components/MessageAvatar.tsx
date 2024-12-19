@@ -1,12 +1,4 @@
-import { User2 } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
-import { useProfilePhoto } from "@/hooks/useProfilePhoto";
-
 const MessageAvatar = ({ isAssistant }: { isAssistant: boolean }) => {
-  const profilePhotoUrl = useProfilePhoto();
-  
-  console.log('[MessageAvatar] Rendering with:', { isAssistant, profilePhotoUrl });
-
   if (isAssistant) {
     return (
       <div className="gizmo-shadow-stroke relative flex h-full items-center justify-center rounded-full bg-token-main-surface-primary text-token-text-primary">
@@ -17,18 +9,8 @@ const MessageAvatar = ({ isAssistant }: { isAssistant: boolean }) => {
       </div>
     );
   }
-
-  return (
-    <Avatar className="h-8 w-8">
-      <AvatarImage 
-        src={profilePhotoUrl || undefined} 
-        alt="User profile" 
-      />
-      <AvatarFallback>
-        <User2 className="h-5 w-5 text-gray-400" />
-      </AvatarFallback>
-    </Avatar>
-  );
+  
+  return null;
 };
 
 export default MessageAvatar;
