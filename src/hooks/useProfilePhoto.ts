@@ -51,20 +51,23 @@ export const useProfilePhoto = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'doctors',
-          filter: `user_id=eq.${supabase.auth.getUser().then(({ data }) => data.user?.id)}`
+          table: 'doctors'
         },
         (payload: DoctorProfileChanges) => {
           console.log('[useProfilePhoto] Realtime update received:', payload);
-          const newProfile = payload.new;
-          if (newProfile && typeof newProfile.profile_photo_url === 'string') {
-            setProfilePhotoUrl(newProfile.profile_photo_url);
+          if (payload.new && 'profile_photo_url' in payload.new) {
+            const newUrl = payload.new.profile_photo_url;
+            console.log('[useProfilePhoto] Setting new profile photo URL:', newUrl);
+            setProfilePhotoUrl(newUrl);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[useProfilePhoto] Subscription status:', status);
+      });
 
     return () => {
+      console.log('[useProfilePhoto] Cleaning up subscription');
       channel.unsubscribe();
     };
   }, []);
