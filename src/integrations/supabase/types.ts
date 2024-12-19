@@ -94,6 +94,53 @@ export type Database = {
           },
         ]
       }
+      doctors: {
+        Row: {
+          address: string
+          clinic_name: string
+          created_at: string
+          id: string
+          license_number: string
+          phone: string
+          specialty: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          clinic_name: string
+          created_at?: string
+          id?: string
+          license_number: string
+          phone: string
+          specialty: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          clinic_name?: string
+          created_at?: string
+          id?: string
+          license_number?: string
+          phone?: string
+          specialty?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctors_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       edited_messages: {
         Row: {
           created_at: string
