@@ -9,8 +9,12 @@ const Login = () => {
   useAuthStateChange();
 
   useEffect(() => {
-    clearSession();
-    console.log('Session cleared on Login component mount');
+    const init = async () => {
+      await clearSession();
+      console.log('Session cleared on Login component mount');
+    };
+    
+    init();
   }, []);
 
   return (

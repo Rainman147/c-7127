@@ -13,14 +13,26 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       console.log('Validating session...');
       const { session, error } = await checkSession();
 
-      if (error || !session) {
-        console.log('Session validation failed:', error?.message || 'No session found');
-        toast({
-          title: error ? "Authentication Error" : "Session Expired",
-          description: error?.message || "Please sign in to continue",
-          variant: "destructive",
-        });
+      if (error) {
+        console.log('Session validation failed:', error.message);
+        
+        // Only show toast for non-refresh token errors
+        if (!error.isRefreshTokenError) {
+          toast({
+            title: "Authentication Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+        
         navigate('/auth');
+        return;
+      }
+
+      if (!session) {
+        console.log('No active session found');
+        navigate('/auth');
+        return;
       }
     };
 
