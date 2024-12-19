@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
-import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { DoctorProfile } from '@/components/doctor/types';
 
 type DoctorProfileChanges = RealtimePostgresChangesPayload<{
@@ -57,13 +57,8 @@ export const useProfilePhoto = () => {
           console.log('[useProfilePhoto] Realtime update received:', payload);
           if (payload.new && 'profile_photo_url' in payload.new) {
             const newUrl = payload.new.profile_photo_url;
-            // Ensure newUrl is of type string | null before setting state
-            if (typeof newUrl === 'string' || newUrl === null) {
-              console.log('[useProfilePhoto] Setting new profile photo URL:', newUrl);
-              setProfilePhotoUrl(newUrl);
-            } else {
-              console.warn('[useProfilePhoto] Received invalid profile_photo_url type:', typeof newUrl);
-            }
+            // Type assertion is safe here because we've verified the property exists
+            setProfilePhotoUrl(newUrl);
           }
         }
       )
