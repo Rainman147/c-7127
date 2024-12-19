@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { usePatientManagement } from "@/hooks/usePatientManagement";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { PatientCard } from "@/components/patients/PatientCard";
@@ -10,45 +9,33 @@ import type { Patient } from "@/types/database/patients";
 
 const PatientsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const { toast } = useToast();
-  const { isLoading, searchPatients, deletePatient } = usePatientManagement();
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [selectedPatient, setSelectedPatient] = useState<Patient | undefined>();
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { toast } = useToast();
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-    try {
-      const results = await searchPatients(query);
-      setPatients(results);
-    } catch (error) {
-      console.error('Error searching patients:', error);
-      toast({
-        title: "Error",
-        description: "Failed to search patients",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDelete = async (patientId: string) => {
-    if (window.confirm("Are you sure you want to delete this patient?")) {
+  useEffect(() => {
+    // Fetch patients from the API or database
+    const fetchPatients = async () => {
       try {
-        await deletePatient(patientId);
-        setPatients(patients.filter(p => p.id !== patientId));
-        toast({
-          title: "Success",
-          description: "Patient deleted successfully",
-        });
+        const response = await fetch('/api/patients'); // Adjust the API endpoint as needed
+        const data = await response.json();
+        setPatients(data);
       } catch (error) {
-        console.error('Error deleting patient:', error);
+        console.error('Error fetching patients:', error);
         toast({
           title: "Error",
-          description: "Failed to delete patient",
+          description: "Failed to load patients.",
           variant: "destructive",
         });
       }
-    }
+    };
+
+    fetchPatients();
+  }, [toast]);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
   };
 
   const handlePatientClick = (patient: Patient) => {
@@ -56,18 +43,30 @@ const PatientsPage = () => {
     setIsDialogOpen(true);
   };
 
-  const handlePatientAdded = async () => {
-    // Refresh the patient list after adding a new patient
+  const handleDeletePatient = async (patientId: string) => {
     try {
-      const results = await searchPatients(searchQuery);
-      setPatients(results);
+      await fetch(`/api/patients/${patientId}`, { method: 'DELETE' });
+      setPatients(patients.filter(patient => patient.id !== patientId));
       toast({
         title: "Success",
-        description: "Patient added successfully",
+        description: "Patient deleted successfully.",
       });
     } catch (error) {
-      console.error('Error refreshing patients:', error);
+      console.error('Error deleting patient:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete patient.",
+        variant: "destructive",
+      });
     }
+  };
+
+  const handlePatientAdded = (newPatient: Patient) => {
+    setPatients([...patients, newPatient]);
+    toast({
+      title: "Success",
+      description: "Patient added successfully.",
+    });
   };
 
   return (
@@ -91,37 +90,28 @@ const PatientsPage = () => {
       </div>
 
       {/* Patient Grid */}
-      {isLoading ? (
-        <div className="text-center py-8">Loading patients...</div>
-      ) : patients.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {patients.map((patient) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {patients.length > 0 ? (
+          patients.map((patient) => (
             <PatientCard
               key={patient.id}
               patient={patient}
               onClick={() => handlePatientClick(patient)}
-              onDelete={() => handleDelete(patient.id)}
+              onDelete={handleDeletePatient}
             />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12 text-gray-400">
-          No patients found. Try a different search.
-        </div>
-      )}
+          ))
+        ) : (
+          <div className="col-span-full text-center text-gray-400">
+            No patients found. Try a different search.
+          </div>
+        )}
+      </div>
 
+      {/* Patient Details Dialog */}
       <PatientDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
         patient={selectedPatient}
-        onClose={() => {
-          setSelectedPatient(undefined);
-          setIsDialogOpen(false);
-        }}
-        onSubmit={() => {
-          handleSearch(searchQuery);
-          setIsDialogOpen(false);
-        }}
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
       />
     </div>
   );
