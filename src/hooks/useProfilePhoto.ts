@@ -25,7 +25,7 @@ export const useProfilePhoto = () => {
           .from('doctors')
           .select('profile_photo_url')
           .eq('user_id', user.id)
-          .maybeSingle();
+          .maybeSingle<Pick<DoctorProfile, 'profile_photo_url'>>();
 
         if (error) {
           console.error('[useProfilePhoto] Error fetching doctor profile:', error);
@@ -52,7 +52,7 @@ export const useProfilePhoto = () => {
         },
         (payload: DoctorProfileChanges) => {
           console.log('[useProfilePhoto] Realtime update received:', payload);
-          const newProfile = payload.new as DoctorProfile | null;
+          const newProfile = payload.new;
           if (newProfile && 'profile_photo_url' in newProfile) {
             setProfilePhotoUrl(newProfile.profile_photo_url);
           }
