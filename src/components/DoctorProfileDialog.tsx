@@ -12,12 +12,12 @@ import { User2, Upload } from "lucide-react";
 interface DoctorProfileFormData {
   title: string;
   specialty: string;
-  clinicName: string;
+  clinic_name: string;  // Changed from clinicName
   address: string;
   phone: string;
-  licenseNumber: string;
-  profilePhotoUrl?: string;
-  businessHours: {
+  license_number: string;  // Changed from licenseNumber
+  profile_photo_url?: string;
+  business_hours: {  // Changed from businessHours
     [key: string]: { open: string; close: string } | null;
   };
 }
@@ -36,11 +36,11 @@ export function DoctorProfileDialog({ open, onOpenChange }: DoctorProfileDialogP
     defaultValues: {
       title: "",
       specialty: "",
-      clinicName: "",
+      clinic_name: "",
       address: "",
       phone: "",
-      licenseNumber: "",
-      businessHours: {
+      license_number: "",
+      business_hours: {
         monday: { open: "09:00", close: "17:00" },
         tuesday: { open: "09:00", close: "17:00" },
         wednesday: { open: "09:00", close: "17:00" },
@@ -97,13 +97,22 @@ export function DoctorProfileDialog({ open, onOpenChange }: DoctorProfileDialogP
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error("No user found");
 
+      // Prepare the data object matching the database schema
+      const doctorData = {
+        user_id: user.id,
+        title: data.title,
+        specialty: data.specialty,
+        clinic_name: data.clinic_name,
+        address: data.address,
+        phone: data.phone,
+        license_number: data.license_number,
+        profile_photo_url: profilePhotoUrl,
+        business_hours: data.business_hours
+      };
+
       const { error } = await supabase
         .from("doctors")
-        .upsert({
-          user_id: user.id,
-          ...data,
-          profile_photo_url: profilePhotoUrl,
-        });
+        .upsert(doctorData);
 
       if (error) throw error;
 
@@ -186,7 +195,7 @@ export function DoctorProfileDialog({ open, onOpenChange }: DoctorProfileDialogP
 
             <FormField
               control={form.control}
-              name="clinicName"
+              name="clinic_name"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Clinic Name</FormLabel>
@@ -225,7 +234,7 @@ export function DoctorProfileDialog({ open, onOpenChange }: DoctorProfileDialogP
 
             <FormField
               control={form.control}
-              name="licenseNumber"
+              name="license_number"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>License Number</FormLabel>
