@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { PatientCard } from "@/components/patients/PatientCard";
 import { PatientDialog } from "@/components/patients/PatientDialog";
 import { PatientListHeader } from "@/components/patients/list/PatientListHeader";
+import { PatientSearch } from "@/components/patients/list/PatientSearch";
+import { PatientGrid } from "@/components/patients/list/PatientGrid";
 import { usePatientManagement } from "@/hooks/usePatientManagement";
 import type { Patient } from "@/types/database/patients";
 
@@ -81,41 +80,18 @@ const PatientsPage = () => {
         onPatientAdded={handlePatientAdded}
       />
 
-      {/* Search Bar */}
-      <div className="relative mb-8">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-        <Input
-          type="text"
-          placeholder="Search patients..."
-          value={searchQuery}
-          onChange={(e) => handleSearch(e.target.value)}
-          className="pl-10 bg-chatgpt-secondary/10 border-white/10 w-full rounded-xl h-12"
-        />
-      </div>
+      <PatientSearch 
+        searchQuery={searchQuery}
+        onSearchChange={handleSearch}
+      />
 
-      {/* Patient Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isLoading ? (
-          <div className="col-span-full text-center text-gray-400">
-            Loading patients...
-          </div>
-        ) : patients.length > 0 ? (
-          patients.map((patient) => (
-            <PatientCard
-              key={patient.id}
-              patient={patient}
-              onClick={() => handlePatientClick(patient)}
-              onDelete={() => handleDeletePatient(patient.id)}
-            />
-          ))
-        ) : (
-          <div className="col-span-full text-center text-gray-400">
-            No patients found. Try a different search.
-          </div>
-        )}
-      </div>
+      <PatientGrid
+        patients={patients}
+        isLoading={isLoading}
+        onPatientClick={handlePatientClick}
+        onPatientDelete={handleDeletePatient}
+      />
 
-      {/* Patient Details Dialog */}
       <PatientDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
