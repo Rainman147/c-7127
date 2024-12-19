@@ -5,6 +5,7 @@ import App from './App.tsx';
 import Auth from './pages/Auth.tsx';
 import Index from './pages/Index.tsx';
 import TemplateManager from './pages/TemplateManager.tsx';
+import Patients from './pages/Patients.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
 import { ToastProvider } from './components/ui/toast';
 import { Toaster } from './components/ui/toaster';
@@ -34,6 +35,14 @@ createRoot(document.getElementById("root")!).render(
               element={
                 <ProtectedRoute>
                   <TemplateManager />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/patients"
+              element={
+                <ProtectedRoute>
+                  <Patients />
                 </ProtectedRoute>
               }
             />
