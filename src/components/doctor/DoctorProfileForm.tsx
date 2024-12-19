@@ -9,11 +9,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedCallback } from "use-debounce";
 
 interface DoctorProfileFormProps {
-  onSubmit: (data: DoctorProfileFormData) => void;
-  isLoading: boolean;
+  onSuccess: () => void;
 }
 
-export function DoctorProfileForm({ onSubmit, isLoading }: DoctorProfileFormProps) {
+export function DoctorProfileForm({ onSuccess }: DoctorProfileFormProps) {
   const { toast } = useToast();
   const form = useForm<DoctorProfileFormData>({
     defaultValues: {
@@ -76,7 +75,7 @@ export function DoctorProfileForm({ onSubmit, isLoading }: DoctorProfileFormProp
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSuccess)} className="space-y-4">
         <FormField
           control={form.control}
           name="full_name"
@@ -182,9 +181,7 @@ export function DoctorProfileForm({ onSubmit, isLoading }: DoctorProfileFormProp
         />
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Saving..." : "Save Profile"}
-          </Button>
+          <Button type="submit">Save Profile</Button>
         </div>
       </form>
     </Form>
