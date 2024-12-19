@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 
 interface SidebarFooterProps {
   apiKey: string;
-  onApiKeyChange: (apiKey: string) => void;
+  onApiKeyChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) => {
@@ -18,7 +18,7 @@ export const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) =>
           type="password"
           placeholder="Enter your API key"
           value={apiKey}
-          onChange={(e) => onApiKeyChange(e.target.value)}
+          onChange={onApiKeyChange}
           className="bg-[#2F2F2F] border-none rounded-xl"
         />
       </div>
