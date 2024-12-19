@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,11 +16,42 @@ export function DoctorProfileDialog({ open, onOpenChange }: DoctorProfileDialogP
   const [isLoading, setIsLoading] = useState(false);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
 
+  // Fetch existing profile data when dialog opens
+  useEffect(() => {
+    const fetchDoctorProfile = async () => {
+      try {
+        const user = (await supabase.auth.getUser()).data.user;
+        if (!user) return;
+
+        const { data: doctorProfile, error } = await supabase
+          .from("doctors")
+          .select("profile_photo_url")
+          .eq("user_id", user.id)
+          .single();
+
+        if (error) throw error;
+
+        if (doctorProfile?.profile_photo_url) {
+          console.log("[DoctorProfileDialog] Fetched profile photo:", doctorProfile.profile_photo_url);
+          setProfilePhotoUrl(doctorProfile.profile_photo_url);
+        }
+      } catch (error) {
+        console.error("Error fetching doctor profile:", error);
+      }
+    };
+
+    if (open) {
+      fetchDoctorProfile();
+    }
+  }, [open]);
+
   const onSubmit = async (data: DoctorProfileFormData) => {
     try {
       setIsLoading(true);
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error("No user found");
+
+      console.log("[DoctorProfileDialog] Submitting with photo URL:", profilePhotoUrl);
 
       const doctorData = {
         user_id: user.id,
@@ -36,11 +67,15 @@ export function DoctorProfileDialog({ open, onOpenChange }: DoctorProfileDialogP
         business_hours: data.business_hours
       };
 
-      const { error } = await supabase
+      const { error, data: result } = await supabase
         .from("doctors")
-        .upsert(doctorData);
+        .upsert(doctorData)
+        .select()
+        .single();
 
       if (error) throw error;
+
+      console.log("[DoctorProfileDialog] Profile updated successfully:", result);
 
       toast({
         title: "Profile updated",
