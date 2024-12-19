@@ -9,7 +9,7 @@ interface DoctorProfileDialogProps {
 
 /**
  * Dialog component for editing doctor profile information
- * Follows ChatGPT styling guidelines with a compact, scrollable layout
+ * Uses consistent menu styling from our global CSS classes
  * 
  * @param open - Controls dialog visibility
  * @param onOpenChange - Callback for handling dialog open/close state
@@ -22,7 +22,7 @@ export const DoctorProfileDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[380px] max-h-[85vh] p-0 gap-0 bg-chatgpt-main border-chatgpt-border rounded-xl overflow-hidden">
+      <DialogContent className="menu-dialog">
         <DoctorProfileHeader />
         <DoctorProfileContent onSuccess={() => onOpenChange(false)} />
       </DialogContent>

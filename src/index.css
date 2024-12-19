@@ -19,6 +19,23 @@ body {
   @apply rounded-xl bg-[#2F2F2F];
 }
 
+/* Dialog styling for consistent menu-like appearance */
+.menu-dialog {
+  @apply max-w-[380px] max-h-[85vh] p-0 gap-0 bg-chatgpt-main border-chatgpt-border rounded-xl overflow-hidden;
+}
+
+.menu-dialog-header {
+  @apply px-4 py-3 border-b border-chatgpt-border bg-chatgpt-secondary/10;
+}
+
+.menu-dialog-title {
+  @apply text-sm font-medium text-white/90;
+}
+
+.menu-dialog-content {
+  @apply p-4 space-y-4;
+}
+
 /* Sidebar scrollbar */
 .sidebar-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-sidebar;
