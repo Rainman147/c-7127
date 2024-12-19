@@ -10,14 +10,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { User2, Upload } from "lucide-react";
 
 interface DoctorProfileFormData {
+  full_name: string;
+  email: string;
   title: string;
   specialty: string;
-  clinic_name: string;  // Changed from clinicName
+  clinic_name: string;
   address: string;
   phone: string;
-  license_number: string;  // Changed from licenseNumber
+  license_number: string;
   profile_photo_url?: string;
-  business_hours: {  // Changed from businessHours
+  business_hours: {
     [key: string]: { open: string; close: string } | null;
   };
 }
@@ -34,6 +36,8 @@ export function DoctorProfileDialog({ open, onOpenChange }: DoctorProfileDialogP
 
   const form = useForm<DoctorProfileFormData>({
     defaultValues: {
+      full_name: "",
+      email: "",
       title: "",
       specialty: "",
       clinic_name: "",
@@ -97,9 +101,10 @@ export function DoctorProfileDialog({ open, onOpenChange }: DoctorProfileDialogP
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error("No user found");
 
-      // Prepare the data object matching the database schema
       const doctorData = {
         user_id: user.id,
+        full_name: data.full_name,
+        email: data.email,
         title: data.title,
         specialty: data.specialty,
         clinic_name: data.clinic_name,
@@ -167,6 +172,32 @@ export function DoctorProfileDialog({ open, onOpenChange }: DoctorProfileDialogP
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="full_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Dr. John Doe" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="doctor@clinic.com" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="title"
