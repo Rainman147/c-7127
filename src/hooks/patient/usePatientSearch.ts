@@ -7,6 +7,7 @@ export const usePatientSearch = () => {
   const { toast } = useToast();
 
   const searchPatients = async (query: string) => {
+    console.log('Calling searchPatients with query:', query);
     setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('patient-management', {
@@ -16,7 +17,12 @@ export const usePatientSearch = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
+      
+      console.log('Search results:', data);
       return data.patients;
     } catch (error: any) {
       console.error('Error searching patients:', error);
