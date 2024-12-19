@@ -100,7 +100,7 @@ export const PatientForm = ({ patient, onClose, onSubmit }: PatientFormProps) =>
         <button 
           type="submit" 
           disabled={isSubmitting} 
-          className="btn-primary"
+          className="btn-primary bg-white/10 hover:bg-white/15"
         >
           {isSubmitting ? 'Adding Patient...' : 'Save'}
         </button>

@@ -6,14 +6,6 @@ body {
   @apply bg-chatgpt-main text-white;
 }
 
-.sidebar-item {
-  @apply flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition-colors duration-200 hover:bg-chatgpt-hover cursor-pointer;
-}
-
-.action-button {
-  @apply flex items-center gap-2 rounded-xl px-3 py-2 text-sm hover:bg-chatgpt-hover/50 border border-transparent hover:border-chatgpt-border transition-all duration-200;
-}
-
 /* Global menu styling */
 .menu-box {
   @apply rounded-xl bg-[#2F2F2F] border border-white/[0.05] shadow-[0_0_0_1px_rgba(0,0,0,0.3)] backdrop-blur-sm;
@@ -28,7 +20,7 @@ body {
 }
 
 .menu-dialog-title {
-  @apply text-lg font-medium text-white/90;
+  @apply text-lg font-medium text-white/90 px-2;
 }
 
 .menu-dialog-content {
@@ -41,7 +33,7 @@ body {
 
 /* Form styling */
 .form-input {
-  @apply w-full px-4 py-3 bg-[#1F1F1F] border border-white/[0.05] rounded-lg text-white placeholder:text-white/30 
+  @apply w-full px-4 py-3 bg-[#1F1F1F] border border-white/[0.05] rounded-md text-white placeholder:text-white/30 
   focus:outline-none focus:ring-2 focus:ring-white/10 focus:border-transparent transition-all duration-200;
 }
 
