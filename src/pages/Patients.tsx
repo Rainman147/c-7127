@@ -14,13 +14,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { PatientForm } from "@/components/patients/PatientForm";
+import type { Patient } from "@/types/database/patients";
 
 const PatientsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const { isLoading, searchPatients, deletePatient } = usePatientManagement();
-  const [patients, setPatients] = useState<any[]>([]);
-  const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleSearch = async (query: string) => {
@@ -58,13 +59,13 @@ const PatientsPage = () => {
     }
   };
 
-  const handleEdit = (patient: any) => {
+  const handleEdit = (patient: Patient) => {
     setSelectedPatient(patient);
     setIsDialogOpen(true);
   };
 
   const handleFormClose = () => {
-    setSelectedPatient(null);
+    setSelectedPatient(undefined);
     setIsDialogOpen(false);
   };
 
@@ -129,10 +130,10 @@ const PatientsPage = () => {
                   {patient.dob ? format(new Date(patient.dob), 'MM/dd/yyyy') : 'N/A'}
                 </TableCell>
                 <TableCell>
-                  {patient.contact_info?.phone || 'N/A'}
+                  {(patient.contact_info as { phone: string })?.phone || 'N/A'}
                 </TableCell>
                 <TableCell>
-                  {patient.contact_info?.email || 'N/A'}
+                  {(patient.contact_info as { email: string })?.email || 'N/A'}
                 </TableCell>
                 <TableCell className="text-right space-x-2">
                   <Button

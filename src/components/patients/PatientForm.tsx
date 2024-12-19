@@ -4,24 +4,30 @@ import { usePatientManagement } from '@/hooks/usePatientManagement';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import type { Json } from '@/types/database';
+import type { Patient } from '@/types/database/patients';
 
-export const PatientForm = () => {
+interface PatientFormProps {
+  patient?: Patient;
+  onClose?: () => void;
+  onSubmit?: () => void;
+}
+
+export const PatientForm = ({ patient, onClose, onSubmit }: PatientFormProps) => {
   const { toast } = useToast();
   const { addPatient } = usePatientManagement();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
-  const [name, setName] = useState('');
-  const [dob, setDob] = useState('');
-  const [address, setAddress] = useState('');
-  const [medicalHistory, setMedicalHistory] = useState('');
-  const [contactInfo, setContactInfo] = useState<Json>({
-    email: '',
-    phone: '',
+  const [name, setName] = useState(patient?.name || '');
+  const [dob, setDob] = useState(patient?.dob || '');
+  const [address, setAddress] = useState(patient?.address || '');
+  const [medicalHistory, setMedicalHistory] = useState(patient?.medical_history || '');
+  const [contactInfo, setContactInfo] = useState({
+    email: (patient?.contact_info as { email: string })?.email || '',
+    phone: (patient?.contact_info as { phone: string })?.phone || '',
   });
-  const [currentMedications, setCurrentMedications] = useState<Json[]>([]);
-  const [recentTests, setRecentTests] = useState<Json[]>([]);
+  const [currentMedications, setCurrentMedications] = useState(patient?.current_medications || []);
+  const [recentTests, setRecentTests] = useState(patient?.recent_tests || []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +58,7 @@ export const PatientForm = () => {
         setContactInfo({ email: '', phone: '' });
         setCurrentMedications([]);
         setRecentTests([]);
+        onSubmit?.();
       }
     } catch (error) {
       console.error('Error adding patient:', error);
@@ -99,7 +106,7 @@ export const PatientForm = () => {
         <Input
           id="email"
           type="email"
-          value={contactInfo.email as string}
+          value={contactInfo.email}
           onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
         />
       </div>
@@ -111,7 +118,7 @@ export const PatientForm = () => {
         <Input
           id="phone"
           type="tel"
-          value={contactInfo.phone as string}
+          value={contactInfo.phone}
           onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
         />
       </div>
