@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -62,12 +62,28 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
   };
 
   return (
-    <div className={cn(
-      "fixed top-0 left-0 z-40 h-screen bg-chatgpt-sidebar transition-all duration-300",
-      isOpen ? "w-64" : "w-0"
-    )}>
+    <div 
+      className={cn(
+        "fixed top-0 left-0 z-40 h-screen bg-chatgpt-sidebar transition-all duration-300 ease-in-out",
+        "md:translate-x-0",
+        isOpen ? "translate-x-0" : "-translate-x-full",
+        isMobile ? "w-full md:w-64" : "w-64"
+      )}
+    >
       <nav className="flex h-full w-full flex-col px-3" aria-label="Chat history">
-        <SidebarHeader onToggle={onToggle} />
+        <div className="flex items-center justify-between h-[60px]">
+          <SidebarHeader onToggle={onToggle} />
+          {isMobile && (
+            <Button
+              onClick={onToggle}
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
 
         <div className="flex-col flex-1 transition-opacity duration-500 relative -mr-2 pr-2 overflow-y-auto sidebar-scrollbar">
           {isOpen && (
