@@ -11,23 +11,14 @@ const MainLayout = () => {
   };
 
   return (
-    <div className="flex h-screen relative">
-      {/* Overlay for mobile */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 transition-opacity md:hidden z-30"
-          onClick={() => setIsSidebarOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-      
+    <div className="flex h-screen">
       <Sidebar 
         isOpen={isSidebarOpen} 
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         onApiKeyChange={handleApiKeyChange}
         onSessionSelect={() => {}}
       />
-      <main className={`flex-1 transition-[margin] duration-300 ease-in-out md:ml-64 ${isSidebarOpen ? 'md:ml-64' : 'ml-0'}`}>
+      <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
         <Outlet />
       </main>
     </div>
