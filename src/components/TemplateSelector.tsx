@@ -25,7 +25,9 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('[TemplateSelector] Selected template updated:', selectedTemplate?.name);
+    if (selectedTemplate) {
+      console.log('[TemplateSelector] Selected template updated:', selectedTemplate.name);
+    }
   }, [selectedTemplate]);
 
   const handleTemplateSelect = useCallback((template: Template) => {
@@ -38,6 +40,10 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     setOpenTooltipId(templateId);
   }, []);
 
+  if (!selectedTemplate) {
+    return null; // Don't render until we have a template
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger 
@@ -45,7 +51,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         disabled={isLoading}
         onClick={() => console.log('[TemplateSelector] Dropdown trigger clicked')}
       >
-        <span className="whitespace-nowrap">{selectedTemplate?.name}</span>
+        <span className="whitespace-nowrap">{selectedTemplate.name}</span>
         <ChevronDown className="h-4 w-4 opacity-70" />
       </DropdownMenuTrigger>
       <DropdownMenuContent 
