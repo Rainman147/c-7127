@@ -14,14 +14,14 @@ body {
   @apply flex items-center gap-2 rounded-xl px-3 py-2 text-sm hover:bg-chatgpt-hover/50 border border-transparent hover:border-chatgpt-border transition-all duration-200;
 }
 
-/* Add consistent rounded corners for menus and boxes */
+/* Add consistent rounded corners and background for menus and boxes */
 .menu-box {
   @apply rounded-xl bg-[#2F2F2F];
 }
 
 /* Dialog styling for consistent menu-like appearance */
 .menu-dialog {
-  @apply max-w-[380px] max-h-[85vh] p-0 gap-0 bg-chatgpt-main border-chatgpt-border rounded-xl overflow-hidden;
+  @apply max-w-[380px] max-h-[85vh] p-0 gap-0 bg-[#2F2F2F] border-chatgpt-border rounded-xl overflow-hidden;
 }
 
 .menu-dialog-header {
