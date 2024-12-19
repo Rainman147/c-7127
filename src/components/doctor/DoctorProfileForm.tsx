@@ -1,8 +1,12 @@
+import { useEffect } from "react";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useForm } from "react-hook-form";
 import type { DoctorProfileFormData } from "./types";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useDebouncedCallback } from "use-debounce";
 
 interface DoctorProfileFormProps {
   onSubmit: (data: DoctorProfileFormData) => void;
@@ -10,6 +14,7 @@ interface DoctorProfileFormProps {
 }
 
 export function DoctorProfileForm({ onSubmit, isLoading }: DoctorProfileFormProps) {
+  const { toast } = useToast();
   const form = useForm<DoctorProfileFormData>({
     defaultValues: {
       full_name: "",
@@ -31,6 +36,43 @@ export function DoctorProfileForm({ onSubmit, isLoading }: DoctorProfileFormProp
       },
     },
   });
+
+  // Debounced auto-save function
+  const debouncedSave = useDebouncedCallback(async (data: DoctorProfileFormData) => {
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return;
+
+      const { error } = await supabase
+        .from("doctors")
+        .upsert({
+          user_id: user.id,
+          ...data
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Changes saved",
+        description: "Your profile has been updated automatically.",
+      });
+    } catch (error) {
+      console.error("Error auto-saving profile:", error);
+      toast({
+        title: "Error saving changes",
+        description: "There was a problem saving your changes. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, 1000); // 1 second delay before saving
+
+  // Watch for form changes and trigger auto-save
+  useEffect(() => {
+    const subscription = form.watch((data) => {
+      debouncedSave(data as DoctorProfileFormData);
+    });
+    return () => subscription.unsubscribe();
+  }, [form.watch, debouncedSave]);
 
   return (
     <Form {...form}>
