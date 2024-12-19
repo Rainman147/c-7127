@@ -18,9 +18,7 @@ export const TemplateItem = ({
 }: TemplateItemProps) => {
   return (
     <DropdownMenuItem
-      className={`flex flex-col items-start px-3 py-2.5 cursor-pointer hover:bg-chatgpt-hover transition-colors rounded-[2px] ${
-        isSelected ? 'bg-chatgpt-secondary' : ''
-      }`}
+      className={`menu-item ${isSelected ? 'menu-item-active' : ''}`}
       onClick={() => !isLoading && onSelect(template)}
       disabled={isLoading}
     >

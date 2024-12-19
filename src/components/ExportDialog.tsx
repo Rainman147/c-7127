@@ -71,8 +71,8 @@ export function ExportDialog({ patientId, summaryId }: ExportDialogProps) {
                   <SelectValue placeholder="Select format" />
                 </SelectTrigger>
                 <SelectContent className="menu-box">
-                  <SelectItem value="PDF">PDF</SelectItem>
-                  <SelectItem value="DOC">DOC</SelectItem>
+                  <SelectItem value="PDF" className="menu-item">PDF</SelectItem>
+                  <SelectItem value="DOC" className="menu-item">DOC</SelectItem>
                 </SelectContent>
               </Select>
             </div>
