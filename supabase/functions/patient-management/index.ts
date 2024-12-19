@@ -29,11 +29,22 @@ serve(async (req) => {
     // Get user from auth header
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
     if (userError || !user) {
+      console.error('Authentication error:', userError)
       throw new Error('Unauthorized')
     }
 
-    const { action, ...params } = await req.json()
-    console.log('Action:', action, 'Params:', params)
+    // Parse request body
+    let params;
+    let action;
+    try {
+      const body = await req.json()
+      action = body.action
+      params = body
+      console.log('Received request:', { action, params })
+    } catch (e) {
+      console.error('Error parsing request body:', e)
+      throw new Error('Invalid request body')
+    }
 
     let result
     switch (action) {
@@ -53,7 +64,7 @@ serve(async (req) => {
           throw error
         }
         
-        console.log('Search results:', data)
+        console.log('Search results:', { patients: data })
         result = { patients: data }
         break
       }
@@ -78,13 +89,17 @@ serve(async (req) => {
       }
 
       default:
+        console.error('Unknown action:', action)
         throw new Error(`Unknown action: ${action}`)
     }
 
     return new Response(
       JSON.stringify(result),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json'
+        },
         status: 200 
       }
     )
@@ -96,7 +111,10 @@ serve(async (req) => {
         error: error.message || 'An unexpected error occurred',
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json'
+        },
         status: error.message === 'Unauthorized' ? 401 : 400,
       }
     )
