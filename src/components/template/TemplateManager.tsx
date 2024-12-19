@@ -1,17 +1,8 @@
 import { useState } from 'react';
 import { useTemplates } from '@/hooks/useTemplates';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Pencil, Trash2, Plus, Info } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,33 +14,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-
-interface TemplateFormData {
-  name: string;
-  content: string;
-  instructions: {
-    dataFormatting: string;
-    priorityRules: string;
-    specialConditions: string;
-  };
-  schema: {
-    sections: string[];
-    requiredFields: string[];
-  };
-}
+import { CreateTemplateDialog } from './dialogs/CreateTemplateDialog';
+import { EditTemplateDialog } from './dialogs/EditTemplateDialog';
+import { TemplateListItem } from './list/TemplateListItem';
 
 export const TemplateManager = () => {
   const { templates, createTemplate, updateTemplate, deleteTemplate } = useTemplates();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<TemplateFormData>({
+  const [formData, setFormData] = useState({
     name: '',
     content: '',
     instructions: {
@@ -153,174 +127,65 @@ export const TemplateManager = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Templates</h2>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              New Template
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="menu-dialog">
-            <DialogHeader className="menu-dialog-header">
-              <DialogTitle className="menu-dialog-title">Create New Template</DialogTitle>
-            </DialogHeader>
-            <div className="menu-dialog-content">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Template Name</label>
-                  <Input
-                    placeholder="Template Name"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1">Template Content</label>
-                  <Textarea
-                    placeholder="Template Content"
-                    value={formData.content}
-                    onChange={(e) => handleInputChange('content', e.target.value)}
-                    rows={5}
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Instructions</h3>
-                  
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Data Formatting</label>
-                    <Textarea
-                      placeholder="Specify data formatting requirements..."
-                      value={formData.instructions.dataFormatting}
-                      onChange={(e) => handleInstructionChange('dataFormatting', e.target.value)}
-                      rows={3}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Priority Rules</label>
-                    <Textarea
-                      placeholder="Define priority rules..."
-                      value={formData.instructions.priorityRules}
-                      onChange={(e) => handleInstructionChange('priorityRules', e.target.value)}
-                      rows={3}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Special Conditions</label>
-                    <Textarea
-                      placeholder="Specify any special conditions..."
-                      value={formData.instructions.specialConditions}
-                      onChange={(e) => handleInstructionChange('specialConditions', e.target.value)}
-                      rows={3}
-                    />
-                  </div>
-                </div>
-
-                <Button 
-                  onClick={handleCreateTemplate}
-                  className="w-full"
-                >
-                  Create Template
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          className="flex items-center gap-2"
+          onClick={() => setIsCreateDialogOpen(true)}
+        >
+          <Plus className="h-4 w-4" />
+          New Template
+        </Button>
       </div>
 
       <div className="space-y-2">
         {templates.map((template) => (
-          <div
-            key={template.id}
-            className="menu-box p-4 flex items-center justify-between"
-          >
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{template.name}</span>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <Info className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="menu-box p-3 max-w-xs">
-                    <div className="space-y-2">
-                      <p className="font-medium">Instructions:</p>
-                      {template.instructions && (
-                        <div className="text-sm">
-                          <p>Formatting: {template.instructions.dataFormatting}</p>
-                          <p>Priority Rules: {template.instructions.priorityRules}</p>
-                          <p>Special Conditions: {template.instructions.specialConditions}</p>
-                        </div>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setEditingTemplate({
-                      id: template.id,
-                      content: template.content,
-                    })}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="menu-dialog">
-                  <DialogHeader className="menu-dialog-header">
-                    <DialogTitle className="menu-dialog-title">Edit Template</DialogTitle>
-                  </DialogHeader>
-                  {editingTemplate && (
-                    <div className="menu-dialog-content">
-                      <Textarea
-                        value={editingTemplate.content}
-                        onChange={(e) => setEditingTemplate({
-                          ...editingTemplate,
-                          content: e.target.value,
-                        })}
-                        rows={10}
-                      />
-                      <Button onClick={handleUpdateTemplate} className="mt-4">Save Changes</Button>
-                    </div>
-                  )}
-                </DialogContent>
-              </Dialog>
-
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="menu-dialog">
-                  <AlertDialogHeader className="menu-dialog-header">
-                    <AlertDialogTitle className="menu-dialog-title">Delete Template</AlertDialogTitle>
-                    <AlertDialogDescription className="text-white/70">
-                      Are you sure you want to delete this template? This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter className="menu-dialog-content">
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => deleteTemplate(template.id)}>
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </div>
+          <AlertDialog key={template.id}>
+            <TemplateListItem
+              template={template}
+              onEdit={(id) => {
+                setEditingTemplate({
+                  id,
+                  content: template.content,
+                });
+                setIsEditDialogOpen(true);
+              }}
+              onDelete={() => {}}
+            />
+            <AlertDialogContent className="menu-dialog">
+              <AlertDialogHeader className="menu-dialog-header">
+                <AlertDialogTitle className="menu-dialog-title">Delete Template</AlertDialogTitle>
+                <AlertDialogDescription className="text-white/70">
+                  Are you sure you want to delete this template? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="menu-dialog-content">
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => deleteTemplate(template.id)}>
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         ))}
       </div>
+
+      <CreateTemplateDialog
+        isOpen={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        formData={formData}
+        onInputChange={handleInputChange}
+        onInstructionChange={handleInstructionChange}
+        onSubmit={handleCreateTemplate}
+      />
+
+      <EditTemplateDialog
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        editingTemplate={editingTemplate}
+        onContentChange={(content) => 
+          setEditingTemplate(prev => prev ? { ...prev, content } : null)
+        }
+        onSave={handleUpdateTemplate}
+      />
     </div>
   );
 };
