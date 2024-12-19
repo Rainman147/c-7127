@@ -56,9 +56,8 @@ export const useProfilePhoto = () => {
         (payload: DoctorProfileChanges) => {
           console.log('[useProfilePhoto] Realtime update received:', payload);
           if (payload.new && 'profile_photo_url' in payload.new) {
-            const newUrl = payload.new.profile_photo_url;
-            // Type assertion is safe here because we've verified the property exists
-            setProfilePhotoUrl(newUrl);
+            // Since we've properly typed DoctorProfile, profile_photo_url is guaranteed to be string | null
+            setProfilePhotoUrl(payload.new.profile_photo_url);
           }
         }
       )
