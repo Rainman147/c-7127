@@ -153,7 +153,7 @@ export function DoctorProfileForm({ onSuccess }: DoctorProfileFormProps) {
             <FormItem>
               <FormLabel>Full Name</FormLabel>
               <FormControl>
-                <Input placeholder="Dr. John Doe" {...field} />
+                <Input placeholder="Dr. John Doe" className="placeholder:text-white/30" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -167,7 +167,7 @@ export function DoctorProfileForm({ onSuccess }: DoctorProfileFormProps) {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="doctor@clinic.com" {...field} />
+                <Input type="email" placeholder="doctor@clinic.com" className="placeholder:text-white/30" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -181,7 +181,7 @@ export function DoctorProfileForm({ onSuccess }: DoctorProfileFormProps) {
             <FormItem>
               <FormLabel>Title</FormLabel>
               <FormControl>
-                <Input placeholder="Dr." {...field} />
+                <Input placeholder="Dr." className="placeholder:text-white/30" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -195,7 +195,7 @@ export function DoctorProfileForm({ onSuccess }: DoctorProfileFormProps) {
             <FormItem>
               <FormLabel>Specialty</FormLabel>
               <FormControl>
-                <Input placeholder="Cardiology" {...field} />
+                <Input placeholder="Cardiology" className="placeholder:text-white/30" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -209,7 +209,7 @@ export function DoctorProfileForm({ onSuccess }: DoctorProfileFormProps) {
             <FormItem>
               <FormLabel>Clinic Name</FormLabel>
               <FormControl>
-                <Input placeholder="Heart Care Clinic" {...field} />
+                <Input placeholder="Heart Care Clinic" className="placeholder:text-white/30" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -223,7 +223,7 @@ export function DoctorProfileForm({ onSuccess }: DoctorProfileFormProps) {
             <FormItem>
               <FormLabel>Address</FormLabel>
               <FormControl>
-                <Input placeholder="123 Medical Center Dr" {...field} />
+                <Input placeholder="123 Medical Center Dr" className="placeholder:text-white/30" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -237,7 +237,7 @@ export function DoctorProfileForm({ onSuccess }: DoctorProfileFormProps) {
             <FormItem>
               <FormLabel>Phone</FormLabel>
               <FormControl>
-                <Input placeholder="(555) 123-4567" {...field} />
+                <Input placeholder="(555) 123-4567" className="placeholder:text-white/30" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -251,7 +251,7 @@ export function DoctorProfileForm({ onSuccess }: DoctorProfileFormProps) {
             <FormItem>
               <FormLabel>License Number</FormLabel>
               <FormControl>
-                <Input placeholder="MD12345" {...field} />
+                <Input placeholder="MD12345" className="placeholder:text-white/30" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
