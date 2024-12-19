@@ -56,7 +56,7 @@ export const useProfilePhoto = () => {
         (payload: DoctorProfileChanges) => {
           console.log('[useProfilePhoto] Realtime update received:', payload);
           if (payload.new && 'profile_photo_url' in payload.new) {
-            // Since we've properly typed DoctorProfile, profile_photo_url is guaranteed to be string | null
+            // Type assertion is safe here because DoctorProfile defines profile_photo_url as string | null
             setProfilePhotoUrl(payload.new.profile_photo_url);
           }
         }
