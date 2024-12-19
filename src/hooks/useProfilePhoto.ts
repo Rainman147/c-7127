@@ -33,9 +33,7 @@ export const useProfilePhoto = () => {
         }
 
         console.log('[useProfilePhoto] Doctor profile fetched:', doctorProfile);
-        if (doctorProfile?.profile_photo_url) {
-          setProfilePhotoUrl(doctorProfile.profile_photo_url);
-        }
+        setProfilePhotoUrl(doctorProfile?.profile_photo_url ?? null);
       } catch (error) {
         console.error('[useProfilePhoto] Error in fetchDoctorProfile:', error);
       }
@@ -43,7 +41,6 @@ export const useProfilePhoto = () => {
 
     fetchDoctorProfile();
 
-    // Subscribe to realtime changes on the doctors table
     const channel = supabase
       .channel('doctors_profile_changes')
       .on(
@@ -55,8 +52,7 @@ export const useProfilePhoto = () => {
         },
         (payload: DoctorProfileChanges) => {
           console.log('[useProfilePhoto] Realtime update received:', payload);
-          if (payload.new && 'profile_photo_url' in payload.new) {
-            // Type assertion is safe here because DoctorProfile defines profile_photo_url as string | null
+          if (payload.new?.profile_photo_url !== undefined) {
             setProfilePhotoUrl(payload.new.profile_photo_url);
           }
         }
