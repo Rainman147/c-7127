@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '@/components/Sidebar';
+import { useSidebar } from '@/contexts/SidebarContext';
 
 const MainLayout = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [apiKey, setApiKey] = useState("");
+  const { isSidebarOpen, setIsSidebarOpen } = useSidebar();
 
   const handleApiKeyChange = (newApiKey: string) => {
     setApiKey(newApiKey);

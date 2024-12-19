@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
-import Sidebar from '@/components/Sidebar';
 import ChatContainer from '@/components/chat/ChatContainer';
 import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import type { Template } from '@/components/template/types';
+import { useSidebar } from '@/contexts/SidebarContext';
 
 const Index = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
+  const { isSidebarOpen } = useSidebar();
   
   const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
@@ -67,13 +67,6 @@ const Index = () => {
 
   return (
     <div className="flex h-screen">
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-        onApiKeyChange={() => {}} 
-        onSessionSelect={handleSessionSelect}
-      />
-      
       <ChatContainer 
         messages={messages}
         isLoading={isLoading}
