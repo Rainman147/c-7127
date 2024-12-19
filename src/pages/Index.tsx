@@ -5,7 +5,6 @@ import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
-import { TemplateProvider } from '@/contexts/TemplateContext';
 import type { Template } from '@/components/template/types';
 
 const Index = () => {
@@ -67,26 +66,24 @@ const Index = () => {
   };
 
   return (
-    <TemplateProvider>
-      <div className="flex h-screen">
-        <Sidebar 
-          isOpen={isSidebarOpen} 
-          onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-          onApiKeyChange={() => {}} 
-          onSessionSelect={handleSessionSelect}
-        />
-        
-        <ChatContainer 
-          messages={messages}
-          isLoading={isLoading}
-          currentChatId={currentChatId}
-          onMessageSend={handleMessageSend}
-          onTemplateChange={handleTemplateChange}
-          onTranscriptionComplete={handleTranscriptionComplete}
-          isSidebarOpen={isSidebarOpen}
-        />
-      </div>
-    </TemplateProvider>
+    <div className="flex h-screen">
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+        onApiKeyChange={() => {}} 
+        onSessionSelect={handleSessionSelect}
+      />
+      
+      <ChatContainer 
+        messages={messages}
+        isLoading={isLoading}
+        currentChatId={currentChatId}
+        onMessageSend={handleMessageSend}
+        onTemplateChange={handleTemplateChange}
+        onTranscriptionComplete={handleTranscriptionComplete}
+        isSidebarOpen={isSidebarOpen}
+      />
+    </div>
   );
 };
 
