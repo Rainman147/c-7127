@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { usePatientManagement } from '@/hooks/usePatientManagement';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { PatientBasicInfo } from './form/PatientBasicInfo';
+import { PatientContactInfo } from './form/PatientContactInfo';
+import { PatientMedicalInfo } from './form/PatientMedicalInfo';
 import type { Patient } from '@/types/database/patients';
 
 interface PatientFormProps {
@@ -74,77 +75,26 @@ export const PatientForm = ({ patient, onClose, onSubmit }: PatientFormProps) =>
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="name" className="block text-sm font-medium">
-          Name
-        </label>
-        <Input
-          id="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-      </div>
+      <PatientBasicInfo
+        name={name}
+        dob={dob}
+        address={address}
+        onNameChange={setName}
+        onDobChange={setDob}
+        onAddressChange={setAddress}
+      />
 
-      <div>
-        <label htmlFor="dob" className="block text-sm font-medium">
-          Date of Birth
-        </label>
-        <Input
-          id="dob"
-          type="date"
-          value={dob}
-          onChange={(e) => setDob(e.target.value)}
-          required
-        />
-      </div>
+      <PatientContactInfo
+        email={contactInfo.email}
+        phone={contactInfo.phone}
+        onEmailChange={(email) => setContactInfo(prev => ({ ...prev, email }))}
+        onPhoneChange={(phone) => setContactInfo(prev => ({ ...prev, phone }))}
+      />
 
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium">
-          Email
-        </label>
-        <Input
-          id="email"
-          type="email"
-          value={contactInfo.email}
-          onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
-        />
-      </div>
-
-      <div>
-        <label htmlFor="phone" className="block text-sm font-medium">
-          Phone
-        </label>
-        <Input
-          id="phone"
-          type="tel"
-          value={contactInfo.phone}
-          onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
-        />
-      </div>
-
-      <div>
-        <label htmlFor="address" className="block text-sm font-medium">
-          Address
-        </label>
-        <Input
-          id="address"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-        />
-      </div>
-
-      <div>
-        <label htmlFor="medicalHistory" className="block text-sm font-medium">
-          Medical History
-        </label>
-        <Textarea
-          id="medicalHistory"
-          value={medicalHistory}
-          onChange={(e) => setMedicalHistory(e.target.value)}
-          rows={4}
-        />
-      </div>
+      <PatientMedicalInfo
+        medicalHistory={medicalHistory}
+        onMedicalHistoryChange={setMedicalHistory}
+      />
 
       <Button type="submit" disabled={isSubmitting}>
         {isSubmitting ? 'Adding Patient...' : 'Add Patient'}

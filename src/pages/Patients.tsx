@@ -1,19 +1,15 @@
 import { useState } from "react";
-import { usePatientManagement } from "@/hooks/usePatientManagement";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Pencil, Trash2 } from "lucide-react";
-import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { usePatientManagement } from "@/hooks/usePatientManagement";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { PatientForm } from "@/components/patients/PatientForm";
+import { PatientListHeader } from "@/components/patients/list/PatientListHeader";
+import { PatientListTable } from "@/components/patients/list/PatientListTable";
 import type { Patient } from "@/types/database/patients";
 
 const PatientsPage = () => {
@@ -77,92 +73,35 @@ const PatientsPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Patient List</h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Add Patient
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedPatient ? "Edit Patient" : "Add New Patient"}
-              </DialogTitle>
-            </DialogHeader>
-            <PatientForm
-              patient={selectedPatient}
-              onClose={handleFormClose}
-              onSubmit={handleFormSubmit}
-            />
-          </DialogContent>
-        </Dialog>
-      </div>
+      <PatientListHeader
+        searchQuery={searchQuery}
+        onSearchChange={handleSearch}
+        onPatientAdded={() => handleSearch(searchQuery)}
+      />
 
       <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
-        <Input
-          placeholder="Search patients..."
-          className="pl-10"
-          value={searchQuery}
-          onChange={(e) => handleSearch(e.target.value)}
+        <PatientListTable
+          patients={patients}
+          isLoading={isLoading}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
         />
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Date of Birth</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {patients.map((patient) => (
-              <TableRow key={patient.id}>
-                <TableCell>{patient.name}</TableCell>
-                <TableCell>
-                  {patient.dob ? format(new Date(patient.dob), 'MM/dd/yyyy') : 'N/A'}
-                </TableCell>
-                <TableCell>
-                  {(patient.contact_info as { phone: string })?.phone || 'N/A'}
-                </TableCell>
-                <TableCell>
-                  {(patient.contact_info as { email: string })?.email || 'N/A'}
-                </TableCell>
-                <TableCell className="text-right space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(patient)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(patient.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {patients.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-4">
-                  {isLoading ? "Loading..." : "No patients found"}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedPatient ? "Edit Patient" : "Add New Patient"}
+            </DialogTitle>
+          </DialogHeader>
+          <PatientForm
+            patient={selectedPatient}
+            onClose={handleFormClose}
+            onSubmit={handleFormSubmit}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
