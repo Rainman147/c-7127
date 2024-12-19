@@ -28,7 +28,7 @@ export const usePatientSearch = () => {
       console.error('Error searching patients:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to search patients",
+        description: "Failed to load patient data. Please try again.",
         variant: "destructive",
       });
       return [];

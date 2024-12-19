@@ -37,11 +37,35 @@ serve(async (req) => {
     let result
     switch (action) {
       case 'searchPatients':
-        result = await handleSearchPatients(params, user.id, supabaseClient)
+        const { query = '' } = params
+        console.log('Searching patients with query:', query)
+        
+        const { data, error } = await supabaseClient
+          .from('patients')
+          .select()
+          .eq('user_id', user.id)
+          .ilike('name', `%${query}%`)
+          .order('name')
+
+        if (error) throw error
+        console.log('Search results:', data)
+        result = { patients: data }
         break
+
       case 'deletePatient':
-        result = await handleDeletePatient(params, user.id, supabaseClient)
+        const { patientId } = params
+        console.log('Deleting patient:', patientId)
+        
+        const { error: deleteError } = await supabaseClient
+          .from('patients')
+          .delete()
+          .eq('id', patientId)
+          .eq('user_id', user.id)
+
+        if (deleteError) throw deleteError
+        result = { success: true, message: 'Patient deleted successfully' }
         break
+
       default:
         throw new Error(`Unknown action: ${action}`)
     }
@@ -55,6 +79,7 @@ serve(async (req) => {
     )
   } catch (error) {
     console.error('Error in patient-management function:', error)
+    
     return new Response(
       JSON.stringify({
         error: error.message || 'An unexpected error occurred',
@@ -66,39 +91,3 @@ serve(async (req) => {
     )
   }
 })
-
-async function handleSearchPatients(
-  { query = '' }: { query?: string },
-  userId: string,
-  supabaseClient: any
-) {
-  console.log('Searching patients with query:', query)
-  
-  const { data, error } = await supabaseClient
-    .from('patients')
-    .select()
-    .eq('user_id', userId)
-    .ilike('name', `%${query}%`)
-    .order('name')
-
-  if (error) throw error
-  console.log('Search results:', data)
-  return { patients: data }
-}
-
-async function handleDeletePatient(
-  { patientId }: { patientId: string },
-  userId: string,
-  supabaseClient: any
-) {
-  console.log('Deleting patient:', patientId)
-  
-  const { error } = await supabaseClient
-    .from('patients')
-    .delete()
-    .eq('id', patientId)
-    .eq('user_id', userId)
-
-  if (error) throw error
-  return { success: true, message: 'Patient deleted successfully' }
-}
