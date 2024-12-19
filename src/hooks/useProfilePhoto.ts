@@ -8,6 +8,10 @@ type DoctorProfileChanges = RealtimePostgresChangesPayload<{
   new: DoctorProfile | null;
 }>;
 
+type DoctorProfileUpdate = {
+  profile_photo_url: string | null;
+};
+
 export const useProfilePhoto = () => {
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
   
@@ -53,7 +57,13 @@ export const useProfilePhoto = () => {
         (payload: DoctorProfileChanges) => {
           console.log('[useProfilePhoto] Realtime update received:', payload);
           const newProfile = payload.new;
-          if (newProfile && 'profile_photo_url' in newProfile) {
+          
+          // Type guard to ensure newProfile has the correct shape
+          function isProfileUpdate(profile: any): profile is DoctorProfileUpdate {
+            return profile && typeof profile === 'object' && 'profile_photo_url' in profile;
+          }
+
+          if (newProfile && isProfileUpdate(newProfile)) {
             setProfilePhotoUrl(newProfile.profile_photo_url);
           }
         }
