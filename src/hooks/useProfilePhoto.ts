@@ -57,8 +57,10 @@ export const useProfilePhoto = () => {
           console.log('[useProfilePhoto] Realtime update received:', payload);
           if (payload.new && 'profile_photo_url' in payload.new) {
             const newUrl = payload.new.profile_photo_url;
-            console.log('[useProfilePhoto] Setting new profile photo URL:', newUrl);
-            setProfilePhotoUrl(newUrl);
+            if (typeof newUrl === 'string' || newUrl === null) {
+              console.log('[useProfilePhoto] Setting new profile photo URL:', newUrl);
+              setProfilePhotoUrl(newUrl);
+            }
           }
         }
       )
