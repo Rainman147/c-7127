@@ -100,6 +100,8 @@ export type Database = {
           business_hours: Json
           clinic_name: string
           created_at: string
+          email: string | null
+          full_name: string | null
           id: string
           license_number: string
           phone: string
@@ -114,6 +116,8 @@ export type Database = {
           business_hours?: Json
           clinic_name: string
           created_at?: string
+          email?: string | null
+          full_name?: string | null
           id?: string
           license_number: string
           phone: string
@@ -128,6 +132,8 @@ export type Database = {
           business_hours?: Json
           clinic_name?: string
           created_at?: string
+          email?: string | null
+          full_name?: string | null
           id?: string
           license_number?: string
           phone?: string
