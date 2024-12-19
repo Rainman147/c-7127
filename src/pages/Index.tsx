@@ -5,16 +5,12 @@ import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
-import { getDefaultTemplate } from '@/utils/template/templateStateManager';
+import { TemplateProvider } from '@/contexts/TemplateContext';
 import type { Template } from '@/components/template/types';
 
 const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [currentTemplate, setCurrentTemplate] = useState<Template | null>(() => {
-    const defaultTemplate = getDefaultTemplate();
-    console.log('[Index] Initializing with default template:', defaultTemplate.name);
-    return defaultTemplate;
-  });
+  const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
   
   const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
@@ -28,7 +24,6 @@ const Index = () => {
     setCurrentChatId
   } = useChat();
 
-  // Initialize audio recovery
   useAudioRecovery();
 
   const handleSessionSelect = async (chatId: string) => {
@@ -54,14 +49,12 @@ const Index = () => {
   };
 
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
-    // Only create a new session when sending the first message
     if (!currentChatId) {
       console.log('[Index] Creating new session for first message');
       const sessionId = await createSession('New Chat');
       if (sessionId) {
         console.log('[Index] Created new session:', sessionId);
         setCurrentChatId(sessionId);
-        // Wait a brief moment for the session to be properly created
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
@@ -74,24 +67,26 @@ const Index = () => {
   };
 
   return (
-    <div className="flex h-screen">
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-        onApiKeyChange={() => {}} 
-        onSessionSelect={handleSessionSelect}
-      />
-      
-      <ChatContainer 
-        messages={messages}
-        isLoading={isLoading}
-        currentChatId={currentChatId}
-        onMessageSend={handleMessageSend}
-        onTemplateChange={handleTemplateChange}
-        onTranscriptionComplete={handleTranscriptionComplete}
-        isSidebarOpen={isSidebarOpen}
-      />
-    </div>
+    <TemplateProvider>
+      <div className="flex h-screen">
+        <Sidebar 
+          isOpen={isSidebarOpen} 
+          onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+          onApiKeyChange={() => {}} 
+          onSessionSelect={handleSessionSelect}
+        />
+        
+        <ChatContainer 
+          messages={messages}
+          isLoading={isLoading}
+          currentChatId={currentChatId}
+          onMessageSend={handleMessageSend}
+          onTemplateChange={handleTemplateChange}
+          onTranscriptionComplete={handleTranscriptionComplete}
+          isSidebarOpen={isSidebarOpen}
+        />
+      </div>
+    </TemplateProvider>
   );
 };
 

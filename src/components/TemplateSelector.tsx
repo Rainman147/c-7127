@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TemplateItem } from "./template/TemplateItem";
 import { useTemplateSelection } from "./template/useTemplateSelection";
+import { useTemplateContext } from "@/contexts/TemplateContext";
 import type { Template } from "./template/types";
 
 interface TemplateSelectorProps {
@@ -17,12 +18,12 @@ interface TemplateSelectorProps {
 export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
   console.log('[TemplateSelector] Initializing with currentChatId:', currentChatId);
   
+  const { globalTemplate, setGlobalTemplate } = useTemplateContext();
   const { selectedTemplate, availableTemplates, isLoading, handleTemplateChange } = useTemplateSelection(
     currentChatId,
-    onTemplateChange
+    onTemplateChange,
+    globalTemplate
   );
-
-  const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedTemplate) {
@@ -32,13 +33,14 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
 
   const handleTemplateSelect = useCallback((template: Template) => {
     console.log('[TemplateSelector] Template selection triggered:', template.name);
-    handleTemplateChange(template);
-  }, [handleTemplateChange]);
+    setGlobalTemplate(template);
+    if (currentChatId) {
+      handleTemplateChange(template);
+    }
+  }, [handleTemplateChange, currentChatId, setGlobalTemplate]);
 
-  const handleTooltipChange = useCallback((templateId: string | null) => {
-    console.log('[TemplateSelector] Tooltip state changed for template:', templateId);
-    setOpenTooltipId(templateId);
-  }, []);
+  // Use either the chat-specific template or the global template
+  const displayTemplate = currentChatId ? selectedTemplate : globalTemplate;
 
   return (
     <DropdownMenu>
@@ -47,7 +49,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         disabled={isLoading}
         onClick={() => console.log('[TemplateSelector] Dropdown trigger clicked')}
       >
-        <span className="whitespace-nowrap">{selectedTemplate?.name || 'Select Template'}</span>
+        <span className="whitespace-nowrap">{displayTemplate?.name || 'Select Template'}</span>
         <ChevronDown className="h-4 w-4 opacity-70" />
       </DropdownMenuTrigger>
       <DropdownMenuContent 
@@ -59,11 +61,11 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
           <TemplateItem
             key={template.id}
             template={template}
-            isSelected={selectedTemplate?.id === template.id}
+            isSelected={displayTemplate?.id === template.id}
             onSelect={handleTemplateSelect}
             isLoading={isLoading}
-            isTooltipOpen={openTooltipId === template.id}
-            onTooltipChange={(isOpen) => handleTooltipChange(isOpen ? template.id : null)}
+            isTooltipOpen={false}
+            onTooltipChange={() => {}}
           />
         ))}
       </DropdownMenuContent>
