@@ -1,15 +1,10 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { usePatientManagement } from "@/hooks/usePatientManagement";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { PatientForm } from "@/components/patients/PatientForm";
-import { PatientListHeader } from "@/components/patients/list/PatientListHeader";
-import { PatientListTable } from "@/components/patients/list/PatientListTable";
+import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { PatientCard } from "@/components/patients/PatientCard";
+import { PatientDialog } from "@/components/patients/PatientDialog";
 import type { Patient } from "@/types/database/patients";
 
 const PatientsPage = () => {
@@ -36,7 +31,7 @@ const PatientsPage = () => {
   };
 
   const handleDelete = async (patientId: string) => {
-    if (window.confirm("Are you sure you want to delete this patient? This action cannot be undone.")) {
+    if (window.confirm("Are you sure you want to delete this patient?")) {
       try {
         await deletePatient(patientId);
         setPatients(patients.filter(p => p.id !== patientId));
@@ -55,53 +50,61 @@ const PatientsPage = () => {
     }
   };
 
-  const handleEdit = (patient: Patient) => {
+  const handlePatientClick = (patient: Patient) => {
     setSelectedPatient(patient);
     setIsDialogOpen(true);
   };
 
-  const handleFormClose = () => {
-    setSelectedPatient(undefined);
-    setIsDialogOpen(false);
-  };
-
-  const handleFormSubmit = async () => {
-    // Refresh the patient list after form submission
-    handleSearch(searchQuery);
-    handleFormClose();
-  };
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <PatientListHeader
-        searchQuery={searchQuery}
-        onSearchChange={handleSearch}
-        onPatientAdded={() => handleSearch(searchQuery)}
-      />
-
-      <div className="relative mb-6">
-        <PatientListTable
-          patients={patients}
-          isLoading={isLoading}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
+      {/* Search Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-6">Patients</h1>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+          <Input
+            type="text"
+            placeholder="Search patients..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-10 bg-chatgpt-secondary/10 border-white/10 w-full"
+          />
+        </div>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedPatient ? "Edit Patient" : "Add New Patient"}
-            </DialogTitle>
-          </DialogHeader>
-          <PatientForm
-            patient={selectedPatient}
-            onClose={handleFormClose}
-            onSubmit={handleFormSubmit}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Patient Grid */}
+      {isLoading ? (
+        <div className="text-center py-8">Loading patients...</div>
+      ) : patients.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {patients.map((patient) => (
+            <PatientCard
+              key={patient.id}
+              patient={patient}
+              onClick={() => handlePatientClick(patient)}
+              onDelete={() => handleDelete(patient.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 text-gray-400">
+          No patients found. Try a different search.
+        </div>
+      )}
+
+      <PatientDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        patient={selectedPatient}
+        onClose={() => {
+          setSelectedPatient(undefined);
+          setIsDialogOpen(false);
+        }}
+        onSubmit={() => {
+          handleSearch(searchQuery);
+          setIsDialogOpen(false);
+        }}
+      />
     </div>
   );
 };
