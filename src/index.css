@@ -36,11 +36,11 @@ body {
 }
 
 .menu-item {
-  @apply flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors duration-200 hover:bg-white/[0.05] cursor-pointer;
+  @apply flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors duration-200 hover:bg-[#3A3A3A] cursor-pointer;
 }
 
 .menu-item-active {
-  @apply bg-white/[0.05];
+  @apply bg-[#3A3A3A];
 }
 
 /* Sidebar scrollbar */
