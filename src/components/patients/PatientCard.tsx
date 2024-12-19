@@ -41,7 +41,7 @@ export const PatientCard = ({ patient, onClick, onDelete }: PatientCardProps) =>
           <div className="w-16 h-16 rounded-full bg-chatgpt-secondary/50 flex items-center justify-center text-xl font-semibold">
             {patient.contact_info?.avatar ? (
               <img 
-                src={patient.contact_info.avatar as string} 
+                src={patient.contact_info.avatar} 
                 alt={patient.name} 
                 className="w-full h-full rounded-full object-cover"
               />

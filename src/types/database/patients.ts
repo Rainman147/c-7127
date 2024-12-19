@@ -1,11 +1,17 @@
 import { Json } from './common';
 
+interface ContactInfo {
+  email?: string;
+  phone?: string;
+  avatar?: string;
+}
+
 export interface Patient {
   id: string;
   user_id: string;
   name: string;
   dob: string;
-  contact_info?: Json;
+  contact_info?: ContactInfo;
   medical_history?: string;
   current_medications?: Json[];
   recent_tests?: Json[];
