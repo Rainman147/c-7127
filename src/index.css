@@ -20,11 +20,11 @@ body {
 }
 
 .menu-dialog-title {
-  @apply text-lg font-medium text-white/90 px-2;
+  @apply text-lg font-medium text-white/90 px-4;
 }
 
 .menu-dialog-content {
-  @apply p-6 space-y-6;
+  @apply p-6 space-y-6 overflow-y-auto;
 }
 
 .menu-dialog-footer {
@@ -52,22 +52,19 @@ body {
   @apply px-6 py-2.5 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-all duration-200;
 }
 
-/* Sidebar scrollbar */
+/* Scrollbar styling */
 .sidebar-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-sidebar;
 }
 
-/* Main chat area scrollbar */
 .chat-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-main;
 }
 
-/* Chat input area scrollbar */
 .chat-input-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-[#2F2F2F];
 }
 
-/* Dialog scrollbar */
 .dialog-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-main;
 }

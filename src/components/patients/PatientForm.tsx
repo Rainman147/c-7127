@@ -66,7 +66,7 @@ export const PatientForm = ({ patient, onClose, onSubmit }: PatientFormProps) =>
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col h-full">
-      <div className="menu-dialog-content flex-grow overflow-y-auto">
+      <div className="menu-dialog-content flex-grow dialog-scrollbar">
         <PatientBasicInfo
           name={name}
           dob={dob}
@@ -100,7 +100,7 @@ export const PatientForm = ({ patient, onClose, onSubmit }: PatientFormProps) =>
         <button 
           type="submit" 
           disabled={isSubmitting} 
-          className="btn-primary bg-white/10 hover:bg-white/15"
+          className="btn-primary"
         >
           {isSubmitting ? 'Adding Patient...' : 'Save'}
         </button>
