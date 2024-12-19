@@ -15,6 +15,7 @@ export function DoctorProfileDialog({ open, onOpenChange }: DoctorProfileDialogP
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  const [profileData, setProfileData] = useState<Partial<DoctorProfileFormData> | null>(null);
 
   // Fetch existing profile data when dialog opens
   useEffect(() => {
@@ -25,25 +26,32 @@ export function DoctorProfileDialog({ open, onOpenChange }: DoctorProfileDialogP
 
         const { data: doctorProfile, error } = await supabase
           .from("doctors")
-          .select("profile_photo_url")
+          .select("*")
           .eq("user_id", user.id)
           .single();
 
         if (error) throw error;
 
-        if (doctorProfile?.profile_photo_url) {
-          console.log("[DoctorProfileDialog] Fetched profile photo:", doctorProfile.profile_photo_url);
+        console.log("[DoctorProfileDialog] Fetched profile data:", doctorProfile);
+        
+        if (doctorProfile) {
+          setProfileData(doctorProfile);
           setProfilePhotoUrl(doctorProfile.profile_photo_url);
         }
       } catch (error) {
         console.error("Error fetching doctor profile:", error);
+        toast({
+          title: "Error loading profile",
+          description: "There was a problem loading your profile data. Please try again.",
+          variant: "destructive",
+        });
       }
     };
 
     if (open) {
       fetchDoctorProfile();
     }
-  }, [open]);
+  }, [open, toast]);
 
   const onSubmit = async (data: DoctorProfileFormData) => {
     try {
@@ -110,6 +118,7 @@ export function DoctorProfileDialog({ open, onOpenChange }: DoctorProfileDialogP
         <DoctorProfileForm 
           onSubmit={onSubmit}
           isLoading={isLoading}
+          initialData={profileData}
         />
       </DialogContent>
     </Dialog>
