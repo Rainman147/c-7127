@@ -38,7 +38,7 @@ const ChatHeaderComponent = ({
           .from('doctors')
           .select('profile_photo_url')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (doctorProfile?.profile_photo_url) {
           setProfilePhotoUrl(doctorProfile.profile_photo_url);
