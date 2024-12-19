@@ -8,8 +8,8 @@ export const DoctorProfileHeader = () => {
   console.log('[DoctorProfileHeader] Rendering header');
   
   return (
-    <DialogHeader className="px-4 py-3 border-b border-chatgpt-border">
-      <DialogTitle className="text-base">My Profile</DialogTitle>
+    <DialogHeader className="px-4 py-3 border-b border-chatgpt-border bg-chatgpt-secondary/10">
+      <DialogTitle className="text-sm font-medium text-white/90">My Profile</DialogTitle>
     </DialogHeader>
   );
 };

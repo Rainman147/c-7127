@@ -22,7 +22,7 @@ export const DoctorProfileDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[380px] max-h-[85vh] p-0 gap-0 bg-chatgpt-main border-chatgpt-border">
+      <DialogContent className="max-w-[380px] max-h-[85vh] p-0 gap-0 bg-chatgpt-main border-chatgpt-border rounded-xl overflow-hidden">
         <DoctorProfileHeader />
         <DoctorProfileContent onSuccess={() => onOpenChange(false)} />
       </DialogContent>

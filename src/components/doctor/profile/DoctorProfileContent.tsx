@@ -13,8 +13,10 @@ export const DoctorProfileContent = ({ onSuccess }: DoctorProfileContentProps) =
   console.log('[DoctorProfileContent] Rendering content area');
 
   return (
-    <ScrollArea className="px-4 py-4 max-h-[calc(85vh-120px)] chat-scrollbar">
-      <DoctorProfileForm onSuccess={onSuccess} />
+    <ScrollArea className="px-6 py-4 max-h-[calc(85vh-120px)] chat-scrollbar">
+      <div className="space-y-6">
+        <DoctorProfileForm onSuccess={onSuccess} />
+      </div>
     </ScrollArea>
   );
 };
