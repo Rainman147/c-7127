@@ -52,6 +52,49 @@ export const usePatientManagement = () => {
     }
   };
 
+  const updatePatient = async (
+    patientId: string,
+    updates: {
+      name?: string;
+      dob?: string;
+      contactInfo?: Json;
+      medicalHistory?: string;
+      currentMedications?: Json[];
+      recentTests?: Json[];
+      address?: string;
+    }
+  ) => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('patient-management', {
+        body: { 
+          action: 'updatePatient',
+          patientId,
+          ...updates
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Patient updated successfully",
+      });
+
+      return data.patient;
+    } catch (error: any) {
+      console.error('Error updating patient:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update patient",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const searchPatients = async (query: string) => {
     setIsLoading(true);
     try {
@@ -102,10 +145,43 @@ export const usePatientManagement = () => {
     }
   };
 
+  const deletePatient = async (patientId: string) => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('patient-management', {
+        body: { 
+          action: 'deletePatient',
+          patientId
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Patient deleted successfully",
+      });
+
+      return true;
+    } catch (error: any) {
+      console.error('Error deleting patient:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete patient",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     addPatient,
+    updatePatient,
     searchPatients,
-    getPatient
+    getPatient,
+    deletePatient
   };
 };
