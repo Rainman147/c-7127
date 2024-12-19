@@ -1,5 +1,3 @@
-import { Input } from '@/components/ui/input';
-
 interface PatientContactInfoProps {
   email: string;
   phone: string;
@@ -14,30 +12,34 @@ export const PatientContactInfo = ({
   onPhoneChange 
 }: PatientContactInfoProps) => {
   return (
-    <>
+    <div className="space-y-4">
       <div>
-        <label htmlFor="email" className="block text-sm font-medium">
+        <label htmlFor="email" className="form-label">
           Email
         </label>
-        <Input
+        <input
           id="email"
           type="email"
+          className="form-input"
           value={email}
           onChange={(e) => onEmailChange(e.target.value)}
+          placeholder="Enter patient email"
         />
       </div>
 
       <div>
-        <label htmlFor="phone" className="block text-sm font-medium">
+        <label htmlFor="phone" className="form-label">
           Phone
         </label>
-        <Input
+        <input
           id="phone"
           type="tel"
+          className="form-input"
           value={phone}
           onChange={(e) => onPhoneChange(e.target.value)}
+          placeholder="Enter patient phone number"
         />
       </div>
-    </>
+    </div>
   );
 };

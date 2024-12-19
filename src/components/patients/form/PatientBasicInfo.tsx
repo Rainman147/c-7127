@@ -1,5 +1,3 @@
-import { Input } from '@/components/ui/input';
-
 interface PatientBasicInfoProps {
   name: string;
   dob: string;
@@ -18,26 +16,29 @@ export const PatientBasicInfo = ({
   onAddressChange
 }: PatientBasicInfoProps) => {
   return (
-    <>
+    <div className="space-y-4">
       <div>
-        <label htmlFor="name" className="block text-sm font-medium">
+        <label htmlFor="name" className="form-label">
           Name
         </label>
-        <Input
+        <input
           id="name"
+          className="form-input"
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
+          placeholder="Enter patient name"
           required
         />
       </div>
 
       <div>
-        <label htmlFor="dob" className="block text-sm font-medium">
+        <label htmlFor="dob" className="form-label">
           Date of Birth
         </label>
-        <Input
+        <input
           id="dob"
           type="date"
+          className="form-input"
           value={dob}
           onChange={(e) => onDobChange(e.target.value)}
           required
@@ -45,15 +46,17 @@ export const PatientBasicInfo = ({
       </div>
 
       <div>
-        <label htmlFor="address" className="block text-sm font-medium">
+        <label htmlFor="address" className="form-label">
           Address
         </label>
-        <Input
+        <input
           id="address"
+          className="form-input"
           value={address}
           onChange={(e) => onAddressChange(e.target.value)}
+          placeholder="Enter patient address"
         />
       </div>
-    </>
+    </div>
   );
 };

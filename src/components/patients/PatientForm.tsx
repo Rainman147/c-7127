@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { usePatientManagement } from '@/hooks/usePatientManagement';
-import { Button } from '@/components/ui/button';
 import { PatientBasicInfo } from './form/PatientBasicInfo';
 import { PatientContactInfo } from './form/PatientContactInfo';
 import { PatientMedicalInfo } from './form/PatientMedicalInfo';
@@ -51,14 +50,6 @@ export const PatientForm = ({ patient, onClose, onSubmit }: PatientFormProps) =>
           description: "Patient added successfully",
           variant: "default"
         });
-        // Reset form
-        setName('');
-        setDob('');
-        setAddress('');
-        setMedicalHistory('');
-        setContactInfo({ email: '', phone: '' });
-        setCurrentMedications([]);
-        setRecentTests([]);
         onSubmit?.();
       }
     } catch (error) {
@@ -74,31 +65,46 @@ export const PatientForm = ({ patient, onClose, onSubmit }: PatientFormProps) =>
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <PatientBasicInfo
-        name={name}
-        dob={dob}
-        address={address}
-        onNameChange={setName}
-        onDobChange={setDob}
-        onAddressChange={setAddress}
-      />
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="menu-dialog-content">
+        <PatientBasicInfo
+          name={name}
+          dob={dob}
+          address={address}
+          onNameChange={setName}
+          onDobChange={setDob}
+          onAddressChange={setAddress}
+        />
 
-      <PatientContactInfo
-        email={contactInfo.email}
-        phone={contactInfo.phone}
-        onEmailChange={(email) => setContactInfo(prev => ({ ...prev, email }))}
-        onPhoneChange={(phone) => setContactInfo(prev => ({ ...prev, phone }))}
-      />
+        <PatientContactInfo
+          email={contactInfo.email}
+          phone={contactInfo.phone}
+          onEmailChange={(email) => setContactInfo(prev => ({ ...prev, email }))}
+          onPhoneChange={(phone) => setContactInfo(prev => ({ ...prev, phone }))}
+        />
 
-      <PatientMedicalInfo
-        medicalHistory={medicalHistory}
-        onMedicalHistoryChange={setMedicalHistory}
-      />
+        <PatientMedicalInfo
+          medicalHistory={medicalHistory}
+          onMedicalHistoryChange={setMedicalHistory}
+        />
+      </div>
 
-      <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'Adding Patient...' : 'Add Patient'}
-      </Button>
+      <div className="menu-dialog-footer">
+        <button 
+          type="button" 
+          onClick={onClose} 
+          className="btn-secondary"
+        >
+          Cancel
+        </button>
+        <button 
+          type="submit" 
+          disabled={isSubmitting} 
+          className="btn-primary"
+        >
+          {isSubmitting ? 'Adding Patient...' : 'Save'}
+        </button>
+      </div>
     </form>
   );
 };

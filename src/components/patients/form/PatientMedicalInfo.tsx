@@ -11,14 +11,15 @@ export const PatientMedicalInfo = ({
 }: PatientMedicalInfoProps) => {
   return (
     <div>
-      <label htmlFor="medicalHistory" className="block text-sm font-medium">
+      <label htmlFor="medicalHistory" className="form-label">
         Medical History
       </label>
       <Textarea
         id="medicalHistory"
         value={medicalHistory}
         onChange={(e) => onMedicalHistoryChange(e.target.value)}
-        rows={4}
+        placeholder="Enter patient medical history"
+        className="form-input min-h-[100px]"
       />
     </div>
   );
