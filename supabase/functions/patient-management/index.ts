@@ -15,6 +15,7 @@ serve(async (req) => {
   }
 
   try {
+    // Create Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -36,23 +37,28 @@ serve(async (req) => {
 
     let result
     switch (action) {
-      case 'searchPatients':
+      case 'searchPatients': {
         const { query = '' } = params
         console.log('Searching patients with query:', query)
         
         const { data, error } = await supabaseClient
           .from('patients')
-          .select()
+          .select('*')
           .eq('user_id', user.id)
           .ilike('name', `%${query}%`)
           .order('name')
 
-        if (error) throw error
+        if (error) {
+          console.error('Database error:', error)
+          throw error
+        }
+        
         console.log('Search results:', data)
         result = { patients: data }
         break
+      }
 
-      case 'deletePatient':
+      case 'deletePatient': {
         const { patientId } = params
         console.log('Deleting patient:', patientId)
         
@@ -62,9 +68,14 @@ serve(async (req) => {
           .eq('id', patientId)
           .eq('user_id', user.id)
 
-        if (deleteError) throw deleteError
+        if (deleteError) {
+          console.error('Delete error:', deleteError)
+          throw deleteError
+        }
+        
         result = { success: true, message: 'Patient deleted successfully' }
         break
+      }
 
       default:
         throw new Error(`Unknown action: ${action}`)
