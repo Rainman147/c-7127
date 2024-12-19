@@ -52,12 +52,14 @@ export const PatientForm = ({ patient, onClose, onSubmit }: PatientFormProps) =>
         toast({
           title: "Success",
           description: "Patient updated successfully",
+          variant: "default",
         });
       } else {
         await addPatient(formData);
         toast({
           title: "Success",
           description: "Patient added successfully",
+          variant: "default",
         });
       }
       onSubmit();
