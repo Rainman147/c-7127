@@ -59,20 +59,31 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
             </Avatar>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer">
-            <User2 className="mr-2 h-4 w-4" />
-            My Profile
-          </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer">
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500 focus:text-red-500">
-            <LogOut className="mr-2 h-4 w-4" />
-            Log Out
-          </DropdownMenuItem>
+        <DropdownMenuContent 
+          align="end" 
+          className="menu-box w-56 p-0"
+        >
+          <div className="menu-dialog-header">
+            <span className="menu-dialog-title">Account</span>
+          </div>
+          <div className="p-1">
+            <DropdownMenuItem onClick={handleProfileClick} className="sidebar-item">
+              <User2 className="h-4 w-4" />
+              My Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem className="sidebar-item">
+              <Settings className="h-4 w-4" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="my-1" />
+            <DropdownMenuItem 
+              onClick={handleLogout} 
+              className="sidebar-item text-red-500 focus:text-red-500"
+            >
+              <LogOut className="h-4 w-4" />
+              Log Out
+            </DropdownMenuItem>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
 
