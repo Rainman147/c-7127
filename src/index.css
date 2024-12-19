@@ -33,3 +33,8 @@ body {
 .chat-input-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-[#2F2F2F];
 }
+
+/* Dialog scrollbar - using same styling as chat area */
+.dialog-scrollbar {
+  @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-main;
+}
