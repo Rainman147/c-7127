@@ -60,8 +60,8 @@ export const TemplateItem = ({
               </button>
             </TooltipTrigger>
             <TooltipContent 
-              side="left" 
-              className="w-[280px] max-w-[80vw] bg-chatgpt-main border border-chatgpt-border p-2.5 rounded-[2px] shadow-lg"
+              side="top" 
+              className="w-[280px] max-w-[90vw] bg-chatgpt-main border border-chatgpt-border p-2.5 rounded-[2px] shadow-lg z-[60]"
               sideOffset={5}
               align="center"
               onPointerDownOutside={() => isIOS && onTooltipChange(false)}
