@@ -10,8 +10,12 @@ const Login = () => {
 
   useEffect(() => {
     const init = async () => {
-      await clearSession();
-      console.log('Session cleared on Login component mount');
+      try {
+        await clearSession();
+        console.log('Session cleared on Login component mount');
+      } catch (error) {
+        console.log('Error clearing session, likely already cleared:', error);
+      }
     };
     
     init();

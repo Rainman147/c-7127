@@ -10,35 +10,40 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   const validateSession = useCallback(async () => {
     console.log('[ProtectedRoute] Validating session...');
-    const { session, error } = await checkSession();
+    try {
+      const { session, error } = await checkSession();
 
-    if (error) {
-      console.log('[ProtectedRoute] Session validation failed:', {
-        error: error.message,
-        isRefreshTokenError: error.isRefreshTokenError,
-        timestamp: new Date().toISOString()
-      });
-      
-      // Only show toast for non-refresh token errors
-      if (!error.isRefreshTokenError) {
-        toast({
-          title: "Authentication Error",
-          description: error.message,
-          variant: "destructive",
+      if (error) {
+        console.log('[ProtectedRoute] Session validation failed:', {
+          error: error.message,
+          isRefreshTokenError: error.isRefreshTokenError,
+          timestamp: new Date().toISOString()
         });
+        
+        // Only show toast for non-refresh token errors
+        if (!error.isRefreshTokenError) {
+          toast({
+            title: "Authentication Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+        
+        navigate('/auth');
+        return;
       }
-      
-      navigate('/auth');
-      return;
-    }
 
-    if (!session) {
-      console.log('[ProtectedRoute] No active session found');
-      navigate('/auth');
-      return;
-    }
+      if (!session) {
+        console.log('[ProtectedRoute] No active session found');
+        navigate('/auth');
+        return;
+      }
 
-    console.log('[ProtectedRoute] Session validated successfully');
+      console.log('[ProtectedRoute] Session validated successfully');
+    } catch (error) {
+      console.error('[ProtectedRoute] Critical session validation error:', error);
+      navigate('/auth');
+    }
   }, [navigate, toast]);
 
   useEffect(() => {
