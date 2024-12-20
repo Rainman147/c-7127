@@ -31,7 +31,7 @@ const ChatContainer = ({
   console.log('[ChatContainer] Rendering with messages:', messages);
   
   return (
-    <main className={`flex-1 transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-0'}`}>
+    <main className="flex-1">
       <ChatHeader 
         isSidebarOpen={isOpen}
         currentChatId={currentChatId}

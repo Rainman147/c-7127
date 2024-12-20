@@ -13,7 +13,7 @@ const MainLayout = () => {
       <Sidebar />
       
       <div className={cn(
-        "flex-1 relative transition-transform duration-300 ease-in-out",
+        "flex-1 relative transition-all duration-300 ease-in-out",
         isOpen ? "md:ml-64" : "ml-0"
       )}>
         {/* Header with open button */}
@@ -22,8 +22,8 @@ const MainLayout = () => {
             onClick={open}
             variant="ghost"
             className={cn(
-              "transition-all duration-300 ease-in-out",
-              isOpen ? "opacity-0 -translate-x-full md:hidden" : "opacity-100 translate-x-0"
+              "transition-opacity duration-300 ease-in-out",
+              isOpen ? "opacity-0 pointer-events-none" : "opacity-100"
             )}
           >
             <Menu className="h-5 w-5" />
