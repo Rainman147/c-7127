@@ -4,6 +4,8 @@ import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { TemplateSelector } from '@/components/TemplateSelector';
+import { ProfileMenu } from '@/components/header/ProfileMenu';
+import { useProfilePhoto } from '@/hooks/useProfilePhoto';
 import { cn } from '@/lib/utils';
 
 interface AppHeaderProps {
@@ -26,6 +28,7 @@ const AppHeader = ({
   const { isOpen, open } = useSidebar();
   const location = useLocation();
   const [mounted, setMounted] = useState(false);
+  const profilePhotoUrl = useProfilePhoto();
 
   const logViewportState = useCallback(() => {
     console.log('[AppHeader] Viewport state:', {
@@ -33,7 +36,8 @@ const AppHeader = ({
       isMobile: window.innerWidth < 768,
       variant,
       path: location.pathname,
-      hasTemplateSelector: !!onTemplateChange
+      hasTemplateSelector: !!onTemplateChange,
+      hasProfileMenu: true
     });
   }, [variant, location.pathname, onTemplateChange]);
 
@@ -91,11 +95,10 @@ const AppHeader = ({
           </div>
         )}
         
-        {rightContent && (
-          <div className="flex items-center">
-            {rightContent}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {rightContent}
+          <ProfileMenu profilePhotoUrl={profilePhotoUrl} />
+        </div>
       </div>
     </header>
   );
