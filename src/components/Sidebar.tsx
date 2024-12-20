@@ -36,17 +36,18 @@ const Sidebar = () => {
       {/* Mobile backdrop */}
       <div 
         className={cn(
-          "fixed inset-0 bg-black/30 backdrop-blur-sm z-30 md:hidden transition-opacity duration-300",
+          "fixed inset-0 bg-black/30 backdrop-blur-sm z-30 md:hidden",
+          "transition-opacity duration-300",
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={close}
       />
 
       {/* Sidebar */}
-      <div
+      <aside
         className={cn(
           "fixed top-0 left-0 z-40 h-screen w-64 bg-chatgpt-sidebar",
-          "transform transition-transform duration-300 ease-in-out",
+          "transform transition-transform duration-300 ease-in-out layout-transition",
           "flex flex-col",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
@@ -101,7 +102,7 @@ const Sidebar = () => {
           apiKey=""
           onApiKeyChange={() => {}}
         />
-      </div>
+      </aside>
     </>
   );
 };
