@@ -81,7 +81,7 @@ const PatientsPage = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <>
       <Button
         onClick={open}
         variant="ghost"
@@ -89,38 +89,40 @@ const PatientsPage = () => {
         className={cn(
           "transition-all duration-300 ease-in-out text-white/70 hover:text-white fixed",
           isOpen ? "-translate-x-full opacity-0 pointer-events-none" : "translate-x-0 opacity-100",
-          "z-50" // Ensure button stays above other content
+          "z-50 left-4 top-4" // Added explicit left and top positioning
         )}
       >
         <Menu className="h-5 w-5" />
       </Button>
 
-      <PatientListHeader
-        searchQuery={searchQuery}
-        onSearchChange={handleSearch}
-        onPatientAdded={handlePatientAdded}
-      />
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <PatientListHeader
+          searchQuery={searchQuery}
+          onSearchChange={handleSearch}
+          onPatientAdded={handlePatientAdded}
+        />
 
-      <PatientSearch 
-        searchQuery={searchQuery}
-        onSearchChange={handleSearch}
-      />
+        <PatientSearch 
+          searchQuery={searchQuery}
+          onSearchChange={handleSearch}
+        />
 
-      <PatientGrid
-        patients={patients}
-        isLoading={isLoading || isInitialLoad}
-        onPatientClick={handlePatientClick}
-        onPatientDelete={handleDeletePatient}
-      />
+        <PatientGrid
+          patients={patients}
+          isLoading={isLoading || isInitialLoad}
+          onPatientClick={handlePatientClick}
+          onPatientDelete={handleDeletePatient}
+        />
 
-      <PatientDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        patient={selectedPatient}
-        onClose={() => setIsDialogOpen(false)}
-        onSubmit={handlePatientAdded}
-      />
-    </div>
+        <PatientDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          patient={selectedPatient}
+          onClose={() => setIsDialogOpen(false)}
+          onSubmit={handlePatientAdded}
+        />
+      </div>
+    </>
   );
 };
 
