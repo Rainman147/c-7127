@@ -1,4 +1,5 @@
 import { ChevronLeft, Plus, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useChatSessions } from "@/hooks/useChatSessions";
@@ -9,6 +10,7 @@ import { SidebarFooter } from "./sidebar/SidebarFooter";
 
 const Sidebar = () => {
   const { isOpen, close } = useSidebar();
+  const navigate = useNavigate();
   const {
     sessions,
     activeSessionId,
@@ -22,14 +24,18 @@ const Sidebar = () => {
     console.log('[Sidebar] Creating new chat session');
     const sessionId = await createSession();
     if (sessionId) {
+      console.log('[Sidebar] New chat session created:', sessionId);
       setActiveSessionId(sessionId);
       close(); // Close sidebar after creating new chat
+      navigate('/'); // Navigate to the main chat page
     }
   };
 
   const handleSessionClick = (sessionId: string) => {
     console.log('[Sidebar] Session selected:', sessionId);
     setActiveSessionId(sessionId);
+    navigate('/'); // Navigate to the main chat page when selecting a session
+    close(); // Close sidebar after selecting a session
   };
 
   return (
