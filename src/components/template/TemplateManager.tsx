@@ -1,28 +1,30 @@
 import { useState } from 'react';
 import { useTemplates } from '@/hooks/useTemplates';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { CreateTemplateDialog } from './dialogs/CreateTemplateDialog';
 import { EditTemplateDialog } from './dialogs/EditTemplateDialog';
-import { TemplateListItem } from './list/TemplateListItem';
+import { TemplateList } from './list/TemplateList';
+import { TemplateHeaderActions } from './header/TemplateHeaderActions';
 
+/**
+ * TemplateManager Component
+ * 
+ * Manages the creation, editing, and deletion of templates.
+ * Provides a UI for users to:
+ * - View all templates
+ * - Create new templates
+ * - Edit existing templates
+ * - Delete templates
+ */
 export const TemplateManager = () => {
   const { templates, createTemplate, updateTemplate, deleteTemplate } = useTemplates();
   const { toast } = useToast();
+  
+  // Dialog state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  
+  // Form state
   const [formData, setFormData] = useState({
     name: '',
     content: '',
@@ -36,8 +38,10 @@ export const TemplateManager = () => {
       requiredFields: [],
     },
   });
+  
   const [editingTemplate, setEditingTemplate] = useState<{ id: string; content: string } | null>(null);
 
+  // Form handlers
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -55,6 +59,7 @@ export const TemplateManager = () => {
     }));
   };
 
+  // Template operations
   const handleCreateTemplate = async () => {
     console.log('[TemplateManager] Creating template with data:', formData);
     if (formData.name && formData.content) {
@@ -71,6 +76,7 @@ export const TemplateManager = () => {
           description: "Template created successfully",
         });
         
+        // Reset form
         setFormData({
           name: '',
           content: '',
@@ -125,47 +131,16 @@ export const TemplateManager = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button 
-          className="flex items-center gap-2"
-          onClick={() => setIsCreateDialogOpen(true)}
-        >
-          <Plus className="h-4 w-4" />
-          New Template
-        </Button>
-      </div>
-
-      <div className="space-y-2">
-        {templates.map((template) => (
-          <AlertDialog key={template.id}>
-            <TemplateListItem
-              template={template}
-              onEdit={(id) => {
-                setEditingTemplate({
-                  id,
-                  content: template.content,
-                });
-                setIsEditDialogOpen(true);
-              }}
-              onDelete={() => {}}
-            />
-            <AlertDialogContent className="menu-dialog">
-              <AlertDialogHeader className="menu-dialog-header">
-                <AlertDialogTitle className="menu-dialog-title">Delete Template</AlertDialogTitle>
-                <AlertDialogDescription className="text-white/70">
-                  Are you sure you want to delete this template? This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter className="menu-dialog-content">
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => deleteTemplate(template.id)}>
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        ))}
-      </div>
+      <TemplateHeaderActions onNewTemplate={() => setIsCreateDialogOpen(true)} />
+      
+      <TemplateList
+        templates={templates}
+        onEdit={(template) => {
+          setEditingTemplate(template);
+          setIsEditDialogOpen(true);
+        }}
+        onDelete={deleteTemplate}
+      />
 
       <CreateTemplateDialog
         isOpen={isCreateDialogOpen}
