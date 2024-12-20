@@ -25,24 +25,42 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
   const handleLogout = useCallback(async () => {
     console.log('[ProfileMenu] Initiating logout process');
     try {
+      // First check if we have a session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.log('[ProfileMenu] No active session found, cleaning up local state');
+        // Clear any local state/storage if needed
+        return;
+      }
+
       const { error } = await supabase.auth.signOut();
+      
       if (error) {
         console.error('[ProfileMenu] Logout error:', error.message);
-        // Check if it's a session not found error
+        // Handle session_not_found error gracefully
         if (error.message.includes('session_not_found') || error.status === 403) {
           console.log('[ProfileMenu] Session already expired, cleaning up local state');
           // Session already expired, we can ignore this error
           return;
         }
+        
+        // Show error toast for other types of errors
         toast({
           title: "Logout Error",
-          description: error.message,
+          description: "There was a problem signing out. Please try again.",
           variant: "destructive",
         });
+      } else {
+        console.log('[ProfileMenu] Logout successful');
       }
-      console.log('[ProfileMenu] Logout successful');
     } catch (error) {
       console.error('[ProfileMenu] Critical logout error:', error);
+      toast({
+        title: "Logout Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     }
   }, [toast]);
 
