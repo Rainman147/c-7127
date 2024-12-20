@@ -5,11 +5,9 @@ import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import type { Template } from '@/components/template/types';
-import { useSidebar } from '@/contexts/SidebarContext';
 
 const Index = () => {
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
-  const { isSidebarOpen } = useSidebar();
   
   const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
@@ -74,7 +72,6 @@ const Index = () => {
         onMessageSend={handleMessageSend}
         onTemplateChange={handleTemplateChange}
         onTranscriptionComplete={handleTranscriptionComplete}
-        isSidebarOpen={isSidebarOpen}
       />
     </div>
   );
