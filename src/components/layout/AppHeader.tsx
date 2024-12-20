@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSidebar } from '@/contexts/SidebarContext';
+import { TemplateSelector } from '@/components/TemplateSelector';
 import { cn } from '@/lib/utils';
 
 interface AppHeaderProps {
@@ -10,44 +11,55 @@ interface AppHeaderProps {
   centerContent?: React.ReactNode;
   rightContent?: React.ReactNode;
   variant?: 'default' | 'chat';
+  currentChatId?: string | null;
+  onTemplateChange?: (template: any) => void;
 }
 
 const AppHeader = ({ 
   leftContent, 
   centerContent, 
   rightContent,
-  variant = 'default' 
+  variant = 'default',
+  currentChatId = null,
+  onTemplateChange 
 }: AppHeaderProps) => {
   const { isOpen, open } = useSidebar();
   const location = useLocation();
   const [mounted, setMounted] = useState(false);
 
-  // Optimized viewport logging
   const logViewportState = useCallback(() => {
-    const startTime = performance.now();
     console.log('[AppHeader] Viewport state:', {
       width: window.innerWidth,
       isMobile: window.innerWidth < 768,
       variant,
       path: location.pathname,
-      renderTime: `${Math.round(performance.now() - startTime)}ms`
+      hasTemplateSelector: !!onTemplateChange
     });
-  }, [variant, location.pathname]);
+  }, [variant, location.pathname, onTemplateChange]);
 
   useEffect(() => {
     logViewportState();
     setMounted(true);
   }, [logViewportState]);
 
-  // Performance monitoring for sidebar state changes
   useEffect(() => {
-    const startTime = performance.now();
     console.log('[AppHeader] Sidebar state changed:', { 
       isOpen,
-      isMobile: window.innerWidth < 768,
-      updateTime: `${Math.round(performance.now() - startTime)}ms`
+      isMobile: window.innerWidth < 768
     });
   }, [isOpen]);
+
+  const renderTemplateSelector = () => {
+    if (variant === 'chat' && onTemplateChange) {
+      return (
+        <TemplateSelector
+          currentChatId={currentChatId}
+          onTemplateChange={onTemplateChange}
+        />
+      );
+    }
+    return null;
+  };
 
   return (
     <header className={cn(
@@ -70,6 +82,7 @@ const AppHeader = ({
             <Menu className="h-5 w-5" />
           </Button>
           {leftContent}
+          {renderTemplateSelector()}
         </div>
         
         {centerContent && (
