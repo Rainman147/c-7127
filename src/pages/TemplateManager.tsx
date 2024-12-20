@@ -1,6 +1,5 @@
 import { TemplateManager as TemplateManagerComponent } from '@/components/template/TemplateManager';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import MainLayout from '@/components/layout/MainLayout';
 
 const TemplateManagerContent = () => {
   return (
@@ -13,9 +12,7 @@ const TemplateManagerContent = () => {
 const TemplateManager = () => {
   return (
     <ProtectedRoute>
-      <MainLayout>
-        <TemplateManagerContent />
-      </MainLayout>
+      <TemplateManagerContent />
     </ProtectedRoute>
   );
 };
