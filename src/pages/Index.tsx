@@ -67,8 +67,8 @@ const Index = () => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header section with TemplateSelector and ProfileMenu */}
-      <div className="flex justify-between items-center px-4 py-2 bg-chatgpt-main/95 backdrop-blur">
+      {/* Template selector and profile menu */}
+      <div className="flex justify-between items-center mb-4">
         <TemplateSelector 
           currentChatId={currentChatId} 
           onTemplateChange={handleTemplateChange}
