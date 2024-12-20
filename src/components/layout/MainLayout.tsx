@@ -5,11 +5,7 @@ import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-interface MainLayoutProps {
-  children?: React.ReactNode;
-}
-
-const MainLayoutContent = ({ children }: MainLayoutProps) => {
+const MainLayout = () => {
   const { isOpen, open } = useSidebar();
 
   return (
@@ -36,16 +32,10 @@ const MainLayoutContent = ({ children }: MainLayoutProps) => {
 
         {/* Main content */}
         <div className="mt-[60px] p-4">
-          {children || <Outlet />}
+          <Outlet />
         </div>
       </div>
     </div>
-  );
-};
-
-const MainLayout = ({ children }: MainLayoutProps) => {
-  return (
-    <MainLayoutContent children={children} />
   );
 };
 

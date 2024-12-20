@@ -3,10 +3,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useChatSessions } from "@/hooks/useChatSessions";
 import { useSidebar } from "@/contexts/SidebarContext";
-import { SidebarHeader } from "./sidebar/SidebarHeader";
-import { SidebarFooter } from "./sidebar/SidebarFooter";
 import { SidebarNavigation } from "./sidebar/SidebarNavigation";
 import { ChatSessionList } from "./sidebar/ChatSessionList";
+import { SidebarFooter } from "./sidebar/SidebarFooter";
 
 const Sidebar = () => {
   const { isOpen, close } = useSidebar();
