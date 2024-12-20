@@ -21,23 +21,23 @@ createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
     <ToastProvider>
       <TemplateProvider>
-        <SidebarProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route element={
-                <ProtectedRoute>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route element={
+              <ProtectedRoute>
+                <SidebarProvider>
                   <MainLayout />
-                </ProtectedRoute>
-              }>
-                <Route path="/" element={<Index />} />
-                <Route path="/templates" element={<TemplateManager />} />
-                <Route path="/patients" element={<Patients />} />
-              </Route>
-            </Routes>
-            <Toaster />
-          </BrowserRouter>
-        </SidebarProvider>
+                </SidebarProvider>
+              </ProtectedRoute>
+            }>
+              <Route path="/" element={<Index />} />
+              <Route path="/templates" element={<TemplateManager />} />
+              <Route path="/patients" element={<Patients />} />
+            </Route>
+          </Routes>
+          <Toaster />
+        </BrowserRouter>
       </TemplateProvider>
     </ToastProvider>
   </QueryClientProvider>
