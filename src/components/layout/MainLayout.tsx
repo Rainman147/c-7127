@@ -3,6 +3,7 @@ import Sidebar from '@/components/Sidebar';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const MainLayout = () => {
   const { isOpen, toggle } = useSidebar();
