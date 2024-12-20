@@ -31,10 +31,9 @@ const Sidebar = () => {
     }
   };
 
-  const handleSessionClick = (sessionId: string) => {
+  const handleSessionClick = async (sessionId: string) => {
     console.log('[Sidebar] Session selected:', sessionId);
     setActiveSessionId(sessionId);
-    navigate('/'); // Navigate to the main chat page when selecting a session
     close(); // Close sidebar after selecting a session
   };
 

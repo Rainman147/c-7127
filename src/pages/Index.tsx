@@ -32,6 +32,7 @@ const Index = () => {
 
   const handleSessionSelect = async (chatId: string) => {
     console.log('[Index] Selecting session:', chatId);
+    setCurrentChatId(chatId);
     await loadChatMessages(chatId);
   };
 

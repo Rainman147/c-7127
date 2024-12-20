@@ -10,12 +10,17 @@ export const useChat = () => {
   const { loadChatMessages } = useMessagePersistence();
 
   useEffect(() => {
-    return () => {
-      // Cleanup function remains the same
-      const controller = new AbortController();
-      controller.abort();
-    };
-  }, []);
+    if (currentChatId) {
+      console.log('[useChat] Current chat ID changed, loading messages:', currentChatId);
+      loadChatMessages(currentChatId).then(loadedMessages => {
+        console.log('[useChat] Messages loaded:', loadedMessages.length);
+        setMessages(loadedMessages);
+      });
+    } else {
+      console.log('[useChat] No current chat ID, clearing messages');
+      setMessages([]);
+    }
+  }, [currentChatId]);
 
   const handleLoadChatMessages = async (chatId: string) => {
     console.log('[useChat] Loading messages for chat:', chatId);
