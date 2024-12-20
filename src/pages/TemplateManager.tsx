@@ -11,7 +11,12 @@ const TemplateManagerContent = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
+      <Sidebar 
+        isOpen={isOpen}
+        onToggle={toggle}
+        onApiKeyChange={() => {}}
+        onSessionSelect={() => {}}
+      />
       
       <div className={`transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-0'}`}>
         <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
