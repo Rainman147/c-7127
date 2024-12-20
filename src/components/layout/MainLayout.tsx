@@ -5,19 +5,26 @@ import AppHeader from './AppHeader';
 import { cn } from '@/lib/utils';
 import { useEffect, useCallback } from 'react';
 
+interface MemoryInfo {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+}
+
 const MainLayout = () => {
   const { isOpen } = useSidebar();
   
   // Optimized viewport change handler with debouncing
   const handleResize = useCallback(() => {
+    const memory = (performance as any).memory as MemoryInfo | undefined;
+    
     console.log('[MainLayout] Viewport changed:', { 
       width: window.innerWidth,
       height: window.innerHeight,
       isMobile: window.innerWidth < 768,
       performance: {
-        memory: performance?.memory ? {
-          usedJSHeapSize: Math.round(performance.memory.usedJSHeapSize / 1048576),
-          totalJSHeapSize: Math.round(performance.memory.totalJSHeapSize / 1048576)
+        memory: memory ? {
+          usedJSHeapSize: Math.round(memory.usedJSHeapSize / 1048576),
+          totalJSHeapSize: Math.round(memory.totalJSHeapSize / 1048576)
         } : 'Not available'
       }
     });
@@ -54,25 +61,21 @@ const MainLayout = () => {
 
   return (
     <div className="relative min-h-screen flex w-full bg-chatgpt-main">
-      {/* Sidebar with will-change hint for better performance */}
       <Sidebar />
       
-      {/* Main Content Area with optimized transitions */}
       <div 
         className={cn(
           "flex-1 min-w-0 flex flex-col",
           "transition-transform duration-300 ease-in-out will-change-transform",
           isOpen ? "md:ml-64" : "ml-0",
-          // Enhanced mobile padding
           "px-2 md:px-4"
         )}
         style={{
-          contain: 'paint layout',  // Optimization hint for browsers
+          contain: 'paint layout',
         }}
       >
         <AppHeader />
         
-        {/* Main content with improved mobile spacing */}
         <main className="flex-1 py-4 md:p-4 overflow-hidden">
           <Outlet />
         </main>
