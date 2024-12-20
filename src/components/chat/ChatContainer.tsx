@@ -33,7 +33,6 @@ const ChatContainer = ({
   return (
     <main className="flex-1">
       <ChatHeader 
-        isSidebarOpen={isOpen}
         currentChatId={currentChatId}
         onTemplateChange={onTemplateChange}
       />
