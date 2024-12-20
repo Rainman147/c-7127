@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useCallback, useEffect } from "react";
 import { TemplateSelector } from "./TemplateSelector";
 import { ProfileMenu } from "./header/ProfileMenu";
 import { useProfilePhoto } from "@/hooks/useProfilePhoto";
@@ -16,17 +16,26 @@ const ChatHeaderComponent = ({
 }: ChatHeaderProps) => {
   const profilePhotoUrl = useProfilePhoto();
   
-  console.log('[ChatHeader] Rendering with:', { 
-    isSidebarOpen, 
-    currentChatId,
-    hasTemplateChangeHandler: !!onTemplateChange,
-    profilePhotoUrl 
-  });
+  // Log only on mount or when key props change
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[ChatHeader] State updated:', { 
+        isSidebarOpen, 
+        currentChatId,
+        hasProfilePhoto: !!profilePhotoUrl 
+      });
+    }
+  }, [isSidebarOpen, currentChatId, profilePhotoUrl]);
   
-  const handleTemplateChange = (template: any) => {
-    console.log('[ChatHeader] Template change requested:', template);
+  const handleTemplateChange = useCallback((template: any) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[ChatHeader] Template change:', {
+        templateId: template.id,
+        templateName: template.name
+      });
+    }
     onTemplateChange(template);
-  };
+  }, [onTemplateChange]);
 
   return (
     <div className="fixed top-0 z-30 w-full border-b border-white/20 bg-chatgpt-main/95 backdrop-blur">
