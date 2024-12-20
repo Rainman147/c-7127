@@ -17,9 +17,7 @@ const TemplateManagerContent = () => {
       
       <div className={`transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-0'}`}>
         <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
-          <div className="flex flex-1 items-center gap-4">
-            <h1 className="text-lg font-semibold">Template Manager</h1>
-          </div>
+          <div className="flex flex-1 items-center gap-4" />
         </header>
         
         <main className="flex-1 space-y-4 p-4 sm:p-6">
