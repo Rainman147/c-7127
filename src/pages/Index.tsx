@@ -1,42 +1,68 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import ChatContainer from '@/components/chat/ChatContainer';
 import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
-import { useTemplateState } from '@/hooks/useTemplateState';
-import { useTranscriptionHandler } from '@/hooks/useTranscriptionHandler';
-import { useMessageHandler } from '@/hooks/useMessageHandler';
+import { useChatSessions } from '@/hooks/useChatSessions';
+import type { Template } from '@/components/template/types';
 
-/**
- * Index Component
- * 
- * Main chat interface that combines sidebar navigation with chat functionality.
- * Handles template selection, audio transcription, and message management.
- */
 const Index = () => {
-  // UI State
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
   
-  // Core Hooks
   const { session } = useSessionManagement();
-  const { messages, isLoading, loadChatMessages, currentChatId } = useChat();
-  const { currentTemplate, handleTemplateChange } = useTemplateState();
-  const { handleTranscriptionComplete } = useTranscriptionHandler();
-  const { handleMessageSend } = useMessageHandler();
+  const { createSession } = useChatSessions();
   
-  // Initialize audio recovery
+  const { 
+    messages, 
+    isLoading, 
+    handleSendMessage,
+    loadChatMessages,
+    currentChatId,
+    setCurrentChatId
+  } = useChat();
+
   useAudioRecovery();
 
-  // Session Management
   const handleSessionSelect = async (chatId: string) => {
     console.log('[Index] Selecting session:', chatId);
     await loadChatMessages(chatId);
   };
 
-  // Message Handling
-  const handleMessage = async (message: string, type: 'text' | 'audio' = 'text') => {
-    await handleMessageSend(message, type, currentTemplate);
+  const handleTemplateChange = (template: Template) => {
+    console.log('[Index] Template changed to:', template.name);
+    setCurrentTemplate(template);
+  };
+
+  const handleTranscriptionComplete = async (text: string) => {
+    console.log('[Index] Transcription complete, ready for user to edit:', text);
+    if (text) {
+      const chatInput = document.querySelector('textarea');
+      if (chatInput) {
+        (chatInput as HTMLTextAreaElement).value = text;
+        const event = new Event('input', { bubbles: true });
+        chatInput.dispatchEvent(event);
+      }
+    }
+  };
+
+  const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
+    if (!currentChatId) {
+      console.log('[Index] Creating new session for first message');
+      const sessionId = await createSession('New Chat');
+      if (sessionId) {
+        console.log('[Index] Created new session:', sessionId);
+        setCurrentChatId(sessionId);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    await handleSendMessage(
+      message, 
+      type, 
+      currentTemplate?.systemInstructions
+    );
   };
 
   return (
@@ -52,7 +78,7 @@ const Index = () => {
         messages={messages}
         isLoading={isLoading}
         currentChatId={currentChatId}
-        onMessageSend={handleMessage}
+        onMessageSend={handleMessageSend}
         onTemplateChange={handleTemplateChange}
         onTranscriptionComplete={handleTranscriptionComplete}
         isSidebarOpen={isSidebarOpen}

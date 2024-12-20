@@ -10,8 +10,6 @@ import {
 } from "../ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { DoctorProfileDialog } from "../DoctorProfileDialog";
-import { useToast } from "@/hooks/use-toast";
-import { clearSession } from "@/utils/auth/sessionManager";
 
 interface ProfileMenuProps {
   profilePhotoUrl: string | null;
@@ -19,42 +17,27 @@ interface ProfileMenuProps {
 
 export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { toast } = useToast();
 
   console.log('[ProfileMenu] Rendering with profilePhotoUrl:', profilePhotoUrl);
 
   const handleLogout = useCallback(async () => {
-    if (isLoggingOut) {
-      console.log('[ProfileMenu] Logout already in progress, skipping');
-      return;
-    }
-
-    setIsLoggingOut(true);
     console.log('[ProfileMenu] Initiating logout process');
-
     try {
-      // First clear local storage and attempt server-side cleanup
-      await clearSession();
-      
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('[ProfileMenu] Logout error:', error.message);
+        if (error.message.includes('session')) {
+          console.log('[ProfileMenu] Session already expired, cleaning up local state');
+          // Session already expired, continue with local cleanup
+          return;
+        }
+        throw error;
+      }
       console.log('[ProfileMenu] Logout successful');
-      toast({
-        title: "Logged Out",
-        description: "You have been successfully logged out.",
-      });
-    } catch (error: any) {
+    } catch (error) {
       console.error('[ProfileMenu] Critical logout error:', error);
-      
-      // Show error toast but ensure user knows they're logged out
-      toast({
-        title: "Partial Logout",
-        description: "You have been logged out, but there was an issue with the server. Please refresh the page.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoggingOut(false);
     }
-  }, [toast, isLoggingOut]);
+  }, []);
 
   const handleProfileClick = useCallback(() => {
     console.log('[ProfileMenu] Opening profile dialog');
@@ -65,7 +48,7 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="focus:outline-none" disabled={isLoggingOut}>
+          <button className="focus:outline-none">
             <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity">
               <AvatarImage 
                 src={profilePhotoUrl || ""} 
@@ -97,10 +80,9 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
             <DropdownMenuItem 
               onClick={handleLogout} 
               className="menu-item text-red-500 focus:text-red-500"
-              disabled={isLoggingOut}
             >
               <LogOut className="h-4 w-4" />
-              {isLoggingOut ? 'Logging out...' : 'Log Out'}
+              Log Out
             </DropdownMenuItem>
           </div>
         </DropdownMenuContent>

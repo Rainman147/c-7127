@@ -11,6 +11,14 @@ export const useRecordingToasts = () => {
     });
   };
 
+  const showStopRecordingToast = () => {
+    toast({
+      title: "Recording Stopped",
+      description: "Processing your audio...",
+      duration: 3000,
+    });
+  };
+
   const showErrorToast = (error: string) => {
     toast({
       title: "Error",
@@ -21,6 +29,7 @@ export const useRecordingToasts = () => {
 
   return {
     showStartRecordingToast,
+    showStopRecordingToast,
     showErrorToast
   };
 };

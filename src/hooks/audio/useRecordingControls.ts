@@ -15,7 +15,7 @@ export const useRecordingControls = ({
 }: RecordingControlsProps) => {
   const { isIOS } = getDeviceType();
   const { ensurePermission, handlePermissionError } = useAudioPermissionsWithDelay();
-  const { showStartRecordingToast, showErrorToast } = useRecordingToasts();
+  const { showStartRecordingToast, showStopRecordingToast, showErrorToast } = useRecordingToasts();
 
   const handleError = useCallback((error: string) => {
     console.error('[RecordingControls] Error:', error);
@@ -71,11 +71,12 @@ export const useRecordingControls = ({
     try {
       await stopRec();
       onRecordingStateChange?.(false);
+      showStopRecordingToast();
     } catch (error) {
       console.error('[RecordingControls] Stop recording error:', error);
       handleError(error instanceof Error ? error.message : 'Failed to stop recording');
     }
-  }, [stopRec, handleError, isRecording, onRecordingStateChange]);
+  }, [stopRec, handleError, isRecording, onRecordingStateChange, showStopRecordingToast]);
 
   return {
     isRecording,
