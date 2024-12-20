@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { DoctorProfileDialog } from "../DoctorProfileDialog";
 import { useNavigate } from "react-router-dom";
+import { clearSession } from "@/utils/auth/sessionManager";
 
 interface ProfileMenuProps {
   profilePhotoUrl: string | null;
@@ -32,13 +33,8 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
     console.log('[ProfileMenu] Initiating logout process');
 
     try {
-      const { error } = await supabase.auth.signOut();
+      await clearSession();
       
-      if (error) {
-        console.error('[ProfileMenu] Logout error:', error);
-        throw error;
-      }
-
       console.log('[ProfileMenu] Logout successful');
       
       toast({
@@ -55,7 +51,15 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
         timestamp: new Date().toISOString()
       });
 
-      // Check if it's a network error
+      // Check if it's a network error or session-related error
+      if (error.message?.includes('session_not_found') || 
+          error.message?.includes('JWT expired')) {
+        console.log('[ProfileMenu] Session already ended, redirecting to auth');
+        navigate('/auth');
+        return;
+      }
+
+      // Handle other types of errors
       if (error.message === 'Failed to fetch') {
         toast({
           title: "Network Error",
@@ -70,9 +74,8 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
         });
       }
 
-      // Force client-side session cleanup if server logout fails
+      // Force client-side cleanup regardless of error
       try {
-        // Use signOut instead of clearSession
         await supabase.auth.signOut();
         console.log('[ProfileMenu] Cleared local session after server logout failure');
         navigate('/auth');

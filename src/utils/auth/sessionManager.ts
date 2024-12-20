@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const clearSession = async () => {
   try {
+    console.log('Clearing session...');
     await supabase.auth.signOut();
     console.log('Session cleared successfully');
   } catch (error) {
@@ -17,8 +18,9 @@ export const checkSession = async () => {
     
     if (sessionError) {
       console.error('Session error:', sessionError);
-      if (sessionError.message?.includes('refresh_token_not_found')) {
-        console.log('Invalid refresh token, clearing session');
+      if (sessionError.message?.includes('session_not_found') || 
+          sessionError.message?.includes('JWT expired')) {
+        console.log('Invalid or expired session, clearing local state');
         await clearSession();
       }
       return { 
@@ -35,34 +37,48 @@ export const checkSession = async () => {
       return { session: null, error: null };
     }
 
-    // Verify the session is still valid
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError) {
-      console.error('User verification failed:', userError);
-      return { 
-        session: null, 
-        error: {
-          message: userError.message,
-          isRefreshTokenError: userError.message?.includes('refresh_token_not_found')
+    // Verify session is still valid
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error('User verification failed:', userError);
+        if (userError.message?.includes('session_not_found')) {
+          await clearSession();
         }
-      };
-    }
+        return { 
+          session: null, 
+          error: {
+            message: userError.message,
+            isRefreshTokenError: false
+          }
+        };
+      }
 
-    if (!user) {
-      console.log('User not found, session invalid');
-      await clearSession();
+      if (!user) {
+        console.log('User not found, session invalid');
+        await clearSession();
+        return { 
+          session: null, 
+          error: {
+            message: 'User session invalid',
+            isRefreshTokenError: false
+          }
+        };
+      }
+
+      console.log('Session verified successfully');
+      return { session, error: null };
+    } catch (error: any) {
+      console.error('User verification failed:', error);
       return { 
         session: null, 
         error: {
-          message: 'User session invalid',
+          message: error.message || 'Failed to verify session',
           isRefreshTokenError: false
         }
       };
     }
-
-    console.log('Session verified successfully');
-    return { session, error: null };
   } catch (error: any) {
     console.error('Unexpected error checking session:', error);
     return { 
