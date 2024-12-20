@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,28 +22,37 @@ const AppHeader = ({
   const location = useLocation();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
+  // Optimized viewport logging
+  const logViewportState = useCallback(() => {
+    const startTime = performance.now();
     console.log('[AppHeader] Viewport state:', {
       width: window.innerWidth,
       isMobile: window.innerWidth < 768,
       variant,
-      path: location.pathname
+      path: location.pathname,
+      renderTime: `${Math.round(performance.now() - startTime)}ms`
     });
-    setMounted(true);
   }, [variant, location.pathname]);
 
   useEffect(() => {
+    logViewportState();
+    setMounted(true);
+  }, [logViewportState]);
+
+  // Performance monitoring for sidebar state changes
+  useEffect(() => {
+    const startTime = performance.now();
     console.log('[AppHeader] Sidebar state changed:', { 
       isOpen,
-      isMobile: window.innerWidth < 768
+      isMobile: window.innerWidth < 768,
+      updateTime: `${Math.round(performance.now() - startTime)}ms`
     });
   }, [isOpen]);
 
   return (
     <header className={cn(
       "h-[60px] bg-chatgpt-main/95 backdrop-blur border-b border-white/20",
-      "sticky top-0 z-10 transition-all duration-300",
-      // Enhanced mobile padding
+      "sticky top-0 z-10 transition-all duration-300 will-change-transform",
       "px-2 md:px-4"
     )}>
       <div className="flex h-full items-center justify-between">
@@ -53,7 +62,7 @@ const AppHeader = ({
             variant="ghost"
             size="icon"
             className={cn(
-              "transition-opacity duration-300 ease-in-out",
+              "transition-opacity duration-300 ease-in-out will-change-opacity",
               isOpen ? "opacity-0 pointer-events-none md:hidden" : "opacity-100",
               mounted ? "visible" : "invisible"
             )}
