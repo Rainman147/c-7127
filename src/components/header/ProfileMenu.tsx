@@ -10,6 +10,7 @@ import {
 } from "../ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { DoctorProfileDialog } from "../DoctorProfileDialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProfileMenuProps {
   profilePhotoUrl: string | null;
@@ -17,6 +18,7 @@ interface ProfileMenuProps {
 
 export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const { toast } = useToast();
 
   console.log('[ProfileMenu] Rendering with profilePhotoUrl:', profilePhotoUrl);
 
@@ -26,18 +28,23 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('[ProfileMenu] Logout error:', error.message);
-        if (error.message.includes('session')) {
+        // Check if it's a session not found error
+        if (error.message.includes('session_not_found') || error.status === 403) {
           console.log('[ProfileMenu] Session already expired, cleaning up local state');
-          // Session already expired, continue with local cleanup
+          // Session already expired, we can ignore this error
           return;
         }
-        throw error;
+        toast({
+          title: "Logout Error",
+          description: error.message,
+          variant: "destructive",
+        });
       }
       console.log('[ProfileMenu] Logout successful');
     } catch (error) {
       console.error('[ProfileMenu] Critical logout error:', error);
     }
-  }, []);
+  }, [toast]);
 
   const handleProfileClick = useCallback(() => {
     console.log('[ProfileMenu] Opening profile dialog');
