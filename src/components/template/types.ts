@@ -3,7 +3,17 @@ export type Template = {
   name: string;
   description: string;
   systemInstructions: string;
-  content?: string; // Added to support database templates
+  content?: string;
+  instructions?: {
+    dataFormatting?: string;
+    priorityRules?: string;
+    specialConditions?: string;
+  };
+  schema?: {
+    sections: string[];
+    requiredFields: string[];
+  };
+  priority_rules?: any;
 };
 
 // Static templates as fallback
@@ -113,7 +123,10 @@ export const mergeTemplates = (dbTemplates: any[]): Template[] => {
     name: template.name,
     description: template.content || '', // Use content as description for custom templates
     systemInstructions: template.content || '', // Use content as system instructions for custom templates
-    content: template.content // Keep original content
+    content: template.content, // Keep original content
+    instructions: template.instructions,
+    schema: template.schema,
+    priority_rules: template.priority_rules
   }));
   
   return [...defaultTemplates, ...converted];
