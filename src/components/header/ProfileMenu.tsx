@@ -11,8 +11,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { DoctorProfileDialog } from "../DoctorProfileDialog";
-import { useNavigate } from "react-router-dom";
-import { clearSession } from "@/utils/auth/sessionManager";
 
 interface ProfileMenuProps {
   profilePhotoUrl: string | null;
@@ -20,70 +18,24 @@ interface ProfileMenuProps {
 
 export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   console.log('[ProfileMenu] Rendering with profilePhotoUrl:', profilePhotoUrl);
 
   const handleLogout = async () => {
-    if (isLoggingOut) return; // Prevent multiple logout attempts
-
-    setIsLoggingOut(true);
-    console.log('[ProfileMenu] Initiating logout process');
-
     try {
-      await clearSession();
-      
-      console.log('[ProfileMenu] Logout successful');
-      
+      await supabase.auth.signOut();
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your account",
       });
-
-      // Navigate to auth page after successful logout
-      navigate('/auth');
-    } catch (error: any) {
-      console.error('[ProfileMenu] Error during logout:', {
-        error: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString()
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast({
+        title: "Error logging out",
+        description: "There was a problem logging out. Please try again.",
+        variant: "destructive",
       });
-
-      // Check if it's a network error or session-related error
-      if (error.message?.includes('session_not_found') || 
-          error.message?.includes('JWT expired')) {
-        console.log('[ProfileMenu] Session already ended, redirecting to auth');
-        navigate('/auth');
-        return;
-      }
-
-      // Handle other types of errors
-      if (error.message === 'Failed to fetch') {
-        toast({
-          title: "Network Error",
-          description: "Unable to connect to the server. Please check your connection and try again.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error logging out",
-          description: "There was a problem logging out. Please try again.",
-          variant: "destructive",
-        });
-      }
-
-      // Force client-side cleanup regardless of error
-      try {
-        await supabase.auth.signOut();
-        console.log('[ProfileMenu] Cleared local session after server logout failure');
-        navigate('/auth');
-      } catch (clearError) {
-        console.error('[ProfileMenu] Failed to clear local session:', clearError);
-      }
-    } finally {
-      setIsLoggingOut(false);
     }
   };
 
@@ -95,7 +47,7 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="focus:outline-none" disabled={isLoggingOut}>
+          <button className="focus:outline-none">
             <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity">
               <AvatarImage 
                 src={profilePhotoUrl || ""} 
@@ -127,10 +79,9 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
             <DropdownMenuItem 
               onClick={handleLogout} 
               className="menu-item text-red-500 focus:text-red-500"
-              disabled={isLoggingOut}
             >
               <LogOut className="h-4 w-4" />
-              {isLoggingOut ? "Logging out..." : "Log Out"}
+              Log Out
             </DropdownMenuItem>
           </div>
         </DropdownMenuContent>

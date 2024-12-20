@@ -1,4 +1,4 @@
-import { memo, useCallback } from "react";
+import { memo } from "react";
 import { TemplateSelector } from "./TemplateSelector";
 import { ProfileMenu } from "./header/ProfileMenu";
 import { useProfilePhoto } from "@/hooks/useProfilePhoto";
@@ -23,10 +23,10 @@ const ChatHeaderComponent = ({
     profilePhotoUrl 
   });
   
-  const handleTemplateChange = useCallback((template: any) => {
+  const handleTemplateChange = (template: any) => {
     console.log('[ChatHeader] Template change requested:', template);
     onTemplateChange(template);
-  }, [onTemplateChange]);
+  };
 
   return (
     <div className="fixed top-0 z-30 w-full border-b border-white/20 bg-chatgpt-main/95 backdrop-blur">

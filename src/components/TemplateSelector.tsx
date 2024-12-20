@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo } from "react";
+import { memo, useCallback, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -15,7 +15,7 @@ interface TemplateSelectorProps {
   onTemplateChange: (template: Template) => void;
 }
 
-const TemplateSelectorComponent = memo(({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
+export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
   console.log('[TemplateSelector] Initializing with currentChatId:', currentChatId);
   
   const { globalTemplate, setGlobalTemplate } = useTemplateContext();
@@ -40,9 +40,7 @@ const TemplateSelectorComponent = memo(({ currentChatId, onTemplateChange }: Tem
   }, [handleTemplateChange, currentChatId, setGlobalTemplate]);
 
   // Use either the chat-specific template or the global template
-  const displayTemplate = useMemo(() => 
-    currentChatId ? selectedTemplate : globalTemplate
-  , [currentChatId, selectedTemplate, globalTemplate]);
+  const displayTemplate = currentChatId ? selectedTemplate : globalTemplate;
 
   return (
     <DropdownMenu>
@@ -76,6 +74,4 @@ const TemplateSelectorComponent = memo(({ currentChatId, onTemplateChange }: Tem
   );
 });
 
-TemplateSelectorComponent.displayName = 'TemplateSelector';
-
-export const TemplateSelector = TemplateSelectorComponent;
+TemplateSelector.displayName = 'TemplateSelector';
