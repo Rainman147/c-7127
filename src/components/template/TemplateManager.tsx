@@ -5,17 +5,8 @@ import { CreateTemplateDialog } from './dialogs/CreateTemplateDialog';
 import { EditTemplateDialog } from './dialogs/EditTemplateDialog';
 import { TemplateList } from './list/TemplateList';
 import { TemplateHeaderActions } from './header/TemplateHeaderActions';
+import type { Template } from '@/types/templates/base';
 
-/**
- * TemplateManager Component
- * 
- * Manages the creation, editing, and deletion of templates.
- * Provides a UI for users to:
- * - View all templates
- * - Create new templates
- * - Edit existing templates
- * - Delete templates
- */
 export const TemplateManager = () => {
   const { templates, createTemplate, updateTemplate, deleteTemplate } = useTemplates();
   const { toast } = useToast();
@@ -25,8 +16,10 @@ export const TemplateManager = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Omit<Template, 'id'>>({
     name: '',
+    description: '',
+    systemInstructions: '',
     content: '',
     instructions: {
       dataFormatting: '',
@@ -79,6 +72,8 @@ export const TemplateManager = () => {
         // Reset form
         setFormData({
           name: '',
+          description: '',
+          systemInstructions: '',
           content: '',
           instructions: {
             dataFormatting: '',
