@@ -1,6 +1,6 @@
 import { TemplateManager as TemplateManagerComponent } from '@/components/template/TemplateManager';
 import Sidebar from '@/components/Sidebar';
-import { useSidebar, SidebarProvider } from '@/contexts/SidebarContext';
+import { useSidebar } from '@/contexts/SidebarContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 const TemplateManagerContent = () => {
@@ -31,9 +31,7 @@ const TemplateManagerContent = () => {
 const TemplateManager = () => {
   return (
     <ProtectedRoute>
-      <SidebarProvider>
-        <TemplateManagerContent />
-      </SidebarProvider>
+      <TemplateManagerContent />
     </ProtectedRoute>
   );
 };
