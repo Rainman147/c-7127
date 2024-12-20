@@ -15,7 +15,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       
       if (sessionError) {
         console.error('[ProtectedRoute] Session validation error:', sessionError);
-        await supabase.auth.signOut(); // Clean up any invalid session data
+        await supabase.auth.signOut();
         navigate('/auth');
         return;
       }
@@ -26,19 +26,49 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
+      // Check if token is close to expiry (within 5 minutes)
+      const tokenExpiryTime = new Date(session.expires_at! * 1000);
+      const now = new Date();
+      const timeUntilExpiry = tokenExpiryTime.getTime() - now.getTime();
+      
+      if (timeUntilExpiry < 300000) { // 5 minutes in milliseconds
+        console.log('[ProtectedRoute] Token near expiry, attempting refresh');
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError) {
+          console.error('[ProtectedRoute] Token refresh failed:', refreshError);
+          toast({
+            title: "Session Expired",
+            description: "Your session has expired. Please sign in again.",
+            variant: "destructive",
+          });
+          await supabase.auth.signOut();
+          navigate('/auth');
+          return;
+        }
+        
+        if (refreshData.session) {
+          console.log('[ProtectedRoute] Token refreshed successfully');
+          toast({
+            title: "Session Refreshed",
+            description: "Your session has been renewed.",
+          });
+        }
+      }
+
       // Verify the access token is still valid
       const { data: userData, error: userError } = await supabase.auth.getUser();
       
       if (userError) {
         console.error('[ProtectedRoute] User validation error:', userError);
-        if (userError.message.includes('session_not_found') || userError.status === 403) {
+        if (userError.message?.includes('session_not_found') || userError.status === 403) {
           console.log('[ProtectedRoute] Token expired or invalid, redirecting to login');
           toast({
             title: "Session Expired",
             description: "Your session has expired. Please sign in again.",
             variant: "destructive",
           });
-          await supabase.auth.signOut(); // Clean up any invalid session data
+          await supabase.auth.signOut();
           navigate('/auth');
           return;
         }
