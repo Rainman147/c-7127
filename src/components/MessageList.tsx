@@ -1,4 +1,5 @@
 import Message from './Message';
+import { cn } from "@/lib/utils";
 
 type Message = {
   role: 'user' | 'assistant';
