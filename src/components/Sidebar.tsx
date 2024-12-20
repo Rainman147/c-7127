@@ -1,4 +1,4 @@
-import { ChevronLeft, Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useChatSessions } from "@/hooks/useChatSessions";
@@ -6,6 +6,7 @@ import { useSidebar } from "@/contexts/SidebarContext";
 import { SidebarNavigation } from "./sidebar/SidebarNavigation";
 import { ChatSessionList } from "./sidebar/ChatSessionList";
 import { SidebarFooter } from "./sidebar/SidebarFooter";
+import { SidebarHeader } from "./sidebar/SidebarHeader";
 import { useEffect } from "react";
 
 const Sidebar = () => {
@@ -63,24 +64,11 @@ const Sidebar = () => {
           "fixed top-0 left-0 z-40 h-screen w-64 bg-chatgpt-sidebar",
           "transform transition-transform duration-300 ease-in-out layout-transition",
           "flex flex-col",
-          // Enhanced mobile handling
           "touch-none",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex items-center justify-between h-[60px] px-4">
-          <span className="text-white/90 font-medium">Chat History</span>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={close}
-              variant="ghost"
-              size="icon"
-              className="text-white/70 hover:text-white md:hidden"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
+        <SidebarHeader />
 
         <nav className="flex-1 px-3 overflow-hidden">
           <div className="flex-col flex-1 transition-opacity duration-500 relative -mr-2 pr-2 overflow-y-auto sidebar-scrollbar">

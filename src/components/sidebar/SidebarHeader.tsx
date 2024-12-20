@@ -1,23 +1,25 @@
-import { Menu } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSidebar } from "@/contexts/SidebarContext";
 
-interface SidebarHeaderProps {
-  onToggle: () => void;
-}
+export const SidebarHeader = () => {
+  const { close } = useSidebar();
 
-export const SidebarHeader = ({ onToggle }: SidebarHeaderProps) => {
   const handleToggle = () => {
     console.log('[SidebarHeader] Toggle button clicked');
-    onToggle();
+    close();
   };
 
   return (
-    <div className="flex justify-between flex h-[60px] items-center">
-      <Button 
-        onClick={handleToggle} 
-        className="h-10 rounded-lg px-2 text-token-text-secondary hover:bg-token-sidebar-surface-secondary"
+    <div className="flex items-center justify-between h-[60px] px-4">
+      <span className="text-white/90 font-medium">Chat History</span>
+      <Button
+        onClick={handleToggle}
+        variant="ghost"
+        size="icon"
+        className="text-white/70 hover:text-white md:hidden"
       >
-        <Menu className="h-5 w-5" />
+        <X className="h-5 w-5" />
       </Button>
     </div>
   );
