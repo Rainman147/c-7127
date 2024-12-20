@@ -3,38 +3,45 @@ import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStateChange } from '@/hooks/useAuthStateChange';
 import { clearSession } from '@/utils/auth/sessionManager';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 const Login = () => {
   useAuthStateChange();
   const { toast } = useToast();
+  const [isClearing, setIsClearing] = useState(true);
 
   useEffect(() => {
     const init = async () => {
       try {
-        // Check if there's an existing session first
+        console.log('[Login] Initializing login component');
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
-          console.log('Found existing session, clearing it');
+          console.log('[Login] Found existing session, clearing it');
           await clearSession();
-          console.log('Session cleared on Login component mount');
+          console.log('[Login] Session cleared successfully');
         } else {
-          console.log('No existing session found');
+          console.log('[Login] No existing session found');
         }
       } catch (error) {
-        console.error('Error during session cleanup:', error);
+        console.error('[Login] Error during session cleanup:', error);
         toast({
           title: "Session Error",
           description: "There was an issue clearing your previous session. Please try again.",
           variant: "destructive",
         });
+      } finally {
+        setIsClearing(false);
       }
     };
     
     init();
   }, [toast]);
+
+  if (isClearing) {
+    return <div>Loading...</div>; // Or a proper loading component
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
