@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect } from "react";
+import { memo, useCallback, useEffect, useMemo } from "react";
 import { TemplateSelector } from "./TemplateSelector";
 import { ProfileMenu } from "./header/ProfileMenu";
 import { useProfilePhoto } from "@/hooks/useProfilePhoto";
@@ -19,7 +19,7 @@ const ChatHeaderComponent = ({
   // Log only on mount or when key props change
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('[ChatHeader] State updated:', { 
+      console.log('[ChatHeader] Significant state update:', { 
         isSidebarOpen, 
         currentChatId,
         hasProfilePhoto: !!profilePhotoUrl 
@@ -37,20 +37,28 @@ const ChatHeaderComponent = ({
     onTemplateChange(template);
   }, [onTemplateChange]);
 
+  // Memoize the key parts of the header
+  const templateSelector = useMemo(() => (
+    <TemplateSelector 
+      key={currentChatId || 'default'}
+      currentChatId={currentChatId}
+      onTemplateChange={handleTemplateChange}
+    />
+  ), [currentChatId, handleTemplateChange]);
+
+  const profileMenu = useMemo(() => (
+    <ProfileMenu profilePhotoUrl={profilePhotoUrl} />
+  ), [profilePhotoUrl]);
+
   return (
     <div className="fixed top-0 z-30 w-full border-b border-white/20 bg-chatgpt-main/95 backdrop-blur">
       <div className="flex h-[60px] items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <span className={`${!isSidebarOpen ? 'ml-24' : ''}`}>
-            <TemplateSelector 
-              key={currentChatId || 'default'}
-              currentChatId={currentChatId}
-              onTemplateChange={handleTemplateChange}
-            />
+            {templateSelector}
           </span>
         </div>
-        
-        <ProfileMenu profilePhotoUrl={profilePhotoUrl} />
+        {profileMenu}
       </div>
     </div>
   );

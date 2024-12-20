@@ -29,23 +29,23 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
   // Log only on mount or when currentChatId changes
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('[TemplateSelector] Initialized with:', { 
+      console.log('[TemplateSelector] Chat ID changed:', { 
         currentChatId,
         hasTemplate: !!selectedTemplate,
         templateName: selectedTemplate?.name
       });
     }
-  }, [currentChatId, selectedTemplate]);
+  }, [currentChatId, selectedTemplate?.name]);
 
   const handleTemplateSelect = useCallback((template: Template) => {
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' && template.id !== selectedTemplate?.id) {
       console.log('[TemplateSelector] Template selected:', template.name);
     }
     setGlobalTemplate(template);
     if (currentChatId) {
       handleTemplateChange(template);
     }
-  }, [handleTemplateChange, currentChatId, setGlobalTemplate]);
+  }, [handleTemplateChange, currentChatId, setGlobalTemplate, selectedTemplate?.id]);
 
   // Memoize the display template
   const displayTemplate = useMemo(() => 

@@ -1,28 +1,40 @@
+let deviceChecked = false;
+let deviceInfo = { isIOS: false };
+
 export const getDeviceType = () => {
-  const userAgent = navigator.userAgent;
-  const isIOS = /iPad|iPhone|iPod/.test(userAgent) || 
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  
-  // Only log when running in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[DeviceDetection] Device check:', { 
-      userAgent: userAgent.substring(0, 50) + '...',
-      isIOS 
-    });
+  // Only perform check once per session
+  if (!deviceChecked) {
+    const userAgent = navigator.userAgent;
+    deviceInfo.isIOS = /iPad|iPhone|iPod/.test(userAgent) || 
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[DeviceDetection] Initial device check:', { 
+        userAgent: userAgent.substring(0, 50) + '...',
+        isIOS: deviceInfo.isIOS 
+      });
+    }
+    deviceChecked = true;
   }
   
-  return { isIOS };
+  return deviceInfo;
 };
 
+let browserChecked = false;
+let browserInfo = { isSafari: false, isChrome: false };
+
 export const getBrowserType = () => {
-  const userAgent = navigator.userAgent.toLowerCase();
-  const isSafari = /^((?!chrome|android).)*safari/i.test(userAgent);
-  const isChrome = /chrome/.test(userAgent) && /google inc/.test(navigator.vendor.toLowerCase());
-  
-  // Only log when running in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[BrowserDetection] Browser check:', { isSafari, isChrome });
+  // Only perform check once per session
+  if (!browserChecked) {
+    const userAgent = navigator.userAgent.toLowerCase();
+    browserInfo.isSafari = /^((?!chrome|android).)*safari/i.test(userAgent);
+    browserInfo.isChrome = /chrome/.test(userAgent) && /google inc/.test(navigator.vendor.toLowerCase());
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[BrowserDetection] Initial browser check:', browserInfo);
+    }
+    browserChecked = true;
   }
   
-  return { isSafari, isChrome };
+  return browserInfo;
 };
