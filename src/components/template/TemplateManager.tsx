@@ -125,8 +125,7 @@ export const TemplateManager = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Templates</h2>
+      <div className="flex justify-end">
         <Button 
           className="flex items-center gap-2"
           onClick={() => setIsCreateDialogOpen(true)}
