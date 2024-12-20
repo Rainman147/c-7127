@@ -6,6 +6,10 @@ import { PatientListHeader } from "@/components/patients/list/PatientListHeader"
 import { PatientSearch } from "@/components/patients/list/PatientSearch";
 import { PatientGrid } from "@/components/patients/list/PatientGrid";
 import { usePatientManagement } from "@/hooks/usePatientManagement";
+import { Button } from "@/components/ui/button";
+import { Menu } from "lucide-react";
+import { useSidebar } from "@/contexts/SidebarContext";
+import { cn } from "@/lib/utils";
 import type { Patient } from "@/types/database/patients";
 
 const PatientsPage = () => {
@@ -17,6 +21,7 @@ const PatientsPage = () => {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { toast } = useToast();
   const { isLoading, searchPatients, deletePatient } = usePatientManagement();
+  const { isOpen, open } = useSidebar();
 
   const loadPatients = useCallback(async () => {
     try {
@@ -77,6 +82,19 @@ const PatientsPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <Button
+        onClick={open}
+        variant="ghost"
+        size="icon"
+        className={cn(
+          "transition-all duration-300 ease-in-out text-white/70 hover:text-white fixed",
+          isOpen ? "-translate-x-full opacity-0 pointer-events-none" : "translate-x-0 opacity-100",
+          "z-50" // Ensure button stays above other content
+        )}
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+
       <PatientListHeader
         searchQuery={searchQuery}
         onSearchChange={handleSearch}
