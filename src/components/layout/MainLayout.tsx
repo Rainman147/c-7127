@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from '@/components/Sidebar';
-import { useSidebar } from '@/contexts/SidebarContext';
+import { useSidebar, SidebarProvider } from '@/contexts/SidebarContext';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -8,7 +8,7 @@ interface MainLayoutProps {
   children?: React.ReactNode;
 }
 
-const MainLayout = ({ children }: MainLayoutProps) => {
+const MainLayoutContent = ({ children }: MainLayoutProps) => {
   const { isOpen, toggle } = useSidebar();
 
   return (
@@ -35,6 +35,14 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         </div>
       </div>
     </div>
+  );
+};
+
+const MainLayout = ({ children }: MainLayoutProps) => {
+  return (
+    <SidebarProvider>
+      <MainLayoutContent children={children} />
+    </SidebarProvider>
   );
 };
 
