@@ -1,4 +1,4 @@
-import { ChevronLeft, Plus, X } from "lucide-react";
+import { ChevronLeft, Plus, X, Pencil, Notebook } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useChatSessions } from "@/hooks/useChatSessions";
@@ -23,6 +23,7 @@ const Sidebar = () => {
     const sessionId = await createSession();
     if (sessionId) {
       setActiveSessionId(sessionId);
+      close(); // Close sidebar after creating new chat
     }
   };
 
@@ -51,7 +52,18 @@ const Sidebar = () => {
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex items-center justify-end h-[60px] px-4">
+        <div className="flex items-center justify-between h-[60px] px-4">
+          <Button
+            onClick={handleNewChat}
+            variant="ghost"
+            size="icon"
+            className="text-white/70 hover:text-white"
+          >
+            <div className="relative">
+              <Notebook className="h-5 w-5" />
+              <Pencil className="h-3 w-3 absolute -bottom-1 -right-1" />
+            </div>
+          </Button>
           <div className="flex items-center gap-2">
             <Button
               onClick={close}
