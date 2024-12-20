@@ -1,4 +1,4 @@
-import { Plus, X } from "lucide-react";
+import { ChevronLeft, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useChatSessions } from "@/hooks/useChatSessions";
@@ -53,14 +53,24 @@ const Sidebar = () => {
       >
         <div className="flex items-center justify-between h-[60px] px-4">
           <span className="text-white/90 font-medium">Chat History</span>
-          <Button
-            onClick={close}
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-          >
-            <X className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={close}
+              variant="ghost"
+              size="icon"
+              className="text-white/70 hover:text-white"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Button
+              onClick={close}
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         <nav className="flex-1 px-3 overflow-hidden">

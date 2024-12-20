@@ -23,7 +23,7 @@ const MainLayout = () => {
             variant="ghost"
             className={cn(
               "transition-all duration-300 ease-in-out",
-              isOpen ? "opacity-0 -translate-x-full" : "opacity-100 translate-x-0"
+              isOpen ? "opacity-0 -translate-x-full md:hidden" : "opacity-100 translate-x-0"
             )}
           >
             <Menu className="h-5 w-5" />
