@@ -72,7 +72,8 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
 
       // Force client-side session cleanup if server logout fails
       try {
-        await supabase.auth.clearSession();
+        // Use signOut instead of clearSession
+        await supabase.auth.signOut();
         console.log('[ProfileMenu] Cleared local session after server logout failure');
         navigate('/auth');
       } catch (clearError) {
