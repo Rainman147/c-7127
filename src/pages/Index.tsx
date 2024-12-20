@@ -80,8 +80,9 @@ const Index = () => {
             variant="ghost"
             size="icon"
             className={cn(
-              "transition-all duration-300 ease-in-out text-white/70 hover:text-white",
-              isOpen ? "-translate-x-full opacity-0 pointer-events-none" : "translate-x-0 opacity-100"
+              "transition-all duration-300 ease-in-out text-white/70 hover:text-white fixed",
+              isOpen ? "-translate-x-full opacity-0 pointer-events-none" : "translate-x-0 opacity-100",
+              "z-50" // Ensure button stays above other content
             )}
           >
             <Menu className="h-5 w-5" />
