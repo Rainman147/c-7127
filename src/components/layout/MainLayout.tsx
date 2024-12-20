@@ -10,19 +10,24 @@ const MainLayout = () => {
   console.log('[MainLayout] Rendering with sidebar state:', { isOpen });
 
   return (
-    <div className="flex h-screen bg-chatgpt-main overflow-hidden">
+    <div className="relative min-h-screen flex w-full bg-chatgpt-main">
+      {/* Sidebar */}
       <Sidebar />
       
-      <div className={cn(
-        "flex-1 relative transition-all duration-300 ease-in-out",
-        isOpen ? "md:ml-64" : "ml-0"
-      )}>
+      {/* Main Content Area */}
+      <div 
+        className={cn(
+          "flex-1 min-w-0 flex flex-col",
+          "transition-transform duration-300 ease-in-out",
+          isOpen ? "md:ml-64" : "ml-0"
+        )}
+      >
         <AppHeader />
         
         {/* Main content */}
-        <div className="mt-[60px] p-4">
+        <main className="flex-1 p-4 mt-[60px]">
           <Outlet />
-        </div>
+        </main>
       </div>
     </div>
   );
