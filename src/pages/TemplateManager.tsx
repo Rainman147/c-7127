@@ -2,6 +2,7 @@ import { TemplateManager as TemplateManagerComponent } from '@/components/templa
 import { useSidebar } from '@/contexts/SidebarContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import MainLayout from '@/components/layout/MainLayout';
+import { SidebarProvider } from '@/contexts/SidebarContext';
 
 const TemplateManagerContent = () => {
   return (
@@ -14,9 +15,11 @@ const TemplateManagerContent = () => {
 const TemplateManager = () => {
   return (
     <ProtectedRoute>
-      <MainLayout>
-        <TemplateManagerContent />
-      </MainLayout>
+      <SidebarProvider>
+        <MainLayout>
+          <TemplateManagerContent />
+        </MainLayout>
+      </SidebarProvider>
     </ProtectedRoute>
   );
 };
