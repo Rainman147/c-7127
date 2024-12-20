@@ -5,19 +5,7 @@ import { CreateTemplateDialog } from './dialogs/CreateTemplateDialog';
 import { EditTemplateDialog } from './dialogs/EditTemplateDialog';
 import { TemplateList } from './list/TemplateList';
 import { TemplateHeaderActions } from './header/TemplateHeaderActions';
-import type { Template, TemplateInstructions } from '@/types/templates/base';
-
-interface CreateTemplateInput {
-  name: string;
-  description: string;
-  systemInstructions: string;
-  content: string;
-  instructions: Required<TemplateInstructions>;
-  schema: {
-    sections: string[];
-    requiredFields: string[];
-  };
-}
+import type { Template, CreateTemplateInput, TemplateInstructions } from '@/types/templates/base';
 
 export const TemplateManager = () => {
   const { templates, createTemplate, updateTemplate, deleteTemplate } = useTemplates();
@@ -28,7 +16,7 @@ export const TemplateManager = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   // Form state with required fields initialized
-  const [formData, setFormData] = useState<Omit<Template, 'id'>>({
+  const [formData, setFormData] = useState<CreateTemplateInput>({
     name: '',
     description: '',
     systemInstructions: '',
@@ -37,7 +25,7 @@ export const TemplateManager = () => {
       dataFormatting: '',
       priorityRules: '',
       specialConditions: '',
-    } as Required<TemplateInstructions>,
+    },
     schema: {
       sections: [],
       requiredFields: [],
@@ -60,7 +48,7 @@ export const TemplateManager = () => {
       instructions: {
         ...prev.instructions,
         [field]: value,
-      } as Required<TemplateInstructions>,
+      },
     }));
   };
 
@@ -69,14 +57,7 @@ export const TemplateManager = () => {
     console.log('[TemplateManager] Creating template with data:', formData);
     if (formData.name && formData.content) {
       try {
-        await createTemplate({
-          name: formData.name,
-          content: formData.content,
-          instructions: formData.instructions,
-          schema: formData.schema,
-          description: formData.description,
-          systemInstructions: formData.systemInstructions,
-        });
+        await createTemplate(formData);
         
         toast({
           title: "Success",
@@ -93,7 +74,7 @@ export const TemplateManager = () => {
             dataFormatting: '',
             priorityRules: '',
             specialConditions: '',
-          } as Required<TemplateInstructions>,
+          },
           schema: {
             sections: [],
             requiredFields: [],

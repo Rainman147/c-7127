@@ -1,20 +1,15 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getDefaultTemplate, isTemplateChange } from "@/utils/template/templateStateManager";
 import { useAvailableTemplates } from "@/hooks/template/useAvailableTemplates";
 import { useTemplatePersistence } from "@/hooks/template/useTemplatePersistence";
-import type { Template } from "@/components/template/types";
+import type { Template } from "@/types/templates/base";
 
 export const useTemplateSelection = (
   currentChatId: string | null,
   onTemplateChange: (template: Template) => void,
   globalTemplate: Template
 ) => {
-  const isFirstRender = useRef(true);
-  
-  if (isFirstRender.current && process.env.NODE_ENV === 'development') {
-    console.log('[useTemplateSelection] Hook initialized with chatId:', currentChatId);
-    isFirstRender.current = false;
-  }
+  console.log('[useTemplateSelection] Hook initialized with chatId:', currentChatId);
   
   const [selectedTemplate, setSelectedTemplate] = useState<Template>(globalTemplate);
   const [isLoading, setIsLoading] = useState(false);

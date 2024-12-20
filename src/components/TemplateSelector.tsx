@@ -8,7 +8,7 @@ import {
 import { TemplateItem } from "./template/TemplateItem";
 import { useTemplateSelection } from "./template/useTemplateSelection";
 import { useTemplateContext } from "@/contexts/TemplateContext";
-import type { Template } from "@/types/templates";
+import type { Template } from "@/types/templates/base";
 
 interface TemplateSelectorProps {
   currentChatId: string | null;
