@@ -22,7 +22,7 @@ export const clearSession = async () => {
     console.log('[SessionManager] Session cleanup completed');
   } catch (error) {
     console.error('[SessionManager] Critical error during session cleanup:', error);
-    throw error; // Propagate error for handling by caller
+    throw error;
   }
 };
 
