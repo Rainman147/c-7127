@@ -1,17 +1,16 @@
-import { useState } from 'react';
 import { TemplateManager as TemplateManagerComponent } from '@/components/template/TemplateManager';
 import Sidebar from '@/components/Sidebar';
 import { useSidebar, SidebarProvider } from '@/contexts/SidebarContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 const TemplateManagerContent = () => {
-  const { isOpen } = useSidebar();
+  const { isOpen, toggle } = useSidebar();
 
   return (
     <div className="min-h-screen bg-background">
       <Sidebar 
         isOpen={isOpen}
-        onToggle={() => {}}
+        onToggle={toggle}
         onApiKeyChange={() => {}}
         onSessionSelect={() => {}}
       />
