@@ -45,8 +45,8 @@ export const ChatSessionList = ({
         <div
           key={session.id}
           className={cn(
-            "group flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-[#2F2F2F] cursor-pointer menu-box",
-            activeSessionId === session.id && "bg-[#2F2F2F]"
+            "group flex items-center gap-2 px-2 py-2 hover:text-white/90 cursor-pointer",
+            activeSessionId === session.id ? "text-white" : "text-white/70"
           )}
         >
           {editingId === session.id ? (
@@ -74,7 +74,7 @@ export const ChatSessionList = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 rounded-xl"
+                  className="h-6 w-6"
                   onClick={() => handleEditStart(session)}
                 >
                   <Pencil className="h-3 w-3" />
@@ -84,7 +84,7 @@ export const ChatSessionList = ({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 rounded-xl"
+                      className="h-6 w-6"
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
