@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { LogOut, Settings, User2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 import {
@@ -20,17 +20,29 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
 
   console.log('[ProfileMenu] Rendering with profilePhotoUrl:', profilePhotoUrl);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
+    console.log('[ProfileMenu] Initiating logout process');
     try {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('[ProfileMenu] Logout error:', error.message);
+        if (error.message.includes('session')) {
+          console.log('[ProfileMenu] Session already expired, cleaning up local state');
+          // Session already expired, continue with local cleanup
+          return;
+        }
+        throw error;
+      }
+      console.log('[ProfileMenu] Logout successful');
     } catch (error) {
-      console.error('Error logging out:', error);
+      console.error('[ProfileMenu] Critical logout error:', error);
     }
-  };
+  }, []);
 
-  const handleProfileClick = () => {
+  const handleProfileClick = useCallback(() => {
+    console.log('[ProfileMenu] Opening profile dialog');
     setIsProfileOpen(true);
-  };
+  }, []);
 
   return (
     <>
