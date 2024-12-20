@@ -4,6 +4,8 @@ import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
+import { TemplateSelector } from '@/components/TemplateSelector';
+import { ProfileMenu } from '@/components/header/ProfileMenu';
 import type { Template } from '@/components/template/types';
 
 const Index = () => {
@@ -64,14 +66,28 @@ const Index = () => {
   };
 
   return (
-    <ChatContainer 
-      messages={messages}
-      isLoading={isLoading}
-      currentChatId={currentChatId}
-      onMessageSend={handleMessageSend}
-      onTemplateChange={handleTemplateChange}
-      onTranscriptionComplete={handleTranscriptionComplete}
-    />
+    <div className="flex flex-col h-full">
+      {/* Header section with TemplateSelector and ProfileMenu */}
+      <div className="flex justify-between items-center px-4 py-2 bg-chatgpt-main/95 backdrop-blur">
+        <TemplateSelector 
+          currentChatId={currentChatId} 
+          onTemplateChange={handleTemplateChange}
+        />
+        <ProfileMenu profilePhotoUrl={session?.user?.user_metadata?.avatar_url} />
+      </div>
+
+      {/* Chat container */}
+      <div className="flex-1">
+        <ChatContainer 
+          messages={messages}
+          isLoading={isLoading}
+          currentChatId={currentChatId}
+          onMessageSend={handleMessageSend}
+          onTemplateChange={handleTemplateChange}
+          onTranscriptionComplete={handleTranscriptionComplete}
+        />
+      </div>
+    </div>
   );
 };
 
