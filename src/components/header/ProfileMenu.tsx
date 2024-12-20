@@ -34,43 +34,21 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
     console.log('[ProfileMenu] Initiating logout process');
 
     try {
-      // Clear local storage and session first
+      // First clear local storage and attempt server-side cleanup
       await clearSession();
       
-      // Then attempt to sign out from Supabase
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error('[ProfileMenu] Logout error:', error.message);
-        
-        // Handle session_not_found error gracefully
-        if (error.message.includes('session_not_found') || error.status === 403) {
-          console.log('[ProfileMenu] Session already expired');
-          toast({
-            title: "Logged Out",
-            description: "Your session has ended. You have been logged out.",
-          });
-          return;
-        }
-        
-        // Show error toast for other types of errors
-        toast({
-          title: "Logout Error",
-          description: "There was a problem signing out. Please try again.",
-          variant: "destructive",
-        });
-      } else {
-        console.log('[ProfileMenu] Logout successful');
-        toast({
-          title: "Logged Out",
-          description: "You have been successfully logged out.",
-        });
-      }
-    } catch (error) {
-      console.error('[ProfileMenu] Critical logout error:', error);
+      console.log('[ProfileMenu] Logout successful');
       toast({
-        title: "Logout Error",
-        description: "An unexpected error occurred. Please try again.",
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error: any) {
+      console.error('[ProfileMenu] Critical logout error:', error);
+      
+      // Show error toast but ensure user knows they're logged out
+      toast({
+        title: "Partial Logout",
+        description: "You have been logged out, but there was an issue with the server. Please refresh the page.",
         variant: "destructive",
       });
     } finally {

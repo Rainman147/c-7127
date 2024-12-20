@@ -4,13 +4,25 @@ export const clearSession = async () => {
   try {
     console.log('[SessionManager] Starting session cleanup');
     
-    // Always clear local storage first
+    // Clear all local storage data
     localStorage.clear();
     console.log('[SessionManager] Cleared local storage');
     
-    console.log('[SessionManager] Session cleared successfully');
+    // Attempt a global signout to ensure server-side cleanup
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+      console.log('[SessionManager] Server-side session cleared');
+    } catch (error: any) {
+      // Ignore session_not_found errors as we've already cleared local storage
+      if (!error.message?.includes('session_not_found')) {
+        console.error('[SessionManager] Error during server-side cleanup:', error);
+      }
+    }
+    
+    console.log('[SessionManager] Session cleanup completed');
   } catch (error) {
     console.error('[SessionManager] Critical error during session cleanup:', error);
+    throw error; // Propagate error for handling by caller
   }
 };
 
@@ -38,13 +50,8 @@ export const validateSession = async () => {
       console.log('[SessionManager] Token near expiry, attempting refresh');
       const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
       
-      if (refreshError) {
+      if (refreshError || !refreshData.session) {
         console.error('[SessionManager] Token refresh failed:', refreshError);
-        return false;
-      }
-      
-      if (!refreshData.session) {
-        console.log('[SessionManager] No session after refresh');
         return false;
       }
       
