@@ -1,5 +1,5 @@
-import { defaultTemplates } from "../../components/template/types";
-import type { Template } from "../../components/template/types";
+import { defaultTemplates } from "@/types/templates";
+import type { Template } from "@/types/templates";
 
 export const getDefaultTemplate = (): Template => defaultTemplates[0];
 
