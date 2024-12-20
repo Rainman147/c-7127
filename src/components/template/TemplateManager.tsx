@@ -15,7 +15,7 @@ export const TemplateManager = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
-  // Form state
+  // Form state with required fields initialized
   const [formData, setFormData] = useState<Omit<Template, 'id'>>({
     name: '',
     description: '',
@@ -25,7 +25,7 @@ export const TemplateManager = () => {
       dataFormatting: '',
       priorityRules: '',
       specialConditions: '',
-    },
+    } as Required<TemplateInstructions>,
     schema: {
       sections: [],
       requiredFields: [],
@@ -48,7 +48,7 @@ export const TemplateManager = () => {
       instructions: {
         ...prev.instructions,
         [field]: value,
-      } as TemplateInstructions,
+      } as Required<TemplateInstructions>,
     }));
   };
 
@@ -71,7 +71,7 @@ export const TemplateManager = () => {
           description: "Template created successfully",
         });
         
-        // Reset form
+        // Reset form with all required fields
         setFormData({
           name: '',
           description: '',
@@ -81,7 +81,7 @@ export const TemplateManager = () => {
             dataFormatting: '',
             priorityRules: '',
             specialConditions: '',
-          },
+          } as Required<TemplateInstructions>,
           schema: {
             sections: [],
             requiredFields: [],

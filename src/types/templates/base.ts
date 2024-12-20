@@ -6,9 +6,9 @@ export type BaseTemplate = {
 };
 
 export type TemplateInstructions = {
-  dataFormatting?: string;
-  priorityRules?: string;
-  specialConditions?: string;
+  dataFormatting: string;
+  priorityRules: string;
+  specialConditions: string;
 };
 
 export type TemplateSchema = {
@@ -17,8 +17,8 @@ export type TemplateSchema = {
 };
 
 export type Template = BaseTemplate & {
-  content?: string;
-  instructions?: TemplateInstructions;
-  schema?: TemplateSchema;
+  content: string;
+  instructions: TemplateInstructions;
+  schema: TemplateSchema;
   priority_rules?: any;
 };
