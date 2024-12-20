@@ -18,14 +18,14 @@ const MainLayout = () => {
       <div 
         className={cn(
           "flex-1 min-w-0 flex flex-col",
-          "transition-transform duration-300 ease-in-out layout-transition",
+          "transition-all duration-300 ease-in-out layout-transition will-change-transform",
           isOpen ? "md:ml-64" : "ml-0"
         )}
       >
         <AppHeader />
         
         {/* Main content */}
-        <main className="flex-1 p-4">
+        <main className="flex-1 p-4 overflow-hidden">
           <Outlet />
         </main>
       </div>
