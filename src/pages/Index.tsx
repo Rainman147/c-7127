@@ -12,10 +12,13 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
 import type { Template } from '@/components/template/types';
 
+/**
+ * Main chat interface page component
+ * Handles chat session management, message display, and user interactions
+ */
 const Index = () => {
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
   const { isOpen, open } = useSidebar();
-  
   const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
   
@@ -30,17 +33,29 @@ const Index = () => {
 
   useAudioRecovery();
 
+  /**
+   * Handles selection of a chat session
+   * @param chatId - The ID of the selected chat
+   */
   const handleSessionSelect = async (chatId: string) => {
     console.log('[Index] Selecting session:', chatId);
     setCurrentChatId(chatId);
     await loadChatMessages(chatId);
   };
 
+  /**
+   * Handles template selection changes
+   * @param template - The selected template
+   */
   const handleTemplateChange = (template: Template) => {
     console.log('[Index] Template changed to:', template.name);
     setCurrentTemplate(template);
   };
 
+  /**
+   * Handles completion of audio transcription
+   * @param text - The transcribed text
+   */
   const handleTranscriptionComplete = async (text: string) => {
     console.log('[Index] Transcription complete, ready for user to edit:', text);
     if (text) {
@@ -53,6 +68,11 @@ const Index = () => {
     }
   };
 
+  /**
+   * Handles sending a new message
+   * @param message - The message content
+   * @param type - The message type (text or audio)
+   */
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
     if (!currentChatId) {
       console.log('[Index] Creating new session for first message');
@@ -73,7 +93,6 @@ const Index = () => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Template selector and profile menu */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-4">
           <Button
@@ -83,7 +102,7 @@ const Index = () => {
             className={cn(
               "transition-all duration-300 ease-in-out text-white/70 hover:text-white fixed",
               isOpen ? "-translate-x-full opacity-0 pointer-events-none" : "translate-x-0 opacity-100",
-              "z-50" // Ensure button stays above other content
+              "z-50"
             )}
           >
             <Menu className="h-5 w-5" />
@@ -96,7 +115,6 @@ const Index = () => {
         <ProfileMenu profilePhotoUrl={session?.user?.user_metadata?.avatar_url} />
       </div>
 
-      {/* Chat container */}
       <div className="flex-1">
         <ChatContainer 
           messages={messages}
