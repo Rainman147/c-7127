@@ -5,7 +5,7 @@ import { CreateTemplateDialog } from './dialogs/CreateTemplateDialog';
 import { EditTemplateDialog } from './dialogs/EditTemplateDialog';
 import { TemplateList } from './list/TemplateList';
 import { TemplateHeaderActions } from './header/TemplateHeaderActions';
-import type { Template } from '@/types/templates/base';
+import type { Template, TemplateInstructions } from '@/types/templates/base';
 
 export const TemplateManager = () => {
   const { templates, createTemplate, updateTemplate, deleteTemplate } = useTemplates();
@@ -48,7 +48,7 @@ export const TemplateManager = () => {
       instructions: {
         ...prev.instructions,
         [field]: value,
-      },
+      } as TemplateInstructions,
     }));
   };
 
@@ -62,6 +62,8 @@ export const TemplateManager = () => {
           content: formData.content,
           instructions: formData.instructions,
           schema: formData.schema,
+          description: formData.description,
+          systemInstructions: formData.systemInstructions,
         });
         
         toast({
