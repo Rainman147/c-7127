@@ -6,6 +6,7 @@ import { useSidebar } from "@/contexts/SidebarContext";
 import { SidebarNavigation } from "./sidebar/SidebarNavigation";
 import { ChatSessionList } from "./sidebar/ChatSessionList";
 import { SidebarFooter } from "./sidebar/SidebarFooter";
+import { useEffect } from "react";
 
 const Sidebar = () => {
   const { isOpen, close } = useSidebar();
@@ -18,6 +19,15 @@ const Sidebar = () => {
     renameSession,
   } = useChatSessions();
 
+  // Log mobile interactions
+  useEffect(() => {
+    console.log('[Sidebar] Mobile state:', {
+      isOpen,
+      isMobile: window.innerWidth < 768,
+      viewportWidth: window.innerWidth
+    });
+  }, [isOpen]);
+
   const handleNewChat = async () => {
     console.log('[Sidebar] Creating new chat session');
     const sessionId = await createSession();
@@ -29,11 +39,15 @@ const Sidebar = () => {
   const handleSessionClick = (sessionId: string) => {
     console.log('[Sidebar] Session selected:', sessionId);
     setActiveSessionId(sessionId);
+    // Auto-close sidebar on mobile after selection
+    if (window.innerWidth < 768) {
+      close();
+    }
   };
 
   return (
     <>
-      {/* Mobile backdrop */}
+      {/* Enhanced Mobile backdrop with blur */}
       <div 
         className={cn(
           "fixed inset-0 bg-black/30 backdrop-blur-sm z-30 md:hidden",
@@ -43,12 +57,14 @@ const Sidebar = () => {
         onClick={close}
       />
 
-      {/* Sidebar */}
+      {/* Sidebar with improved mobile transitions */}
       <aside
         className={cn(
           "fixed top-0 left-0 z-40 h-screen w-64 bg-chatgpt-sidebar",
           "transform transition-transform duration-300 ease-in-out layout-transition",
           "flex flex-col",
+          // Enhanced mobile handling
+          "touch-none",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -59,15 +75,7 @@ const Sidebar = () => {
               onClick={close}
               variant="ghost"
               size="icon"
-              className="text-white/70 hover:text-white"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <Button
-              onClick={close}
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
+              className="text-white/70 hover:text-white md:hidden"
             >
               <X className="h-5 w-5" />
             </Button>
