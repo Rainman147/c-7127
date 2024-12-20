@@ -4,7 +4,11 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const MainLayout = () => {
+interface MainLayoutProps {
+  children?: React.ReactNode;
+}
+
+const MainLayout = ({ children }: MainLayoutProps) => {
   const { isOpen, toggle } = useSidebar();
 
   return (
@@ -27,7 +31,7 @@ const MainLayout = () => {
           </Button>
         </div>
         <div className="mt-[60px]">
-          <Outlet />
+          {children || <Outlet />}
         </div>
       </div>
     </div>
