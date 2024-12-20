@@ -4,37 +4,33 @@ import Sidebar from '@/components/Sidebar';
 import { useSidebar, SidebarProvider } from '@/contexts/SidebarContext';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 const TemplateManagerContent = () => {
   const { isOpen, toggle } = useSidebar();
 
   return (
-    <div className="flex h-screen bg-chatgpt-main">
-      <Sidebar 
-        isOpen={isOpen} 
-        onToggle={toggle}
-        onApiKeyChange={() => {}}
-        onSessionSelect={() => {}}
-      />
+    <div className="min-h-screen bg-background">
+      <Sidebar />
       
-      <div className={`flex-1 transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-0'}`}>
-        <div className="fixed top-0 left-0 z-40 h-[60px] w-full bg-chatgpt-main/95 backdrop-blur flex items-center px-4">
+      <div className={`transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-0'}`}>
+        <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
           <Button
-            onClick={toggle}
             variant="ghost"
-            className={`${isOpen ? 'ml-64' : 'ml-0'} transition-all duration-300`}
+            size="icon"
+            className="shrink-0"
+            onClick={toggle}
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-6 w-6" />
+            <span className="sr-only">Toggle sidebar</span>
           </Button>
-        </div>
-        <main className="flex-1 overflow-hidden mt-[60px]">
-          <div className="flex h-full flex-col">
-            <div className="flex-1 overflow-hidden">
-              <div className="h-full overflow-y-auto p-4">
-                <TemplateManagerComponent />
-              </div>
-            </div>
+          <div className="flex flex-1 items-center gap-4">
+            <h1 className="text-lg font-semibold">Template Manager</h1>
           </div>
+        </header>
+        
+        <main className="flex-1 space-y-4 p-4 sm:p-6">
+          <TemplateManagerComponent />
         </main>
       </div>
     </div>
@@ -43,9 +39,11 @@ const TemplateManagerContent = () => {
 
 const TemplateManager = () => {
   return (
-    <SidebarProvider>
-      <TemplateManagerContent />
-    </SidebarProvider>
+    <ProtectedRoute>
+      <SidebarProvider>
+        <TemplateManagerContent />
+      </SidebarProvider>
+    </ProtectedRoute>
   );
 };
 
