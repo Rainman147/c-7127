@@ -6,20 +6,28 @@ export const clearSession = async () => {
     console.log('Session cleared successfully');
   } catch (error) {
     console.error('Error clearing session:', error);
+    throw error;
   }
 };
 
 export const checkSession = async () => {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession();
+    console.log('Checking session status...');
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (error) {
-      console.error('Session error:', error);
-      if (error.message?.includes('refresh_token_not_found')) {
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+      if (sessionError.message?.includes('refresh_token_not_found')) {
         console.log('Invalid refresh token, clearing session');
         await clearSession();
       }
-      throw error;
+      return { 
+        session: null, 
+        error: {
+          message: sessionError.message,
+          isRefreshTokenError: sessionError.message?.includes('refresh_token_not_found')
+        }
+      };
     }
 
     if (!session) {
@@ -27,14 +35,41 @@ export const checkSession = async () => {
       return { session: null, error: null };
     }
 
+    // Verify the session is still valid
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) {
+      console.error('User verification failed:', userError);
+      return { 
+        session: null, 
+        error: {
+          message: userError.message,
+          isRefreshTokenError: userError.message?.includes('refresh_token_not_found')
+        }
+      };
+    }
+
+    if (!user) {
+      console.log('User not found, session invalid');
+      await clearSession();
+      return { 
+        session: null, 
+        error: {
+          message: 'User session invalid',
+          isRefreshTokenError: false
+        }
+      };
+    }
+
+    console.log('Session verified successfully');
     return { session, error: null };
   } catch (error: any) {
-    console.error('Auth error:', error);
+    console.error('Unexpected error checking session:', error);
     return { 
       session: null, 
       error: {
-        message: error.message || 'Authentication error occurred',
-        isRefreshTokenError: error.message?.includes('refresh_token_not_found')
+        message: error.message || 'Failed to verify session',
+        isRefreshTokenError: false
       }
     };
   }
