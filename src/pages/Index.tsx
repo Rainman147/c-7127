@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import ChatContainer from '@/components/chat/ChatContainer';
 import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
@@ -6,10 +8,13 @@ import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { TemplateSelector } from '@/components/TemplateSelector';
 import { ProfileMenu } from '@/components/header/ProfileMenu';
+import { useSidebar } from '@/contexts/SidebarContext';
+import { cn } from '@/lib/utils';
 import type { Template } from '@/components/template/types';
 
 const Index = () => {
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
+  const { isOpen, open } = useSidebar();
   
   const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
@@ -69,10 +74,23 @@ const Index = () => {
     <div className="flex flex-col h-full">
       {/* Template selector and profile menu */}
       <div className="flex justify-between items-center mb-4">
-        <TemplateSelector 
-          currentChatId={currentChatId} 
-          onTemplateChange={handleTemplateChange}
-        />
+        <div className="flex items-center gap-4">
+          <Button
+            onClick={open}
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "transition-all duration-300 ease-in-out text-white/70 hover:text-white",
+              isOpen ? "-translate-x-full opacity-0 pointer-events-none" : "translate-x-0 opacity-100"
+            )}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <TemplateSelector 
+            currentChatId={currentChatId} 
+            onTemplateChange={handleTemplateChange}
+          />
+        </div>
         <ProfileMenu profilePhotoUrl={session?.user?.user_metadata?.avatar_url} />
       </div>
 
