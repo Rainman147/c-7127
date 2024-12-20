@@ -16,7 +16,6 @@ const ChatHeaderComponent = ({
 }: ChatHeaderProps) => {
   const profilePhotoUrl = useProfilePhoto();
   
-  // Log only on mount or when key props change
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       console.log('[ChatHeader] Significant state update:', { 
@@ -37,7 +36,6 @@ const ChatHeaderComponent = ({
     onTemplateChange(template);
   }, [onTemplateChange]);
 
-  // Memoize the key parts of the header
   const templateSelector = useMemo(() => (
     <TemplateSelector 
       key={currentChatId || 'default'}
@@ -51,7 +49,7 @@ const ChatHeaderComponent = ({
   ), [profilePhotoUrl]);
 
   return (
-    <div className="fixed top-0 z-30 w-full border-b border-white/20 bg-chatgpt-main/95 backdrop-blur">
+    <div className="fixed top-0 z-30 w-full bg-chatgpt-main/95 backdrop-blur">
       <div className="flex h-[60px] items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <span className={`${!isSidebarOpen ? 'ml-24' : ''}`}>
