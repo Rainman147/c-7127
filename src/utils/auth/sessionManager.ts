@@ -9,11 +9,14 @@ export const clearSession = async () => {
     
     if (sessionError) {
       console.error('[SessionManager] Error checking session:', sessionError);
+      // Even if there's an error checking the session, we should still clear local storage
+      localStorage.removeItem('supabase.auth.token');
       return;
     }
 
     if (!session) {
       console.log('[SessionManager] No active session found, skipping logout');
+      localStorage.removeItem('supabase.auth.token');
       return;
     }
 
@@ -24,6 +27,7 @@ export const clearSession = async () => {
       // If we get a session_not_found error, we can ignore it
       if (error.message?.includes('session_not_found')) {
         console.log('[SessionManager] Session already cleared');
+        localStorage.removeItem('supabase.auth.token');
         return;
       }
       throw error;
