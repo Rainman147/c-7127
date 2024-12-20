@@ -1,36 +1,41 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from '@/components/Sidebar';
-import { useSidebar, SidebarProvider } from '@/contexts/SidebarContext';
+import { useSidebar } from '@/contexts/SidebarContext';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface MainLayoutProps {
   children?: React.ReactNode;
 }
 
 const MainLayoutContent = ({ children }: MainLayoutProps) => {
-  const { isOpen, toggle } = useSidebar();
+  const { isOpen, open } = useSidebar();
 
   return (
-    <div className="flex h-screen bg-chatgpt-main">
-      <Sidebar 
-        isOpen={isOpen} 
-        onToggle={toggle}
-        onApiKeyChange={() => {}}
-        onSessionSelect={() => {}}
-      />
+    <div className="flex h-screen bg-chatgpt-main overflow-hidden">
+      <Sidebar />
       
-      <div className={`flex-1 transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-0'}`}>
-        <div className="fixed top-0 left-0 z-40 h-[60px] w-full bg-chatgpt-main/95 backdrop-blur flex items-center px-4">
+      <div className={cn(
+        "flex-1 relative transition-transform duration-300 ease-in-out",
+        isOpen ? "md:ml-64" : "ml-0"
+      )}>
+        {/* Header with open button */}
+        <div className="fixed top-0 left-0 right-0 h-[60px] bg-chatgpt-main/95 backdrop-blur flex items-center px-4 z-20">
           <Button
-            onClick={toggle}
+            onClick={open}
             variant="ghost"
-            className={`${isOpen ? 'ml-64' : 'ml-0'} transition-all duration-300`}
+            className={cn(
+              "transition-all duration-300 ease-in-out",
+              isOpen ? "opacity-0 -translate-x-full" : "opacity-100 translate-x-0"
+            )}
           >
             <Menu className="h-5 w-5" />
           </Button>
         </div>
-        <div className="mt-[60px]">
+
+        {/* Main content */}
+        <div className="mt-[60px] p-4">
           {children || <Outlet />}
         </div>
       </div>
@@ -40,9 +45,7 @@ const MainLayoutContent = ({ children }: MainLayoutProps) => {
 
 const MainLayout = ({ children }: MainLayoutProps) => {
   return (
-    <SidebarProvider>
-      <MainLayoutContent children={children} />
-    </SidebarProvider>
+    <MainLayoutContent children={children} />
   );
 };
 
