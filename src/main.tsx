@@ -10,6 +10,8 @@ import ProtectedRoute from './components/ProtectedRoute.tsx';
 import { ToastProvider } from './components/ui/toast';
 import { Toaster } from './components/ui/toaster';
 import { TemplateProvider } from './contexts/TemplateContext';
+import { SidebarProvider } from './contexts/SidebarContext';
+import MainLayout from './components/layout/MainLayout';
 import './index.css';
 
 // Create a client
@@ -19,36 +21,23 @@ createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
     <ToastProvider>
       <TemplateProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route
-              path="/"
-              element={
+        <SidebarProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route element={
                 <ProtectedRoute>
-                  <Index />
+                  <MainLayout />
                 </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/templates"
-              element={
-                <ProtectedRoute>
-                  <TemplateManager />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/patients"
-              element={
-                <ProtectedRoute>
-                  <Patients />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-          <Toaster />
-        </BrowserRouter>
+              }>
+                <Route path="/" element={<Index />} />
+                <Route path="/templates" element={<TemplateManager />} />
+                <Route path="/patients" element={<Patients />} />
+              </Route>
+            </Routes>
+            <Toaster />
+          </BrowserRouter>
+        </SidebarProvider>
       </TemplateProvider>
     </ToastProvider>
   </QueryClientProvider>
