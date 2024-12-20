@@ -17,7 +17,7 @@ export const TemplateList = ({ templates, onEdit, onDelete }: TemplateListProps)
             template={template}
             onEdit={(id) => onEdit({
               id,
-              content: template.content,
+              content: template.content || template.systemInstructions, // Use content if available, otherwise use systemInstructions
             })}
             onDelete={() => {}}
           />

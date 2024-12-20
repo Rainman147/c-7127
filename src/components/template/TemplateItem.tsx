@@ -26,7 +26,7 @@ export const TemplateItem = ({
     >
       <span className="text-sm font-medium text-white">{template.name}</span>
       <span className="text-xs text-gray-400 mt-1">
-        {template.description.split('.')[0].trim()}
+        {(template.content || template.description).split('.')[0].trim()}
       </span>
     </DropdownMenuItem>
   );

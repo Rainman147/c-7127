@@ -3,6 +3,7 @@ export type Template = {
   name: string;
   description: string;
   systemInstructions: string;
+  content?: string; // Added to support database templates
 };
 
 // Static templates as fallback
@@ -110,8 +111,9 @@ export const mergeTemplates = (dbTemplates: any[]): Template[] => {
   const converted = dbTemplates.map(template => ({
     id: template.id,
     name: template.name,
-    description: template.content, // Using content as description for custom templates
-    systemInstructions: template.content
+    description: template.content || '', // Use content as description for custom templates
+    systemInstructions: template.content || '', // Use content as system instructions for custom templates
+    content: template.content // Keep original content
   }));
   
   return [...defaultTemplates, ...converted];
