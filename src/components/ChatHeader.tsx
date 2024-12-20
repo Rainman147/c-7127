@@ -2,7 +2,6 @@ import { memo } from "react";
 import AppHeader from "./layout/AppHeader";
 
 interface ChatHeaderProps {
-  isSidebarOpen?: boolean;
   currentChatId: string | null;
   onTemplateChange: (template: any) => void;
 }
