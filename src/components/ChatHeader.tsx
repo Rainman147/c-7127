@@ -3,10 +3,11 @@ import { TemplateSelector } from "./TemplateSelector";
 import { ProfileMenu } from "./header/ProfileMenu";
 import { useProfilePhoto } from "@/hooks/useProfilePhoto";
 import { useSidebar } from "@/contexts/SidebarContext";
+import type { Template } from '@/components/template/types';
 
 interface ChatHeaderProps {
   currentChatId: string | null;
-  onTemplateChange: (template: any) => void;
+  onTemplateChange: (template: Template) => void;
 }
 
 const ChatHeaderComponent = ({ 
@@ -23,7 +24,7 @@ const ChatHeaderComponent = ({
     profilePhotoUrl 
   });
   
-  const handleTemplateChange = (template: any) => {
+  const handleTemplateChange = (template: Template) => {
     console.log('[ChatHeader] Template change requested:', template);
     onTemplateChange(template);
   };
