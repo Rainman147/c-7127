@@ -10,12 +10,6 @@ export const useAuthStateChange = () => {
       console.log('Auth event:', event);
       
       switch (event) {
-        case 'SIGNED_OUT':
-          toast({
-            title: "Signed out",
-            description: "Successfully signed out.",
-          });
-          break;
         case 'USER_UPDATED':
           toast({
             title: "Profile updated",

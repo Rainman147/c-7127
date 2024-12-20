@@ -8,7 +8,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { DoctorProfileDialog } from "../DoctorProfileDialog";
 
@@ -17,7 +16,6 @@ interface ProfileMenuProps {
 }
 
 export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
-  const { toast } = useToast();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   console.log('[ProfileMenu] Rendering with profilePhotoUrl:', profilePhotoUrl);
@@ -25,17 +23,8 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      toast({
-        title: "Logged out successfully",
-        description: "You have been logged out of your account",
-      });
     } catch (error) {
       console.error('Error logging out:', error);
-      toast({
-        title: "Error logging out",
-        description: "There was a problem logging out. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
