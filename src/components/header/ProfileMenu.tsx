@@ -34,23 +34,10 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
     console.log('[ProfileMenu] Initiating logout process');
 
     try {
-      // First check if we have a session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // Clear local storage and session first
+      await clearSession();
       
-      if (sessionError) {
-        console.error('[ProfileMenu] Error checking session:', sessionError);
-        // If we get a session error, we should still try to clean up
-        await clearSession();
-        return;
-      }
-
-      if (!session) {
-        console.log('[ProfileMenu] No active session found, cleaning up local state');
-        await clearSession();
-        return;
-      }
-
-      // Attempt to sign out
+      // Then attempt to sign out from Supabase
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -58,12 +45,10 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
         
         // Handle session_not_found error gracefully
         if (error.message.includes('session_not_found') || error.status === 403) {
-          console.log('[ProfileMenu] Session already expired, cleaning up local state');
-          await clearSession();
+          console.log('[ProfileMenu] Session already expired');
           toast({
-            title: "Session Ended",
-            description: "Your session has already expired. You have been logged out.",
-            variant: "default",
+            title: "Logged Out",
+            description: "Your session has ended. You have been logged out.",
           });
           return;
         }
@@ -83,8 +68,6 @@ export const ProfileMenu = ({ profilePhotoUrl }: ProfileMenuProps) => {
       }
     } catch (error) {
       console.error('[ProfileMenu] Critical logout error:', error);
-      // Attempt to clean up anyway
-      await clearSession();
       toast({
         title: "Logout Error",
         description: "An unexpected error occurred. Please try again.",
