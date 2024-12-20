@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import Message from './Message';
 
 type Message = {
@@ -7,12 +8,14 @@ type Message = {
   type?: 'text' | 'audio';
 };
 
-const MessageList = ({ messages }: { messages: Message[] }) => {
-  console.log('[MessageList] Rendering messages:', messages.map(m => ({
-    role: m.role,
-    id: m.id,
-    contentPreview: m.content.substring(0, 50) + '...'
-  })));
+const MessageList = memo(({ messages }: { messages: Message[] }) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[MessageList] Rendering messages:', messages.map(m => ({
+      role: m.role,
+      id: m.id,
+      contentPreview: m.content.substring(0, 50) + '...'
+    })));
+  }
   
   return (
     <div className="flex-1 overflow-y-auto chat-scrollbar">
@@ -23,6 +26,8 @@ const MessageList = ({ messages }: { messages: Message[] }) => {
       </div>
     </div>
   );
-};
+});
+
+MessageList.displayName = 'MessageList';
 
 export default MessageList;
