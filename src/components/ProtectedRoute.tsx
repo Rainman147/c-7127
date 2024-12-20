@@ -11,24 +11,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const validateSession = useCallback(async () => {
     console.log('[ProtectedRoute] Validating session...');
     try {
-      const { session, error } = await checkSession();
-
-      if (error) {
-        console.log('[ProtectedRoute] Session validation failed:', {
-          error: error.message,
-          isRefreshTokenError: error.isRefreshTokenError,
-          timestamp: new Date().toISOString()
+      // First check if we have a valid session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('[ProtectedRoute] Session validation error:', sessionError);
+        toast({
+          title: "Session Error",
+          description: "Your session could not be validated. Please sign in again.",
+          variant: "destructive",
         });
-        
-        // Only show toast for non-refresh token errors
-        if (!error.isRefreshTokenError) {
-          toast({
-            title: "Authentication Error",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
-        
         navigate('/auth');
         return;
       }
@@ -37,6 +29,23 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         console.log('[ProtectedRoute] No active session found');
         navigate('/auth');
         return;
+      }
+
+      // Verify the access token is still valid
+      const { error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.error('[ProtectedRoute] User validation error:', userError);
+        if (userError.message.includes('session_not_found') || userError.status === 403) {
+          console.log('[ProtectedRoute] Token expired or invalid, redirecting to login');
+          toast({
+            title: "Session Expired",
+            description: "Your session has expired. Please sign in again.",
+            variant: "destructive",
+          });
+          await supabase.auth.signOut(); // Clean up any invalid session data
+          navigate('/auth');
+          return;
+        }
       }
 
       console.log('[ProtectedRoute] Session validated successfully');
