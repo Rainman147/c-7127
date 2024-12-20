@@ -51,8 +51,7 @@ const Sidebar = () => {
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex items-center justify-between h-[60px] px-4">
-          <span className="text-white/90 font-medium">Chat History</span>
+        <div className="flex items-center justify-end h-[60px] px-4">
           <div className="flex items-center gap-2">
             <Button
               onClick={close}
