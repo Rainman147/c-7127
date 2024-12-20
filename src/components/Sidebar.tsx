@@ -5,6 +5,7 @@ import { useSidebar } from "@/contexts/SidebarContext";
 import { SidebarNavigation } from "./sidebar/SidebarNavigation";
 import { ChatSessionList } from "./sidebar/ChatSessionList";
 import { SidebarFooter } from "./sidebar/SidebarFooter";
+import { cn } from "@/lib/utils";
 
 /**
  * Sidebar component for chat navigation and session management
