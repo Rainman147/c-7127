@@ -12,12 +12,22 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const validateSession = async () => {
       try {
         console.log('Validating session...');
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        // Log session details for debugging
+        console.log('Current session state:', {
+          exists: !!currentSession,
+          expiresAt: currentSession?.expires_at,
+          user: currentSession?.user?.email
+        });
+
         const { session, error } = await checkSession();
 
         if (error) {
           console.error('Session validation failed:', {
             error: error.message,
-            isRefreshTokenError: error.isRefreshTokenError
+            isRefreshTokenError: error.isRefreshTokenError,
+            timestamp: new Date().toISOString()
           });
           
           // Only show toast for non-refresh token errors
@@ -39,9 +49,28 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           return;
         }
 
-        console.log('Session validated successfully');
+        // Verify user data is accessible
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError) {
+          console.error('Error fetching user data:', userError);
+          toast({
+            title: "User Data Error",
+            description: "Unable to verify user information",
+            variant: "destructive",
+          });
+          navigate('/auth');
+          return;
+        }
+
+        console.log('Session validated successfully for user:', user?.email);
       } catch (error: any) {
-        console.error('Unexpected error during session validation:', error);
+        console.error('Unexpected error during session validation:', {
+          error: error.message,
+          stack: error.stack,
+          timestamp: new Date().toISOString()
+        });
+        
         toast({
           title: "Connection Error",
           description: "Unable to verify your session. Please check your connection and try again.",
@@ -56,7 +85,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', { event, sessionExists: !!session });
+      console.log('Auth state changed:', { 
+        event, 
+        sessionExists: !!session,
+        timestamp: new Date().toISOString()
+      });
       
       if (event === 'SIGNED_OUT' || !session) {
         console.log('User signed out or session expired, redirecting to auth');
