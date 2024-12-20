@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Plus, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -62,45 +62,51 @@ const Sidebar = ({ isOpen, onToggle, onApiKeyChange, onSessionSelect }: SidebarP
   };
 
   return (
-    <div className={cn(
-      "fixed top-0 left-0 z-40 h-screen bg-chatgpt-sidebar transition-all duration-300",
-      isOpen ? "w-64" : "w-0"
-    )}>
+    <div 
+      className={cn(
+        "fixed top-0 left-0 z-40 h-screen bg-chatgpt-sidebar transition-all duration-300 ease-in-out",
+        isOpen ? "translate-x-0 w-64" : "-translate-x-full w-64"
+      )}
+    >
       <nav className="flex h-full w-full flex-col px-3" aria-label="Chat history">
-        <SidebarHeader onToggle={onToggle} />
-
-        <div className="flex-col flex-1 transition-opacity duration-500 relative -mr-2 pr-2 overflow-y-auto sidebar-scrollbar">
-          {isOpen && (
-            <>
-              <div className="mb-4">
-                <Button
-                  onClick={handleNewChat}
-                  className="w-full flex items-center gap-2 bg-[#2F2F2F] hover:bg-[#404040] rounded-xl"
-                >
-                  <Plus className="h-4 w-4" />
-                  New Chat
-                </Button>
-              </div>
-
-              <SidebarNavigation />
-
-              <ChatSessionList
-                sessions={sessions}
-                activeSessionId={activeSessionId}
-                onSessionSelect={handleSessionClick}
-                onSessionDelete={deleteSession}
-                onSessionRename={renameSession}
-              />
-            </>
-          )}
+        {/* Sidebar Header with toggle button */}
+        <div className="flex h-[60px] items-center justify-between border-b border-white/20">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggle}
+            className="h-10 w-10"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
         </div>
 
-        {isOpen && (
-          <SidebarFooter 
-            apiKey={apiKey}
-            onApiKeyChange={handleApiKeyChange}
+        <div className="flex-col flex-1 transition-opacity duration-500 relative -mr-2 pr-2 overflow-y-auto sidebar-scrollbar">
+          <div className="mb-4 mt-4">
+            <Button
+              onClick={handleNewChat}
+              className="w-full flex items-center gap-2 bg-[#2F2F2F] hover:bg-[#404040] rounded-xl"
+            >
+              <Plus className="h-4 w-4" />
+              New Chat
+            </Button>
+          </div>
+
+          <SidebarNavigation />
+
+          <ChatSessionList
+            sessions={sessions}
+            activeSessionId={activeSessionId}
+            onSessionSelect={handleSessionClick}
+            onSessionDelete={deleteSession}
+            onSessionRename={renameSession}
           />
-        )}
+        </div>
+
+        <SidebarFooter 
+          apiKey={apiKey}
+          onApiKeyChange={handleApiKeyChange}
+        />
       </nav>
     </div>
   );
