@@ -10,7 +10,6 @@ import ProtectedRoute from './components/ProtectedRoute.tsx';
 import { ToastProvider } from './components/ui/toast';
 import { Toaster } from './components/ui/toaster';
 import { TemplateProvider } from './contexts/TemplateContext';
-import { SidebarProvider } from './contexts/SidebarContext';
 import './index.css';
 
 // Create a client
@@ -20,38 +19,36 @@ createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
     <ToastProvider>
       <TemplateProvider>
-        <SidebarProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Index />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/templates"
-                element={
-                  <ProtectedRoute>
-                    <TemplateManager />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patients"
-                element={
-                  <ProtectedRoute>
-                    <Patients />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-            <Toaster />
-          </BrowserRouter>
-        </SidebarProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/templates"
+              element={
+                <ProtectedRoute>
+                  <TemplateManager />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/patients"
+              element={
+                <ProtectedRoute>
+                  <Patients />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+          <Toaster />
+        </BrowserRouter>
       </TemplateProvider>
     </ToastProvider>
   </QueryClientProvider>

@@ -3,7 +3,6 @@ import { ChatHeader } from '@/components/ChatHeader';
 import ChatInput from '@/components/ChatInput';
 import MessageList from '@/components/MessageList';
 import type { Template } from '@/components/template/types';
-import { useSidebar } from '@/contexts/SidebarContext';
 
 interface ChatContainerProps {
   messages: Array<{ 
@@ -17,6 +16,7 @@ interface ChatContainerProps {
   onMessageSend: (message: string, type?: 'text' | 'audio') => Promise<void>;
   onTemplateChange: (template: Template) => void;
   onTranscriptionComplete: (text: string) => void;
+  isSidebarOpen: boolean;
 }
 
 const ChatContainer = ({
@@ -26,14 +26,14 @@ const ChatContainer = ({
   onMessageSend,
   onTemplateChange,
   onTranscriptionComplete,
+  isSidebarOpen
 }: ChatContainerProps) => {
-  const { isSidebarOpen } = useSidebar();
-  
   console.log('[ChatContainer] Rendering with messages:', messages);
   
   return (
     <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
       <ChatHeader 
+        isSidebarOpen={isSidebarOpen}
         currentChatId={currentChatId}
         onTemplateChange={onTemplateChange}
       />

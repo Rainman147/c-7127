@@ -2,20 +2,19 @@ import { memo } from "react";
 import { TemplateSelector } from "./TemplateSelector";
 import { ProfileMenu } from "./header/ProfileMenu";
 import { useProfilePhoto } from "@/hooks/useProfilePhoto";
-import { useSidebar } from "@/contexts/SidebarContext";
-import type { Template } from '@/components/template/types';
 
 interface ChatHeaderProps {
+  isSidebarOpen?: boolean;
   currentChatId: string | null;
-  onTemplateChange: (template: Template) => void;
+  onTemplateChange: (template: any) => void;
 }
 
 const ChatHeaderComponent = ({ 
+  isSidebarOpen = true, 
   currentChatId,
   onTemplateChange 
 }: ChatHeaderProps) => {
   const profilePhotoUrl = useProfilePhoto();
-  const { isSidebarOpen } = useSidebar();
   
   console.log('[ChatHeader] Rendering with:', { 
     isSidebarOpen, 
@@ -24,7 +23,7 @@ const ChatHeaderComponent = ({
     profilePhotoUrl 
   });
   
-  const handleTemplateChange = (template: Template) => {
+  const handleTemplateChange = (template: any) => {
     console.log('[ChatHeader] Template change requested:', template);
     onTemplateChange(template);
   };

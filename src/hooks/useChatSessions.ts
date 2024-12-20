@@ -18,23 +18,12 @@ export const useChatSessions = () => {
   const fetchSessions = async () => {
     try {
       console.log('[useChatSessions] Fetching chat sessions');
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        console.error('[useChatSessions] No authenticated user found');
-        throw new Error('User not authenticated');
-      }
-
       const { data: sessions, error } = await supabase
         .from('chats')
         .select('*')
-        .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
 
-      if (error) {
-        console.error('[useChatSessions] Error fetching sessions:', error);
-        throw error;
-      }
+      if (error) throw error;
       
       // Filter out sessions with no messages
       const { data: sessionsWithMessages, error: messagesError } = await supabase
@@ -42,10 +31,7 @@ export const useChatSessions = () => {
         .select('chat_id')
         .in('chat_id', sessions?.map(s => s.id) || []);
         
-      if (messagesError) {
-        console.error('[useChatSessions] Error fetching messages:', messagesError);
-        throw messagesError;
-      }
+      if (messagesError) throw messagesError;
       
       const validSessionIds = new Set(sessionsWithMessages?.map(m => m.chat_id));
       const validSessions = sessions?.filter(s => validSessionIds.has(s.id)) || [];
@@ -53,10 +39,10 @@ export const useChatSessions = () => {
       console.log('[useChatSessions] Filtered sessions:', validSessions);
       setSessions(validSessions);
     } catch (error: any) {
-      console.error('[useChatSessions] Error:', error);
+      console.error('[useChatSessions] Error fetching sessions:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load chat sessions. Please try again.',
+        description: 'Failed to load chat sessions',
         variant: 'destructive',
       });
     } finally {
@@ -158,12 +144,6 @@ export const useChatSessions = () => {
   // Set up real-time subscription
   useEffect(() => {
     console.log('[useChatSessions] Setting up real-time subscription');
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN') {
-        fetchSessions();
-      }
-    });
-
     const channel = supabase
       .channel('chat-changes')
       .on(
@@ -179,8 +159,7 @@ export const useChatSessions = () => {
     fetchSessions();
 
     return () => {
-      console.log('[useChatSessions] Cleaning up subscriptions');
-      subscription?.unsubscribe();
+      console.log('[useChatSessions] Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
   }, []);
