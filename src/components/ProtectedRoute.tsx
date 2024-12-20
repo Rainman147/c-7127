@@ -1,7 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { checkSession } from '@/utils/auth/sessionManager';
 import { supabase } from '@/integrations/supabase/client';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -16,11 +15,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       
       if (sessionError) {
         console.error('[ProtectedRoute] Session validation error:', sessionError);
-        toast({
-          title: "Session Error",
-          description: "Your session could not be validated. Please sign in again.",
-          variant: "destructive",
-        });
+        await supabase.auth.signOut(); // Clean up any invalid session data
         navigate('/auth');
         return;
       }
@@ -32,7 +27,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       }
 
       // Verify the access token is still valid
-      const { error: userError } = await supabase.auth.getUser();
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
       if (userError) {
         console.error('[ProtectedRoute] User validation error:', userError);
         if (userError.message.includes('session_not_found') || userError.status === 403) {
@@ -48,9 +44,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
+      if (!userData?.user) {
+        console.log('[ProtectedRoute] No user data found, redirecting to login');
+        await supabase.auth.signOut();
+        navigate('/auth');
+        return;
+      }
+
       console.log('[ProtectedRoute] Session validated successfully');
     } catch (error) {
       console.error('[ProtectedRoute] Critical session validation error:', error);
+      await supabase.auth.signOut();
       navigate('/auth');
     }
   }, [navigate, toast]);
