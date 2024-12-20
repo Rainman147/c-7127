@@ -41,6 +41,13 @@ export const validateSession = async () => {
       return false;
     }
 
+    // Log session details for debugging
+    console.log('[SessionManager] Current session:', {
+      accessToken: session.access_token?.substring(0, 10) + '...',
+      expiresAt: new Date(session.expires_at! * 1000).toISOString(),
+      user: session.user.id
+    });
+
     // Check if token is close to expiry (within 5 minutes)
     const tokenExpiryTime = new Date(session.expires_at! * 1000);
     const now = new Date();
@@ -56,6 +63,12 @@ export const validateSession = async () => {
       }
       
       console.log('[SessionManager] Token refreshed successfully');
+      // Log refreshed session details
+      console.log('[SessionManager] Refreshed session:', {
+        accessToken: refreshData.session.access_token?.substring(0, 10) + '...',
+        expiresAt: new Date(refreshData.session.expires_at! * 1000).toISOString(),
+        user: refreshData.session.user.id
+      });
     }
 
     return true;

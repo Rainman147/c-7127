@@ -16,8 +16,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       setIsRedirecting(true);
       await clearSession();
       navigate('/auth', { replace: true });
+      toast({
+        title: "Session Expired",
+        description: "Please sign in again to continue.",
+        variant: "destructive",
+      });
     }
-  }, [navigate, isRedirecting]);
+  }, [navigate, isRedirecting, toast]);
 
   useEffect(() => {
     console.log('[ProtectedRoute] Component mounted');
@@ -50,6 +55,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       if (event === 'SIGNED_OUT' || !session) {
         console.log('[ProtectedRoute] No session, handling error');
         await handleSessionError();
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('[ProtectedRoute] Token refreshed, validating session');
+        const isValid = await validateSession();
+        if (!isValid) {
+          await handleSessionError();
+        }
       }
     });
 
