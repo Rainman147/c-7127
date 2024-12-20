@@ -33,7 +33,10 @@ const AppHeader = ({
   }, [isOpen]);
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-[60px] bg-chatgpt-main/95 backdrop-blur z-50 border-b border-white/20">
+    <header className={cn(
+      "h-[60px] bg-chatgpt-main/95 backdrop-blur border-b border-white/20",
+      "sticky top-0 z-10 transition-all duration-300"
+    )}>
       <div className="flex h-full items-center justify-between px-4">
         <div className="flex items-center gap-4">
           <Button
