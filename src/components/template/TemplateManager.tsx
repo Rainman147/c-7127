@@ -7,6 +7,18 @@ import { TemplateList } from './list/TemplateList';
 import { TemplateHeaderActions } from './header/TemplateHeaderActions';
 import type { Template, TemplateInstructions } from '@/types/templates/base';
 
+interface CreateTemplateInput {
+  name: string;
+  description: string;
+  systemInstructions: string;
+  content: string;
+  instructions: Required<TemplateInstructions>;
+  schema: {
+    sections: string[];
+    requiredFields: string[];
+  };
+}
+
 export const TemplateManager = () => {
   const { templates, createTemplate, updateTemplate, deleteTemplate } = useTemplates();
   const { toast } = useToast();

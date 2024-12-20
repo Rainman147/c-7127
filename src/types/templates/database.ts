@@ -1,4 +1,4 @@
-import { Template } from './base';
+import type { Template } from './base';
 import { defaultTemplates } from './defaults';
 
 export type DatabaseTemplate = {
@@ -6,9 +6,9 @@ export type DatabaseTemplate = {
   name: string;
   content: string;
   instructions?: {
-    dataFormatting?: string;
-    priorityRules?: string;
-    specialConditions?: string;
+    dataFormatting: string;
+    priorityRules: string;
+    specialConditions: string;
   };
   schema?: {
     sections: string[];
@@ -20,11 +20,18 @@ export type DatabaseTemplate = {
 export const convertDatabaseTemplate = (dbTemplate: DatabaseTemplate): Template => ({
   id: dbTemplate.id,
   name: dbTemplate.name,
-  description: dbTemplate.content || '', // Use content as description
-  systemInstructions: dbTemplate.content || '', // Use content as system instructions
+  description: dbTemplate.content || '',
+  systemInstructions: dbTemplate.content || '',
   content: dbTemplate.content,
-  instructions: dbTemplate.instructions,
-  schema: dbTemplate.schema,
+  instructions: dbTemplate.instructions || {
+    dataFormatting: '',
+    priorityRules: '',
+    specialConditions: ''
+  },
+  schema: dbTemplate.schema || {
+    sections: [],
+    requiredFields: []
+  },
   priority_rules: dbTemplate.priority_rules
 });
 
