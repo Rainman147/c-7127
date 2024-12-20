@@ -20,11 +20,11 @@ const MainLayout = () => {
       />
       
       <div className={cn(
-        "flex-1 transition-all duration-300 ease-in-out relative",
+        "flex-1 flex flex-col transition-all duration-300 ease-in-out relative",
         isOpen ? "md:pl-64" : "pl-0"
       )}>
-        {/* Fixed Header */}
-        <header className="fixed top-0 left-0 right-0 z-50 h-[60px] border-b border-white/20 bg-chatgpt-main/95 backdrop-blur">
+        {/* Global Header - Always on top */}
+        <header className="fixed top-0 left-0 right-0 z-[100] h-[60px] border-b border-white/20 bg-chatgpt-main/95 backdrop-blur">
           <div className="flex h-full items-center px-4">
             <Button
               onClick={() => {
@@ -33,7 +33,7 @@ const MainLayout = () => {
               }}
               variant="ghost"
               size="icon"
-              className="hover:bg-white/10 transition-colors mr-2"
+              className="hover:bg-white/10 transition-colors mr-4"
               aria-label="Toggle sidebar"
             >
               <Menu className="h-5 w-5 text-white/70" />
@@ -42,7 +42,7 @@ const MainLayout = () => {
         </header>
 
         {/* Main Content with proper spacing */}
-        <main className="pt-[60px] h-full overflow-auto">
+        <main className="flex-1 pt-[60px] overflow-auto">
           <Outlet />
         </main>
       </div>
