@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { TemplateManager as TemplateManagerComponent } from '@/components/template/TemplateManager';
 import Sidebar from '@/components/Sidebar';
-import { useSidebar } from '@/contexts/SidebarContext';
+import { useSidebar, SidebarProvider } from '@/contexts/SidebarContext';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const TemplateManager = () => {
+const TemplateManagerContent = () => {
   const { isOpen, toggle } = useSidebar();
 
   return (
@@ -38,6 +38,14 @@ const TemplateManager = () => {
         </main>
       </div>
     </div>
+  );
+};
+
+const TemplateManager = () => {
+  return (
+    <SidebarProvider>
+      <TemplateManagerContent />
+    </SidebarProvider>
   );
 };
 
