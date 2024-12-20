@@ -31,7 +31,7 @@ const MainLayout = () => {
           }}
           variant="ghost"
           size="icon"
-          className="fixed top-4 left-4 z-[999] !bg-red-500 hover:!bg-red-600 !visible !block"
+          className="fixed top-4 left-4 z-[999] !bg-red-500 hover:!bg-red-600 !block"
           aria-label="Emergency toggle sidebar"
         >
           <Menu className="h-5 w-5 text-white" />
@@ -39,19 +39,13 @@ const MainLayout = () => {
 
         {/* Global Header */}
         <header 
-          className="fixed top-0 left-0 right-0 z-[300] h-[60px] border-b-2 border-red-500 bg-gray-800"
+          className="fixed top-0 left-0 right-0 z-[300] h-[60px] border-b-2 border-red-500 bg-gray-800 !block"
           style={{ 
-            visibility: 'visible !important',
-            display: 'block !important'
+            background: 'rgba(33, 33, 33, 0.95)'
           }}
         >
           <div 
-            className="flex h-full items-center px-4 border-2 border-blue-500"
-            style={{ 
-              background: 'rgba(33, 33, 33, 0.95)',
-              visibility: 'visible !important',
-              display: 'flex !important'
-            }}
+            className="flex h-full items-center px-4 border-2 border-blue-500 !flex"
           >
             <Button
               onClick={() => {
@@ -60,13 +54,7 @@ const MainLayout = () => {
               }}
               variant="ghost"
               size="icon"
-              className="!visible !block hover:bg-white/10 transition-colors mr-4 border-2 border-green-500 !bg-gray-700"
-              style={{
-                position: 'relative',
-                zIndex: 9999,
-                visibility: 'visible !important',
-                display: 'block !important'
-              }}
+              className="hover:bg-white/10 transition-colors mr-4 border-2 border-green-500 !bg-gray-700 !block relative z-[9999]"
               aria-label="Toggle sidebar"
             >
               <Menu className="h-5 w-5 text-white" />
