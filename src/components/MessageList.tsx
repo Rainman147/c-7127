@@ -1,5 +1,4 @@
 import Message from './Message';
-import { cn } from "@/lib/utils";
 
 type Message = {
   role: 'user' | 'assistant';
@@ -17,10 +16,7 @@ const MessageList = ({ messages }: { messages: Message[] }) => {
   
   return (
     <div className="flex-1 overflow-y-auto chat-scrollbar">
-      <div className={cn(
-        "w-full max-w-3xl mx-auto px-4",
-        "transition-all duration-300 ease-in-out transform"
-      )}>
+      <div className="w-full max-w-3xl mx-auto px-4">
         {messages.map((message, index) => (
           <Message key={message.id || index} {...message} />
         ))}

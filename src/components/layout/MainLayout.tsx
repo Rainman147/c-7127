@@ -1,84 +1,39 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from '@/components/Sidebar';
 import { useSidebar } from '@/contexts/SidebarContext';
-import AppHeader from './AppHeader';
+import { Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useEffect, useCallback } from 'react';
-
-interface MemoryInfo {
-  usedJSHeapSize: number;
-  totalJSHeapSize: number;
-}
 
 const MainLayout = () => {
-  const { isOpen } = useSidebar();
-  
-  // Optimized viewport change handler with debouncing
-  const handleResize = useCallback(() => {
-    const memory = (performance as any).memory as MemoryInfo | undefined;
-    
-    console.log('[MainLayout] Viewport changed:', { 
-      width: window.innerWidth,
-      height: window.innerHeight,
-      isMobile: window.innerWidth < 768,
-      performance: {
-        memory: memory ? {
-          usedJSHeapSize: Math.round(memory.usedJSHeapSize / 1048576),
-          totalJSHeapSize: Math.round(memory.totalJSHeapSize / 1048576)
-        } : 'Not available'
-      }
-    });
-  }, []);
-
-  // Log initial viewport and set up resize listener
-  useEffect(() => {
-    let resizeTimeout: NodeJS.Timeout;
-    
-    const debouncedResize = () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(handleResize, 250);
-    };
-
-    // Initial log
-    handleResize();
-
-    window.addEventListener('resize', debouncedResize);
-    return () => {
-      window.removeEventListener('resize', debouncedResize);
-      clearTimeout(resizeTimeout);
-    };
-  }, [handleResize]);
-
-  // Performance monitoring for layout changes
-  useEffect(() => {
-    const startTime = performance.now();
-    console.log('[MainLayout] Rendering with sidebar state:', { 
-      isOpen,
-      isMobile: window.innerWidth < 768,
-      renderTime: `${Math.round(performance.now() - startTime)}ms`
-    });
-  }, [isOpen]);
+  const { isOpen, open } = useSidebar();
 
   return (
-    <div className="relative min-h-screen flex w-full bg-chatgpt-main">
+    <div className="flex h-screen bg-chatgpt-main overflow-hidden">
       <Sidebar />
       
-      <div 
-        className={cn(
-          "flex-1 min-w-0 flex flex-col",
-          "transition-transform duration-300 ease-in-out will-change-transform",
-          isOpen ? "md:ml-64" : "ml-0",
-          "px-2 md:px-4"
-        )}
-        style={{
-          contain: 'paint layout',
-        }}
-      >
-        <AppHeader />
-        
-        <main className="flex-1 py-4 md:p-4 overflow-hidden">
+      <div className={cn(
+        "flex-1 relative transition-all duration-300 ease-in-out",
+        isOpen ? "md:ml-64" : "ml-0"
+      )}>
+        {/* Header with open button */}
+        <div className="fixed top-0 left-0 right-0 h-[60px] bg-chatgpt-main/95 backdrop-blur flex items-center px-4 z-20">
+          <Button
+            onClick={open}
+            variant="ghost"
+            className={cn(
+              "transition-opacity duration-300 ease-in-out",
+              isOpen ? "opacity-0 pointer-events-none" : "opacity-100"
+            )}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Main content */}
+        <div className="mt-[60px] p-4">
           <Outlet />
-        </main>
+        </div>
       </div>
     </div>
   );

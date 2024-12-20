@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 interface SidebarContextType {
   isOpen: boolean;
@@ -6,22 +6,10 @@ interface SidebarContextType {
   close: () => void;
 }
 
-const SIDEBAR_STATE_KEY = 'sidebar_state';
-
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  // Initialize state from localStorage if available
-  const [isOpen, setIsOpen] = useState(() => {
-    const savedState = localStorage.getItem(SIDEBAR_STATE_KEY);
-    return savedState ? JSON.parse(savedState) : true;
-  });
-
-  // Persist state changes to localStorage
-  useEffect(() => {
-    console.log('[SidebarContext] Persisting state:', { isOpen });
-    localStorage.setItem(SIDEBAR_STATE_KEY, JSON.stringify(isOpen));
-  }, [isOpen]);
+  const [isOpen, setIsOpen] = useState(true);
 
   const open = () => {
     console.log('[SidebarContext] Opening sidebar');
