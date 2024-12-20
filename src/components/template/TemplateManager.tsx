@@ -12,7 +12,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { CreateTemplateDialog } from './dialogs/CreateTemplateDialog';
 import { EditTemplateDialog } from './dialogs/EditTemplateDialog';
