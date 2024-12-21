@@ -4,6 +4,8 @@ import { useChatSessions } from "@/hooks/useChatSessions";
 import ChatInputField from "./chat/ChatInputField";
 import ChatInputActions from "./chat/ChatInputActions";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 interface ChatInputProps {
   onSend: (message: string, type?: 'text' | 'audio') => void;
@@ -19,6 +21,9 @@ const ChatInputComponent = ({
   isLoading = false 
 }: ChatInputProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+  
   const {
     message,
     setMessage,
@@ -36,47 +41,42 @@ const ChatInputComponent = ({
     setMessage
   });
 
-  const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !isLoading && !isProcessing) {
-      e.preventDefault();
+  const ensureActiveSession = async () => {
+    if (!activeSessionId && !isCreatingSession) {
+      console.log('[ChatInput] Creating new session for message');
+      setIsCreatingSession(true);
       
       try {
-        // Ensure we have an active session before submitting
-        if (!activeSessionId) {
-          console.log('[ChatInput] No active session, creating new one before submit');
-          await createSession('New Chat');
+        const sessionId = await createSession('New Chat');
+        if (sessionId) {
+          console.log('[ChatInput] New session created:', sessionId);
+          navigate(`/c/${sessionId}`);
         }
-        
-        handleSubmit();
       } catch (error) {
-        console.error('[ChatInput] Error handling message submission:', error);
+        console.error('[ChatInput] Failed to create session:', error);
         toast({
           title: "Error",
-          description: "Failed to create chat session",
+          description: "Failed to create new chat session",
           variant: "destructive"
         });
+      } finally {
+        setIsCreatingSession(false);
       }
     }
   };
 
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && !isLoading && !isProcessing && !isCreatingSession) {
+      e.preventDefault();
+      await ensureActiveSession();
+      handleSubmit();
+    }
+  };
+
   const handleMessageChange = async (newMessage: string) => {
-    try {
-      // Create a new session when user starts typing if none exists
-      if (newMessage.length === 1 && !activeSessionId) {
-        console.log('[ChatInput] First character typed, creating new session');
-        await createSession('New Chat');
-        console.log('[ChatInput] New session created successfully');
-      }
-      
-      // Only update message after session creation (if needed) completes
-      setMessage(newMessage);
-    } catch (error) {
-      console.error('[ChatInput] Error creating new session:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create chat session",
-        variant: "destructive"
-      });
+    setMessage(newMessage);
+    if (newMessage.length === 1) {
+      await ensureActiveSession();
     }
   };
 
@@ -87,12 +87,15 @@ const ChatInputComponent = ({
           message={message}
           setMessage={handleMessageChange}
           handleKeyDown={handleKeyDown}
-          isLoading={isLoading || isProcessing}
+          isLoading={isLoading || isProcessing || isCreatingSession}
         />
         <ChatInputActions
-          isLoading={isLoading || isProcessing}
+          isLoading={isLoading || isProcessing || isCreatingSession}
           message={message}
-          handleSubmit={handleSubmit}
+          handleSubmit={async () => {
+            await ensureActiveSession();
+            handleSubmit();
+          }}
           onTranscriptionComplete={handleTranscriptionComplete}
           handleFileUpload={handleFileUpload}
         />

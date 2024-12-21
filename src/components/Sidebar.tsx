@@ -5,9 +5,13 @@ import { ChatSessionList } from "./sidebar/ChatSessionList";
 import { SidebarFooter } from "./sidebar/SidebarFooter";
 import { SidebarHeader } from "./sidebar/SidebarHeader";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const Sidebar = () => {
   const { isOpen, close } = useSidebar();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const {
     sessions,
     activeSessionId,
@@ -15,23 +19,45 @@ const Sidebar = () => {
     createSession,
     deleteSession,
     renameSession,
+    isLoading
   } = useChatSessions();
 
   const handleNewChat = async () => {
-    console.log('[Sidebar] Creating new chat session');
-    const sessionId = await createSession();
-    if (sessionId) {
-      console.log('[Sidebar] New chat session created:', sessionId);
-      setActiveSessionId(sessionId);
+    console.log('[Sidebar] Initiating new chat creation');
+    try {
+      // Clear active session before creating new one
+      setActiveSessionId(null);
+      
+      // Navigate to new chat route first
+      navigate('/c/new');
+      
+      console.log('[Sidebar] Navigated to new chat route');
       close();
+    } catch (error) {
+      console.error('[Sidebar] Error creating new chat:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start new chat",
+        variant: "destructive"
+      });
     }
   };
 
-  const handleSessionClick = (sessionId: string) => {
-    console.log('[Sidebar] Session selected:', sessionId);
-    // Set active session before closing sidebar
-    setActiveSessionId(sessionId);
-    setTimeout(close, 100); // Slight delay to ensure state updates
+  const handleSessionClick = async (sessionId: string) => {
+    console.log('[Sidebar] Switching to session:', sessionId);
+    try {
+      setActiveSessionId(sessionId);
+      navigate(`/c/${sessionId}`);
+      console.log('[Sidebar] Successfully switched to session:', sessionId);
+      close();
+    } catch (error) {
+      console.error('[Sidebar] Error switching sessions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to switch chat sessions",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -60,13 +86,19 @@ const Sidebar = () => {
         <nav className="flex-1 px-3 overflow-hidden">
           <div className="flex-col flex-1 transition-opacity duration-500 relative -mr-2 pr-2 overflow-y-auto sidebar-scrollbar">
             <SidebarNavigation />
-            <ChatSessionList
-              sessions={sessions}
-              activeSessionId={activeSessionId}
-              onSessionSelect={handleSessionClick}
-              onSessionDelete={deleteSession}
-              onSessionRename={renameSession}
-            />
+            {isLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white/70" />
+              </div>
+            ) : (
+              <ChatSessionList
+                sessions={sessions}
+                activeSessionId={activeSessionId}
+                onSessionSelect={handleSessionClick}
+                onSessionDelete={deleteSession}
+                onSessionRename={renameSession}
+              />
+            )}
           </div>
         </nav>
 
