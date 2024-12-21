@@ -4,37 +4,38 @@ import { TemplateTrigger } from "./template/dropdown/TemplateTrigger";
 import { TemplateDropdownContent } from "./template/dropdown/TemplateDropdownContent";
 import { useTemplateSelection } from "./template/useTemplateSelection";
 import { useTemplateContext } from "@/contexts/TemplateContext";
+import { useSessionParams } from "@/hooks/routing/useSessionParams";
 import type { Template } from "@/components/template/templateTypes";
 
 interface TemplateSelectorProps {
-  currentChatId: string | null;
   onTemplateChange: (template: Template) => void;
 }
 
-export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
+export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProps) => {
   const { globalTemplate, setGlobalTemplate } = useTemplateContext();
+  const { sessionId } = useSessionParams();
   
   useEffect(() => {
     console.log('[TemplateSelector] Component mounted/updated:', {
-      currentChatId,
+      sessionId,
       globalTemplateId: globalTemplate?.id
     });
 
     return () => {
-      console.log('[TemplateSelector] Component cleanup for chat:', currentChatId);
+      console.log('[TemplateSelector] Component cleanup for chat:', sessionId);
     };
-  }, [currentChatId, globalTemplate?.id]);
+  }, [sessionId, globalTemplate?.id]);
 
   const { 
     selectedTemplate, 
     availableTemplates, 
     isLoading, 
     handleTemplateChange 
-  } = useTemplateSelection(currentChatId, onTemplateChange, globalTemplate);
+  } = useTemplateSelection(sessionId, onTemplateChange, globalTemplate);
 
   const handleTemplateSelect = useCallback((template: Template) => {
     console.log('[TemplateSelector] Template selection requested:', {
-      currentChatId,
+      sessionId,
       currentTemplateId: selectedTemplate?.id,
       newTemplateId: template.id,
       templateName: template.name
@@ -46,21 +47,19 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     }
     
     setGlobalTemplate(template);
-    if (currentChatId) {
-      handleTemplateChange(template);
-    }
-  }, [handleTemplateChange, currentChatId, setGlobalTemplate, selectedTemplate?.id]);
+    handleTemplateChange(template);
+  }, [handleTemplateChange, sessionId, setGlobalTemplate, selectedTemplate?.id]);
 
   const displayTemplate = useMemo(() => {
-    const template = currentChatId ? selectedTemplate : globalTemplate;
+    const template = sessionId ? selectedTemplate : globalTemplate;
     console.log('[TemplateSelector] Display template updated:', {
-      currentChatId,
+      sessionId,
       templateId: template?.id,
       templateName: template?.name,
-      source: currentChatId ? 'selected' : 'global'
+      source: sessionId ? 'selected' : 'global'
     });
     return template;
-  }, [currentChatId, selectedTemplate, globalTemplate]);
+  }, [sessionId, selectedTemplate, globalTemplate]);
 
   return (
     <DropdownMenu>
