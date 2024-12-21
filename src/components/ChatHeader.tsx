@@ -17,36 +17,41 @@ const ChatHeaderComponent = ({
   const profilePhotoUrl = useProfilePhoto();
   
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[ChatHeader] Significant state update:', { 
-        isSidebarOpen, 
-        currentChatId,
-        hasProfilePhoto: !!profilePhotoUrl 
-      });
-    }
+    console.log('[ChatHeader] Component mounted/updated:', { 
+      isSidebarOpen, 
+      currentChatId,
+      hasProfilePhoto: !!profilePhotoUrl 
+    });
+
+    return () => {
+      console.log('[ChatHeader] Component cleanup for chat:', currentChatId);
+    };
   }, [isSidebarOpen, currentChatId, profilePhotoUrl]);
   
   const handleTemplateChange = useCallback((template: any) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[ChatHeader] Template change:', {
-        templateId: template.id,
-        templateName: template.name
-      });
-    }
+    console.log('[ChatHeader] Template change requested:', {
+      chatId: currentChatId,
+      templateId: template.id,
+      templateName: template.name
+    });
     onTemplateChange(template);
-  }, [onTemplateChange]);
+  }, [onTemplateChange, currentChatId]);
 
-  const templateSelector = useMemo(() => (
-    <TemplateSelector 
-      key={currentChatId || 'default'}
-      currentChatId={currentChatId}
-      onTemplateChange={handleTemplateChange}
-    />
-  ), [currentChatId, handleTemplateChange]);
+  const templateSelector = useMemo(() => {
+    console.log('[ChatHeader] Creating TemplateSelector instance for chat:', currentChatId);
+    return (
+      <TemplateSelector 
+        key={currentChatId || 'default'}
+        currentChatId={currentChatId}
+        onTemplateChange={handleTemplateChange}
+      />
+    );
+  }, [currentChatId, handleTemplateChange]);
 
-  const profileMenu = useMemo(() => (
-    <ProfileMenu profilePhotoUrl={profilePhotoUrl} />
-  ), [profilePhotoUrl]);
+  const profileMenu = useMemo(() => {
+    console.log('[ChatHeader] Creating ProfileMenu instance');
+    return <ProfileMenu profilePhotoUrl={profilePhotoUrl} />;
+  }, [profilePhotoUrl]);
 
   return (
     <div className="fixed top-0 z-30 w-full bg-chatgpt-main/95 backdrop-blur">
