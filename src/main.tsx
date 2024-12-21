@@ -28,14 +28,11 @@ createRoot(document.getElementById("root")!).render(
                 </SidebarProvider>
               </ProtectedRoute>
             }>
-              {/* Redirect root to /c/new */}
               <Route path="/" element={<Navigate to="/c/new" replace />} />
-              
-              {/* Chat routes */}
               <Route path="/c/new" element={<Index />} />
               <Route path="/c/:sessionId" element={<Index />} />
               
-              {/* Legacy routes - redirect to chat with query params */}
+              {/* Legacy route redirects */}
               <Route 
                 path="/t/:templateId" 
                 element={

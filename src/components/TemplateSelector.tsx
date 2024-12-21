@@ -3,7 +3,6 @@ import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { TemplateTrigger } from "./template/dropdown/TemplateTrigger";
 import { TemplateDropdownContent } from "./template/dropdown/TemplateDropdownContent";
 import { useTemplateSelection } from "./template/useTemplateSelection";
-import { useTemplateContext } from "@/contexts/TemplateContext";
 import { useSessionParams } from "@/hooks/routing/useSessionParams";
 import type { Template } from "@/components/template/templateTypes";
 
@@ -12,26 +11,25 @@ interface TemplateSelectorProps {
 }
 
 export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProps) => {
-  const { globalTemplate, setGlobalTemplate } = useTemplateContext();
-  const { sessionId } = useSessionParams();
+  const { sessionId, templateId } = useSessionParams();
   
   useEffect(() => {
     console.log('[TemplateSelector] Component mounted/updated:', {
       sessionId,
-      globalTemplateId: globalTemplate?.id
+      templateId
     });
 
     return () => {
       console.log('[TemplateSelector] Component cleanup for chat:', sessionId);
     };
-  }, [sessionId, globalTemplate?.id]);
+  }, [sessionId, templateId]);
 
   const { 
     selectedTemplate, 
     availableTemplates, 
     isLoading, 
     handleTemplateChange 
-  } = useTemplateSelection(sessionId, onTemplateChange, globalTemplate);
+  } = useTemplateSelection(sessionId, onTemplateChange);
 
   const handleTemplateSelect = useCallback((template: Template) => {
     console.log('[TemplateSelector] Template selection requested:', {
@@ -46,20 +44,17 @@ export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProp
       return;
     }
     
-    setGlobalTemplate(template);
     handleTemplateChange(template);
-  }, [handleTemplateChange, sessionId, setGlobalTemplate, selectedTemplate?.id]);
+  }, [handleTemplateChange, sessionId, selectedTemplate?.id]);
 
   const displayTemplate = useMemo(() => {
-    const template = sessionId ? selectedTemplate : globalTemplate;
     console.log('[TemplateSelector] Display template updated:', {
       sessionId,
-      templateId: template?.id,
-      templateName: template?.name,
-      source: sessionId ? 'selected' : 'global'
+      templateId: selectedTemplate?.id,
+      templateName: selectedTemplate?.name
     });
-    return template;
-  }, [sessionId, selectedTemplate, globalTemplate]);
+    return selectedTemplate;
+  }, [selectedTemplate]);
 
   return (
     <DropdownMenu>
