@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useDebounce } from 'use-debounce';
 
 export type ChatSession = {
   id: string;
@@ -49,6 +50,9 @@ export const useChatSessions = () => {
       setIsLoading(false);
     }
   };
+
+  // Debounce the fetch function to prevent multiple rapid refreshes
+  const [debouncedFetchSessions] = useDebounce(fetchSessions, 300);
 
   const createSession = async (title: string = 'New Chat') => {
     try {
@@ -141,21 +145,25 @@ export const useChatSessions = () => {
     }
   };
 
-  // Set up real-time subscription
+  // Set up real-time subscription for both chats and messages tables
   useEffect(() => {
     console.log('[useChatSessions] Setting up real-time subscription');
     const channel = supabase
-      .channel('chat-changes')
+      .channel('chat-and-message-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'chats' },
+        [
+          { event: '*', schema: 'public', table: 'chats' },
+          { event: '*', schema: 'public', table: 'messages' }
+        ],
         (payload) => {
-          console.log('[useChatSessions] Chat change received:', payload);
-          fetchSessions();
+          console.log('[useChatSessions] Database change received:', payload);
+          debouncedFetchSessions();
         }
       )
       .subscribe();
 
+    // Initial fetch
     fetchSessions();
 
     return () => {
