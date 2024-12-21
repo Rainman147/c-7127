@@ -13,8 +13,8 @@ import ChatContainer from '@/components/chat/ChatContainer';
 
 const ChatContent = () => {
   const { isOpen, open } = useSidebar();
-  const { messages, isLoading, handleSendMessage, currentChatId } = useChat();
   const { activeSessionId } = useChatSessions();
+  const { messages, isLoading, handleSendMessage } = useChat(activeSessionId);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   const handleTemplateChange = (template: any) => {
