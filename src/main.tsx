@@ -12,7 +12,6 @@ import { SidebarProvider } from './contexts/SidebarContext';
 import MainLayout from './components/layout/MainLayout';
 import './index.css';
 
-// Create a client
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
@@ -43,7 +42,7 @@ createRoot(document.getElementById("root")!).render(
                   <Navigate 
                     to={{
                       pathname: '/c/new',
-                      search: `?template=${window.location.pathname.split('/')[2]}`
+                      search: `template=${window.location.pathname.split('/')[2]}`
                     }}
                     replace 
                   />
@@ -55,7 +54,7 @@ createRoot(document.getElementById("root")!).render(
                   <Navigate 
                     to={{
                       pathname: '/c/new',
-                      search: `?patient=${window.location.pathname.split('/')[2]}`
+                      search: `patient=${window.location.pathname.split('/')[2]}`
                     }}
                     replace 
                   />

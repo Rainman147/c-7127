@@ -5,32 +5,27 @@ import { TemplateManager } from '../template/TemplateManager';
 import { useSessionParams } from '@/hooks/routing/useSessionParams';
 import type { Template } from '@/components/template/templateTypes';
 
-interface ChatContainerProps {
-  activeSessionId: string | null;
-}
-
-const ChatContainer = ({ activeSessionId }: ChatContainerProps) => {
+const ChatContainer = () => {
   const { globalTemplate } = useTemplateContext();
   const { sessionId } = useSessionParams();
 
   useEffect(() => {
     console.log('[ChatContainer] Component mounted/updated:', {
-      activeSessionId,
       globalTemplateId: globalTemplate?.id,
       sessionId
     });
 
     return () => {
-      console.log('[ChatContainer] Component cleanup for session:', activeSessionId);
+      console.log('[ChatContainer] Component cleanup for session:', sessionId);
     };
-  }, [activeSessionId, globalTemplate?.id, sessionId]);
+  }, [globalTemplate?.id, sessionId]);
 
   return (
     <div className="chat-container">
       <TemplateSelector
         onTemplateChange={(template: Template) => {
           console.log('[ChatContainer] Template changed:', {
-            sessionId: activeSessionId,
+            sessionId,
             templateId: template.id,
             templateName: template.name
           });
