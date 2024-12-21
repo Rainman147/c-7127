@@ -47,25 +47,28 @@ export const useSessionParams = () => {
   };
 
   const redirectToNew = (params?: { template?: string; patient?: string }) => {
-    console.log('[useSessionParams] Redirecting to new session with params:', params);
-    const newSearchParams = new URLSearchParams();
-    
-    // Handle template parameter
-    if (params?.template) {
-      newSearchParams.set('template', params.template);
-    } else if (templateId) {
-      newSearchParams.set('template', templateId);
-    }
+    // Only redirect if we're not already on the new route
+    if (!isNewSession) {
+      console.log('[useSessionParams] Redirecting to new session with params:', params);
+      const newSearchParams = new URLSearchParams();
+      
+      // Handle template parameter
+      if (params?.template) {
+        newSearchParams.set('template', params.template);
+      } else if (templateId) {
+        newSearchParams.set('template', templateId);
+      }
 
-    // Handle patient parameter
-    if (params?.patient) {
-      newSearchParams.set('patient', params.patient);
-    } else if (patientId) {
-      newSearchParams.set('patient', patientId);
-    }
+      // Handle patient parameter
+      if (params?.patient) {
+        newSearchParams.set('patient', params.patient);
+      } else if (patientId) {
+        newSearchParams.set('patient', patientId);
+      }
 
-    const queryString = newSearchParams.toString();
-    navigate(`/c/new${queryString ? `?${queryString}` : ''}`);
+      const queryString = newSearchParams.toString();
+      navigate(`/c/new${queryString ? `?${queryString}` : ''}`);
+    }
   };
 
   return {
