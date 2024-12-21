@@ -13,79 +13,37 @@ export type DatabaseSchema = {
   requiredFields: string[];
 };
 
-export type DatabaseTemplate = {
+export interface DatabaseTemplate {
   id: string;
+  user_id: string;
   name: string;
   content: string;
-  instructions?: DatabaseInstructions | Json | null;
-  schema?: DatabaseSchema | Json | null;
-  priority_rules?: Json | null;
-  created_at?: string;
-  updated_at?: string;
-  user_id: string;
-};
+  created_at: string;
+  updated_at: string;
+  instructions: DatabaseInstructions | Json;
+  schema: DatabaseSchema | Json;
+  priority_rules?: Json;
+}
 
-const isValidInstructions = (instructions: any): instructions is DatabaseInstructions => {
-  return (
-    instructions &&
-    typeof instructions === 'object' &&
-    'dataFormatting' in instructions &&
-    'priorityRules' in instructions &&
-    'specialConditions' in instructions &&
-    typeof instructions.dataFormatting === 'string' &&
-    typeof instructions.priorityRules === 'string' &&
-    typeof instructions.specialConditions === 'string'
-  );
-};
-
-const isValidSchema = (schema: any): schema is DatabaseSchema => {
-  return (
-    schema &&
-    typeof schema === 'object' &&
-    Array.isArray(schema.sections) &&
-    Array.isArray(schema.requiredFields) &&
-    schema.sections.every((s: any) => typeof s === 'string') &&
-    schema.requiredFields.every((f: any) => typeof f === 'string')
-  );
-};
-
-export const convertDatabaseTemplate = (dbTemplate: DatabaseTemplate): Template => {
-  console.log('[convertDatabaseTemplate] Converting template:', dbTemplate);
-  
-  const defaultInstructions = {
-    dataFormatting: '',
-    priorityRules: '',
-    specialConditions: ''
-  };
-
-  const defaultSchema = {
-    sections: [],
-    requiredFields: []
-  };
-
-  let instructions = defaultInstructions;
-  if (dbTemplate.instructions && isValidInstructions(dbTemplate.instructions)) {
-    instructions = dbTemplate.instructions;
-  }
-
-  let schema = defaultSchema;
-  if (dbTemplate.schema && isValidSchema(dbTemplate.schema)) {
-    schema = dbTemplate.schema;
-  }
-
-  return {
-    id: dbTemplate.id,
-    name: dbTemplate.name,
-    description: dbTemplate.content || '',
-    systemInstructions: dbTemplate.content || '',
-    content: dbTemplate.content || '',
-    instructions,
-    schema,
-    priority_rules: dbTemplate.priority_rules
-  };
-};
-
+// Function to merge database templates with default ones
 export const mergeTemplates = (dbTemplates: DatabaseTemplate[]): Template[] => {
-  const converted = dbTemplates.map(convertDatabaseTemplate);
+  const converted = dbTemplates.map(template => ({
+    id: template.id,
+    name: template.name,
+    description: template.content || '',
+    systemInstructions: template.content || '',
+    content: template.content || '',
+    instructions: typeof template.instructions === 'object' ? template.instructions : {
+      dataFormatting: '',
+      priorityRules: '',
+      specialConditions: ''
+    },
+    schema: typeof template.schema === 'object' ? template.schema : {
+      sections: [],
+      requiredFields: []
+    },
+    priority_rules: template.priority_rules
+  }));
+  
   return [...defaultTemplates, ...converted];
 };

@@ -4,9 +4,9 @@ export const defaultTemplates: Template[] = [
   {
     id: "live-session",
     name: "Live Patient Session",
-    description: "Real-time session with focus on symptoms and immediate observations. Perfect for capturing patient interactions as they happen.",
-    systemInstructions: `Live Patient Session Template - Revised System Instructions...`,
-    content: `Live Patient Session Template - Revised System Instructions...`,
+    description: "Real-time session with focus on symptoms and immediate observations.",
+    systemInstructions: "Live Patient Session Template - Revised System Instructions...",
+    content: "Live Patient Session Template - Revised System Instructions...",
     instructions: {
       dataFormatting: "Standard medical formatting",
       priorityRules: "Prioritize critical symptoms",
