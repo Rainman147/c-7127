@@ -5,6 +5,7 @@ import App from './App'
 import './index.css'
 import { BrowserRouter } from 'react-router-dom'
 import Index from './pages/Index'
+import { SidebarProvider } from '@/contexts/SidebarContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,11 +19,13 @@ const queryClient = new QueryClient({
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App>
-        <BrowserRouter>
-          <Index />
-        </BrowserRouter>
-      </App>
+      <SidebarProvider>
+        <App>
+          <BrowserRouter>
+            <Index />
+          </BrowserRouter>
+        </App>
+      </SidebarProvider>
     </QueryClientProvider>
   </React.StrictMode>
 )
