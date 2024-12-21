@@ -152,12 +152,17 @@ export const useChatSessions = () => {
       .channel('chat-and-message-changes')
       .on(
         'postgres_changes',
-        [
-          { event: '*', schema: 'public', table: 'chats' },
-          { event: '*', schema: 'public', table: 'messages' }
-        ],
+        { event: '*', schema: 'public', table: 'chats' },
         (payload) => {
-          console.log('[useChatSessions] Database change received:', payload);
+          console.log('[useChatSessions] Chat change received:', payload);
+          debouncedFetchSessions();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'messages' },
+        (payload) => {
+          console.log('[useChatSessions] Message change received:', payload);
           debouncedFetchSessions();
         }
       )
