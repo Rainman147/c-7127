@@ -25,25 +25,60 @@ export interface DatabaseTemplate {
   priority_rules?: Json;
 }
 
-// Function to merge database templates with default ones
-export const mergeTemplates = (dbTemplates: DatabaseTemplate[]): Template[] => {
-  const converted = dbTemplates.map(template => ({
+const isValidInstructions = (instructions: any): instructions is DatabaseInstructions => {
+  return (
+    typeof instructions === 'object' &&
+    typeof instructions.dataFormatting === 'string' &&
+    typeof instructions.priorityRules === 'string' &&
+    typeof instructions.specialConditions === 'string'
+  );
+};
+
+const isValidSchema = (schema: any): schema is DatabaseSchema => {
+  return (
+    typeof schema === 'object' &&
+    Array.isArray(schema.sections) &&
+    Array.isArray(schema.requiredFields)
+  );
+};
+
+export const convertDatabaseTemplate = (template: DatabaseTemplate): Template => {
+  console.log('[convertDatabaseTemplate] Converting template:', template);
+  
+  const defaultInstructions = {
+    dataFormatting: '',
+    priorityRules: '',
+    specialConditions: ''
+  };
+
+  const defaultSchema = {
+    sections: [],
+    requiredFields: []
+  };
+
+  return {
     id: template.id,
     name: template.name,
     description: template.content || '',
     systemInstructions: template.content || '',
     content: template.content || '',
-    instructions: typeof template.instructions === 'object' ? template.instructions : {
-      dataFormatting: '',
-      priorityRules: '',
-      specialConditions: ''
-    },
-    schema: typeof template.schema === 'object' ? template.schema : {
-      sections: [],
-      requiredFields: []
-    },
+    instructions: isValidInstructions(template.instructions) 
+      ? template.instructions 
+      : defaultInstructions,
+    schema: isValidSchema(template.schema) 
+      ? template.schema 
+      : defaultSchema,
     priority_rules: template.priority_rules
-  }));
+  };
+};
+
+// Function to merge database templates with default ones
+export const mergeTemplates = (dbTemplates: DatabaseTemplate[]): Template[] => {
+  console.log('[mergeTemplates] Merging templates:', { 
+    defaultCount: defaultTemplates.length, 
+    dbCount: dbTemplates.length 
+  });
   
+  const converted = dbTemplates.map(convertDatabaseTemplate);
   return [...defaultTemplates, ...converted];
 };
