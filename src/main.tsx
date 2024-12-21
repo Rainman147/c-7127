@@ -39,17 +39,23 @@ createRoot(document.getElementById("root")!).render(
               {/* Legacy routes - redirect to chat with query params */}
               <Route 
                 path="/t/:templateId" 
-                element={<Navigate to={(location) => ({
-                  pathname: '/c/new',
-                  search: `?template=${location.pathname.split('/')[2]}`
-                })} replace />} 
+                element={<Navigate 
+                  to={({ params }) => ({
+                    pathname: '/c/new',
+                    search: `?template=${params.templateId}`
+                  })} 
+                  replace 
+                />} 
               />
               <Route 
                 path="/p/:patientId" 
-                element={<Navigate to={(location) => ({
-                  pathname: '/c/new',
-                  search: `?patient=${location.pathname.split('/')[2]}`
-                })} replace />} 
+                element={<Navigate 
+                  to={({ params }) => ({
+                    pathname: '/c/new',
+                    search: `?patient=${params.patientId}`
+                  })} 
+                  replace 
+                />} 
               />
             </Route>
           </Routes>

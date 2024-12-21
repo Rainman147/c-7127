@@ -8,9 +8,11 @@ import { TwoLineMenuIcon } from '@/components/icons/TwoLineMenuIcon';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
 import { useSessionParams } from '@/hooks/routing/useSessionParams';
+import { useNavigate } from 'react-router-dom';
 
 const ChatContent = () => {
   const { isOpen, open } = useSidebar();
+  const navigate = useNavigate();
   const { sessionId, templateId, patientId } = useSessionParams();
   const { messages, isLoading, handleSendMessage } = useChat(sessionId);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -25,7 +27,17 @@ const ChatContent = () => {
   const handleTemplateChange = useCallback((template: any) => {
     console.log('[Index] Template changed:', template);
     setSelectedTemplate(template);
-  }, []); 
+    
+    // Update URL with new template
+    const searchParams = new URLSearchParams();
+    if (template?.id) searchParams.set('template', template.id);
+    if (patientId) searchParams.set('patient', patientId);
+    
+    navigate({
+      pathname: sessionId ? `/c/${sessionId}` : '/c/new',
+      search: searchParams.toString()
+    });
+  }, [navigate, sessionId, patientId]); 
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] relative">
@@ -43,7 +55,7 @@ const ChatContent = () => {
       </Button>
       
       <ChatHeader 
-        currentChatId={sessionId}
+        isSidebarOpen={isOpen}
         onTemplateChange={handleTemplateChange}
       />
       

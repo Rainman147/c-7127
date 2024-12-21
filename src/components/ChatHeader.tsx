@@ -42,8 +42,6 @@ const ChatHeaderComponent = ({
     console.log('[ChatHeader] Creating TemplateSelector instance for chat:', sessionId);
     return (
       <TemplateSelector 
-        key={sessionId || 'default'}
-        currentChatId={sessionId}
         onTemplateChange={handleTemplateChange}
       />
     );
