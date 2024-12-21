@@ -27,8 +27,8 @@ const ChatContainer = () => {
       templateName: template.name
     });
 
-    // Update URL with new template
-    const searchParams = new URLSearchParams();
+    // Update URL with new template while preserving other params
+    const searchParams = new URLSearchParams(window.location.search);
     searchParams.set('template', template.id);
     navigate({
       pathname: sessionId ? `/c/${sessionId}` : '/c/new',

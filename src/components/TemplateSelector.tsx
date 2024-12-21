@@ -31,7 +31,7 @@ export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProp
     availableTemplates, 
     isLoading, 
     handleTemplateChange 
-  } = useTemplateSelection(sessionId, onTemplateChange, globalTemplate);
+  } = useTemplateSelection(onTemplateChange, globalTemplate);
 
   const handleTemplateSelect = useCallback((template: Template) => {
     console.log('[TemplateSelector] Template selection requested:', {
@@ -56,7 +56,7 @@ export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProp
       templateName: selectedTemplate?.name
     });
     return selectedTemplate;
-  }, [selectedTemplate]);
+  }, [selectedTemplate, sessionId]);
 
   return (
     <DropdownMenu>

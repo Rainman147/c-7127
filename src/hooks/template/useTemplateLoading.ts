@@ -1,23 +1,24 @@
 import { useEffect } from "react";
 import { useAvailableTemplates } from "./useAvailableTemplates";
 import { useTemplatePersistence } from "./useTemplatePersistence";
+import { useSessionParams } from "@/hooks/routing/useSessionParams";
 import type { Template } from "@/components/template/templateTypes";
 
 export const useTemplateLoading = (
-  currentChatId: string | null,
   onTemplateChange: (template: Template) => void,
   selectedTemplate: Template | null,
   setSelectedTemplate: (template: Template) => void,
   setIsLoading: (loading: boolean) => void,
   globalTemplateRef: React.RefObject<Template>
 ) => {
+  const { sessionId } = useSessionParams();
   const availableTemplates = useAvailableTemplates();
-  const { loadTemplate } = useTemplatePersistence(currentChatId);
+  const { loadTemplate } = useTemplatePersistence();
 
   useEffect(() => {
     const loadTemplateForChat = async () => {
-      if (!currentChatId) {
-        console.log('[useTemplateLoading] No chat ID provided, using global template');
+      if (!sessionId) {
+        console.log('[useTemplateLoading] No session ID provided, using global template');
         if (selectedTemplate?.id === globalTemplateRef.current.id) {
           console.log('[useTemplateLoading] Template unchanged, skipping update');
           return;
@@ -29,7 +30,7 @@ export const useTemplateLoading = (
 
       try {
         setIsLoading(true);
-        const template = await loadTemplate();
+        const template = await loadTemplate(sessionId);
         
         if (template) {
           console.log('[useTemplateLoading] Loaded template from chat:', template.name);
@@ -58,7 +59,7 @@ export const useTemplateLoading = (
     };
 
     loadTemplateForChat();
-  }, [currentChatId, onTemplateChange, loadTemplate, selectedTemplate, setSelectedTemplate, setIsLoading, globalTemplateRef]);
+  }, [sessionId, onTemplateChange, loadTemplate, selectedTemplate, setSelectedTemplate, setIsLoading, globalTemplateRef]);
 
   return {
     availableTemplates

@@ -1,15 +1,16 @@
 import { useCallback } from "react";
 import { useTemplatePersistence } from "./useTemplatePersistence";
+import { useSessionParams } from "@/hooks/routing/useSessionParams";
 import type { Template } from "@/components/template/templateTypes";
 
 export const useTemplateUpdates = (
-  currentChatId: string | null,
   selectedTemplate: Template | null,
   setSelectedTemplate: (template: Template) => void,
   setIsLoading: (loading: boolean) => void,
   onTemplateChange: (template: Template) => void
 ) => {
-  const { saveTemplate } = useTemplatePersistence(currentChatId);
+  const { sessionId } = useSessionParams();
+  const { saveTemplate } = useTemplatePersistence();
 
   const handleTemplateChange = useCallback(async (template: Template) => {
     console.log('[useTemplateUpdates] Template change requested:', template.name);
@@ -23,8 +24,8 @@ export const useTemplateUpdates = (
     try {
       setSelectedTemplate(template);
       onTemplateChange(template);
-      if (currentChatId) {
-        await saveTemplate(template);
+      if (sessionId) {
+        await saveTemplate(sessionId, template);
         console.log('[useTemplateUpdates] Template saved to chat successfully');
       }
     } catch (error) {
@@ -32,7 +33,7 @@ export const useTemplateUpdates = (
     } finally {
       setIsLoading(false);
     }
-  }, [currentChatId, selectedTemplate?.id, onTemplateChange, saveTemplate, setSelectedTemplate, setIsLoading]);
+  }, [sessionId, selectedTemplate?.id, onTemplateChange, saveTemplate, setSelectedTemplate, setIsLoading]);
 
   return {
     handleTemplateChange

@@ -1,14 +1,15 @@
 import type { Template } from "@/components/template/templateTypes";
-import { useTemplateState } from "./useTemplateState";
-import { useTemplateLoading } from "./useTemplateLoading";
-import { useTemplateUpdates } from "./useTemplateUpdates";
+import { useTemplateState } from "@/hooks/template/useTemplateState";
+import { useTemplateLoading } from "@/hooks/template/useTemplateLoading";
+import { useTemplateUpdates } from "@/hooks/template/useTemplateUpdates";
+import { useSessionParams } from "@/hooks/routing/useSessionParams";
 
 export const useTemplateSelection = (
-  currentChatId: string | null,
   onTemplateChange: (template: Template) => void,
   globalTemplate: Template
 ) => {
-  console.log('[useTemplateSelection] Hook initialized with chatId:', currentChatId);
+  const { sessionId } = useSessionParams();
+  console.log('[useTemplateSelection] Hook initialized with sessionId:', sessionId);
   
   const {
     selectedTemplate,
@@ -19,7 +20,6 @@ export const useTemplateSelection = (
   } = useTemplateState(globalTemplate);
 
   const { availableTemplates } = useTemplateLoading(
-    currentChatId,
     onTemplateChange,
     selectedTemplate,
     setSelectedTemplate,
@@ -28,7 +28,6 @@ export const useTemplateSelection = (
   );
 
   const { handleTemplateChange } = useTemplateUpdates(
-    currentChatId,
     selectedTemplate,
     setSelectedTemplate,
     setIsLoading,
