@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { CreateTemplateDialog } from './dialogs/CreateTemplateDialog';
 import { EditTemplateDialog } from './dialogs/EditTemplateDialog';
 import { TemplateList } from './list/TemplateList';
@@ -18,6 +19,14 @@ export const TemplateManager = () => {
     handleUpdateTemplate,
     deleteTemplate,
   } = useTemplateOperations();
+
+  useEffect(() => {
+    console.log('[TemplateManager] Component mounted with templates:', { 
+      templatesCount: templates?.length,
+      isCreateDialogOpen,
+      isEditDialogOpen
+    });
+  }, [templates, isCreateDialogOpen, isEditDialogOpen]);
   
   return (
     <div className="space-y-4">
@@ -26,6 +35,7 @@ export const TemplateManager = () => {
       <TemplateList
         templates={templates}
         onEdit={(template) => {
+          console.log('[TemplateManager] Editing template:', template);
           setEditingTemplate(template);
           setIsEditDialogOpen(true);
         }}

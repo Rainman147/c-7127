@@ -2,9 +2,14 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from '@/components/Sidebar';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
+import { useEffect } from 'react';
 
 const MainLayout = () => {
   const { isOpen } = useSidebar();
+
+  useEffect(() => {
+    console.log('[MainLayout] Mounted with sidebar state:', { isOpen });
+  }, [isOpen]);
 
   return (
     <div className="flex h-screen bg-chatgpt-main overflow-hidden">

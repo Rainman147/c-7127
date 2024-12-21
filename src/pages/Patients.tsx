@@ -4,6 +4,7 @@ import { PatientSearch } from "@/components/patients/list/PatientSearch";
 import { PatientGrid } from "@/components/patients/list/PatientGrid";
 import { SidebarToggle } from "@/components/patients/SidebarToggle";
 import { usePatientPage } from "@/hooks/usePatientPage";
+import { useEffect } from "react";
 
 const PatientsPage = () => {
   const {
@@ -19,6 +20,15 @@ const PatientsPage = () => {
     handlePatientAdded,
     setIsDialogOpen,
   } = usePatientPage();
+
+  useEffect(() => {
+    console.log('[PatientsPage] Mounted with state:', {
+      patientsCount: patients?.length,
+      isLoading,
+      isInitialLoad,
+      isDialogOpen
+    });
+  }, [patients, isLoading, isInitialLoad, isDialogOpen]);
 
   return (
     <>
