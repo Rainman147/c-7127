@@ -1,12 +1,10 @@
-import { ChevronLeft, Plus, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useChatSessions } from "@/hooks/useChatSessions";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { SidebarNavigation } from "./sidebar/SidebarNavigation";
 import { ChatSessionList } from "./sidebar/ChatSessionList";
 import { SidebarFooter } from "./sidebar/SidebarFooter";
+import { SidebarHeader } from "./sidebar/SidebarHeader";
 import { cn } from "@/lib/utils";
-import { TwoLineMenuIcon } from "./icons/TwoLineMenuIcon";
 
 const Sidebar = () => {
   const { isOpen, close } = useSidebar();
@@ -55,35 +53,7 @@ const Sidebar = () => {
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between h-[60px] px-4">
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={close}
-              variant="ghost"
-              size="icon"
-              className="text-white/70 hover:text-white"
-            >
-              <TwoLineMenuIcon className="h-5 w-5" />
-            </Button>
-            <Button
-              onClick={handleNewChat}
-              variant="ghost"
-              className="text-white/70 hover:text-white flex items-center gap-2"
-            >
-              <Plus className="h-5 w-5" />
-              <span>New Chat</span>
-            </Button>
-          </div>
-          <Button
-            onClick={close}
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+        <SidebarHeader onNewChat={handleNewChat} onClose={close} />
 
         {/* Navigation */}
         <nav className="flex-1 px-3 overflow-hidden">

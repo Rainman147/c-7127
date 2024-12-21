@@ -1,23 +1,40 @@
-import { Menu } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TwoLineMenuIcon } from "@/components/icons/TwoLineMenuIcon";
 
 interface SidebarHeaderProps {
-  onToggle: () => void;
+  onNewChat: () => void;
+  onClose: () => void;
 }
 
-export const SidebarHeader = ({ onToggle }: SidebarHeaderProps) => {
-  const handleToggle = () => {
-    console.log('[SidebarHeader] Toggle button clicked');
-    onToggle();
-  };
-
+export const SidebarHeader = ({ onNewChat, onClose }: SidebarHeaderProps) => {
   return (
-    <div className="flex justify-between flex h-[60px] items-center">
-      <Button 
-        onClick={handleToggle} 
-        className="h-10 rounded-lg px-2 text-token-text-secondary hover:bg-token-sidebar-surface-secondary"
+    <div className="flex items-center justify-between h-[60px] px-4">
+      <div className="flex items-center gap-3">
+        <Button
+          onClick={onClose}
+          variant="ghost"
+          size="icon"
+          className="text-white/70 hover:text-white"
+        >
+          <TwoLineMenuIcon className="h-5 w-5" />
+        </Button>
+        <Button
+          onClick={onNewChat}
+          variant="ghost"
+          className="text-white/70 hover:text-white flex items-center gap-2"
+        >
+          <Plus className="h-5 w-5" />
+          <span>New Chat</span>
+        </Button>
+      </div>
+      <Button
+        onClick={onClose}
+        variant="ghost"
+        size="icon"
+        className="md:hidden"
       >
-        <Menu className="h-5 w-5" />
+        <X className="h-5 w-5" />
       </Button>
     </div>
   );
