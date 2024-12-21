@@ -1,43 +1,50 @@
 import { useCallback } from "react";
-import { loadTemplateFromDb, saveTemplateToDb } from "@/utils/template/templateDbOperations";
-import { findTemplateById } from "@/utils/template/templateStateManager";
-import type { Template } from '@/components/template/templateTypes';
+import { useSessionParams } from "@/hooks/routing/useSessionParams";
+import { supabase } from "@/integrations/supabase/client";
+import type { Template } from "@/components/template/templateTypes";
 
-export const useTemplatePersistence = (currentChatId: string | null) => {
+export const useTemplatePersistence = () => {
+  const { sessionId } = useSessionParams();
+
   const loadTemplate = useCallback(async () => {
-    if (!currentChatId) {
-      console.log('[useTemplatePersistence] No chat ID provided');
+    if (!sessionId) {
+      console.log('[useTemplatePersistence] No session ID provided');
       return null;
     }
 
     try {
-      const templateType = await loadTemplateFromDb(currentChatId);
-      if (templateType) {
-        const template = findTemplateById(templateType);
-        if (template) {
-          console.log('[useTemplatePersistence] Found template in database:', template.name);
-          return template;
-        }
+      const { data: chat } = await supabase
+        .from('chats')
+        .select('template_type')
+        .eq('id', sessionId)
+        .single();
+
+      if (chat?.template_type) {
+        console.log('[useTemplatePersistence] Found template in database:', chat.template_type);
+        return chat.template_type;
       }
     } catch (error) {
       console.error('[useTemplatePersistence] Failed to load template:', error);
     }
     return null;
-  }, [currentChatId]);
+  }, [sessionId]);
 
   const saveTemplate = useCallback(async (template: Template) => {
-    if (!currentChatId) {
-      console.log('[useTemplatePersistence] No chat ID provided, skipping save');
+    if (!sessionId) {
+      console.log('[useTemplatePersistence] No session ID provided, skipping save');
       return;
     }
 
     try {
-      await saveTemplateToDb(currentChatId, template.id);
+      await supabase
+        .from('chats')
+        .update({ template_type: template.id })
+        .eq('id', sessionId);
       console.log('[useTemplatePersistence] Template saved successfully');
     } catch (error) {
       console.error('[useTemplatePersistence] Failed to save template:', error);
     }
-  }, [currentChatId]);
+  }, [sessionId]);
 
   return { loadTemplate, saveTemplate };
 };
