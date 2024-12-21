@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useTemplateContext } from '@/contexts/TemplateContext';
 import { TemplateSelector } from '../TemplateSelector';
 import { TemplateManager } from '../template/TemplateManager';
+import { useSessionParams } from '@/hooks/routing/useSessionParams';
 import type { Template } from '@/components/template/templateTypes';
 
 interface ChatContainerProps {
@@ -10,17 +11,19 @@ interface ChatContainerProps {
 
 const ChatContainer = ({ activeSessionId }: ChatContainerProps) => {
   const { globalTemplate } = useTemplateContext();
+  const { sessionId } = useSessionParams();
 
   useEffect(() => {
     console.log('[ChatContainer] Component mounted/updated:', {
       activeSessionId,
-      globalTemplateId: globalTemplate?.id
+      globalTemplateId: globalTemplate?.id,
+      sessionId
     });
 
     return () => {
       console.log('[ChatContainer] Component cleanup for session:', activeSessionId);
     };
-  }, [activeSessionId, globalTemplate?.id]);
+  }, [activeSessionId, globalTemplate?.id, sessionId]);
 
   return (
     <div className="chat-container">
