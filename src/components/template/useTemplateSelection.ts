@@ -4,11 +4,10 @@ import { useTemplateLoading } from "@/hooks/template/useTemplateLoading";
 import { useTemplateUpdates } from "@/hooks/template/useTemplateUpdates";
 
 export const useTemplateSelection = (
-  currentChatId: string | null,
   onTemplateChange: (template: Template) => void,
   globalTemplate: Template
 ) => {
-  console.log('[useTemplateSelection] Hook initialized with chatId:', currentChatId);
+  console.log('[useTemplateSelection] Hook initialized');
   
   const {
     selectedTemplate,
@@ -19,7 +18,6 @@ export const useTemplateSelection = (
   } = useTemplateState(globalTemplate);
 
   const { availableTemplates } = useTemplateLoading(
-    currentChatId,
     onTemplateChange,
     selectedTemplate,
     setSelectedTemplate,
@@ -28,7 +26,6 @@ export const useTemplateSelection = (
   );
 
   const { handleTemplateChange } = useTemplateUpdates(
-    currentChatId,
     selectedTemplate,
     setSelectedTemplate,
     setIsLoading,

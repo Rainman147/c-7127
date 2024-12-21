@@ -17,16 +17,16 @@ export const useTemplateLoading = (
     const loadTemplateForChat = async () => {
       try {
         setIsLoading(true);
-        const template = await loadTemplate();
+        const loadedTemplate = await loadTemplate();
         
-        if (template) {
-          console.log('[useTemplateLoading] Loaded template:', template.name);
-          if (selectedTemplate?.id === template.id) {
+        if (loadedTemplate) {
+          console.log('[useTemplateLoading] Loaded template:', loadedTemplate.name);
+          if (selectedTemplate?.id === loadedTemplate.id) {
             console.log('[useTemplateLoading] Loaded template matches current, skipping update');
             return;
           }
-          setSelectedTemplate(template);
-          onTemplateChange(template);
+          setSelectedTemplate(loadedTemplate);
+          onTemplateChange(loadedTemplate);
         } else {
           console.log('[useTemplateLoading] No saved template, using global template');
           if (selectedTemplate?.id === globalTemplateRef.current.id) {
