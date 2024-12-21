@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App.tsx';
 import Auth from './pages/Auth.tsx';
@@ -31,8 +31,19 @@ createRoot(document.getElementById("root")!).render(
                 </SidebarProvider>
               </ProtectedRoute>
             }>
-              <Route path="/" element={<Index />} />
+              {/* Redirect root to /c/new */}
+              <Route path="/" element={<Navigate to="/c/new" replace />} />
+              
+              {/* Chat routes */}
+              <Route path="/c/new" element={<Index />} />
+              <Route path="/c/:sessionId" element={<Index />} />
+              
+              {/* Template routes */}
+              <Route path="/t/:templateId" element={<TemplateManager />} />
               <Route path="/templates" element={<TemplateManager />} />
+              
+              {/* Patient routes */}
+              <Route path="/p/:patientId" element={<Patients />} />
               <Route path="/patients" element={<Patients />} />
             </Route>
           </Routes>
