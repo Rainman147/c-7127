@@ -1,11 +1,7 @@
 import { memo, useCallback, useEffect, useMemo } from "react";
-import { ChevronDown } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { TemplateItem } from "./template/TemplateItem";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { TemplateTrigger } from "./template/dropdown/TemplateTrigger";
+import { TemplateDropdownContent } from "./template/dropdown/TemplateDropdownContent";
 import { useTemplateSelection } from "./template/useTemplateSelection";
 import { useTemplateContext } from "@/contexts/TemplateContext";
 import type { Template } from "@/components/template/templateTypes";
@@ -61,42 +57,18 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     [currentChatId, selectedTemplate, globalTemplate]
   );
 
-  const triggerContent = useMemo(() => (
-    <>
-      <span className="whitespace-nowrap">{displayTemplate?.name || 'Select Template'}</span>
-      <ChevronDown className="h-4 w-4 opacity-70" />
-    </>
-  ), [displayTemplate?.name]);
-
-  const dropdownContent = useMemo(() => (
-    availableTemplates.map((template) => (
-      <TemplateItem
-        key={template.id}
-        template={template}
-        isSelected={displayTemplate?.id === template.id}
-        onSelect={handleTemplateSelect}
-        isLoading={isLoading}
-        isTooltipOpen={false}
-        onTooltipChange={() => {}}
-      />
-    ))
-  ), [availableTemplates, displayTemplate?.id, handleTemplateSelect, isLoading]);
-
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger 
-        className="flex items-center gap-2 text-sm font-medium text-white hover:text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        disabled={isLoading}
-      >
-        {triggerContent}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        className="menu-box w-72 max-h-[80vh] overflow-y-auto"
-        align="start"
-        sideOffset={8}
-      >
-        {dropdownContent}
-      </DropdownMenuContent>
+      <TemplateTrigger 
+        displayTemplate={displayTemplate}
+        isLoading={isLoading}
+      />
+      <TemplateDropdownContent 
+        templates={availableTemplates}
+        selectedTemplateId={displayTemplate?.id}
+        onTemplateSelect={handleTemplateSelect}
+        isLoading={isLoading}
+      />
     </DropdownMenu>
   );
 });
