@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { getDefaultTemplate, isTemplateChange } from "@/utils/template/templateStateManager";
 import { useAvailableTemplates } from "@/hooks/template/useAvailableTemplates";
 import { useTemplatePersistence } from "@/hooks/template/useTemplatePersistence";
-import type { Template } from "@/types/templates";
+import type { Template } from "@/components/template/templateTypes";
 
 export const useTemplateSelection = (
   currentChatId: string | null,

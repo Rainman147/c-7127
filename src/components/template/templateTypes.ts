@@ -1,4 +1,4 @@
-import type { Template as BaseTemplate } from '@/types/templates/base';
+import type { Template as BaseTemplate, TemplateInstructions, TemplateSchema } from '@/types/templates/base';
 
 export type Template = BaseTemplate;
 

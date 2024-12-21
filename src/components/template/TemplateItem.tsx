@@ -1,5 +1,5 @@
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import type { Template } from "./types";
+import type { Template } from "./templateTypes";
 
 interface TemplateItemProps {
   template: Template;

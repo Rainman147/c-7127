@@ -5,7 +5,8 @@ import { CreateTemplateDialog } from './dialogs/CreateTemplateDialog';
 import { EditTemplateDialog } from './dialogs/EditTemplateDialog';
 import { TemplateList } from './list/TemplateList';
 import { TemplateHeaderActions } from './header/TemplateHeaderActions';
-import type { Template, CreateTemplateInput, TemplateInstructions } from '@/types/templates/base';
+import type { Template } from './templateTypes';
+import type { CreateTemplateInput } from '@/types/templates/base';
 
 export const TemplateManager = () => {
   const { templates, createTemplate, updateTemplate, deleteTemplate } = useTemplates();
