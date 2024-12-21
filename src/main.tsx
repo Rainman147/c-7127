@@ -31,32 +31,6 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/" element={<Navigate to="/c/new" replace />} />
               <Route path="/c/new" element={<Index />} />
               <Route path="/c/:sessionId" element={<Index />} />
-              
-              {/* Legacy route redirects */}
-              <Route 
-                path="/t/:templateId" 
-                element={
-                  <Navigate 
-                    to={{
-                      pathname: '/c/new',
-                      search: `template=${window.location.pathname.split('/')[2]}`
-                    }}
-                    replace 
-                  />
-                } 
-              />
-              <Route 
-                path="/p/:patientId" 
-                element={
-                  <Navigate 
-                    to={{
-                      pathname: '/c/new',
-                      search: `patient=${window.location.pathname.split('/')[2]}`
-                    }}
-                    replace 
-                  />
-                } 
-              />
             </Route>
           </Routes>
           <Toaster />
