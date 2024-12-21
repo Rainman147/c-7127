@@ -47,7 +47,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('[ProtectedRoute] Auth state changed:', {
         event,
         sessionExists: !!session,
@@ -57,10 +57,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       if (event === 'SIGNED_OUT' || !session) {
         console.log('[ProtectedRoute] User signed out or session expired, redirecting to auth');
         navigate('/auth');
-      } else if (event === 'SIGNED_IN') {
-        // Wait a moment for the session to be fully established
-        await new Promise(resolve => setTimeout(resolve, 100));
-        validateSession();
       }
     });
 

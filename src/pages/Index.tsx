@@ -22,23 +22,22 @@ const ChatContent = () => {
     isNewSession,
     isValidSessionId,
     isValidTemplateId,
-    isValidPatientId,
-    redirectToNew 
+    isValidPatientId 
   } = useSessionParams();
   
   const { messages, isLoading, handleSendMessage } = useChat(sessionId);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
-  // Handle invalid routes - now properly checks for new session
+  // Handle invalid routes
   useEffect(() => {
     if (!isNewSession && !isValidSessionId) {
-      console.log('[Index] Invalid session ID detected, redirecting to new chat');
-      redirectToNew();
+      console.log('[Index] Invalid session ID, redirecting to new chat');
       toast({
-        title: "Starting New Chat",
-        description: "Creating a new chat session for you.",
-        variant: "default"
+        title: "Invalid Session",
+        description: "The requested chat session could not be found.",
+        variant: "destructive"
       });
+      navigate('/c/new');
       return;
     }
 
@@ -65,8 +64,8 @@ const ChatContent = () => {
     templateId, 
     isValidTemplateId, 
     patientId, 
-    isValidPatientId,
-    redirectToNew,
+    isValidPatientId, 
+    navigate,
     toast
   ]);
 
