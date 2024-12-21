@@ -1,6 +1,5 @@
 import type { Template } from './base';
 import type { Json } from '@/integrations/supabase/types';
-import { defaultTemplates } from './defaults';
 
 export type DatabaseInstructions = {
   dataFormatting: string;
@@ -50,6 +49,8 @@ const isValidSchema = (schema: any): schema is DatabaseSchema => {
 };
 
 export const convertDatabaseTemplate = (dbTemplate: DatabaseTemplate): Template => {
+  console.log('[convertDatabaseTemplate] Converting template:', dbTemplate);
+  
   const defaultInstructions = {
     dataFormatting: '',
     priorityRules: '',
