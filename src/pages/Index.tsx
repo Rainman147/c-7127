@@ -1,10 +1,9 @@
 import { TemplateManager as TemplateManagerComponent } from '@/components/template/TemplateManager';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
+import { TwoLineMenuIcon } from '@/components/icons/TwoLineMenuIcon';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
-import type { Template } from '@/components/template/templateTypes';
 
 const TemplateManagerContent = () => {
   const { isOpen, open } = useSidebar();
@@ -21,7 +20,7 @@ const TemplateManagerContent = () => {
           "z-50" // Ensure button stays above other content
         )}
       >
-        <Menu className="h-5 w-5" />
+        <TwoLineMenuIcon className="h-5 w-5" />
       </Button>
       <TemplateManagerComponent />
     </main>

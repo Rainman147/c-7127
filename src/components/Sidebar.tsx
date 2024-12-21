@@ -6,11 +6,8 @@ import { SidebarNavigation } from "./sidebar/SidebarNavigation";
 import { ChatSessionList } from "./sidebar/ChatSessionList";
 import { SidebarFooter } from "./sidebar/SidebarFooter";
 import { cn } from "@/lib/utils";
+import { TwoLineMenuIcon } from "./icons/TwoLineMenuIcon";
 
-/**
- * Sidebar component for chat navigation and session management
- * Handles creating new chats and switching between existing chat sessions
- */
 const Sidebar = () => {
   const { isOpen, close } = useSidebar();
   const {
@@ -22,9 +19,6 @@ const Sidebar = () => {
     renameSession,
   } = useChatSessions();
 
-  /**
-   * Creates a new chat session and sets it as active
-   */
   const handleNewChat = async () => {
     console.log('[Sidebar] Creating new chat session');
     const sessionId = await createSession();
@@ -35,10 +29,6 @@ const Sidebar = () => {
     }
   };
 
-  /**
-   * Handles selection of an existing chat session
-   * @param sessionId - The ID of the selected session
-   */
   const handleSessionClick = async (sessionId: string) => {
     console.log('[Sidebar] Session selected:', sessionId);
     setActiveSessionId(sessionId);

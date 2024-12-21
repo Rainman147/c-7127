@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { TwoLineMenuIcon } from "@/components/icons/TwoLineMenuIcon";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/contexts/SidebarContext";
 
@@ -17,7 +17,7 @@ export const SidebarToggle = () => {
         "z-50 left-4 top-4"
       )}
     >
-      <Menu className="h-5 w-5" />
+      <TwoLineMenuIcon className="h-5 w-5" />
     </Button>
   );
 };
