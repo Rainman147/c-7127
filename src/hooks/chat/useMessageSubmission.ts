@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { extractParameters } from "@/utils/functionMapping/parameterExtractor";
 import { useFunctionCalling } from "@/hooks/useFunctionCalling";
+import { useChatSessions } from "@/hooks/useChatSessions";
 
 interface UseMessageSubmissionProps {
   onSend: (message: string, type?: 'text' | 'audio') => void;
@@ -11,10 +12,17 @@ export const useMessageSubmission = ({ onSend }: UseMessageSubmissionProps) => {
   const [message, setMessage] = useState("");
   const { toast } = useToast();
   const { handleFunctionCall, isProcessing } = useFunctionCalling();
+  const { activeSessionId, createSession } = useChatSessions();
 
   const handleSubmit = async () => {
     if (message.trim() && !isProcessing) {
       console.log('[useMessageSubmission] Submitting message:', message);
+      
+      // Ensure we have an active session before sending
+      if (!activeSessionId) {
+        console.log('[useMessageSubmission] No active session, creating new one');
+        await createSession('New Chat');
+      }
       
       // Check if the message starts with a command prefix (e.g., "/")
       const isCommand = message.trim().startsWith('/');
