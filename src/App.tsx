@@ -4,6 +4,7 @@ import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
 import TemplateManager from "@/pages/TemplateManager";
 import PatientsPage from "@/pages/Patients";
+import { SidebarProvider } from "@/contexts/SidebarContext";
 
 const router = createBrowserRouter([
   {
@@ -39,7 +40,13 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-  return <RouterProvider router={router} />;
+  console.log('[App] Initializing application with router and SidebarProvider');
+  
+  return (
+    <SidebarProvider>
+      <RouterProvider router={router} />
+    </SidebarProvider>
+  );
 }
 
 export default App;

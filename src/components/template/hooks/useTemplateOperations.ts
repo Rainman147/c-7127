@@ -5,7 +5,7 @@ import type { Template } from '@/components/template/templateTypes';
 import type { CreateTemplateInput } from '@/types/templates/base';
 
 export const useTemplateOperations = () => {
-  const { templates, createTemplate, updateTemplate, deleteTemplate } = useTemplates();
+  const { templates, createTemplate, updateTemplate, deleteTemplate, isLoading, error } = useTemplates();
   const { toast } = useToast();
   
   const [editingTemplate, setEditingTemplate] = useState<{ id: string; content: string } | null>(null);
@@ -77,5 +77,7 @@ export const useTemplateOperations = () => {
     handleCreateTemplate,
     handleUpdateTemplate,
     deleteTemplate,
+    isLoading,
+    error,
   };
 };

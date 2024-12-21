@@ -5,6 +5,8 @@ import { TemplateList } from './list/TemplateList';
 import { TemplateHeaderActions } from './header/TemplateHeaderActions';
 import { useTemplateOperations } from './hooks/useTemplateOperations';
 import { CreateTemplateForm } from './form/CreateTemplateForm';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 export const TemplateManager = () => {
   const {
@@ -18,16 +20,51 @@ export const TemplateManager = () => {
     handleCreateTemplate,
     handleUpdateTemplate,
     deleteTemplate,
+    isLoading,
+    error
   } = useTemplateOperations();
 
+  const { toast } = useToast();
+
   useEffect(() => {
-    console.log('[TemplateManager] Component mounted with templates:', { 
+    console.log('[TemplateManager] Component mounted with state:', { 
       templatesCount: templates?.length,
       isCreateDialogOpen,
-      isEditDialogOpen
+      isEditDialogOpen,
+      isLoading,
+      hasError: !!error
     });
-  }, [templates, isCreateDialogOpen, isEditDialogOpen]);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load templates. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [templates, isCreateDialogOpen, isEditDialogOpen, isLoading, error, toast]);
   
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-32 ml-auto" />
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-20 w-full" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-500">Failed to load templates. Please try again.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <TemplateHeaderActions onNewTemplate={() => setIsCreateDialogOpen(true)} />

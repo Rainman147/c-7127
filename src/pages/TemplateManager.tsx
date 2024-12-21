@@ -2,11 +2,18 @@ import { TemplateManager as TemplateManagerComponent } from '@/components/templa
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { SidebarToggle } from '@/components/patients/SidebarToggle';
 import { useEffect } from 'react';
+import { useSidebar } from '@/contexts/SidebarContext';
 
 const TemplateManager = () => {
+  const { isOpen } = useSidebar();
+
   useEffect(() => {
-    console.log('[TemplateManager] Page component mounted');
-  }, []);
+    console.log('[TemplateManager] Page mounted with sidebar state:', { isOpen });
+    
+    return () => {
+      console.log('[TemplateManager] Page unmounting');
+    };
+  }, [isOpen]);
 
   return (
     <ProtectedRoute>
