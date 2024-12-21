@@ -9,7 +9,6 @@ import { TwoLineMenuIcon } from '@/components/icons/TwoLineMenuIcon';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
 import { useChatSessions } from '@/hooks/useChatSessions';
-import ChatContainer from '@/components/chat/ChatContainer';
 
 const ChatContent = () => {
   const { isOpen, open } = useSidebar();
@@ -20,7 +19,7 @@ const ChatContent = () => {
   const handleTemplateChange = useCallback((template: any) => {
     console.log('[Index] Template changed:', template);
     setSelectedTemplate(template);
-  }, []); // Memoized with empty deps since setSelectedTemplate is stable
+  }, []); 
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] relative">
@@ -57,8 +56,6 @@ const ChatContent = () => {
           />
         </div>
       </div>
-
-      <ChatContainer activeSessionId={activeSessionId} />
     </div>
   );
 };
