@@ -52,7 +52,7 @@ const ChatHeaderComponent = ({
     <div className="fixed top-0 z-30 w-full bg-chatgpt-main/95 backdrop-blur">
       <div className="flex h-[60px] items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <span className={`${!isSidebarOpen ? 'ml-24' : ''}`}>
+          <span className={`${!isSidebarOpen ? 'ml-16' : 'ml-8'} pl-8`}>
             {templateSelector}
           </span>
         </div>

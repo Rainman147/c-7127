@@ -20,7 +20,7 @@ const ChatContent = () => {
   };
 
   return (
-    <main className="flex h-full flex-col">
+    <main className="flex h-[calc(100vh-2rem)] flex-col">
       <Button
         onClick={open}
         variant="ghost"
@@ -28,7 +28,7 @@ const ChatContent = () => {
         className={cn(
           "transition-all duration-300 ease-in-out text-white/70 hover:text-white fixed",
           isOpen ? "-translate-x-full opacity-0 pointer-events-none" : "translate-x-0 opacity-100",
-          "z-50"
+          "z-50 left-4 top-3"
         )}
       >
         <TwoLineMenuIcon className="h-5 w-5" />
@@ -39,16 +39,18 @@ const ChatContent = () => {
         onTemplateChange={handleTemplateChange}
       />
       
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden mt-[60px]">
         <MessageList messages={messages} />
       </div>
       
-      <div className="pb-4 pt-2">
-        <ChatInput 
-          onSend={handleSendMessage}
-          onTranscriptionComplete={(text) => handleSendMessage(text, 'audio')}
-          isLoading={isLoading}
-        />
+      <div className="w-full pb-4 pt-2 fixed bottom-0 left-0 right-0 bg-chatgpt-main/95 backdrop-blur">
+        <div className="max-w-5xl mx-auto px-4">
+          <ChatInput 
+            onSend={handleSendMessage}
+            onTranscriptionComplete={(text) => handleSendMessage(text, 'audio')}
+            isLoading={isLoading}
+          />
+        </div>
       </div>
     </main>
   );
