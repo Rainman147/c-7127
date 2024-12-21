@@ -1,5 +1,6 @@
 import type { Template } from './base';
 import type { Json } from '@/integrations/supabase/types';
+import { defaultTemplates } from './defaults';
 
 export type DatabaseInstructions = {
   dataFormatting: string;
