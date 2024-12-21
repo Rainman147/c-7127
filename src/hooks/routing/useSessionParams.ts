@@ -8,7 +8,7 @@ export const useSessionParams = () => {
   const templateId = searchParams.get('template');
   const patientId = searchParams.get('patient');
 
-  // Improved validation logic
+  // Improved validation logic with proper type checking
   const isNewSession = sessionId === 'new';
   const isValidSessionId = sessionId && !isNewSession && /^[0-9a-fA-F-]+$/.test(sessionId);
   const isValidTemplateId = templateId && /^[0-9a-fA-F-]+$/.test(templateId);
@@ -28,18 +28,17 @@ export const useSessionParams = () => {
     console.log('[useSessionParams] Redirecting to session:', { id, params });
     const newSearchParams = new URLSearchParams();
     
+    // Handle template parameter
     if (params?.template) {
       newSearchParams.set('template', params.template);
-    }
-    if (params?.patient) {
-      newSearchParams.set('patient', params.patient);
-    }
-
-    // Preserve existing params if not explicitly changed
-    if (!params?.template && templateId) {
+    } else if (templateId) {
       newSearchParams.set('template', templateId);
     }
-    if (!params?.patient && patientId) {
+
+    // Handle patient parameter
+    if (params?.patient) {
+      newSearchParams.set('patient', params.patient);
+    } else if (patientId) {
       newSearchParams.set('patient', patientId);
     }
 
@@ -51,18 +50,17 @@ export const useSessionParams = () => {
     console.log('[useSessionParams] Redirecting to new session with params:', params);
     const newSearchParams = new URLSearchParams();
     
+    // Handle template parameter
     if (params?.template) {
       newSearchParams.set('template', params.template);
-    }
-    if (params?.patient) {
-      newSearchParams.set('patient', params.patient);
-    }
-
-    // Preserve existing params if not explicitly changed
-    if (!params?.template && templateId) {
+    } else if (templateId) {
       newSearchParams.set('template', templateId);
     }
-    if (!params?.patient && patientId) {
+
+    // Handle patient parameter
+    if (params?.patient) {
+      newSearchParams.set('patient', params.patient);
+    } else if (patientId) {
       newSearchParams.set('patient', patientId);
     }
 
