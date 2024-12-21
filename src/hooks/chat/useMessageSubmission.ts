@@ -16,22 +16,30 @@ export const useMessageSubmission = ({ onSend }: UseMessageSubmissionProps) => {
     if (message.trim() && !isProcessing) {
       console.log('[useMessageSubmission] Submitting message:', message);
       
-      // Send the message immediately to improve responsiveness
-      onSend(message, 'text');
-      setMessage("");
+      // Check if the message starts with a command prefix (e.g., "/")
+      const isCommand = message.trim().startsWith('/');
       
-      // Try to extract function call parameters
-      const extracted = extractParameters(message);
-      console.log('[useMessageSubmission] Extracted parameters:', extracted);
+      // Send regular messages directly without function extraction
+      if (!isCommand) {
+        console.log('[useMessageSubmission] Sending regular chat message');
+        onSend(message, 'text');
+        setMessage("");
+        return;
+      }
 
+      // Only try to extract parameters for command messages
+      console.log('[useMessageSubmission] Processing command message');
+      const extracted = extractParameters(message);
+      
       if (extracted.function && !extracted.clarificationNeeded) {
         try {
-          // Handle function call asynchronously without blocking
+          onSend(message, 'text');
+          setMessage("");
+          
           handleFunctionCall(extracted.function, extracted.parameters)
             .then(result => {
               console.log('[useMessageSubmission] Function call result:', result);
               if (result) {
-                // Send function result as a separate message
                 onSend(JSON.stringify(result, null, 2), 'text');
               }
             })
@@ -46,8 +54,7 @@ export const useMessageSubmission = ({ onSend }: UseMessageSubmissionProps) => {
         } catch (error: any) {
           console.error('[useMessageSubmission] Function call setup error:', error);
         }
-      } else if (extracted.clarificationNeeded) {
-        // Handle missing parameters with a toast notification
+      } else if (extracted.clarificationNeeded && extracted.missingRequired) {
         const missingParams = extracted.missingRequired.join(', ');
         toast({
           title: "Missing Information",
