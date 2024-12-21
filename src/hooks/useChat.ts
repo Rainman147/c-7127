@@ -20,6 +20,7 @@ export const useChat = (activeSessionId: string | null) => {
   // Load messages when activeSessionId changes
   useEffect(() => {
     console.log('[useChat] Active session changed:', activeSessionId);
+    let isMounted = true;
     
     if (activeSessionId) {
       const loadChatMessages = async () => {
@@ -27,13 +28,16 @@ export const useChat = (activeSessionId: string | null) => {
         try {
           // Check cache first
           const cachedMessages = getCachedMessages(activeSessionId);
-          if (cachedMessages) {
-            console.log('[useChat] Using cached messages');
+          if (cachedMessages && isMounted) {
+            console.log('[useChat] Using cached messages for session:', activeSessionId);
             setMessages(cachedMessages);
           } else {
-            console.log('[useChat] Fetching messages from database');
+            console.log('[useChat] Fetching messages from database for session:', activeSessionId);
             const loadedMessages = await loadMessages(activeSessionId, updateCache);
-            setMessages(loadedMessages);
+            if (isMounted) {
+              console.log('[useChat] Successfully loaded messages for session:', activeSessionId);
+              setMessages(loadedMessages);
+            }
           }
         } catch (error) {
           console.error('[useChat] Error loading chat messages:', error);
@@ -51,6 +55,11 @@ export const useChat = (activeSessionId: string | null) => {
       console.log('[useChat] No active session, clearing messages');
       setMessages([]);
     }
+
+    return () => {
+      isMounted = false;
+      console.log('[useChat] Cleanup: Session change effect for:', activeSessionId);
+    };
   }, [activeSessionId]);
 
   const handleSendMessage = async (
@@ -80,6 +89,7 @@ export const useChat = (activeSessionId: string | null) => {
       );
 
       if (result) {
+        console.log('[useChat] Message sent successfully for session:', activeSessionId);
         setMessages(result.messages);
         updateCache(activeSessionId, result.messages);
       }
