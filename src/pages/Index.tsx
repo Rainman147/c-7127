@@ -16,6 +16,9 @@ const ChatContent = () => {
   const { messages, isLoading, handleSendMessage } = useChat(activeSessionId);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
+  console.log('[Index] Rendering with activeSessionId:', activeSessionId);
+  console.log('[Index] Current messages:', messages.length);
+
   const handleTemplateChange = useCallback((template: any) => {
     console.log('[Index] Template changed:', template);
     setSelectedTemplate(template);

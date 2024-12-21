@@ -17,9 +17,15 @@ const MessageList = ({ messages }: { messages: Message[] }) => {
   return (
     <div className="flex-1 overflow-y-auto chat-scrollbar pb-32">
       <div className="space-y-4">
-        {messages.map((message, index) => (
-          <Message key={message.id || index} {...message} />
-        ))}
+        {messages.length === 0 ? (
+          <div className="text-center text-white/70 mt-8">
+            No messages yet. Start a conversation!
+          </div>
+        ) : (
+          messages.map((message, index) => (
+            <Message key={message.id || index} {...message} />
+          ))
+        )}
       </div>
     </div>
   );
