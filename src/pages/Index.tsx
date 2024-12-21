@@ -8,10 +8,13 @@ import { Button } from '@/components/ui/button';
 import { TwoLineMenuIcon } from '@/components/icons/TwoLineMenuIcon';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
+import { useChatSessions } from '@/hooks/useChatSessions';
+import ChatContainer from '@/components/chat/ChatContainer';
 
 const ChatContent = () => {
   const { isOpen, open } = useSidebar();
   const { messages, isLoading, handleSendMessage, currentChatId } = useChat();
+  const { activeSessionId } = useChatSessions();
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   const handleTemplateChange = (template: any) => {
@@ -35,7 +38,7 @@ const ChatContent = () => {
       </Button>
       
       <ChatHeader 
-        currentChatId={currentChatId}
+        currentChatId={activeSessionId}
         onTemplateChange={handleTemplateChange}
       />
       
@@ -54,6 +57,8 @@ const ChatContent = () => {
           />
         </div>
       </div>
+
+      <ChatContainer activeSessionId={activeSessionId} />
     </div>
   );
 };
