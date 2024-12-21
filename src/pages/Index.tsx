@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useChat } from '@/hooks/useChat';
 import { ChatHeader } from '@/components/ChatHeader';
 import MessageList from '@/components/MessageList';
@@ -9,13 +9,65 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
 import { useSessionParams } from '@/hooks/routing/useSessionParams';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 const ChatContent = () => {
   const { isOpen, open } = useSidebar();
   const navigate = useNavigate();
-  const { sessionId, templateId, patientId } = useSessionParams();
+  const { toast } = useToast();
+  const { 
+    sessionId, 
+    templateId, 
+    patientId, 
+    isNewSession,
+    isValidSessionId,
+    isValidTemplateId,
+    isValidPatientId 
+  } = useSessionParams();
+  
   const { messages, isLoading, handleSendMessage } = useChat(sessionId);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+
+  // Handle invalid routes
+  useEffect(() => {
+    if (!isNewSession && !isValidSessionId) {
+      console.log('[Index] Invalid session ID, redirecting to new chat');
+      toast({
+        title: "Invalid Session",
+        description: "The requested chat session could not be found.",
+        variant: "destructive"
+      });
+      navigate('/c/new');
+      return;
+    }
+
+    if (templateId && !isValidTemplateId) {
+      console.log('[Index] Invalid template ID:', templateId);
+      toast({
+        title: "Invalid Template",
+        description: "The requested template could not be found.",
+        variant: "destructive"
+      });
+    }
+
+    if (patientId && !isValidPatientId) {
+      console.log('[Index] Invalid patient ID:', patientId);
+      toast({
+        title: "Invalid Patient",
+        description: "The requested patient could not be found.",
+        variant: "destructive"
+      });
+    }
+  }, [
+    isNewSession, 
+    isValidSessionId, 
+    templateId, 
+    isValidTemplateId, 
+    patientId, 
+    isValidPatientId, 
+    navigate,
+    toast
+  ]);
 
   console.log('[Index] Rendering with params:', { 
     sessionId, 
