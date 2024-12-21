@@ -5,7 +5,7 @@ import ChatInputField from "./chat/ChatInputField";
 import ChatInputActions from "./chat/ChatInputActions";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 interface ChatInputProps {
   onSend: (message: string, type?: 'text' | 'audio') => void;
@@ -27,7 +27,7 @@ const ChatInputComponent = ({
   const {
     message,
     setMessage,
-    handleSubmit,
+    handleSubmit: originalHandleSubmit,
     isProcessing
   } = useMessageSubmission({ onSend });
 
@@ -41,7 +41,7 @@ const ChatInputComponent = ({
     setMessage
   });
 
-  const ensureActiveSession = async () => {
+  const ensureActiveSession = useCallback(async () => {
     if (!activeSessionId && !isCreatingSession) {
       console.log('[ChatInput] Creating new session for message');
       setIsCreatingSession(true);
@@ -51,6 +51,7 @@ const ChatInputComponent = ({
         if (sessionId) {
           console.log('[ChatInput] New session created:', sessionId);
           navigate(`/c/${sessionId}`);
+          return true;
         }
       } catch (error) {
         console.error('[ChatInput] Failed to create session:', error);
@@ -59,16 +60,24 @@ const ChatInputComponent = ({
           description: "Failed to create new chat session",
           variant: "destructive"
         });
+        return false;
       } finally {
         setIsCreatingSession(false);
       }
+    }
+    return true;
+  }, [activeSessionId, isCreatingSession, createSession, navigate, toast]);
+
+  const handleSubmit = async () => {
+    const sessionCreated = await ensureActiveSession();
+    if (sessionCreated) {
+      originalHandleSubmit();
     }
   };
 
   const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !isLoading && !isProcessing && !isCreatingSession) {
       e.preventDefault();
-      await ensureActiveSession();
       handleSubmit();
     }
   };
@@ -92,10 +101,7 @@ const ChatInputComponent = ({
         <ChatInputActions
           isLoading={isLoading || isProcessing || isCreatingSession}
           message={message}
-          handleSubmit={async () => {
-            await ensureActiveSession();
-            handleSubmit();
-          }}
+          handleSubmit={handleSubmit}
           onTranscriptionComplete={handleTranscriptionComplete}
           handleFileUpload={handleFileUpload}
         />
