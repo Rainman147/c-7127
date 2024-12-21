@@ -26,13 +26,9 @@ const Sidebar = () => {
   const handleNewChat = async () => {
     console.log('[Sidebar] Initiating new chat');
     try {
-      // Clear active session before creating new one
       setActiveSessionId(null);
       
-      // Get current template if exists
       const templateId = searchParams.get('template');
-      
-      // Navigate to root with template param if exists
       const queryParams = new URLSearchParams();
       if (templateId) {
         queryParams.set('template', templateId);
@@ -57,7 +53,6 @@ const Sidebar = () => {
     try {
       setActiveSessionId(sessionId);
       
-      // Preserve template parameter when switching sessions
       const templateId = searchParams.get('template');
       const queryParams = new URLSearchParams();
       if (templateId) {
@@ -80,7 +75,6 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile backdrop */}
       <div 
         className={cn(
           "fixed inset-0 bg-black/30 backdrop-blur-sm z-30 md:hidden transition-opacity duration-300",
@@ -89,18 +83,15 @@ const Sidebar = () => {
         onClick={close}
       />
 
-      {/* Sidebar content */}
-      <div
+      <aside
         className={cn(
           "fixed top-0 left-0 z-40 h-screen w-64 bg-chatgpt-sidebar",
           "transform transition-transform duration-300 ease-in-out",
-          "flex flex-col",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <SidebarHeader onNewChat={handleNewChat} onClose={close} />
 
-        {/* Navigation */}
         <nav className="flex-1 px-3 overflow-hidden">
           <div className="flex-col flex-1 transition-opacity duration-500 relative -mr-2 pr-2 overflow-y-auto sidebar-scrollbar">
             <SidebarNavigation />
@@ -124,7 +115,7 @@ const Sidebar = () => {
           apiKey=""
           onApiKeyChange={() => {}}
         />
-      </div>
+      </aside>
     </>
   );
 };

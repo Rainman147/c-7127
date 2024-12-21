@@ -12,9 +12,10 @@ export const SidebarToggle = () => {
       variant="ghost"
       size="icon"
       className={cn(
-        "transition-all duration-300 ease-in-out text-white/70 hover:text-white fixed",
-        isOpen ? "-translate-x-full opacity-0 pointer-events-none" : "translate-x-0 opacity-100",
-        "z-50 left-4 top-4"
+        "fixed top-4 left-4 z-50",
+        "transition-opacity duration-300 ease-in-out",
+        isOpen ? "opacity-0 pointer-events-none" : "opacity-100",
+        "text-white/70 hover:text-white"
       )}
     >
       <TwoLineMenuIcon className="h-5 w-5" />
