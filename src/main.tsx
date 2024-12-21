@@ -4,8 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App.tsx';
 import Auth from './pages/Auth.tsx';
 import Index from './pages/Index.tsx';
-import TemplateManager from './pages/TemplateManager.tsx';
-import Patients from './pages/Patients.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
 import { ToastProvider } from './components/ui/toast';
 import { Toaster } from './components/ui/toaster';
@@ -38,13 +36,15 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/c/new" element={<Index />} />
               <Route path="/c/:sessionId" element={<Index />} />
               
-              {/* Template routes */}
-              <Route path="/t/:templateId" element={<TemplateManager />} />
-              <Route path="/templates" element={<TemplateManager />} />
-              
-              {/* Patient routes */}
-              <Route path="/p/:patientId" element={<Patients />} />
-              <Route path="/patients" element={<Patients />} />
+              {/* Legacy routes - redirect to chat with query params */}
+              <Route 
+                path="/t/:templateId" 
+                element={<Navigate to={location => `/c/new?template=${location.pathname.split('/')[2]}`} replace />} 
+              />
+              <Route 
+                path="/p/:patientId" 
+                element={<Navigate to={location => `/c/new?patient=${location.pathname.split('/')[2]}`} replace />} 
+              />
             </Route>
           </Routes>
           <Toaster />
