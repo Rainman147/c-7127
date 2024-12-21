@@ -17,16 +17,29 @@ export const useTemplateLoading = (
     const loadTemplateForChat = async () => {
       try {
         setIsLoading(true);
-        const loadedTemplate = await loadTemplate();
+        const templateId = await loadTemplate();
         
-        if (loadedTemplate) {
-          console.log('[useTemplateLoading] Loaded template:', loadedTemplate.name);
-          if (selectedTemplate?.id === loadedTemplate.id) {
-            console.log('[useTemplateLoading] Loaded template matches current, skipping update');
-            return;
+        if (templateId) {
+          // Find the template object from available templates using the ID
+          const loadedTemplate = availableTemplates.find(t => t.id === templateId);
+          
+          if (loadedTemplate) {
+            console.log('[useTemplateLoading] Loaded template:', loadedTemplate.name);
+            if (selectedTemplate?.id === loadedTemplate.id) {
+              console.log('[useTemplateLoading] Loaded template matches current, skipping update');
+              return;
+            }
+            setSelectedTemplate(loadedTemplate);
+            onTemplateChange(loadedTemplate);
+          } else {
+            console.log('[useTemplateLoading] Template ID not found in available templates, using global template');
+            if (selectedTemplate?.id === globalTemplateRef.current.id) {
+              console.log('[useTemplateLoading] Global template matches current, skipping update');
+              return;
+            }
+            setSelectedTemplate(globalTemplateRef.current);
+            onTemplateChange(globalTemplateRef.current);
           }
-          setSelectedTemplate(loadedTemplate);
-          onTemplateChange(loadedTemplate);
         } else {
           console.log('[useTemplateLoading] No saved template, using global template');
           if (selectedTemplate?.id === globalTemplateRef.current.id) {
@@ -46,7 +59,7 @@ export const useTemplateLoading = (
     };
 
     loadTemplateForChat();
-  }, [onTemplateChange, loadTemplate, selectedTemplate, setSelectedTemplate, setIsLoading, globalTemplateRef]);
+  }, [onTemplateChange, loadTemplate, selectedTemplate, setSelectedTemplate, setIsLoading, globalTemplateRef, availableTemplates]);
 
   return {
     availableTemplates
