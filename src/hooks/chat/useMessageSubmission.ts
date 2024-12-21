@@ -3,6 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { extractParameters } from "@/utils/functionMapping/parameterExtractor";
 import { useFunctionCalling } from "@/hooks/useFunctionCalling";
 import { useChatSessions } from "@/hooks/useChatSessions";
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 interface UseMessageSubmissionProps {
   onSend: (message: string, type?: 'text' | 'audio') => void;
@@ -11,64 +12,50 @@ interface UseMessageSubmissionProps {
 export const useMessageSubmission = ({ onSend }: UseMessageSubmissionProps) => {
   const [message, setMessage] = useState("");
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { handleFunctionCall, isProcessing } = useFunctionCalling();
   const { activeSessionId, createSession } = useChatSessions();
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+
+  const ensureActiveSession = async () => {
+    if (!activeSessionId && !isCreatingSession) {
+      console.log('[useMessageSubmission] Creating new session for first message');
+      setIsCreatingSession(true);
+      
+      try {
+        const templateType = searchParams.get('template') || 'live-patient-session';
+        const sessionId = await createSession('New Chat', templateType);
+        if (sessionId) {
+          console.log('[useMessageSubmission] New session created:', sessionId);
+          
+          // Preserve all existing query parameters when redirecting
+          const queryParams = new URLSearchParams(searchParams);
+          const queryString = queryParams.toString();
+          navigate(`/c/${sessionId}${queryString ? `?${queryString}` : ''}`);
+          return true;
+        }
+      } catch (error) {
+        console.error('[useMessageSubmission] Failed to create session:', error);
+        toast({
+          title: "Error",
+          description: "Failed to create new chat session",
+          variant: "destructive"
+        });
+        return false;
+      } finally {
+        setIsCreatingSession(false);
+      }
+    }
+    return true;
+  };
 
   const handleSubmit = async () => {
     if (message.trim() && !isProcessing) {
-      console.log('[useMessageSubmission] Submitting message:', message);
-      
-      // Ensure we have an active session before sending
-      if (!activeSessionId) {
-        console.log('[useMessageSubmission] No active session, creating new one');
-        await createSession('New Chat');
-      }
-      
-      // Check if the message starts with a command prefix (e.g., "/")
-      const isCommand = message.trim().startsWith('/');
-      
-      // Send regular messages directly without function extraction
-      if (!isCommand) {
-        console.log('[useMessageSubmission] Sending regular chat message');
+      const sessionCreated = await ensureActiveSession();
+      if (sessionCreated) {
         onSend(message, 'text');
         setMessage("");
-        return;
-      }
-
-      // Only try to extract parameters for command messages
-      console.log('[useMessageSubmission] Processing command message');
-      const extracted = extractParameters(message);
-      
-      if (extracted.function && !extracted.clarificationNeeded) {
-        try {
-          onSend(message, 'text');
-          setMessage("");
-          
-          handleFunctionCall(extracted.function, extracted.parameters)
-            .then(result => {
-              console.log('[useMessageSubmission] Function call result:', result);
-              if (result) {
-                onSend(JSON.stringify(result, null, 2), 'text');
-              }
-            })
-            .catch(error => {
-              console.error('[useMessageSubmission] Function call error:', error);
-              toast({
-                title: "Error",
-                description: error.message,
-                variant: "destructive"
-              });
-            });
-        } catch (error: any) {
-          console.error('[useMessageSubmission] Function call setup error:', error);
-        }
-      } else if (extracted.clarificationNeeded && extracted.missingRequired) {
-        const missingParams = extracted.missingRequired.join(', ');
-        toast({
-          title: "Missing Information",
-          description: `Please provide: ${missingParams}`,
-          duration: 5000,
-        });
       }
     }
   };
@@ -77,6 +64,6 @@ export const useMessageSubmission = ({ onSend }: UseMessageSubmissionProps) => {
     message,
     setMessage,
     handleSubmit,
-    isProcessing
+    isProcessing: isProcessing || isCreatingSession
   };
 };

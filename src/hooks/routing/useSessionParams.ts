@@ -9,8 +9,8 @@ export const useSessionParams = () => {
   const patientId = searchParams.get('patient');
 
   // Improved validation logic
-  const isNewSession = sessionId === 'new';
-  const isValidSessionId = sessionId && !isNewSession && /^[0-9a-fA-F-]+$/.test(sessionId);
+  const isNewSession = !sessionId;
+  const isValidSessionId = sessionId && /^[0-9a-fA-F-]+$/.test(sessionId);
   const isValidTemplateId = templateId && /^[0-9a-fA-F-]+$/.test(templateId);
   const isValidPatientId = patientId && /^[0-9a-fA-F-]+$/.test(patientId);
 
@@ -67,7 +67,7 @@ export const useSessionParams = () => {
     }
 
     const queryString = newSearchParams.toString();
-    navigate(`/c/new${queryString ? `?${queryString}` : ''}`);
+    navigate(`/${queryString ? `?${queryString}` : ''}`);
   };
 
   return {

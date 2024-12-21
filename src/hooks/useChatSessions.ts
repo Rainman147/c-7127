@@ -54,9 +54,9 @@ export const useChatSessions = () => {
   // Debounce the fetch function to prevent multiple rapid refreshes
   const [debouncedFetchSessions] = useDebounce(fetchSessions, 300);
 
-  const createSession = async (title: string = 'New Chat') => {
+  const createSession = async (title: string = 'New Chat', templateType: string = 'live-patient-session') => {
     try {
-      console.log('[useChatSessions] Creating new session:', title);
+      console.log('[useChatSessions] Creating new session:', { title, templateType });
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not authenticated');
 
@@ -64,7 +64,8 @@ export const useChatSessions = () => {
         .from('chats')
         .insert({ 
           title,
-          user_id: user.id 
+          user_id: user.id,
+          template_type: templateType
         })
         .select()
         .single();
