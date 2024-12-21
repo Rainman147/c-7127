@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Json } from '@/integrations/supabase/types';
+import type { Template } from '@/components/template/templateTypes';
 
-interface Template {
+interface DatabaseTemplate {
   id: string;
   name: string;
   content: string;
@@ -42,6 +43,24 @@ interface UpdateTemplateInput {
   content: string;
 }
 
+const convertDatabaseTemplate = (dbTemplate: DatabaseTemplate): Template => ({
+  id: dbTemplate.id,
+  name: dbTemplate.name,
+  description: dbTemplate.content || '',
+  systemInstructions: dbTemplate.content || '',
+  content: dbTemplate.content || '',
+  instructions: dbTemplate.instructions || {
+    dataFormatting: '',
+    priorityRules: '',
+    specialConditions: ''
+  },
+  schema: dbTemplate.schema || {
+    sections: [],
+    requiredFields: []
+  },
+  priority_rules: dbTemplate.priority_rules
+});
+
 export const useTemplates = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -62,8 +81,8 @@ export const useTemplates = () => {
         throw error;
       }
 
-      // Type assertion to ensure the data matches our Template interface
-      return data as Template[];
+      // Convert database templates to our Template type
+      return (data as DatabaseTemplate[]).map(convertDatabaseTemplate);
     },
   });
 
@@ -97,7 +116,7 @@ export const useTemplates = () => {
         throw error;
       }
 
-      return data;
+      return convertDatabaseTemplate(data as DatabaseTemplate);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates'] });
@@ -132,7 +151,7 @@ export const useTemplates = () => {
         throw error;
       }
 
-      return data;
+      return convertDatabaseTemplate(data as DatabaseTemplate);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates'] });
