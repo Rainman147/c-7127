@@ -53,8 +53,11 @@ const ChatInputComponent = ({
         if (sessionId) {
           console.log('[ChatInput] New session created:', sessionId);
           
-          // Preserve all existing query parameters when redirecting
-          const queryParams = new URLSearchParams(searchParams);
+          // Preserve template parameter when creating new session
+          const queryParams = new URLSearchParams();
+          if (templateType) {
+            queryParams.set('template', templateType);
+          }
           const queryString = queryParams.toString();
           navigate(`/c/${sessionId}${queryString ? `?${queryString}` : ''}`);
           return true;

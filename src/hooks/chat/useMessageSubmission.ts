@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { extractParameters } from "@/utils/functionMapping/parameterExtractor";
 import { useFunctionCalling } from "@/hooks/useFunctionCalling";
 import { useChatSessions } from "@/hooks/useChatSessions";
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -29,8 +28,11 @@ export const useMessageSubmission = ({ onSend }: UseMessageSubmissionProps) => {
         if (sessionId) {
           console.log('[useMessageSubmission] New session created:', sessionId);
           
-          // Preserve all existing query parameters when redirecting
-          const queryParams = new URLSearchParams(searchParams);
+          // Preserve template parameter when creating new session
+          const queryParams = new URLSearchParams();
+          if (templateType) {
+            queryParams.set('template', templateType);
+          }
           const queryString = queryParams.toString();
           navigate(`/c/${sessionId}${queryString ? `?${queryString}` : ''}`);
           return true;

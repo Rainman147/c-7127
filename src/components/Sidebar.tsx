@@ -5,12 +5,13 @@ import { ChatSessionList } from "./sidebar/ChatSessionList";
 import { SidebarFooter } from "./sidebar/SidebarFooter";
 import { SidebarHeader } from "./sidebar/SidebarHeader";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 const Sidebar = () => {
   const { isOpen, close } = useSidebar();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const {
     sessions,
@@ -23,15 +24,23 @@ const Sidebar = () => {
   } = useChatSessions();
 
   const handleNewChat = async () => {
-    console.log('[Sidebar] Initiating new chat creation');
+    console.log('[Sidebar] Initiating new chat');
     try {
       // Clear active session before creating new one
       setActiveSessionId(null);
       
-      // Navigate to new chat route first
-      navigate('/c/new');
+      // Get current template if exists
+      const templateId = searchParams.get('template');
       
-      console.log('[Sidebar] Navigated to new chat route');
+      // Navigate to root with template param if exists
+      const queryParams = new URLSearchParams();
+      if (templateId) {
+        queryParams.set('template', templateId);
+      }
+      const queryString = queryParams.toString();
+      navigate(`/${queryString ? `?${queryString}` : ''}`);
+      
+      console.log('[Sidebar] Navigated to new chat with params:', queryString);
       close();
     } catch (error) {
       console.error('[Sidebar] Error creating new chat:', error);
@@ -47,7 +56,16 @@ const Sidebar = () => {
     console.log('[Sidebar] Switching to session:', sessionId);
     try {
       setActiveSessionId(sessionId);
-      navigate(`/c/${sessionId}`);
+      
+      // Preserve template parameter when switching sessions
+      const templateId = searchParams.get('template');
+      const queryParams = new URLSearchParams();
+      if (templateId) {
+        queryParams.set('template', templateId);
+      }
+      const queryString = queryParams.toString();
+      
+      navigate(`/c/${sessionId}${queryString ? `?${queryString}` : ''}`);
       console.log('[Sidebar] Successfully switched to session:', sessionId);
       close();
     } catch (error) {
