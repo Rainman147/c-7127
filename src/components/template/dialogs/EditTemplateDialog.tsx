@@ -6,6 +6,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { templateSchema } from "@/schemas/templateSchemas";
 
 interface EditTemplateDialogProps {
   isOpen: boolean;
@@ -22,7 +24,25 @@ export const EditTemplateDialog = ({
   onContentChange,
   onSave,
 }: EditTemplateDialogProps) => {
+  const { toast } = useToast();
+
   if (!editingTemplate) return null;
+
+  const handleSave = () => {
+    try {
+      // Validate the content
+      templateSchema.shape.content.parse(editingTemplate.content);
+      onSave();
+    } catch (error) {
+      if (error instanceof Error) {
+        toast({
+          title: "Validation Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -36,7 +56,7 @@ export const EditTemplateDialog = ({
             onChange={(e) => onContentChange(e.target.value)}
             rows={10}
           />
-          <Button onClick={onSave} className="mt-4">
+          <Button onClick={handleSave} className="mt-4">
             Save Changes
           </Button>
         </div>

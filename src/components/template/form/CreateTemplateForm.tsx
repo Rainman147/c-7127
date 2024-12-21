@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { TemplateNameInput } from "./TemplateNameInput";
 import { TemplateContentInput } from "./TemplateContentInput";
 import { TemplateInstructionsInput } from "./TemplateInstructionsInput";
+import { useToast } from "@/hooks/use-toast";
+import { templateSchema } from "@/schemas/templateSchemas";
 import type { CreateTemplateInput } from '@/types/templates/base';
 
 interface CreateTemplateFormProps {
@@ -10,6 +12,7 @@ interface CreateTemplateFormProps {
 }
 
 export const CreateTemplateForm = ({ onSubmit }: CreateTemplateFormProps) => {
+  const { toast } = useToast();
   const [formData, setFormData] = useState<CreateTemplateInput>({
     name: '',
     description: '',
@@ -44,23 +47,37 @@ export const CreateTemplateForm = ({ onSubmit }: CreateTemplateFormProps) => {
   };
 
   const handleSubmit = async () => {
-    const success = await onSubmit(formData);
-    if (success) {
-      setFormData({
-        name: '',
-        description: '',
-        systemInstructions: '',
-        content: '',
-        instructions: {
-          dataFormatting: '',
-          priorityRules: '',
-          specialConditions: '',
-        },
-        schema: {
-          sections: [],
-          requiredFields: [],
-        },
-      });
+    try {
+      // Validate the form data
+      templateSchema.parse(formData);
+      
+      const success = await onSubmit(formData);
+      if (success) {
+        setFormData({
+          name: '',
+          description: '',
+          systemInstructions: '',
+          content: '',
+          instructions: {
+            dataFormatting: '',
+            priorityRules: '',
+            specialConditions: '',
+          },
+          schema: {
+            sections: [],
+            requiredFields: [],
+          },
+        });
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        toast({
+          title: "Validation Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+      return false;
     }
   };
 
