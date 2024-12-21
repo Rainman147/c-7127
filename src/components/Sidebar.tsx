@@ -27,10 +27,11 @@ const Sidebar = () => {
     }
   };
 
-  const handleSessionClick = async (sessionId: string) => {
+  const handleSessionClick = (sessionId: string) => {
     console.log('[Sidebar] Session selected:', sessionId);
+    // Set active session before closing sidebar
     setActiveSessionId(sessionId);
-    close();
+    setTimeout(close, 100); // Slight delay to ensure state updates
   };
 
   return (

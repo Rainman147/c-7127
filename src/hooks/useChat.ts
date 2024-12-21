@@ -22,45 +22,45 @@ export const useChat = (activeSessionId: string | null) => {
     console.log('[useChat] Active session changed:', activeSessionId);
     let isMounted = true;
     
-    if (activeSessionId) {
-      const loadChatMessages = async () => {
-        console.log('[useChat] Loading messages for chat:', activeSessionId);
-        try {
-          // Check cache first
-          const cachedMessages = getCachedMessages(activeSessionId);
-          if (cachedMessages && isMounted) {
-            console.log('[useChat] Using cached messages for session:', activeSessionId);
-            setMessages(cachedMessages);
-          } else {
-            console.log('[useChat] Fetching messages from database for session:', activeSessionId);
-            const loadedMessages = await loadMessages(activeSessionId, updateCache);
-            if (isMounted) {
-              console.log('[useChat] Successfully loaded messages for session:', activeSessionId);
-              setMessages(loadedMessages);
-            }
-          }
-        } catch (error) {
-          console.error('[useChat] Error loading chat messages:', error);
-          toast({
-            title: "Error",
-            description: "Failed to load chat messages",
-            variant: "destructive"
-          });
-        }
-      };
+    const loadChatMessages = async () => {
+      if (!activeSessionId) {
+        console.log('[useChat] No active session, clearing messages');
+        setMessages([]);
+        return;
+      }
 
-      loadChatMessages();
-    } else {
-      // Clear messages when no session is selected
-      console.log('[useChat] No active session, clearing messages');
-      setMessages([]);
-    }
+      console.log('[useChat] Loading messages for chat:', activeSessionId);
+      try {
+        // Check cache first
+        const cachedMessages = getCachedMessages(activeSessionId);
+        if (cachedMessages && isMounted) {
+          console.log('[useChat] Using cached messages for session:', activeSessionId);
+          setMessages(cachedMessages);
+        } else {
+          console.log('[useChat] Fetching messages from database for session:', activeSessionId);
+          const loadedMessages = await loadMessages(activeSessionId, updateCache);
+          if (isMounted) {
+            console.log('[useChat] Successfully loaded messages for session:', activeSessionId);
+            setMessages(loadedMessages);
+          }
+        }
+      } catch (error) {
+        console.error('[useChat] Error loading chat messages:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load chat messages",
+          variant: "destructive"
+        });
+      }
+    };
+
+    loadChatMessages();
 
     return () => {
       isMounted = false;
       console.log('[useChat] Cleanup: Session change effect for:', activeSessionId);
     };
-  }, [activeSessionId]);
+  }, [activeSessionId, getCachedMessages, loadMessages, updateCache, toast]);
 
   const handleSendMessage = async (
     content: string,
