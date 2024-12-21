@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useTemplateContext } from '@/contexts/TemplateContext';
 import { TemplateSelector } from '../TemplateSelector';
 import { TemplateManager } from '../template/TemplateManager';
+import type { Template } from '@/components/template/templateTypes';
 
 interface ChatContainerProps {
   activeSessionId: string | null;
@@ -24,8 +25,7 @@ const ChatContainer = ({ activeSessionId }: ChatContainerProps) => {
   return (
     <div className="chat-container">
       <TemplateSelector
-        currentChatId={activeSessionId}
-        onTemplateChange={(template) => {
+        onTemplateChange={(template: Template) => {
           console.log('[ChatContainer] Template changed:', {
             sessionId: activeSessionId,
             templateId: template.id,
