@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useAvailableTemplates } from "./useAvailableTemplates";
 import { useTemplatePersistence } from "./useTemplatePersistence";
 import type { Template } from "@/components/template/templateTypes";
@@ -11,20 +11,11 @@ export const useTemplateLoading = (
   setIsLoading: (loading: boolean) => void,
   globalTemplateRef: React.RefObject<Template>
 ) => {
-  const isInitialMount = useRef(true);
   const availableTemplates = useAvailableTemplates();
   const { loadTemplate } = useTemplatePersistence(currentChatId);
 
   useEffect(() => {
     const loadTemplateForChat = async () => {
-      if (isInitialMount.current) {
-        console.log('[useTemplateLoading] Initial mount, setting template:', globalTemplateRef.current.name);
-        isInitialMount.current = false;
-        setSelectedTemplate(globalTemplateRef.current);
-        onTemplateChange(globalTemplateRef.current);
-        return;
-      }
-
       if (!currentChatId) {
         console.log('[useTemplateLoading] No chat ID provided, using global template');
         if (selectedTemplate?.id === globalTemplateRef.current.id) {
@@ -63,7 +54,6 @@ export const useTemplateLoading = (
         onTemplateChange(globalTemplateRef.current);
       } finally {
         setIsLoading(false);
-        console.log('[useTemplateLoading] Template loading completed');
       }
     };
 
