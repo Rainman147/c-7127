@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useCallback, useState } from 'react';
 import { getDefaultTemplate } from '@/utils/template/templateStateManager';
 import type { Template } from '@/components/template/templateTypes';
 
@@ -10,8 +10,7 @@ interface TemplateContextType {
 const TemplateContext = createContext<TemplateContextType | undefined>(undefined);
 
 export const TemplateProvider = ({ children }: { children: React.ReactNode }) => {
-  const [globalTemplate, setGlobalTemplate] = useState<Template>(() => {
-    // Try to load from localStorage first
+  const [globalTemplate, setGlobalTemplateState] = useState<Template>(() => {
     const saved = localStorage.getItem('selectedTemplate');
     if (saved) {
       try {
@@ -24,9 +23,23 @@ export const TemplateProvider = ({ children }: { children: React.ReactNode }) =>
   });
 
   useEffect(() => {
-    console.log('[TemplateProvider] Saving template to localStorage:', globalTemplate.name);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[TemplateProvider] Template state updated:', globalTemplate.name);
+    }
     localStorage.setItem('selectedTemplate', JSON.stringify(globalTemplate));
   }, [globalTemplate]);
+
+  const setGlobalTemplate = useCallback((newTemplate: Template) => {
+    if (newTemplate.id === globalTemplate.id) {
+      console.log('[TemplateProvider] Skipping duplicate template update');
+      return;
+    }
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[TemplateProvider] Setting new template:', newTemplate.name);
+    }
+    setGlobalTemplateState(newTemplate);
+  }, [globalTemplate.id]);
 
   return (
     <TemplateContext.Provider value={{ globalTemplate, setGlobalTemplate }}>
