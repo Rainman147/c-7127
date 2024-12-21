@@ -3,6 +3,7 @@ import { useTranscriptionHandler } from "@/hooks/chat/useTranscriptionHandler";
 import { useChatSessions } from "@/hooks/useChatSessions";
 import ChatInputField from "./chat/ChatInputField";
 import ChatInputActions from "./chat/ChatInputActions";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChatInputProps {
   onSend: (message: string, type?: 'text' | 'audio') => void;
@@ -17,6 +18,7 @@ const ChatInputComponent = ({
   onTranscriptionUpdate,
   isLoading = false 
 }: ChatInputProps) => {
+  const { toast } = useToast();
   const {
     message,
     setMessage,
@@ -38,23 +40,44 @@ const ChatInputComponent = ({
     if (e.key === 'Enter' && !e.shiftKey && !isLoading && !isProcessing) {
       e.preventDefault();
       
-      // Create a new session if none exists
-      if (!activeSessionId) {
-        console.log('[ChatInput] No active session, creating new one');
-        await createSession('New Chat');
+      try {
+        // Ensure we have an active session before submitting
+        if (!activeSessionId) {
+          console.log('[ChatInput] No active session, creating new one before submit');
+          await createSession('New Chat');
+        }
+        
+        handleSubmit();
+      } catch (error) {
+        console.error('[ChatInput] Error handling message submission:', error);
+        toast({
+          title: "Error",
+          description: "Failed to create chat session",
+          variant: "destructive"
+        });
       }
-      
-      handleSubmit();
     }
   };
 
   const handleMessageChange = async (newMessage: string) => {
-    // Create a new session when user starts typing if none exists
-    if (newMessage.length === 1 && !activeSessionId) {
-      console.log('[ChatInput] First character typed, creating new session');
-      await createSession('New Chat');
+    try {
+      // Create a new session when user starts typing if none exists
+      if (newMessage.length === 1 && !activeSessionId) {
+        console.log('[ChatInput] First character typed, creating new session');
+        await createSession('New Chat');
+        console.log('[ChatInput] New session created successfully');
+      }
+      
+      // Only update message after session creation (if needed) completes
+      setMessage(newMessage);
+    } catch (error) {
+      console.error('[ChatInput] Error creating new session:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create chat session",
+        variant: "destructive"
+      });
     }
-    setMessage(newMessage);
   };
 
   return (
