@@ -13,19 +13,22 @@ const ChatInputField = ({
   handleKeyDown,
   isLoading 
 }: ChatInputFieldProps) => {
+  console.log('[ChatInputField] Rendering with:', { messageLength: message.length, isLoading });
+  
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = 'auto';
-      const newHeight = Math.min(textarea.scrollHeight, 200); // Max height of 200px
+      const newHeight = Math.min(textarea.scrollHeight, 200);
       textarea.style.height = `${newHeight}px`;
+      console.log('[ChatInputField] Adjusted height:', { newHeight });
     }
   };
 
-  // Adjust height when message changes
   useEffect(() => {
+    console.log('[ChatInputField] Message changed, adjusting height');
     adjustTextareaHeight();
   }, [message]);
 

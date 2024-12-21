@@ -1,11 +1,9 @@
 import { useMessageSubmission } from "@/hooks/chat/useMessageSubmission";
 import { useTranscriptionHandler } from "@/hooks/chat/useTranscriptionHandler";
-import { useChatSessions } from "@/hooks/useChatSessions";
 import ChatInputField from "./chat/ChatInputField";
 import ChatInputActions from "./chat/ChatInputActions";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useState, useCallback } from "react";
+import { useSessionManagement } from "@/hooks/chat/useSessionManagement";
+import { useState } from "react";
 
 interface ChatInputProps {
   onSend: (message: string, type?: 'text' | 'audio') => void;
@@ -14,25 +12,21 @@ interface ChatInputProps {
   isLoading?: boolean;
 }
 
-const ChatInputComponent = ({ 
+const ChatInput = ({ 
   onSend, 
   onTranscriptionComplete,
   onTranscriptionUpdate,
   isLoading = false 
 }: ChatInputProps) => {
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [isCreatingSession, setIsCreatingSession] = useState(false);
+  console.log('[ChatInput] Rendering with props:', { isLoading });
+  
+  const [message, setMessage] = useState("");
+  const { isCreatingSession, ensureActiveSession } = useSessionManagement();
   
   const {
-    message,
-    setMessage,
     handleSubmit: originalHandleSubmit,
     isProcessing
   } = useMessageSubmission({ onSend });
-
-  const { activeSessionId, createSession } = useChatSessions();
 
   const {
     handleTranscriptionComplete,
@@ -42,42 +36,8 @@ const ChatInputComponent = ({
     setMessage
   });
 
-  const ensureActiveSession = useCallback(async () => {
-    if (!activeSessionId && !isCreatingSession) {
-      console.log('[ChatInput] Creating new session for message');
-      setIsCreatingSession(true);
-      
-      try {
-        const templateType = searchParams.get('template') || 'live-patient-session';
-        const sessionId = await createSession('New Chat', templateType);
-        if (sessionId) {
-          console.log('[ChatInput] New session created:', sessionId);
-          
-          // Preserve template parameter when creating new session
-          const queryParams = new URLSearchParams();
-          if (templateType) {
-            queryParams.set('template', templateType);
-          }
-          const queryString = queryParams.toString();
-          navigate(`/c/${sessionId}${queryString ? `?${queryString}` : ''}`);
-          return true;
-        }
-      } catch (error) {
-        console.error('[ChatInput] Failed to create session:', error);
-        toast({
-          title: "Error",
-          description: "Failed to create new chat session",
-          variant: "destructive"
-        });
-        return false;
-      } finally {
-        setIsCreatingSession(false);
-      }
-    }
-    return true;
-  }, [activeSessionId, isCreatingSession, createSession, navigate, searchParams, toast]);
-
   const handleSubmit = async () => {
+    console.log('[ChatInput] Handling submit with message:', message);
     const sessionCreated = await ensureActiveSession();
     if (sessionCreated) {
       originalHandleSubmit();
@@ -86,17 +46,22 @@ const ChatInputComponent = ({
 
   const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !isLoading && !isProcessing && !isCreatingSession) {
+      console.log('[ChatInput] Enter key pressed, submitting message');
       e.preventDefault();
       handleSubmit();
     }
   };
 
   const handleMessageChange = async (newMessage: string) => {
+    console.log('[ChatInput] Message changed:', { length: newMessage.length });
     setMessage(newMessage);
     if (newMessage.length === 1) {
       await ensureActiveSession();
     }
   };
+
+  const isDisabled = isLoading || isProcessing || isCreatingSession;
+  console.log('[ChatInput] Component state:', { isDisabled, messageLength: message.length });
 
   return (
     <div className="relative flex w-full flex-col items-center">
@@ -105,10 +70,10 @@ const ChatInputComponent = ({
           message={message}
           setMessage={handleMessageChange}
           handleKeyDown={handleKeyDown}
-          isLoading={isLoading || isProcessing || isCreatingSession}
+          isLoading={isDisabled}
         />
         <ChatInputActions
-          isLoading={isLoading || isProcessing || isCreatingSession}
+          isLoading={isDisabled}
           message={message}
           handleSubmit={handleSubmit}
           onTranscriptionComplete={handleTranscriptionComplete}
@@ -119,5 +84,4 @@ const ChatInputComponent = ({
   );
 };
 
-const ChatInput = ChatInputComponent;
 export default ChatInput;
