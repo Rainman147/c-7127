@@ -125,7 +125,7 @@ export const TemplateManager = () => {
       <TemplateHeaderActions onNewTemplate={() => setIsCreateDialogOpen(true)} />
       
       <TemplateList
-        templates={templates}
+        templates={templates as Template[]}
         onEdit={(template) => {
           setEditingTemplate(template);
           setIsEditDialogOpen(true);

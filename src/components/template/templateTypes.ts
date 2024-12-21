@@ -1,6 +1,11 @@
-import type { Template as BaseTemplate, TemplateInstructions, TemplateSchema } from '@/types/templates/base';
+import type { BaseTemplate, TemplateInstructions, TemplateSchema } from '@/types/templates/base';
 
-export type Template = BaseTemplate;
+export interface Template extends BaseTemplate {
+  content: string;
+  instructions: TemplateInstructions;
+  schema: TemplateSchema;
+  priority_rules?: any;
+}
 
 // Static templates as fallback
 export const defaultTemplates: Template[] = [
@@ -8,8 +13,8 @@ export const defaultTemplates: Template[] = [
     id: "live-session",
     name: "Live Patient Session",
     description: "Real-time session with focus on symptoms and immediate observations.",
-    systemInstructions: `Live Patient Session Template - Revised System Instructions...`,
-    content: `Live Patient Session Template - Revised System Instructions...`,
+    systemInstructions: "Live Patient Session Template - Revised System Instructions...",
+    content: "Live Patient Session Template - Revised System Instructions...",
     instructions: {
       dataFormatting: "Standard medical formatting",
       priorityRules: "Prioritize critical symptoms",
@@ -91,7 +96,7 @@ export const mergeTemplates = (dbTemplates: any[]): Template[] => {
   const converted = dbTemplates.map(template => ({
     id: template.id,
     name: template.name,
-    description: template.content || '', 
+    description: template.content || '',
     systemInstructions: template.content || '',
     content: template.content || '',
     instructions: template.instructions || {

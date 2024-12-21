@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTemplateContext } from '@/contexts/TemplateContext';
-import { TemplateSelector } from '@/components/template/TemplateSelector';
-import { TemplateManager } from '@/components/template/TemplateManager';
+import { TemplateSelector } from '../TemplateSelector';
+import { TemplateManager } from '../template/TemplateManager';
 
 const ChatContainer = () => {
   const { globalTemplate } = useTemplateContext();
