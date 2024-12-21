@@ -1,4 +1,4 @@
-import { Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TwoLineMenuIcon } from "@/components/icons/TwoLineMenuIcon";
 
@@ -28,14 +28,6 @@ export const SidebarHeader = ({ onNewChat, onClose }: SidebarHeaderProps) => {
           <span>New Chat</span>
         </Button>
       </div>
-      <Button
-        onClick={onClose}
-        variant="ghost"
-        size="icon"
-        className="md:hidden"
-      >
-        <X className="h-5 w-5" />
-      </Button>
     </div>
   );
 };
