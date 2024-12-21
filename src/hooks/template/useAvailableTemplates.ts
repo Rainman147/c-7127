@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { defaultTemplates, mergeTemplates } from "@/components/template/types";
-import type { Template } from "@/components/template/types";
+import { defaultTemplates, mergeTemplates } from "@/components/template/templateTypes";
+import type { Template } from "@/components/template/templateTypes";
 
 export const useAvailableTemplates = () => {
   const [availableTemplates, setAvailableTemplates] = useState<Template[]>(defaultTemplates);

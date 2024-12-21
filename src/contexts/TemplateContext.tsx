@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { getDefaultTemplate } from '@/utils/template/templateStateManager';
-import type { Template } from '@/components/template/types';
+import type { Template } from '@/components/template/templateTypes';
 
 interface TemplateContextType {
   globalTemplate: Template;

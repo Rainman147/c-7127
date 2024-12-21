@@ -1,72 +1,21 @@
-import { useState } from 'react';
-import { ChatHeader } from '@/components/ChatHeader';
-import ChatInput from '@/components/ChatInput';
-import MessageList from '@/components/MessageList';
-import { useSidebar } from '@/contexts/SidebarContext';
-import type { Template } from '@/components/template/types';
+import React from 'react';
+import { useTemplateContext } from '@/contexts/TemplateContext';
+import { TemplateSelector } from '@/components/template/TemplateSelector';
+import { TemplateManager } from '@/components/template/TemplateManager';
 
-interface ChatContainerProps {
-  messages: Array<{ 
-    role: 'user' | 'assistant'; 
-    content: string; 
-    type?: 'text' | 'audio';
-    id?: string;
-  }>;
-  isLoading: boolean;
-  currentChatId: string | null;
-  onMessageSend: (message: string, type?: 'text' | 'audio') => Promise<void>;
-  onTemplateChange: (template: Template) => void;
-  onTranscriptionComplete: (text: string) => void;
-}
+const ChatContainer = () => {
+  const { globalTemplate } = useTemplateContext();
 
-const ChatContainer = ({
-  messages,
-  isLoading,
-  currentChatId,
-  onMessageSend,
-  onTemplateChange,
-  onTranscriptionComplete,
-}: ChatContainerProps) => {
-  const { isOpen } = useSidebar();
-  console.log('[ChatContainer] Rendering with messages:', messages);
-  
   return (
-    <main className="flex-1">
-      <ChatHeader 
-        isSidebarOpen={isOpen}
-        currentChatId={currentChatId}
-        onTemplateChange={onTemplateChange}
+    <div className="chat-container">
+      <TemplateSelector
+        currentChatId={null} // Replace with actual chat ID if available
+        onTemplateChange={(template) => {
+          console.log('Template changed to:', template.name);
+        }}
       />
-      
-      <div className={`flex h-full flex-col ${messages.length === 0 ? 'items-center justify-center' : 'justify-between'} pt-[60px] pb-4`}>
-        {messages.length === 0 ? (
-          <div className="w-full max-w-3xl px-4 space-y-4">
-            <div>
-              <h1 className="mb-8 text-4xl font-semibold text-center">What can I help with?</h1>
-              <ChatInput 
-                onSend={onMessageSend}
-                onTranscriptionComplete={onTranscriptionComplete}
-                isLoading={isLoading} 
-              />
-            </div>
-          </div>
-        ) : (
-          <>
-            <MessageList messages={messages} />
-            <div className="w-full max-w-3xl mx-auto px-4 py-2">
-              <ChatInput 
-                onSend={onMessageSend}
-                onTranscriptionComplete={onTranscriptionComplete}
-                isLoading={isLoading} 
-              />
-            </div>
-            <div className="text-xs text-center text-gray-500 py-2">
-              ChatGPT can make mistakes. Check important info.
-            </div>
-          </>
-        )}
-      </div>
-    </main>
+      <TemplateManager />
+    </div>
   );
 };
 

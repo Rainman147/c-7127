@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Template } from "../../components/template/types";
+import type { Template } from '@/components/template/templateTypes';
 
 export const loadTemplateFromDb = async (chatId: string) => {
   console.log('[templateDbOperations] Loading template for chat:', chatId);

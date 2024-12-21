@@ -1,6 +1,6 @@
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { TemplateListItem } from "./TemplateListItem";
-import type { Template } from "../types";
+import type { Template } from '../templateTypes';
 
 interface TemplateListProps {
   templates: Template[];

@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { loadTemplateFromDb, saveTemplateToDb } from "@/utils/template/templateDbOperations";
 import { findTemplateById } from "@/utils/template/templateStateManager";
-import type { Template } from "@/components/template/types";
+import type { Template } from '@/components/template/templateTypes';
 
 export const useTemplatePersistence = (currentChatId: string | null) => {
   const loadTemplate = useCallback(async () => {
