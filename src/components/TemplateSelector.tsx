@@ -4,6 +4,7 @@ import { TemplateTrigger } from "./template/dropdown/TemplateTrigger";
 import { TemplateDropdownContent } from "./template/dropdown/TemplateDropdownContent";
 import { useTemplateSelection } from "./template/useTemplateSelection";
 import { useSessionParams } from "@/hooks/routing/useSessionParams";
+import { useTemplateContext } from "@/contexts/TemplateContext";
 import type { Template } from "@/components/template/templateTypes";
 
 interface TemplateSelectorProps {
@@ -12,6 +13,7 @@ interface TemplateSelectorProps {
 
 export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProps) => {
   const { sessionId, templateId } = useSessionParams();
+  const { globalTemplate } = useTemplateContext();
   
   useEffect(() => {
     console.log('[TemplateSelector] Component mounted/updated:', {
@@ -29,7 +31,7 @@ export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProp
     availableTemplates, 
     isLoading, 
     handleTemplateChange 
-  } = useTemplateSelection(sessionId, onTemplateChange);
+  } = useTemplateSelection(sessionId, onTemplateChange, globalTemplate);
 
   const handleTemplateSelect = useCallback((template: Template) => {
     console.log('[TemplateSelector] Template selection requested:', {
