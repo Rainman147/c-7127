@@ -3,8 +3,6 @@ import { useChat } from '@/hooks/useChat';
 import { ChatHeader } from '@/components/ChatHeader';
 import MessageList from '@/components/MessageList';
 import ChatInput from '@/components/ChatInput';
-import { Button } from '@/components/ui/button';
-import { TwoLineMenuIcon } from '@/components/icons/TwoLineMenuIcon';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
 import { useSessionParams } from '@/hooks/routing/useSessionParams';
@@ -12,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
 const ChatContent = () => {
-  const { isOpen, open } = useSidebar();
+  const { isOpen } = useSidebar();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { 
@@ -93,19 +91,6 @@ const ChatContent = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] relative">
-      <Button
-        onClick={open}
-        variant="ghost"
-        size="icon"
-        className={cn(
-          "transition-all duration-300 ease-in-out text-white/70 hover:text-white fixed",
-          isOpen ? "-translate-x-full opacity-0 pointer-events-none" : "translate-x-0 opacity-100",
-          "z-50 left-4 top-3"
-        )}
-      >
-        <TwoLineMenuIcon className="h-5 w-5" />
-      </Button>
-      
       <ChatHeader 
         isSidebarOpen={isOpen}
         onTemplateChange={handleTemplateChange}

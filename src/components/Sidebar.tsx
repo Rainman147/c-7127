@@ -4,12 +4,14 @@ import { SidebarNavigation } from "./sidebar/SidebarNavigation";
 import { ChatSessionList } from "./sidebar/ChatSessionList";
 import { SidebarFooter } from "./sidebar/SidebarFooter";
 import { SidebarHeader } from "./sidebar/SidebarHeader";
+import { Button } from "@/components/ui/button";
+import { TwoLineMenuIcon } from "@/components/icons/TwoLineMenuIcon";
 import { cn } from "@/lib/utils";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 const Sidebar = () => {
-  const { isOpen, close } = useSidebar();
+  const { isOpen, open, close } = useSidebar();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -75,6 +77,7 @@ const Sidebar = () => {
 
   return (
     <>
+      {/* Backdrop */}
       <div 
         className={cn(
           "fixed inset-0 bg-black/30 backdrop-blur-sm z-30 md:hidden transition-opacity duration-300",
@@ -83,6 +86,22 @@ const Sidebar = () => {
         onClick={close}
       />
 
+      {/* Toggle Button - Now part of Sidebar */}
+      <Button
+        onClick={open}
+        variant="ghost"
+        size="icon"
+        className={cn(
+          "fixed top-4 left-4 z-50",
+          "transition-all duration-300 ease-in-out",
+          isOpen ? "opacity-0 pointer-events-none -translate-x-full" : "opacity-100 translate-x-0",
+          "text-white/70 hover:text-white"
+        )}
+      >
+        <TwoLineMenuIcon className="h-5 w-5" />
+      </Button>
+
+      {/* Sidebar Content */}
       <aside
         className={cn(
           "fixed top-0 left-0 z-40 h-screen w-64 bg-chatgpt-sidebar",
