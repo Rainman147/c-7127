@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useChat } from '@/hooks/useChat';
 import { ChatHeader } from '@/components/ChatHeader';
 import MessageList from '@/components/MessageList';
@@ -17,10 +17,10 @@ const ChatContent = () => {
   const { messages, isLoading, handleSendMessage } = useChat(activeSessionId);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
-  const handleTemplateChange = (template: any) => {
+  const handleTemplateChange = useCallback((template: any) => {
     console.log('[Index] Template changed:', template);
     setSelectedTemplate(template);
-  };
+  }, []); // Memoized with empty deps since setSelectedTemplate is stable
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] relative">

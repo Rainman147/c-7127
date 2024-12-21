@@ -13,22 +13,22 @@ export const useTemplateSelection = (
   
   const [selectedTemplate, setSelectedTemplate] = useState<Template>(globalTemplate);
   const [isLoading, setIsLoading] = useState(false);
-  const previousTemplateId = useRef<string>(globalTemplate.id);
+  const globalTemplateRef = useRef(globalTemplate);
   
   const availableTemplates = useAvailableTemplates();
   const { loadTemplate, saveTemplate } = useTemplatePersistence(currentChatId);
 
+  // Update ref when globalTemplate changes without triggering effect
+  useEffect(() => {
+    globalTemplateRef.current = globalTemplate;
+  }, [globalTemplate]);
+
   useEffect(() => {
     const loadTemplateForChat = async () => {
       if (!currentChatId) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[useTemplateSelection] Using global template:', globalTemplate.name);
-        }
-        if (previousTemplateId.current !== globalTemplate.id) {
-          setSelectedTemplate(globalTemplate);
-          onTemplateChange(globalTemplate);
-          previousTemplateId.current = globalTemplate.id;
-        }
+        console.log('[useTemplateSelection] No chat ID provided, using global template');
+        setSelectedTemplate(globalTemplateRef.current);
+        onTemplateChange(globalTemplateRef.current);
         return;
       }
 
@@ -37,31 +37,18 @@ export const useTemplateSelection = (
         const template = await loadTemplate();
         
         if (template) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[useTemplateSelection] Loaded template from chat:', template.name);
-          }
-          if (previousTemplateId.current !== template.id) {
-            setSelectedTemplate(template);
-            onTemplateChange(template);
-            previousTemplateId.current = template.id;
-          }
+          console.log('[useTemplateSelection] Loaded template from chat:', template.name);
+          setSelectedTemplate(template);
+          onTemplateChange(template);
         } else {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[useTemplateSelection] No saved template, using global');
-          }
-          if (previousTemplateId.current !== globalTemplate.id) {
-            setSelectedTemplate(globalTemplate);
-            onTemplateChange(globalTemplate);
-            previousTemplateId.current = globalTemplate.id;
-          }
+          console.log('[useTemplateSelection] No saved template, using global template');
+          setSelectedTemplate(globalTemplateRef.current);
+          onTemplateChange(globalTemplateRef.current);
         }
       } catch (error) {
         console.error('[useTemplateSelection] Failed to load template:', error);
-        if (previousTemplateId.current !== globalTemplate.id) {
-          setSelectedTemplate(globalTemplate);
-          onTemplateChange(globalTemplate);
-          previousTemplateId.current = globalTemplate.id;
-        }
+        setSelectedTemplate(globalTemplateRef.current);
+        onTemplateChange(globalTemplateRef.current);
       } finally {
         setIsLoading(false);
         console.log('[useTemplateSelection] Template loading completed');
@@ -69,35 +56,30 @@ export const useTemplateSelection = (
     };
 
     loadTemplateForChat();
-  }, [currentChatId, onTemplateChange, globalTemplate]);
+  }, [currentChatId, onTemplateChange, loadTemplate]); // Removed globalTemplate from deps
 
   const handleTemplateChange = useCallback(async (template: Template) => {
-    if (!isTemplateChange(previousTemplateId.current, template)) {
-      console.log('[useTemplateSelection] Same template selected, skipping update');
+    console.log('[useTemplateSelection] Template change requested:', template.name);
+    
+    if (!isTemplateChange(selectedTemplate.id, template)) {
+      console.log('[useTemplateSelection] Same template selected, no changes needed');
       return;
-    }
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[useTemplateSelection] Template change:', template.name);
     }
 
     setIsLoading(true);
     try {
       setSelectedTemplate(template);
       onTemplateChange(template);
-      previousTemplateId.current = template.id;
       if (currentChatId) {
         await saveTemplate(template);
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[useTemplateSelection] Template saved successfully');
-        }
+        console.log('[useTemplateSelection] Template saved to chat successfully');
       }
     } catch (error) {
       console.error('[useTemplateSelection] Failed to update template:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [currentChatId, onTemplateChange, saveTemplate]);
+  }, [currentChatId, selectedTemplate.id, onTemplateChange, saveTemplate]);
 
   return {
     selectedTemplate,
