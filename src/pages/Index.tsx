@@ -3,21 +3,24 @@ import { useChat } from '@/hooks/useChat';
 import { ChatHeader } from '@/components/ChatHeader';
 import MessageList from '@/components/MessageList';
 import ChatInput from '@/components/ChatInput';
-import ProtectedRoute from '@/components/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { TwoLineMenuIcon } from '@/components/icons/TwoLineMenuIcon';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
-import { useChatSessions } from '@/hooks/useChatSessions';
+import { useSessionParams } from '@/hooks/routing/useSessionParams';
 
 const ChatContent = () => {
   const { isOpen, open } = useSidebar();
-  const { activeSessionId } = useChatSessions();
-  const { messages, isLoading, handleSendMessage } = useChat(activeSessionId);
+  const { sessionId, templateId, patientId } = useSessionParams();
+  const { messages, isLoading, handleSendMessage } = useChat(sessionId);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
-  console.log('[Index] Rendering with activeSessionId:', activeSessionId);
-  console.log('[Index] Current messages:', messages.length);
+  console.log('[Index] Rendering with params:', { 
+    sessionId, 
+    templateId, 
+    patientId,
+    messagesCount: messages.length 
+  });
 
   const handleTemplateChange = useCallback((template: any) => {
     console.log('[Index] Template changed:', template);
@@ -40,7 +43,7 @@ const ChatContent = () => {
       </Button>
       
       <ChatHeader 
-        currentChatId={activeSessionId}
+        currentChatId={sessionId}
         onTemplateChange={handleTemplateChange}
       />
       
@@ -64,11 +67,7 @@ const ChatContent = () => {
 };
 
 const Index = () => {
-  return (
-    <ProtectedRoute>
-      <ChatContent />
-    </ProtectedRoute>
-  );
+  return <ChatContent />;
 };
 
 export default Index;

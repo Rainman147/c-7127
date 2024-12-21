@@ -2,51 +2,52 @@ import { memo, useCallback, useEffect, useMemo } from "react";
 import { TemplateSelector } from "./TemplateSelector";
 import { ProfileMenu } from "./header/ProfileMenu";
 import { useProfilePhoto } from "@/hooks/useProfilePhoto";
+import { useSessionParams } from "@/hooks/routing/useSessionParams";
 
 interface ChatHeaderProps {
   isSidebarOpen?: boolean;
-  currentChatId: string | null;
   onTemplateChange: (template: any) => void;
 }
 
 const ChatHeaderComponent = ({ 
-  isSidebarOpen = true, 
-  currentChatId,
+  isSidebarOpen = true,
   onTemplateChange 
 }: ChatHeaderProps) => {
   const profilePhotoUrl = useProfilePhoto();
+  const { sessionId, templateId } = useSessionParams();
   
   useEffect(() => {
     console.log('[ChatHeader] Component mounted/updated:', { 
       isSidebarOpen, 
-      currentChatId,
+      sessionId,
+      templateId,
       hasProfilePhoto: !!profilePhotoUrl 
     });
 
     return () => {
-      console.log('[ChatHeader] Component cleanup for chat:', currentChatId);
+      console.log('[ChatHeader] Component cleanup for chat:', sessionId);
     };
-  }, [isSidebarOpen, currentChatId, profilePhotoUrl]);
+  }, [isSidebarOpen, sessionId, templateId, profilePhotoUrl]);
   
   const handleTemplateChange = useCallback((template: any) => {
     console.log('[ChatHeader] Template change requested:', {
-      chatId: currentChatId,
+      sessionId,
       templateId: template.id,
       templateName: template.name
     });
     onTemplateChange(template);
-  }, [onTemplateChange, currentChatId]);
+  }, [onTemplateChange, sessionId]);
 
   const templateSelector = useMemo(() => {
-    console.log('[ChatHeader] Creating TemplateSelector instance for chat:', currentChatId);
+    console.log('[ChatHeader] Creating TemplateSelector instance for chat:', sessionId);
     return (
       <TemplateSelector 
-        key={currentChatId || 'default'}
-        currentChatId={currentChatId}
+        key={sessionId || 'default'}
+        currentChatId={sessionId}
         onTemplateChange={handleTemplateChange}
       />
     );
-  }, [currentChatId, handleTemplateChange]);
+  }, [sessionId, handleTemplateChange]);
 
   const profileMenu = useMemo(() => {
     console.log('[ChatHeader] Creating ProfileMenu instance');
