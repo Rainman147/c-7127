@@ -57,33 +57,32 @@ const Sidebar = () => {
       >
         {/* Header */}
         <div className="flex items-center justify-between h-[60px] px-4">
-          <Button
-            onClick={handleNewChat}
-            variant="ghost"
-            size="icon"
-            className="text-white/70 hover:text-white flex items-center gap-2"
-          >
-            <Plus className="h-5 w-5" />
-            <span>New Chat</span>
-          </Button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button
               onClick={close}
               variant="ghost"
               size="icon"
               className="text-white/70 hover:text-white"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <TwoLineMenuIcon className="h-5 w-5" />
             </Button>
             <Button
-              onClick={close}
+              onClick={handleNewChat}
               variant="ghost"
-              size="icon"
-              className="md:hidden"
+              className="text-white/70 hover:text-white flex items-center gap-2"
             >
-              <X className="h-5 w-5" />
+              <Plus className="h-5 w-5" />
+              <span>New Chat</span>
             </Button>
           </div>
+          <Button
+            onClick={close}
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
 
         {/* Navigation */}
