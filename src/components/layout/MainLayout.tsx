@@ -13,11 +13,11 @@ const MainLayout = () => {
       <div className={cn(
         "flex-1 relative transition-all duration-300 ease-in-out",
         isOpen ? "md:ml-64" : "ml-0",
-        "z-0" // Ensure main content has lower z-index than toggle button
+        "z-0"
       )}>
-        <div className="p-4">
+        <main className="max-w-[1200px] mx-auto">
           <Outlet />
-        </div>
+        </main>
       </div>
     </div>
   );

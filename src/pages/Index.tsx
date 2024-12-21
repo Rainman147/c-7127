@@ -20,7 +20,7 @@ const ChatContent = () => {
   };
 
   return (
-    <main className="flex h-[calc(100vh-2rem)] flex-col">
+    <div className="flex flex-col h-[calc(100vh-2rem)] relative">
       <Button
         onClick={open}
         variant="ghost"
@@ -39,12 +39,14 @@ const ChatContent = () => {
         onTemplateChange={handleTemplateChange}
       />
       
-      <div className="flex-1 overflow-hidden mt-[60px]">
-        <MessageList messages={messages} />
+      <div className="flex-1 overflow-hidden mt-[60px] relative">
+        <div className="max-w-3xl mx-auto px-4 h-full">
+          <MessageList messages={messages} />
+        </div>
       </div>
       
       <div className="w-full pb-4 pt-2 fixed bottom-0 left-0 right-0 bg-chatgpt-main/95 backdrop-blur">
-        <div className="max-w-5xl mx-auto px-4">
+        <div className="max-w-3xl mx-auto px-4">
           <ChatInput 
             onSend={handleSendMessage}
             onTranscriptionComplete={(text) => handleSendMessage(text, 'audio')}
@@ -52,7 +54,7 @@ const ChatContent = () => {
           />
         </div>
       </div>
-    </main>
+    </div>
   );
 };
 

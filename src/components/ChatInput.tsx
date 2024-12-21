@@ -93,7 +93,7 @@ const ChatInputComponent = ({
 
   return (
     <div className="relative flex w-full flex-col items-center">
-      <div className="w-full max-w-4xl rounded-3xl overflow-hidden bg-[#2F2F2F]">
+      <div className="w-full rounded-xl overflow-hidden bg-[#2F2F2F] border border-white/[0.05] shadow-lg">
         <ChatInputField
           message={message}
           setMessage={setMessage}

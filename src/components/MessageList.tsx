@@ -15,8 +15,8 @@ const MessageList = ({ messages }: { messages: Message[] }) => {
   })));
   
   return (
-    <div className="flex-1 overflow-y-auto chat-scrollbar">
-      <div className="w-full max-w-3xl mx-auto px-4">
+    <div className="flex-1 overflow-y-auto chat-scrollbar pb-32">
+      <div className="space-y-4">
         {messages.map((message, index) => (
           <Message key={message.id || index} {...message} />
         ))}
