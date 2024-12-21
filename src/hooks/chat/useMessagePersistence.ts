@@ -16,12 +16,19 @@ export const useMessagePersistence = () => {
         contentPreview: message.content.substring(0, 50) + '...'
       });
 
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('User not authenticated');
+
       // If no chatId, create a new chat
       let finalChatId = chatId;
       if (!chatId) {
         const { data: chat, error: chatError } = await supabase
           .from('chats')
-          .insert([{ title: 'New Chat' }])
+          .insert({
+            title: 'New Chat',
+            user_id: user.id
+          })
           .select()
           .single();
 
@@ -32,12 +39,12 @@ export const useMessagePersistence = () => {
       // Save the message
       const { data: savedMessage, error: messageError } = await supabase
         .from('messages')
-        .insert([{
+        .insert({
           chat_id: finalChatId,
           content: message.content,
           sender: message.role,
           type: message.type || 'text'
-        }])
+        })
         .select()
         .single();
 
