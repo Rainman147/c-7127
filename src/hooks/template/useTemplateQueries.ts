@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Template } from '@/components/template/templateTypes';
-import { convertDatabaseTemplate } from '@/utils/template/templateConverter';
+import { convertDatabaseTemplate, type DatabaseTemplate } from '@/types/templates/database';
 
 export const useTemplateQueries = () => {
   console.log('[useTemplateQueries] Initializing template queries');
@@ -24,7 +24,7 @@ export const useTemplateQueries = () => {
         throw error;
       }
 
-      return data.map(convertDatabaseTemplate);
+      return data.map((template: DatabaseTemplate) => convertDatabaseTemplate(template));
     },
   });
 
