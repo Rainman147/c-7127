@@ -4,7 +4,7 @@ import { useChatSessions } from "@/hooks/useChatSessions";
 import ChatInputField from "./chat/ChatInputField";
 import ChatInputActions from "./chat/ChatInputActions";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useCallback } from "react";
 
 interface ChatInputProps {
@@ -22,6 +22,7 @@ const ChatInputComponent = ({
 }: ChatInputProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   
   const {
@@ -47,10 +48,15 @@ const ChatInputComponent = ({
       setIsCreatingSession(true);
       
       try {
-        const sessionId = await createSession('New Chat');
+        const templateType = searchParams.get('template') || 'live-patient-session';
+        const sessionId = await createSession('New Chat', templateType);
         if (sessionId) {
           console.log('[ChatInput] New session created:', sessionId);
-          navigate(`/c/${sessionId}`);
+          
+          // Preserve all existing query parameters when redirecting
+          const queryParams = new URLSearchParams(searchParams);
+          const queryString = queryParams.toString();
+          navigate(`/c/${sessionId}${queryString ? `?${queryString}` : ''}`);
           return true;
         }
       } catch (error) {
@@ -66,7 +72,7 @@ const ChatInputComponent = ({
       }
     }
     return true;
-  }, [activeSessionId, isCreatingSession, createSession, navigate, toast]);
+  }, [activeSessionId, isCreatingSession, createSession, navigate, searchParams, toast]);
 
   const handleSubmit = async () => {
     const sessionCreated = await ensureActiveSession();

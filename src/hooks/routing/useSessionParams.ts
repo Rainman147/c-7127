@@ -14,60 +14,74 @@ export const useSessionParams = () => {
   const isValidTemplateId = templateId && /^[0-9a-fA-F-]+$/.test(templateId);
   const isValidPatientId = patientId && /^[0-9a-fA-F-]+$/.test(patientId);
 
-  console.log('[useSessionParams] Current params:', {
+  console.log('[useSessionParams] Current state:', {
     sessionId,
     templateId,
     patientId,
     isNewSession,
     isValidSessionId,
     isValidTemplateId,
-    isValidPatientId
+    isValidPatientId,
+    currentPath: window.location.pathname
   });
 
   const redirectToSession = (id: string, params?: { template?: string; patient?: string }) => {
-    console.log('[useSessionParams] Redirecting to session:', { id, params });
+    console.log('[useSessionParams] Redirecting to session:', { 
+      id, 
+      params,
+      currentTemplate: templateId,
+      currentPatient: patientId 
+    });
+    
     const newSearchParams = new URLSearchParams();
     
-    if (params?.template) {
-      newSearchParams.set('template', params.template);
-    }
-    if (params?.patient) {
-      newSearchParams.set('patient', params.patient);
-    }
-
     // Preserve existing params if not explicitly changed
     if (!params?.template && templateId) {
       newSearchParams.set('template', templateId);
+    } else if (params?.template) {
+      newSearchParams.set('template', params.template);
     }
+    
     if (!params?.patient && patientId) {
       newSearchParams.set('patient', patientId);
+    } else if (params?.patient) {
+      newSearchParams.set('patient', params.patient);
     }
 
     const queryString = newSearchParams.toString();
-    navigate(`/c/${id}${queryString ? `?${queryString}` : ''}`);
+    const newPath = `/c/${id}${queryString ? `?${queryString}` : ''}`;
+    
+    console.log('[useSessionParams] New path:', newPath);
+    navigate(newPath);
   };
 
   const redirectToNew = (params?: { template?: string; patient?: string }) => {
-    console.log('[useSessionParams] Redirecting to new session with params:', params);
+    console.log('[useSessionParams] Redirecting to new session with params:', {
+      params,
+      currentTemplate: templateId,
+      currentPatient: patientId
+    });
+    
     const newSearchParams = new URLSearchParams();
     
-    if (params?.template) {
-      newSearchParams.set('template', params.template);
-    }
-    if (params?.patient) {
-      newSearchParams.set('patient', params.patient);
-    }
-
     // Preserve existing params if not explicitly changed
     if (!params?.template && templateId) {
       newSearchParams.set('template', templateId);
+    } else if (params?.template) {
+      newSearchParams.set('template', params.template);
     }
+    
     if (!params?.patient && patientId) {
       newSearchParams.set('patient', patientId);
+    } else if (params?.patient) {
+      newSearchParams.set('patient', params.patient);
     }
 
     const queryString = newSearchParams.toString();
-    navigate(`/${queryString ? `?${queryString}` : ''}`);
+    const newPath = `/${queryString ? `?${queryString}` : ''}`;
+    
+    console.log('[useSessionParams] New path:', newPath);
+    navigate(newPath);
   };
 
   return {
