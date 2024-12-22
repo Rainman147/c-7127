@@ -2,7 +2,6 @@ import { useMessageSubmission } from "@/hooks/chat/useMessageSubmission";
 import { useTranscriptionHandler } from "@/hooks/chat/useTranscriptionHandler";
 import ChatInputField from "./chat/ChatInputField";
 import ChatInputActions from "./chat/ChatInputActions";
-import { useSessionManagement } from "@/hooks/chat/useSessionManagement";
 import { useState } from "react";
 
 interface ChatInputProps {
@@ -21,7 +20,6 @@ const ChatInput = ({
   console.log('[ChatInput] Rendering with props:', { isLoading });
   
   const [message, setMessage] = useState("");
-  const { isCreatingSession, ensureActiveSession } = useSessionManagement();
   
   const {
     handleSubmit: originalHandleSubmit,
@@ -38,29 +36,25 @@ const ChatInput = ({
 
   const handleSubmit = async () => {
     console.log('[ChatInput] Handling submit with message:', message);
-    const sessionCreated = await ensureActiveSession();
-    if (sessionCreated) {
+    if (message.trim()) {
       originalHandleSubmit();
     }
   };
 
   const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !isLoading && !isProcessing && !isCreatingSession) {
+    if (e.key === 'Enter' && !e.shiftKey && !isLoading && !isProcessing) {
       console.log('[ChatInput] Enter key pressed, submitting message');
       e.preventDefault();
       handleSubmit();
     }
   };
 
-  const handleMessageChange = async (newMessage: string) => {
+  const handleMessageChange = (newMessage: string) => {
     console.log('[ChatInput] Message changed:', { length: newMessage.length });
     setMessage(newMessage);
-    if (newMessage.length === 1) {
-      await ensureActiveSession();
-    }
   };
 
-  const isDisabled = isLoading || isProcessing || isCreatingSession;
+  const isDisabled = isLoading || isProcessing;
   console.log('[ChatInput] Component state:', { isDisabled, messageLength: message.length });
 
   return (

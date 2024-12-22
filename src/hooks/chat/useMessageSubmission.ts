@@ -17,47 +17,45 @@ export const useMessageSubmission = ({ onSend }: UseMessageSubmissionProps) => {
   const { activeSessionId, createSession } = useChatSessions();
   const [isCreatingSession, setIsCreatingSession] = useState(false);
 
-  const ensureActiveSession = async () => {
-    if (!activeSessionId && !isCreatingSession) {
-      console.log('[useMessageSubmission] Creating new session for first message');
-      setIsCreatingSession(true);
-      
-      try {
-        const templateType = searchParams.get('template') || 'live-patient-session';
-        const sessionId = await createSession('New Chat', templateType);
-        if (sessionId) {
-          console.log('[useMessageSubmission] New session created:', sessionId);
-          
-          // Preserve template parameter when creating new session
-          const queryParams = new URLSearchParams();
-          if (templateType) {
-            queryParams.set('template', templateType);
-          }
-          const queryString = queryParams.toString();
-          navigate(`/c/${sessionId}${queryString ? `?${queryString}` : ''}`);
-          return true;
-        }
-      } catch (error) {
-        console.error('[useMessageSubmission] Failed to create session:', error);
-        toast({
-          title: "Error",
-          description: "Failed to create new chat session",
-          variant: "destructive"
-        });
-        return false;
-      } finally {
-        setIsCreatingSession(false);
-      }
-    }
-    return true;
-  };
-
   const handleSubmit = async () => {
     if (message.trim() && !isProcessing) {
-      const sessionCreated = await ensureActiveSession();
-      if (sessionCreated) {
-        onSend(message, 'text');
+      try {
+        // If no active session, we'll create one after successful AI response
+        const templateType = searchParams.get('template') || 'live-patient-session';
+        
+        // Send message and get AI response
+        const response = await onSend(message, 'text');
+        
+        // If successful and no active session, create one and update URL
+        if (response && !activeSessionId && !isCreatingSession) {
+          console.log('[useMessageSubmission] Creating new session after successful AI response');
+          setIsCreatingSession(true);
+          
+          try {
+            const sessionId = await createSession('New Chat', templateType);
+            if (sessionId) {
+              console.log('[useMessageSubmission] New session created:', sessionId);
+              
+              const queryParams = new URLSearchParams();
+              if (templateType) {
+                queryParams.set('template', templateType);
+              }
+              const queryString = queryParams.toString();
+              navigate(`/c/${sessionId}${queryString ? `?${queryString}` : ''}`);
+            }
+          } finally {
+            setIsCreatingSession(false);
+          }
+        }
+        
         setMessage("");
+      } catch (error) {
+        console.error('[useMessageSubmission] Error processing message:', error);
+        toast({
+          title: "Error",
+          description: "Failed to process message",
+          variant: "destructive"
+        });
       }
     }
   };

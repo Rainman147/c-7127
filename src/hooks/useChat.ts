@@ -10,7 +10,7 @@ export const useChat = (activeSessionId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const { toast } = useToast();
   
-  const { isLoading, handleSendMessage: sendMessage } = useMessageHandling();
+  const { isLoading, handleSendMessage } = useMessageHandling();
   const { getCachedMessages, updateCache } = useChatCache();
   const { loadMessages, loadMoreMessages, isLoadingMore } = useMessageLoading();
 
@@ -69,18 +69,8 @@ export const useChat = (activeSessionId: string | null) => {
   ) => {
     console.log('[useChat] Sending message:', { content, type, systemInstructions });
     
-    if (!activeSessionId) {
-      console.error('[useChat] No active session');
-      toast({
-        title: "Error",
-        description: "No active chat session",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
-      const result = await sendMessage(
+      const result = await handleSendMessage(
         content,
         type,
         systemInstructions,
@@ -92,6 +82,7 @@ export const useChat = (activeSessionId: string | null) => {
         console.log('[useChat] Message sent successfully for session:', activeSessionId);
         setMessages(result.messages);
         updateCache(activeSessionId, result.messages);
+        return result;
       }
     } catch (error) {
       console.error('[useChat] Error sending message:', error);
