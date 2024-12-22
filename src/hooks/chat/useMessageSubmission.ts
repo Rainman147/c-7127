@@ -6,10 +6,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 interface UseMessageSubmissionProps {
   onSend: (message: string, type?: 'text' | 'audio') => Promise<any>;
+  message: string;
+  setMessage: (message: string) => void;
 }
 
-export const useMessageSubmission = ({ onSend }: UseMessageSubmissionProps) => {
-  const [message, setMessage] = useState("");
+export const useMessageSubmission = ({ onSend, message, setMessage }: UseMessageSubmissionProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -18,51 +19,29 @@ export const useMessageSubmission = ({ onSend }: UseMessageSubmissionProps) => {
   const [isCreatingSession, setIsCreatingSession] = useState(false);
 
   const handleSubmit = async () => {
-    if (message.trim() && !isProcessing) {
-      try {
-        // If no active session, we'll create one after successful AI response
-        const templateType = searchParams.get('template') || 'live-patient-session';
-        
-        // Send message and get AI response
-        const response = await onSend(message, 'text');
-        
-        // If successful and no active session, create one and update URL
-        if (response && !activeSessionId && !isCreatingSession) {
-          console.log('[useMessageSubmission] Creating new session after successful AI response');
-          setIsCreatingSession(true);
-          
-          try {
-            const sessionId = await createSession('New Chat', templateType);
-            if (sessionId) {
-              console.log('[useMessageSubmission] New session created:', sessionId);
-              
-              const queryParams = new URLSearchParams();
-              if (templateType) {
-                queryParams.set('template', templateType);
-              }
-              const queryString = queryParams.toString();
-              navigate(`/c/${sessionId}${queryString ? `?${queryString}` : ''}`);
-            }
-          } finally {
-            setIsCreatingSession(false);
-          }
-        }
-        
-        setMessage("");
-      } catch (error) {
-        console.error('[useMessageSubmission] Error processing message:', error);
-        toast({
-          title: "Error",
-          description: "Failed to process message",
-          variant: "destructive"
-        });
+    if (!message.trim() || isProcessing || isCreatingSession) {
+      return;
+    }
+
+    try {
+      console.log('[useMessageSubmission] Submitting message:', message);
+      const response = await onSend(message, 'text');
+      
+      if (response) {
+        console.log('[useMessageSubmission] Message sent successfully:', response);
+        setMessage(""); // Clear message only after successful send
       }
+    } catch (error) {
+      console.error('[useMessageSubmission] Error sending message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
   return {
-    message,
-    setMessage,
     handleSubmit,
     isProcessing: isProcessing || isCreatingSession
   };

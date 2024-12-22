@@ -1,21 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useMessageHandling } from './chat/useMessageHandling';
 import { useChatCache } from './chat/useChatCache';
 import { useRealtimeMessages } from './chat/useRealtimeMessages';
 import { useMessageLoading } from './chat/useMessageLoading';
 import { useToast } from './use-toast';
+import { useChatSessions } from './useChatSessions';
 import type { Message } from '@/types/chat';
 
 export const useChat = (activeSessionId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const { toast } = useToast();
+  const { createSession } = useChatSessions();
   
   const { isLoading, handleSendMessage: sendMessage } = useMessageHandling();
   const { getCachedMessages, updateCache } = useChatCache();
   const { loadMessages, loadMoreMessages, isLoadingMore } = useMessageLoading();
 
+  // Memoize these callbacks to prevent infinite loops
+  const handleCacheUpdate = useCallback((sessionId: string, newMessages: Message[]) => {
+    console.log('[useChat] Updating cache for session:', sessionId);
+    updateCache(sessionId, newMessages);
+  }, [updateCache]);
+
+  const handleMessagesLoad = useCallback(async (sessionId: string) => {
+    console.log('[useChat] Loading messages for session:', sessionId);
+    return await loadMessages(sessionId, handleCacheUpdate);
+  }, [loadMessages]);
+
   // Set up real-time message updates
-  useRealtimeMessages(activeSessionId, messages, setMessages, updateCache);
+  useRealtimeMessages(activeSessionId, messages, setMessages, handleCacheUpdate);
 
   // Load messages when activeSessionId changes
   useEffect(() => {
@@ -29,7 +42,6 @@ export const useChat = (activeSessionId: string | null) => {
         return;
       }
 
-      console.log('[useChat] Loading messages for chat:', activeSessionId);
       try {
         // Check cache first
         const cachedMessages = getCachedMessages(activeSessionId);
@@ -38,7 +50,7 @@ export const useChat = (activeSessionId: string | null) => {
           setMessages(cachedMessages);
         } else {
           console.log('[useChat] Fetching messages from database for session:', activeSessionId);
-          const loadedMessages = await loadMessages(activeSessionId, updateCache);
+          const loadedMessages = await handleMessagesLoad(activeSessionId);
           if (isMounted) {
             console.log('[useChat] Successfully loaded messages for session:', activeSessionId);
             setMessages(loadedMessages);
@@ -60,7 +72,7 @@ export const useChat = (activeSessionId: string | null) => {
       isMounted = false;
       console.log('[useChat] Cleanup: Session change effect for:', activeSessionId);
     };
-  }, [activeSessionId, getCachedMessages, loadMessages, updateCache, toast]);
+  }, [activeSessionId, getCachedMessages, handleMessagesLoad, toast]);
 
   const handleSendMessage = async (
     content: string,
@@ -70,18 +82,28 @@ export const useChat = (activeSessionId: string | null) => {
     console.log('[useChat] Sending message:', { content, type, systemInstructions });
     
     try {
+      // Create session if none exists
+      let currentSessionId = activeSessionId;
+      if (!currentSessionId) {
+        console.log('[useChat] No active session, creating new one');
+        currentSessionId = await createSession();
+        if (!currentSessionId) {
+          throw new Error('Failed to create new chat session');
+        }
+      }
+
       const result = await sendMessage(
         content,
         type,
         systemInstructions,
         messages,
-        activeSessionId
+        currentSessionId
       );
 
       if (result) {
-        console.log('[useChat] Message sent successfully for session:', activeSessionId);
+        console.log('[useChat] Message sent successfully for session:', currentSessionId);
         setMessages(result.messages);
-        updateCache(activeSessionId, result.messages);
+        handleCacheUpdate(currentSessionId, result.messages);
         return result;
       }
     } catch (error) {
@@ -91,6 +113,7 @@ export const useChat = (activeSessionId: string | null) => {
         description: "Failed to send message",
         variant: "destructive"
       });
+      throw error; // Propagate error for proper handling
     }
   };
 
@@ -99,8 +122,10 @@ export const useChat = (activeSessionId: string | null) => {
     isLoading,
     isLoadingMore,
     handleSendMessage,
-    loadMoreMessages: () => 
-      loadMoreMessages(activeSessionId, messages, setMessages, updateCache),
+    loadMoreMessages: useCallback(() => 
+      loadMoreMessages(activeSessionId, messages, setMessages, handleCacheUpdate),
+      [activeSessionId, messages, loadMoreMessages, handleCacheUpdate]
+    ),
     setMessages
   };
 };

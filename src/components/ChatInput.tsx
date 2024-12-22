@@ -24,7 +24,11 @@ const ChatInput = ({
   const {
     handleSubmit: originalHandleSubmit,
     isProcessing
-  } = useMessageSubmission({ onSend });
+  } = useMessageSubmission({ 
+    onSend,
+    message,
+    setMessage
+  });
 
   const {
     handleTranscriptionComplete,
@@ -37,7 +41,11 @@ const ChatInput = ({
   const handleSubmit = async () => {
     console.log('[ChatInput] Handling submit with message:', message);
     if (message.trim()) {
-      await originalHandleSubmit();
+      try {
+        await originalHandleSubmit();
+      } catch (error) {
+        console.error('[ChatInput] Error submitting message:', error);
+      }
     }
   };
 
