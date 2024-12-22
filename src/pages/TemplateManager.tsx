@@ -1,6 +1,6 @@
 import { TemplateManager as TemplateManagerComponent } from '@/components/template/TemplateManager';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { SidebarToggle } from '@/components/patients/SidebarToggle';
+import { SidebarToggle } from '@/components/SidebarToggle';
 import { useEffect } from 'react';
 import { useSidebar } from '@/contexts/SidebarContext';
 

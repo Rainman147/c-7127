@@ -2,7 +2,7 @@ import { PatientDialog } from "@/components/patients/PatientDialog";
 import { PatientListHeader } from "@/components/patients/list/PatientListHeader";
 import { PatientSearch } from "@/components/patients/list/PatientSearch";
 import { PatientGrid } from "@/components/patients/list/PatientGrid";
-import { SidebarToggle } from "@/components/patients/SidebarToggle";
+import { SidebarToggle } from "@/components/SidebarToggle";
 import { usePatientPage } from "@/hooks/usePatientPage";
 import { useEffect } from "react";
 

@@ -6,9 +6,14 @@ import { cn } from "@/lib/utils";
 export const SidebarToggle = () => {
   const { isOpen, open } = useSidebar();
 
+  console.log('[SidebarToggle] Rendering with state:', { isOpen });
+
   return (
     <Button
-      onClick={open}
+      onClick={() => {
+        console.log('[SidebarToggle] Toggle clicked, current state:', { isOpen });
+        open();
+      }}
       variant="ghost"
       size="icon"
       className={cn(
