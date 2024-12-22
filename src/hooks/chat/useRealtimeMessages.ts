@@ -38,9 +38,13 @@ const isDatabaseMessage = (obj: any): obj is DatabaseMessage => {
   return obj && 
     typeof obj === 'object' && 
     'id' in obj && 
+    typeof obj.id === 'string' &&
     'content' in obj && 
+    typeof obj.content === 'string' &&
     'sender' in obj &&
-    'type' in obj;
+    typeof obj.sender === 'string' &&
+    'type' in obj &&
+    typeof obj.type === 'string';
 };
 
 export const useRealtimeMessages = (
@@ -67,12 +71,12 @@ export const useRealtimeMessages = (
           filter: `chat_id=eq.${currentChatId}`
         },
         (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
-          // First check if we have new data and log it safely
           const newData = payload.new;
+          
           console.log('[useRealtimeMessages] Received update:', {
             event: payload.eventType,
-            messageId: newData ? newData.id : undefined,
-            sequence: newData ? newData.sequence : undefined
+            messageId: isDatabaseMessage(newData) ? newData.id : undefined,
+            sequence: isDatabaseMessage(newData) ? newData.sequence : undefined
           });
           
           try {
