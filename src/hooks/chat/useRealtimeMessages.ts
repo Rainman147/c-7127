@@ -16,12 +16,19 @@ const validateAndMergeMessages = (localMessages: Message[], newMessage: Message)
     return localMessages;
   }
 
-  return [...localMessages, newMessage].sort((a, b) => {
+  const updatedMessages = [...localMessages, newMessage].sort((a, b) => {
     if (a.sequence !== b.sequence) {
       return (a.sequence || 0) - (b.sequence || 0);
     }
     return new Date(a.timestamp || '').getTime() - new Date(b.timestamp || '').getTime();
   });
+
+  console.log('[useRealtimeMessages] Messages sorted:', {
+    messageCount: updatedMessages.length,
+    sequences: updatedMessages.map(m => m.sequence)
+  });
+
+  return updatedMessages;
 };
 
 export const useRealtimeMessages = (
@@ -48,14 +55,18 @@ export const useRealtimeMessages = (
           filter: `chat_id=eq.${currentChatId}`
         },
         async (payload) => {
-          console.log('[useRealtimeMessages] Received update:', payload);
+          console.log('[useRealtimeMessages] Received update:', {
+            event: payload.eventType,
+            messageId: payload.new?.id,
+            sequence: payload.new?.sequence
+          });
           
           try {
             if (payload.eventType === 'INSERT') {
               const newMessage = {
                 ...payload.new,
-                sequence: messages.length + 1,
-                timestamp: new Date().toISOString()
+                sequence: payload.new.sequence || messages.length + 1,
+                timestamp: payload.new.timestamp || new Date().toISOString()
               } as Message;
               
               console.log('[useRealtimeMessages] Processing new message:', {
@@ -67,6 +78,7 @@ export const useRealtimeMessages = (
               const updatedMessages = validateAndMergeMessages(messages, newMessage);
               setMessages(updatedMessages);
               updateCache(currentChatId, updatedMessages);
+              
             } else if (payload.eventType === 'UPDATE') {
               console.log('[useRealtimeMessages] Processing message update:', payload.new.id);
               

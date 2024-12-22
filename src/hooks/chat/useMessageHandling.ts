@@ -1,89 +1,87 @@
-import { useState, useRef } from 'react';
-import { toast } from '@/hooks/use-toast';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
-import { useMessagePersistence } from './useMessagePersistence';
 
 export const useMessageHandling = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const { saveMessageToSupabase } = useMessagePersistence();
+  const { toast } = useToast();
 
   const handleSendMessage = async (
-    content: string, 
+    content: string,
     type: 'text' | 'audio' = 'text',
     systemInstructions?: string,
-    currentMessages: Message[] = [],
-    currentChatId?: string
+    existingMessages: Message[] = [],
+    chatId: string
   ) => {
-    if (!content.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a message",
-        variant: "destructive"
-      });
-      return null;
-    }
+    console.log('[useMessageHandling] Sending message:', { 
+      contentLength: content.length,
+      type,
+      chatId,
+      existingMessagesCount: existingMessages.length 
+    });
 
     setIsLoading(true);
 
     try {
-      const userMessage: Message = { role: 'user', content, type };
-      const newMessages = [...currentMessages, userMessage];
+      // Calculate next sequence number
+      const nextSequence = existingMessages.length + 1;
+      const timestamp = new Date().toISOString();
 
-      // Save message to Supabase
-      const { chatId, messageId } = await saveMessageToSupabase(userMessage, currentChatId);
-      userMessage.id = messageId;
-
-      // Cancel any ongoing stream
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-
-      // Create new abort controller for this stream
-      abortControllerRef.current = new AbortController();
-
-      // Call Gemini function with system instructions
-      const { data, error } = await supabase.functions.invoke('gemini', {
-        body: { 
-          messages: newMessages,
-          systemInstructions: systemInstructions 
-        }
+      console.log('[useMessageHandling] Calculated message metadata:', {
+        sequence: nextSequence,
+        timestamp
       });
 
-      if (error) throw error;
-      if (!data) throw new Error('No response from Gemini API');
+      // Insert user message
+      const { data: userMessage, error: userMessageError } = await supabase
+        .from('messages')
+        .insert({
+          chat_id: chatId,
+          content,
+          sender: 'user',
+          type,
+          sequence: nextSequence,
+          timestamp
+        })
+        .select()
+        .single();
 
-      // Create and save assistant message
-      if (data.content) {
-        const assistantMessage: Message = {
-          role: 'assistant',
-          content: data.content,
-          isStreaming: false
-        };
-        
-        const { messageId: assistantMessageId } = await saveMessageToSupabase(assistantMessage, chatId);
-        assistantMessage.id = assistantMessageId;
-        
-        return {
-          messages: [...newMessages, assistantMessage],
-          chatId
-        };
-      }
+      if (userMessageError) throw userMessageError;
+
+      console.log('[useMessageHandling] User message inserted:', {
+        messageId: userMessage.id,
+        sequence: nextSequence
+      });
+
+      // Get updated messages
+      const { data: messages, error: messagesError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_id', chatId)
+        .order('sequence', { ascending: true })
+        .order('timestamp', { ascending: true });
+
+      if (messagesError) throw messagesError;
+
+      console.log('[useMessageHandling] Retrieved updated messages:', {
+        count: messages.length,
+        sequences: messages.map(m => m.sequence)
+      });
 
       return {
-        messages: newMessages,
-        chatId
+        messages,
+        userMessage
       };
 
-    } catch (error: any) {
-      console.error('Error sending message:', error);
+    } catch (error) {
+      console.error('[useMessageHandling] Error sending message:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: "Failed to send message",
         variant: "destructive"
       });
-      return null;
+      throw error;
     } finally {
       setIsLoading(false);
     }

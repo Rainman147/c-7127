@@ -1,36 +1,29 @@
-import { useRef } from 'react';
+import { useState } from 'react';
 import type { Message } from '@/types/chat';
 
-type MessageCache = {
-  [chatId: string]: {
-    messages: Message[];
-    lastFetched: number;
-  };
+type ChatCache = {
+  [chatId: string]: Message[];
 };
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
 export const useChatCache = () => {
-  const messageCache = useRef<MessageCache>({});
+  const [cache, setCache] = useState<ChatCache>({});
 
   const getCachedMessages = (chatId: string) => {
-    const cachedData = messageCache.current[chatId];
-    const now = Date.now();
-    
-    if (cachedData && (now - cachedData.lastFetched) < CACHE_DURATION) {
-      console.log('[useChatCache] Cache hit for chat:', chatId);
-      return cachedData.messages;
-    }
-    
-    return null;
+    console.log('[useChatCache] Retrieving messages for chat:', chatId);
+    return cache[chatId];
   };
 
   const updateCache = (chatId: string, messages: Message[]) => {
-    console.log('[useChatCache] Updating cache for chat:', chatId);
-    messageCache.current[chatId] = {
-      messages,
-      lastFetched: Date.now()
-    };
+    console.log('[useChatCache] Updating cache for chat:', {
+      chatId,
+      messageCount: messages.length,
+      sequences: messages.map(m => m.sequence)
+    });
+    
+    setCache(prevCache => ({
+      ...prevCache,
+      [chatId]: messages
+    }));
   };
 
   return {
