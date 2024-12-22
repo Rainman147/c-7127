@@ -39,7 +39,8 @@ const isDatabaseMessage = (obj: any): obj is DatabaseMessage => {
     typeof obj === 'object' && 
     'id' in obj && 
     'content' in obj && 
-    'sender' in obj;
+    'sender' in obj &&
+    'type' in obj;
 };
 
 export const useRealtimeMessages = (
@@ -73,7 +74,7 @@ export const useRealtimeMessages = (
           });
           
           try {
-            if (payload.eventType === 'INSERT' && payload.new && isDatabaseMessage(payload.new)) {
+            if (payload.eventType === 'INSERT' && isDatabaseMessage(payload.new)) {
               const dbMessage = payload.new;
               
               const newMessage: Message = {
@@ -95,7 +96,7 @@ export const useRealtimeMessages = (
               setMessages(updatedMessages);
               updateCache(currentChatId, updatedMessages);
               
-            } else if (payload.eventType === 'UPDATE' && payload.new && isDatabaseMessage(payload.new)) {
+            } else if (payload.eventType === 'UPDATE' && isDatabaseMessage(payload.new)) {
               const dbMessage = payload.new;
               console.log('[useRealtimeMessages] Processing message update:', dbMessage.id);
               
