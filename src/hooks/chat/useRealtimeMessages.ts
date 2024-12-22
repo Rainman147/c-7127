@@ -94,7 +94,8 @@ export const useRealtimeMessages = (
                 msg.id === dbMessage.id ? {
                   ...msg,
                   content: dbMessage.content,
-                  type: dbMessage.type as 'text' | 'audio'
+                  type: dbMessage.type as 'text' | 'audio',
+                  sequence: dbMessage.sequence || msg.sequence
                 } : msg
               );
               setMessages(updatedMessages);
