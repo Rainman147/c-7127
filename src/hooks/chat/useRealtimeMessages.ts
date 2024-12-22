@@ -33,6 +33,15 @@ const validateAndMergeMessages = (localMessages: Message[], newMessage: Message)
   return updatedMessages;
 };
 
+// Type guard to check if an object is a valid DatabaseMessage
+const isDatabaseMessage = (obj: any): obj is DatabaseMessage => {
+  return obj && 
+    typeof obj === 'object' && 
+    'id' in obj && 
+    'content' in obj && 
+    'sender' in obj;
+};
+
 export const useRealtimeMessages = (
   currentChatId: string | null,
   messages: Message[],
@@ -64,7 +73,7 @@ export const useRealtimeMessages = (
           });
           
           try {
-            if (payload.eventType === 'INSERT' && payload.new && 'id' in payload.new) {
+            if (payload.eventType === 'INSERT' && payload.new && isDatabaseMessage(payload.new)) {
               const dbMessage = payload.new;
               
               const newMessage: Message = {
@@ -86,7 +95,7 @@ export const useRealtimeMessages = (
               setMessages(updatedMessages);
               updateCache(currentChatId, updatedMessages);
               
-            } else if (payload.eventType === 'UPDATE' && payload.new && 'id' in payload.new) {
+            } else if (payload.eventType === 'UPDATE' && payload.new && isDatabaseMessage(payload.new)) {
               const dbMessage = payload.new;
               console.log('[useRealtimeMessages] Processing message update:', dbMessage.id);
               
