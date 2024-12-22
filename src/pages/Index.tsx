@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useSessionParams } from '@/hooks/routing/useSessionParams';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { SidebarToggle } from '@/components/SidebarToggle';
 
 const ChatContent = () => {
   const { isOpen } = useSidebar();
@@ -91,6 +92,7 @@ const ChatContent = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] relative">
+      <SidebarToggle />
       <ChatHeader 
         isSidebarOpen={isOpen}
         onTemplateChange={handleTemplateChange}
