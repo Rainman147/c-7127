@@ -64,7 +64,7 @@ export const useRealtimeMessages = (
           });
           
           try {
-            if (payload.eventType === 'INSERT' && payload.new) {
+            if (payload.eventType === 'INSERT' && payload.new && 'id' in payload.new) {
               const dbMessage = payload.new;
               
               const newMessage: Message = {
@@ -86,7 +86,7 @@ export const useRealtimeMessages = (
               setMessages(updatedMessages);
               updateCache(currentChatId, updatedMessages);
               
-            } else if (payload.eventType === 'UPDATE' && payload.new) {
+            } else if (payload.eventType === 'UPDATE' && payload.new && 'id' in payload.new) {
               const dbMessage = payload.new;
               console.log('[useRealtimeMessages] Processing message update:', dbMessage.id);
               
