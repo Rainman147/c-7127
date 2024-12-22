@@ -5,7 +5,7 @@ import { useChatSessions } from "@/hooks/useChatSessions";
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 interface UseMessageSubmissionProps {
-  onSend: (message: string, type?: 'text' | 'audio') => void;
+  onSend: (message: string, type?: 'text' | 'audio') => Promise<any>;
 }
 
 export const useMessageSubmission = ({ onSend }: UseMessageSubmissionProps) => {

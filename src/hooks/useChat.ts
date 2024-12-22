@@ -10,7 +10,7 @@ export const useChat = (activeSessionId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const { toast } = useToast();
   
-  const { isLoading, handleSendMessage } = useMessageHandling();
+  const { isLoading, handleSendMessage: sendMessage } = useMessageHandling();
   const { getCachedMessages, updateCache } = useChatCache();
   const { loadMessages, loadMoreMessages, isLoadingMore } = useMessageLoading();
 
@@ -70,7 +70,7 @@ export const useChat = (activeSessionId: string | null) => {
     console.log('[useChat] Sending message:', { content, type, systemInstructions });
     
     try {
-      const result = await handleSendMessage(
+      const result = await sendMessage(
         content,
         type,
         systemInstructions,
