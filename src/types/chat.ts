@@ -4,4 +4,6 @@ export type Message = {
   isStreaming?: boolean;
   type?: 'text' | 'audio';
   id?: string;
+  sequence?: number;
+  timestamp?: string;
 };

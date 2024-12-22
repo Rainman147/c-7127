@@ -7,6 +7,31 @@ import { useToast } from './use-toast';
 import { useSessionCoordinator } from './chat/useSessionCoordinator';
 import type { Message } from '@/types/chat';
 
+const sortMessages = (messages: Message[]) => {
+  return [...messages].sort((a, b) => {
+    if (a.sequence !== b.sequence) {
+      return (a.sequence || 0) - (b.sequence || 0);
+    }
+    return new Date(a.timestamp || '').getTime() - new Date(b.timestamp || '').getTime();
+  });
+};
+
+const validateAndMergeMessages = (localMessages: Message[], newMessage: Message) => {
+  console.log('[useChat] Validating new message:', { 
+    messageId: newMessage.id,
+    sequence: newMessage.sequence,
+    timestamp: newMessage.timestamp
+  });
+
+  const isDuplicate = localMessages.some(msg => msg.id === newMessage.id);
+  if (isDuplicate) {
+    console.log('[useChat] Duplicate message detected:', newMessage.id);
+    return localMessages;
+  }
+
+  return sortMessages([...localMessages, newMessage]);
+};
+
 export const useChat = (activeSessionId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const { toast } = useToast();
@@ -15,21 +40,17 @@ export const useChat = (activeSessionId: string | null) => {
   const { loadMessages, loadMoreMessages, isLoadingMore } = useMessageLoading();
   const { ensureSession } = useSessionCoordinator();
 
-  // Memoize these callbacks to prevent infinite loops
   const handleCacheUpdate = useCallback((sessionId: string, newMessages: Message[]) => {
     console.log('[useChat] Updating cache for session:', sessionId);
-    updateCache(sessionId, newMessages);
+    updateCache(sessionId, sortMessages(newMessages));
   }, [updateCache]);
 
   const handleMessagesLoad = useCallback(async (sessionId: string) => {
     console.log('[useChat] Loading messages for session:', sessionId);
-    return await loadMessages(sessionId, handleCacheUpdate);
+    const loadedMessages = await loadMessages(sessionId, handleCacheUpdate);
+    return sortMessages(loadedMessages);
   }, [loadMessages]);
 
-  // Set up real-time message updates
-  useRealtimeMessages(activeSessionId, messages, setMessages, handleCacheUpdate);
-
-  // Load messages when activeSessionId changes
   useEffect(() => {
     console.log('[useChat] Active session changed:', activeSessionId);
     let isMounted = true;
@@ -42,11 +63,10 @@ export const useChat = (activeSessionId: string | null) => {
       }
 
       try {
-        // Check cache first
         const cachedMessages = getCachedMessages(activeSessionId);
         if (cachedMessages && isMounted) {
           console.log('[useChat] Using cached messages for session:', activeSessionId);
-          setMessages(cachedMessages);
+          setMessages(sortMessages(cachedMessages));
         } else {
           console.log('[useChat] Fetching messages from database for session:', activeSessionId);
           const loadedMessages = await handleMessagesLoad(activeSessionId);
@@ -81,7 +101,6 @@ export const useChat = (activeSessionId: string | null) => {
     console.log('[useChat] Sending message:', { content, type, systemInstructions });
     
     try {
-      // Ensure session exists before sending message
       const currentSessionId = activeSessionId || await ensureSession();
       if (!currentSessionId) {
         throw new Error('Failed to create or get chat session');
@@ -97,8 +116,9 @@ export const useChat = (activeSessionId: string | null) => {
 
       if (result) {
         console.log('[useChat] Message sent successfully for session:', currentSessionId);
-        setMessages(result.messages);
-        handleCacheUpdate(currentSessionId, result.messages);
+        const sortedMessages = sortMessages(result.messages);
+        setMessages(sortedMessages);
+        handleCacheUpdate(currentSessionId, sortedMessages);
         return result;
       }
     } catch (error) {

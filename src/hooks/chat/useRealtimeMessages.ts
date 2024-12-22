@@ -3,6 +3,27 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
 
+const validateAndMergeMessages = (localMessages: Message[], newMessage: Message) => {
+  console.log('[useRealtimeMessages] Validating new message:', { 
+    messageId: newMessage.id,
+    sequence: newMessage.sequence,
+    timestamp: newMessage.timestamp
+  });
+
+  const isDuplicate = localMessages.some(msg => msg.id === newMessage.id);
+  if (isDuplicate) {
+    console.log('[useRealtimeMessages] Duplicate message detected:', newMessage.id);
+    return localMessages;
+  }
+
+  return [...localMessages, newMessage].sort((a, b) => {
+    if (a.sequence !== b.sequence) {
+      return (a.sequence || 0) - (b.sequence || 0);
+    }
+    return new Date(a.timestamp || '').getTime() - new Date(b.timestamp || '').getTime();
+  });
+};
+
 export const useRealtimeMessages = (
   currentChatId: string | null,
   messages: Message[],
@@ -31,11 +52,24 @@ export const useRealtimeMessages = (
           
           try {
             if (payload.eventType === 'INSERT') {
-              const newMessage = payload.new as Message;
-              const updatedMessages = [...messages, newMessage];
+              const newMessage = {
+                ...payload.new,
+                sequence: messages.length + 1,
+                timestamp: new Date().toISOString()
+              } as Message;
+              
+              console.log('[useRealtimeMessages] Processing new message:', {
+                id: newMessage.id,
+                sequence: newMessage.sequence,
+                timestamp: newMessage.timestamp
+              });
+
+              const updatedMessages = validateAndMergeMessages(messages, newMessage);
               setMessages(updatedMessages);
               updateCache(currentChatId, updatedMessages);
             } else if (payload.eventType === 'UPDATE') {
+              console.log('[useRealtimeMessages] Processing message update:', payload.new.id);
+              
               const updatedMessages = messages.map(msg => 
                 msg.id === payload.new.id ? { ...msg, ...payload.new } : msg
               );
