@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
 import type { DatabaseMessage } from '@/types/database/messages';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 const validateAndMergeMessages = (localMessages: Message[], newMessage: Message) => {
   console.log('[useRealtimeMessages] Validating new message:', { 
@@ -55,7 +56,7 @@ export const useRealtimeMessages = (
           table: 'messages',
           filter: `chat_id=eq.${currentChatId}`
         },
-        async (payload) => {
+        async (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
           console.log('[useRealtimeMessages] Received update:', {
             event: payload.eventType,
             messageId: payload.new?.id,
@@ -63,10 +64,9 @@ export const useRealtimeMessages = (
           });
           
           try {
-            if (payload.eventType === 'INSERT') {
-              const dbMessage = payload.new as DatabaseMessage;
-              if (!dbMessage) return;
-
+            if (payload.eventType === 'INSERT' && payload.new) {
+              const dbMessage = payload.new;
+              
               const newMessage: Message = {
                 role: dbMessage.sender as 'user' | 'assistant',
                 content: dbMessage.content,
@@ -86,12 +86,12 @@ export const useRealtimeMessages = (
               setMessages(updatedMessages);
               updateCache(currentChatId, updatedMessages);
               
-            } else if (payload.eventType === 'UPDATE') {
-              const dbMessage = payload.new as DatabaseMessage;
-              console.log('[useRealtimeMessages] Processing message update:', dbMessage?.id);
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+              const dbMessage = payload.new;
+              console.log('[useRealtimeMessages] Processing message update:', dbMessage.id);
               
               const updatedMessages = messages.map(msg => 
-                msg.id === dbMessage?.id ? {
+                msg.id === dbMessage.id ? {
                   ...msg,
                   content: dbMessage.content,
                   type: dbMessage.type as 'text' | 'audio'
