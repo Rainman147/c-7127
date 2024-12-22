@@ -4,11 +4,12 @@ import { ChatHeader } from '@/components/ChatHeader';
 import MessageList from '@/components/MessageList';
 import ChatInput from '@/components/ChatInput';
 import { useSidebar } from '@/contexts/SidebarContext';
-import { cn } from '@/lib/utils';
+import { SidebarToggle } from '@/components/SidebarToggle';
 import { useSessionParams } from '@/hooks/routing/useSessionParams';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { SidebarToggle } from '@/components/SidebarToggle';
+import { useSessionCoordinator } from '@/hooks/chat/useSessionCoordinator';
+import type { Template } from '@/components/template/templateTypes';
 
 const ChatContent = () => {
   const { isOpen } = useSidebar();
@@ -25,7 +26,8 @@ const ChatContent = () => {
   } = useSessionParams();
   
   const { messages, isLoading, handleSendMessage } = useChat(sessionId);
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const { handleTemplateChange: coordinateTemplateChange } = useSessionCoordinator();
 
   // Handle invalid routes
   useEffect(() => {
@@ -36,7 +38,7 @@ const ChatContent = () => {
         description: "The requested chat session could not be found.",
         variant: "destructive"
       });
-      navigate('/c/new');
+      navigate('/');
       return;
     }
 
@@ -75,20 +77,11 @@ const ChatContent = () => {
     messagesCount: messages.length 
   });
 
-  const handleTemplateChange = useCallback((template: any) => {
+  const handleTemplateChange = useCallback(async (template: Template) => {
     console.log('[Index] Template changed:', template);
     setSelectedTemplate(template);
-    
-    // Update URL with new template
-    const searchParams = new URLSearchParams();
-    if (template?.id) searchParams.set('template', template.id);
-    if (patientId) searchParams.set('patient', patientId);
-    
-    navigate({
-      pathname: sessionId ? `/c/${sessionId}` : '/c/new',
-      search: searchParams.toString()
-    });
-  }, [navigate, sessionId, patientId]); 
+    await coordinateTemplateChange(template, sessionId);
+  }, [coordinateTemplateChange, sessionId]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] relative">

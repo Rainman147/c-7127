@@ -4,17 +4,16 @@ import { useChatCache } from './chat/useChatCache';
 import { useRealtimeMessages } from './chat/useRealtimeMessages';
 import { useMessageLoading } from './chat/useMessageLoading';
 import { useToast } from './use-toast';
-import { useChatSessions } from './useChatSessions';
+import { useSessionCoordinator } from './chat/useSessionCoordinator';
 import type { Message } from '@/types/chat';
 
 export const useChat = (activeSessionId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const { toast } = useToast();
-  const { createSession } = useChatSessions();
-  
   const { isLoading, handleSendMessage: sendMessage } = useMessageHandling();
   const { getCachedMessages, updateCache } = useChatCache();
   const { loadMessages, loadMoreMessages, isLoadingMore } = useMessageLoading();
+  const { ensureSession } = useSessionCoordinator();
 
   // Memoize these callbacks to prevent infinite loops
   const handleCacheUpdate = useCallback((sessionId: string, newMessages: Message[]) => {
@@ -82,14 +81,10 @@ export const useChat = (activeSessionId: string | null) => {
     console.log('[useChat] Sending message:', { content, type, systemInstructions });
     
     try {
-      // Create session if none exists
-      let currentSessionId = activeSessionId;
+      // Ensure session exists before sending message
+      const currentSessionId = activeSessionId || await ensureSession();
       if (!currentSessionId) {
-        console.log('[useChat] No active session, creating new one');
-        currentSessionId = await createSession();
-        if (!currentSessionId) {
-          throw new Error('Failed to create new chat session');
-        }
+        throw new Error('Failed to create or get chat session');
       }
 
       const result = await sendMessage(
@@ -113,7 +108,7 @@ export const useChat = (activeSessionId: string | null) => {
         description: "Failed to send message",
         variant: "destructive"
       });
-      throw error; // Propagate error for proper handling
+      throw error;
     }
   };
 
