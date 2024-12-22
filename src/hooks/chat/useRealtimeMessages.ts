@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
+import type { DatabaseMessage } from '@/types/database/messages';
 
 const validateAndMergeMessages = (localMessages: Message[], newMessage: Message) => {
   console.log('[useRealtimeMessages] Validating new message:', { 
@@ -63,7 +64,7 @@ export const useRealtimeMessages = (
           
           try {
             if (payload.eventType === 'INSERT') {
-              const dbMessage = payload.new;
+              const dbMessage = payload.new as DatabaseMessage;
               if (!dbMessage) return;
 
               const newMessage: Message = {
@@ -72,7 +73,7 @@ export const useRealtimeMessages = (
                 type: dbMessage.type as 'text' | 'audio',
                 id: dbMessage.id,
                 sequence: dbMessage.sequence || messages.length + 1,
-                timestamp: dbMessage.timestamp || new Date().toISOString()
+                timestamp: dbMessage.timestamp || dbMessage.created_at
               };
               
               console.log('[useRealtimeMessages] Processing new message:', {
@@ -86,13 +87,14 @@ export const useRealtimeMessages = (
               updateCache(currentChatId, updatedMessages);
               
             } else if (payload.eventType === 'UPDATE') {
-              console.log('[useRealtimeMessages] Processing message update:', payload.new?.id);
+              const dbMessage = payload.new as DatabaseMessage;
+              console.log('[useRealtimeMessages] Processing message update:', dbMessage?.id);
               
               const updatedMessages = messages.map(msg => 
-                msg.id === payload.new?.id ? {
+                msg.id === dbMessage?.id ? {
                   ...msg,
-                  content: payload.new.content,
-                  type: payload.new.type as 'text' | 'audio'
+                  content: dbMessage.content,
+                  type: dbMessage.type as 'text' | 'audio'
                 } : msg
               );
               setMessages(updatedMessages);

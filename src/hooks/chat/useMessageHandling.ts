@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
+import type { DatabaseMessage } from '@/types/database/messages';
 
 export const useMessageHandling = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -65,13 +66,13 @@ export const useMessageHandling = () => {
       if (messagesError) throw messagesError;
 
       // Transform database messages to Message type
-      const transformedMessages: Message[] = messages.map(msg => ({
+      const transformedMessages: Message[] = (messages as DatabaseMessage[]).map(msg => ({
         role: msg.sender as 'user' | 'assistant',
         content: msg.content,
         type: msg.type as 'text' | 'audio',
         id: msg.id,
-        sequence: msg.sequence,
-        timestamp: msg.timestamp
+        sequence: msg.sequence || messages.indexOf(msg) + 1,
+        timestamp: msg.timestamp || msg.created_at
       }));
 
       console.log('[useMessageHandling] Retrieved updated messages:', {
@@ -83,11 +84,11 @@ export const useMessageHandling = () => {
         messages: transformedMessages,
         userMessage: {
           role: 'user' as const,
-          content: userMessage.content,
-          type: userMessage.type as 'text' | 'audio',
-          id: userMessage.id,
-          sequence: userMessage.sequence,
-          timestamp: userMessage.timestamp
+          content: (userMessage as DatabaseMessage).content,
+          type: (userMessage as DatabaseMessage).type as 'text' | 'audio',
+          id: (userMessage as DatabaseMessage).id,
+          sequence: (userMessage as DatabaseMessage).sequence || nextSequence,
+          timestamp: (userMessage as DatabaseMessage).timestamp || timestamp
         }
       };
 
