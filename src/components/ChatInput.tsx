@@ -5,7 +5,7 @@ import ChatInputActions from "./chat/ChatInputActions";
 import { useState } from "react";
 
 interface ChatInputProps {
-  onSend: (message: string, type?: 'text' | 'audio') => void;
+  onSend: (message: string, type?: 'text' | 'audio') => Promise<any>;
   onTranscriptionComplete: (text: string) => void;
   onTranscriptionUpdate?: (text: string) => void;
   isLoading?: boolean;
@@ -37,7 +37,7 @@ const ChatInput = ({
   const handleSubmit = async () => {
     console.log('[ChatInput] Handling submit with message:', message);
     if (message.trim()) {
-      originalHandleSubmit();
+      await originalHandleSubmit();
     }
   };
 
@@ -45,7 +45,7 @@ const ChatInput = ({
     if (e.key === 'Enter' && !e.shiftKey && !isLoading && !isProcessing) {
       console.log('[ChatInput] Enter key pressed, submitting message');
       e.preventDefault();
-      handleSubmit();
+      await handleSubmit();
     }
   };
 
