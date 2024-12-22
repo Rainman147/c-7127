@@ -22,6 +22,16 @@ export const useMessageHandling = () => {
       existingMessagesCount: existingMessages.length 
     });
 
+    if (!content.trim()) {
+      console.error('[useMessageHandling] Empty message content');
+      throw new Error('Message content cannot be empty');
+    }
+
+    if (!chatId) {
+      console.error('[useMessageHandling] No chat ID provided');
+      throw new Error('Chat ID is required');
+    }
+
     setIsLoading(true);
 
     try {
@@ -48,7 +58,10 @@ export const useMessageHandling = () => {
         .select()
         .single();
 
-      if (userMessageError) throw userMessageError;
+      if (userMessageError) {
+        console.error('[useMessageHandling] Error inserting user message:', userMessageError);
+        throw userMessageError;
+      }
 
       console.log('[useMessageHandling] User message inserted:', {
         messageId: userMessage.id,
@@ -63,7 +76,10 @@ export const useMessageHandling = () => {
         .order('sequence', { ascending: true })
         .order('timestamp', { ascending: true });
 
-      if (messagesError) throw messagesError;
+      if (messagesError) {
+        console.error('[useMessageHandling] Error fetching messages:', messagesError);
+        throw messagesError;
+      }
 
       // Transform database messages to Message type
       const transformedMessages: Message[] = (messages as DatabaseMessage[]).map(msg => ({
@@ -96,7 +112,7 @@ export const useMessageHandling = () => {
       console.error('[useMessageHandling] Error sending message:', error);
       toast({
         title: "Error",
-        description: "Failed to send message",
+        description: "Failed to send message. Please try again.",
         variant: "destructive"
       });
       throw error;
