@@ -6,5 +6,4 @@ export type DatabaseMessage = {
   type: string;
   created_at: string;
   sequence: number | null;
-  timestamp?: string;
 };

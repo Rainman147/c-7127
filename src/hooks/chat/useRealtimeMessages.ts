@@ -9,7 +9,7 @@ const validateAndMergeMessages = (localMessages: Message[], newMessage: Message)
   console.log('[useRealtimeMessages] Validating new message:', { 
     messageId: newMessage.id,
     sequence: newMessage.sequence,
-    timestamp: newMessage.timestamp
+    created_at: newMessage.created_at
   });
 
   const isDuplicate = localMessages.some(msg => msg.id === newMessage.id);
@@ -22,7 +22,7 @@ const validateAndMergeMessages = (localMessages: Message[], newMessage: Message)
     if (a.sequence !== b.sequence) {
       return (a.sequence || 0) - (b.sequence || 0);
     }
-    return new Date(a.timestamp || '').getTime() - new Date(b.timestamp || '').getTime();
+    return new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime();
   });
 
   console.log('[useRealtimeMessages] Messages sorted:', {
@@ -97,13 +97,13 @@ export const useRealtimeMessages = (
                 type: newData.type as 'text' | 'audio',
                 id: newData.id,
                 sequence: newData.sequence || messages.length + 1,
-                timestamp: newData.created_at // Changed from timestamp to created_at
+                created_at: newData.created_at
               };
               
               console.log('[useRealtimeMessages] Processing new message:', {
                 id: newMessage.id,
                 sequence: newMessage.sequence,
-                timestamp: newMessage.timestamp
+                created_at: newMessage.created_at
               });
 
               const updatedMessages = validateAndMergeMessages(messages, newMessage);
@@ -119,7 +119,7 @@ export const useRealtimeMessages = (
                   content: newData.content,
                   type: newData.type as 'text' | 'audio',
                   sequence: newData.sequence || msg.sequence,
-                  timestamp: newData.created_at // Changed from timestamp to created_at
+                  created_at: newData.created_at
                 } : msg
               );
               setMessages(updatedMessages);

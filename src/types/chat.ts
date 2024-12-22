@@ -5,5 +5,5 @@ export type Message = {
   type?: 'text' | 'audio';
   id?: string;
   sequence?: number;
-  timestamp?: string;
+  created_at?: string;
 };
