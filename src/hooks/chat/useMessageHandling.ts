@@ -9,10 +9,10 @@ export const useMessageHandling = () => {
 
   const handleSendMessage = async (
     content: string,
-    type: 'text' | 'audio' = 'text',
-    systemInstructions?: string,
+    type: 'text' | 'audio',
+    chatId: string,
     existingMessages: Message[] = [],
-    chatId: string
+    systemInstructions?: string
   ) => {
     console.log('[useMessageHandling] Sending message:', { 
       contentLength: content.length,
@@ -64,14 +64,31 @@ export const useMessageHandling = () => {
 
       if (messagesError) throw messagesError;
 
+      // Transform database messages to Message type
+      const transformedMessages: Message[] = messages.map(msg => ({
+        role: msg.sender as 'user' | 'assistant',
+        content: msg.content,
+        type: msg.type as 'text' | 'audio',
+        id: msg.id,
+        sequence: msg.sequence,
+        timestamp: msg.timestamp
+      }));
+
       console.log('[useMessageHandling] Retrieved updated messages:', {
-        count: messages.length,
-        sequences: messages.map(m => m.sequence)
+        count: transformedMessages.length,
+        sequences: transformedMessages.map(m => m.sequence)
       });
 
       return {
-        messages,
-        userMessage
+        messages: transformedMessages,
+        userMessage: {
+          role: 'user' as const,
+          content: userMessage.content,
+          type: userMessage.type as 'text' | 'audio',
+          id: userMessage.id,
+          sequence: userMessage.sequence,
+          timestamp: userMessage.timestamp
+        }
       };
 
     } catch (error) {

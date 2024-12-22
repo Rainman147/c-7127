@@ -63,11 +63,17 @@ export const useRealtimeMessages = (
           
           try {
             if (payload.eventType === 'INSERT') {
-              const newMessage = {
-                ...payload.new,
-                sequence: payload.new.sequence || messages.length + 1,
-                timestamp: payload.new.timestamp || new Date().toISOString()
-              } as Message;
+              const dbMessage = payload.new;
+              if (!dbMessage) return;
+
+              const newMessage: Message = {
+                role: dbMessage.sender as 'user' | 'assistant',
+                content: dbMessage.content,
+                type: dbMessage.type as 'text' | 'audio',
+                id: dbMessage.id,
+                sequence: dbMessage.sequence || messages.length + 1,
+                timestamp: dbMessage.timestamp || new Date().toISOString()
+              };
               
               console.log('[useRealtimeMessages] Processing new message:', {
                 id: newMessage.id,
@@ -80,10 +86,14 @@ export const useRealtimeMessages = (
               updateCache(currentChatId, updatedMessages);
               
             } else if (payload.eventType === 'UPDATE') {
-              console.log('[useRealtimeMessages] Processing message update:', payload.new.id);
+              console.log('[useRealtimeMessages] Processing message update:', payload.new?.id);
               
               const updatedMessages = messages.map(msg => 
-                msg.id === payload.new.id ? { ...msg, ...payload.new } : msg
+                msg.id === payload.new?.id ? {
+                  ...msg,
+                  content: payload.new.content,
+                  type: payload.new.type as 'text' | 'audio'
+                } : msg
               );
               setMessages(updatedMessages);
               updateCache(currentChatId, updatedMessages);

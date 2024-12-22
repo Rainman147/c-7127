@@ -109,9 +109,9 @@ export const useChat = (activeSessionId: string | null) => {
       const result = await sendMessage(
         content,
         type,
-        systemInstructions,
+        currentSessionId,
         messages,
-        currentSessionId
+        systemInstructions
       );
 
       if (result) {
@@ -131,6 +131,9 @@ export const useChat = (activeSessionId: string | null) => {
       throw error;
     }
   };
+
+  // Set up real-time message updates
+  useRealtimeMessages(activeSessionId, messages, setMessages, handleCacheUpdate);
 
   return {
     messages,
