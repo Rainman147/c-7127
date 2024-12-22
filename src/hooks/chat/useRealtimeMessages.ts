@@ -66,7 +66,7 @@ export const useRealtimeMessages = (
           table: 'messages',
           filter: `chat_id=eq.${currentChatId}`
         },
-        async (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
+        (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
           console.log('[useRealtimeMessages] Received update:', {
             event: payload.eventType,
             messageId: payload.new?.id,
@@ -74,16 +74,26 @@ export const useRealtimeMessages = (
           });
           
           try {
-            if (payload.eventType === 'INSERT' && isDatabaseMessage(payload.new)) {
-              const dbMessage = payload.new;
-              
+            const newData = payload.new;
+            
+            if (!newData) {
+              console.log('[useRealtimeMessages] No new data in payload');
+              return;
+            }
+
+            if (!isDatabaseMessage(newData)) {
+              console.error('[useRealtimeMessages] Invalid message data received');
+              return;
+            }
+
+            if (payload.eventType === 'INSERT') {
               const newMessage: Message = {
-                role: dbMessage.sender as 'user' | 'assistant',
-                content: dbMessage.content,
-                type: dbMessage.type as 'text' | 'audio',
-                id: dbMessage.id,
-                sequence: dbMessage.sequence || messages.length + 1,
-                timestamp: dbMessage.timestamp || dbMessage.created_at
+                role: newData.sender as 'user' | 'assistant',
+                content: newData.content,
+                type: newData.type as 'text' | 'audio',
+                id: newData.id,
+                sequence: newData.sequence || messages.length + 1,
+                timestamp: newData.timestamp || newData.created_at
               };
               
               console.log('[useRealtimeMessages] Processing new message:', {
@@ -96,16 +106,15 @@ export const useRealtimeMessages = (
               setMessages(updatedMessages);
               updateCache(currentChatId, updatedMessages);
               
-            } else if (payload.eventType === 'UPDATE' && isDatabaseMessage(payload.new)) {
-              const dbMessage = payload.new;
-              console.log('[useRealtimeMessages] Processing message update:', dbMessage.id);
+            } else if (payload.eventType === 'UPDATE') {
+              console.log('[useRealtimeMessages] Processing message update:', newData.id);
               
               const updatedMessages = messages.map(msg => 
-                msg.id === dbMessage.id ? {
+                msg.id === newData.id ? {
                   ...msg,
-                  content: dbMessage.content,
-                  type: dbMessage.type as 'text' | 'audio',
-                  sequence: dbMessage.sequence || msg.sequence
+                  content: newData.content,
+                  type: newData.type as 'text' | 'audio',
+                  sequence: newData.sequence || msg.sequence
                 } : msg
               );
               setMessages(updatedMessages);
