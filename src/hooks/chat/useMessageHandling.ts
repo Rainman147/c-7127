@@ -37,11 +37,9 @@ export const useMessageHandling = () => {
     try {
       // Calculate next sequence number
       const nextSequence = existingMessages.length + 1;
-      const timestamp = new Date().toISOString();
 
       console.log('[useMessageHandling] Calculated message metadata:', {
-        sequence: nextSequence,
-        timestamp
+        sequence: nextSequence
       });
 
       // Insert user message
@@ -52,8 +50,7 @@ export const useMessageHandling = () => {
           content,
           sender: 'user',
           type,
-          sequence: nextSequence,
-          timestamp
+          sequence: nextSequence
         })
         .select()
         .single();
@@ -74,7 +71,7 @@ export const useMessageHandling = () => {
         .select('*')
         .eq('chat_id', chatId)
         .order('sequence', { ascending: true })
-        .order('timestamp', { ascending: true });
+        .order('created_at', { ascending: true });
 
       if (messagesError) {
         console.error('[useMessageHandling] Error fetching messages:', messagesError);
@@ -88,7 +85,7 @@ export const useMessageHandling = () => {
         type: msg.type as 'text' | 'audio',
         id: msg.id,
         sequence: msg.sequence || messages.indexOf(msg) + 1,
-        timestamp: msg.timestamp || msg.created_at
+        created_at: msg.created_at
       }));
 
       console.log('[useMessageHandling] Retrieved updated messages:', {
@@ -104,7 +101,7 @@ export const useMessageHandling = () => {
           type: (userMessage as DatabaseMessage).type as 'text' | 'audio',
           id: (userMessage as DatabaseMessage).id,
           sequence: (userMessage as DatabaseMessage).sequence || nextSequence,
-          timestamp: (userMessage as DatabaseMessage).timestamp || timestamp
+          created_at: (userMessage as DatabaseMessage).created_at
         }
       };
 

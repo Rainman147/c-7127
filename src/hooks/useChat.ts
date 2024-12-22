@@ -12,7 +12,7 @@ const sortMessages = (messages: Message[]) => {
     if (a.sequence !== b.sequence) {
       return (a.sequence || 0) - (b.sequence || 0);
     }
-    return new Date(a.timestamp || '').getTime() - new Date(b.timestamp || '').getTime();
+    return new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime();
   });
 };
 
@@ -20,7 +20,7 @@ const validateAndMergeMessages = (localMessages: Message[], newMessage: Message)
   console.log('[useChat] Validating new message:', { 
     messageId: newMessage.id,
     sequence: newMessage.sequence,
-    timestamp: newMessage.timestamp
+    created_at: newMessage.created_at
   });
 
   const isDuplicate = localMessages.some(msg => msg.id === newMessage.id);
