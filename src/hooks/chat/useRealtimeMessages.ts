@@ -67,15 +67,15 @@ export const useRealtimeMessages = (
           filter: `chat_id=eq.${currentChatId}`
         },
         (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
+          // First check if we have new data and log it safely
+          const newData = payload.new;
           console.log('[useRealtimeMessages] Received update:', {
             event: payload.eventType,
-            messageId: payload.new?.id,
-            sequence: payload.new?.sequence
+            messageId: newData ? newData.id : undefined,
+            sequence: newData ? newData.sequence : undefined
           });
           
           try {
-            const newData = payload.new;
-            
             if (!newData) {
               console.log('[useRealtimeMessages] No new data in payload');
               return;
