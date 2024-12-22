@@ -97,7 +97,7 @@ export const useRealtimeMessages = (
                 type: newData.type as 'text' | 'audio',
                 id: newData.id,
                 sequence: newData.sequence || messages.length + 1,
-                timestamp: newData.timestamp || newData.created_at
+                timestamp: newData.created_at // Changed from timestamp to created_at
               };
               
               console.log('[useRealtimeMessages] Processing new message:', {
@@ -118,7 +118,8 @@ export const useRealtimeMessages = (
                   ...msg,
                   content: newData.content,
                   type: newData.type as 'text' | 'audio',
-                  sequence: newData.sequence || msg.sequence
+                  sequence: newData.sequence || msg.sequence,
+                  timestamp: newData.created_at // Changed from timestamp to created_at
                 } : msg
               );
               setMessages(updatedMessages);
