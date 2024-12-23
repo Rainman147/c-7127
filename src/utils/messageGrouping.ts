@@ -1,73 +1,77 @@
-import { format, isToday, isYesterday, isThisWeek, isThisMonth, parseISO } from 'date-fns';
-import type { Message } from '@/types/chat';
-import { logger, LogCategory } from '@/utils/logging';
+import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns';
+import { logger, LogCategory } from './logging';
+import type { Message, MessageGroup } from '@/types/chat';
 
-type MessageGroup = {
-  id: string;
-  messages: Message[];
-  timestamp: string;
-  label: string;
+const TIME_THRESHOLD_MINUTES = 5;
+
+// Format the timestamp for display
+const formatMessageTime = (date: Date): string => {
+  if (isToday(date)) {
+    return `Today at ${format(date, 'h:mm a')}`;
+  }
+  if (isYesterday(date)) {
+    return `Yesterday at ${format(date, 'h:mm a')}`;
+  }
+  return format(date, 'MMM d, yyyy h:mm a');
 };
 
+// Get time label with error handling
+const getTimeLabel = (dateStr: string): string => {
+  try {
+    const date = new Date(dateStr);
+    return formatMessageTime(date);
+  } catch (error) {
+    logger.error(LogCategory.STATE, 'messageGrouping', 'Error formatting date:', { 
+      dateStr, 
+      error 
+    });
+    return 'Unknown time';
+  }
+};
+
+// Check if a new group should be started
+const shouldStartNewGroup = (
+  currentMessage: Message,
+  previousMessage: Message | undefined,
+  currentRole: string | null
+): boolean => {
+  if (!previousMessage) return false;
+  
+  const currentTime = new Date(currentMessage.created_at || '');
+  const previousTime = new Date(previousMessage.created_at || '');
+  
+  return currentMessage.role !== currentRole || 
+         differenceInMinutes(currentTime, previousTime) > TIME_THRESHOLD_MINUTES;
+};
+
+// Create a message group object
+const createMessageGroup = (
+  messages: Message[],
+  firstMessage: Message
+): MessageGroup => {
+  const timestamp = firstMessage.created_at || new Date().toISOString();
+  
+  return {
+    id: `group-${firstMessage.id}`,
+    label: getTimeLabel(timestamp),
+    timestamp,
+    messages
+  };
+};
+
+// Main grouping function
 export const groupMessages = (messages: Message[]): MessageGroup[] => {
-  if (!messages.length) return [];
+  logger.debug(LogCategory.STATE, 'messageGrouping', 'Starting message grouping:', { 
+    messageCount: messages.length 
+  });
 
   const groups: MessageGroup[] = [];
   let currentGroup: Message[] = [];
   let currentRole: string | null = null;
 
-  const getTimeLabel = (dateStr: string) => {
-    try {
-      const date = parseISO(dateStr);
-      
-      if (!date || isNaN(date.getTime())) {
-        logger.error(LogCategory.STATE, 'messageGrouping', 'Invalid date:', { dateStr });
-        return 'Unknown Date';
-      }
-
-      if (isToday(date)) return 'Today';
-      if (isYesterday(date)) return 'Yesterday';
-      if (isThisWeek(date)) return format(date, 'EEEE');
-      if (isThisMonth(date)) return format(date, 'MMMM d');
-      return format(date, 'MMMM d, yyyy');
-    } catch (error) {
-      logger.error(LogCategory.STATE, 'messageGrouping', 'Error formatting date:', { 
-        dateStr, 
-        error 
-      });
-      return 'Unknown Date';
-    }
-  };
-
   messages.forEach((message, index) => {
-    // Use role instead of sender for grouping
-    const shouldStartNewGroup = 
-      message.role !== currentRole || 
-      (index > 0 && new Date(message.created_at || '').getTime() - 
-       new Date(messages[index - 1].created_at || '').getTime() > 5 * 60 * 1000);
-
-    if (shouldStartNewGroup && currentGroup.length > 0) {
-      const firstMessage = currentGroup[0];
-      const timeLabel = getTimeLabel(firstMessage.created_at || '');
-      
-      try {
-        const timestamp = firstMessage.created_at ? 
-          format(parseISO(firstMessage.created_at), 'h:mm a') : 
-          'Unknown time';
-
-        groups.push({
-          id: `group-${groups.length}`,
-          messages: [...currentGroup],
-          timestamp,
-          label: timeLabel
-        });
-      } catch (error) {
-        logger.error(LogCategory.STATE, 'messageGrouping', 'Error creating group:', { 
-          error,
-          firstMessage 
-        });
-      }
-      
+    if (shouldStartNewGroup(message, messages[index - 1], currentRole) && currentGroup.length > 0) {
+      groups.push(createMessageGroup(currentGroup, currentGroup[0]));
       currentGroup = [];
     }
 
@@ -75,29 +79,14 @@ export const groupMessages = (messages: Message[]): MessageGroup[] => {
     currentRole = message.role;
   });
 
-  // Add the last group
+  // Add the last group if there are remaining messages
   if (currentGroup.length > 0) {
-    const firstMessage = currentGroup[0];
-    const timeLabel = getTimeLabel(firstMessage.created_at || '');
-    
-    try {
-      const timestamp = firstMessage.created_at ? 
-        format(parseISO(firstMessage.created_at), 'h:mm a') : 
-        'Unknown time';
-
-      groups.push({
-        id: `group-${groups.length}`,
-        messages: [...currentGroup],
-        timestamp,
-        label: timeLabel
-      });
-    } catch (error) {
-      logger.error(LogCategory.STATE, 'messageGrouping', 'Error creating final group:', { 
-        error,
-        firstMessage 
-      });
-    }
+    groups.push(createMessageGroup(currentGroup, currentGroup[0]));
   }
+
+  logger.debug(LogCategory.STATE, 'messageGrouping', 'Grouping complete:', { 
+    groupCount: groups.length 
+  });
 
   return groups;
 };
