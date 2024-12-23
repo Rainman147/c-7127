@@ -14,7 +14,7 @@ export const groupMessages = (messages: Message[]): MessageGroup[] => {
 
   const groups: MessageGroup[] = [];
   let currentGroup: Message[] = [];
-  let currentSender: string | null = null;
+  let currentRole: string | null = null;
 
   const getTimeLabel = (dateStr: string) => {
     try {
@@ -40,19 +40,10 @@ export const groupMessages = (messages: Message[]): MessageGroup[] => {
   };
 
   messages.forEach((message, index) => {
-    // Map role to sender for grouping
-    message.sender = message.role;
-    
-    if (!message.created_at) {
-      logger.warn(LogCategory.STATE, 'messageGrouping', 'Message missing created_at:', { 
-        messageId: message.id 
-      });
-      message.created_at = new Date().toISOString();
-    }
-
+    // Use role instead of sender for grouping
     const shouldStartNewGroup = 
-      message.sender !== currentSender || 
-      (index > 0 && new Date(message.created_at).getTime() - 
+      message.role !== currentRole || 
+      (index > 0 && new Date(message.created_at || '').getTime() - 
        new Date(messages[index - 1].created_at || '').getTime() > 5 * 60 * 1000);
 
     if (shouldStartNewGroup && currentGroup.length > 0) {
@@ -81,7 +72,7 @@ export const groupMessages = (messages: Message[]): MessageGroup[] => {
     }
 
     currentGroup.push(message);
-    currentSender = message.sender;
+    currentRole = message.role;
   });
 
   // Add the last group
