@@ -17,10 +17,12 @@ export const useMessageHandling = () => {
     messages: Message[],
     systemInstructions?: string
   ) => {
-    logger.info(LogCategory.COMMUNICATION, 'useMessageHandling', 'Sending message:', {
+    logger.info(LogCategory.COMMUNICATION, 'useMessageHandling', 'Starting message handling:', {
       contentLength: content.length,
       type,
-      chatId
+      chatId,
+      hasSystemInstructions: !!systemInstructions,
+      existingMessages: messages.length
     });
 
     try {
@@ -35,10 +37,19 @@ export const useMessageHandling = () => {
         sequence: messages.length
       });
 
+      logger.debug(LogCategory.STATE, 'useMessageHandling', 'User message saved:', {
+        messageId: userMessage.id,
+        sequence: userMessage.sequence
+      });
+
       const updatedMessages = [...messages, userMessage];
 
       // Call Edge Function for AI response
-      logger.debug(LogCategory.COMMUNICATION, 'useMessageHandling', 'Invoking chat function');
+      logger.debug(LogCategory.COMMUNICATION, 'useMessageHandling', 'Invoking chat function with:', {
+        messageLength: content.length,
+        historyLength: messages.slice(-5).length,
+        chatId
+      });
       
       const { data: aiResponse, error: functionError } = await supabase.functions.invoke('chat', {
         body: {
@@ -53,12 +64,18 @@ export const useMessageHandling = () => {
       });
 
       if (functionError) {
-        logger.error(LogCategory.ERROR, 'useMessageHandling', 'Edge function error:', functionError);
+        logger.error(LogCategory.ERROR, 'useMessageHandling', 'Edge function error:', {
+          error: functionError,
+          statusCode: functionError.status,
+          statusText: functionError.statusText,
+          message: functionError.message
+        });
         throw new Error('Failed to get AI response');
       }
 
       logger.debug(LogCategory.COMMUNICATION, 'useMessageHandling', 'Received AI response:', {
-        responseLength: aiResponse?.content?.length
+        responseLength: aiResponse?.content?.length,
+        hasContent: !!aiResponse?.content
       });
 
       // Save AI response
@@ -68,6 +85,11 @@ export const useMessageHandling = () => {
         chatId,
         role: 'assistant',
         sequence: updatedMessages.length
+      });
+
+      logger.info(LogCategory.STATE, 'useMessageHandling', 'AI response saved:', {
+        messageId: assistantMessage.id,
+        sequence: assistantMessage.sequence
       });
 
       return {
