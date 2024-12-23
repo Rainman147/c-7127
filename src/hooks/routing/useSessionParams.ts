@@ -1,4 +1,5 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { defaultTemplates } from '@/types/templates/defaults';
 
 export const useSessionParams = () => {
   const { sessionId } = useParams();
@@ -7,10 +8,17 @@ export const useSessionParams = () => {
 
   const templateId = searchParams.get('template');
 
-  // Improved validation logic
+  // Enhanced validation logic
   const isNewSession = !sessionId;
   const isValidSessionId = sessionId ? /^[0-9a-fA-F-]+$/.test(sessionId) : false;
-  const isValidTemplateId = templateId ? /^[0-9a-fA-F-]+$/.test(templateId) : false;
+  
+  // Improved template validation to handle both default and custom templates
+  const isValidTemplateId = templateId ? (
+    // Check if it's a default template
+    defaultTemplates.some(template => template.id === templateId) ||
+    // Or if it's a custom template (UUID format)
+    /^[0-9a-fA-F-]+$/.test(templateId)
+  ) : false;
 
   console.log('[useSessionParams] Current state:', {
     sessionId,
@@ -18,14 +26,20 @@ export const useSessionParams = () => {
     isNewSession,
     isValidSessionId,
     isValidTemplateId,
-    currentPath: window.location.pathname
+    currentPath: window.location.pathname,
+    defaultTemplatesCount: defaultTemplates.length,
+    isDefaultTemplate: templateId ? defaultTemplates.some(t => t.id === templateId) : false
   });
 
   const redirectToSession = (id: string, params?: { template?: string }) => {
     console.log('[useSessionParams] Redirecting to session:', { 
       id, 
       params,
-      currentTemplate: templateId 
+      currentTemplate: templateId,
+      isValidTemplate: params?.template ? (
+        defaultTemplates.some(t => t.id === params.template) ||
+        /^[0-9a-fA-F-]+$/.test(params.template)
+      ) : false
     });
     
     const newSearchParams = new URLSearchParams();
@@ -47,7 +61,11 @@ export const useSessionParams = () => {
   const redirectToNew = (params?: { template?: string }) => {
     console.log('[useSessionParams] Redirecting to new session with params:', {
       params,
-      currentTemplate: templateId
+      currentTemplate: templateId,
+      isValidTemplate: params?.template ? (
+        defaultTemplates.some(t => t.id === params.template) ||
+        /^[0-9a-fA-F-]+$/.test(params.template)
+      ) : false
     });
     
     const newSearchParams = new URLSearchParams();
