@@ -14,27 +14,41 @@ const ITEM_SIZE = 150; // Average height of a message
 const OVERSCAN_COUNT = 5; // Number of items to render beyond visible area
 
 const MessageList = ({ messages }: { messages: Message[] }) => {
-  logger.debug(LogCategory.RENDER, 'MessageList', 'Rendering messages:', 
-    messages.map(m => ({
-      role: m.role,
-      id: m.id,
-      contentPreview: m.content.substring(0, 50) + '...'
-    }))
-  );
+  const renderStartTime = performance.now();
+  
+  logger.debug(LogCategory.RENDER, 'MessageList', 'Starting render:', { 
+    messageCount: messages.length,
+    renderStartTime
+  });
 
   const listRef = useRef<List>(null);
   
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (listRef.current && messages.length > 0) {
-      logger.debug(LogCategory.STATE, 'MessageList', 'Scrolling to bottom');
+      const scrollStartTime = performance.now();
+      logger.debug(LogCategory.STATE, 'MessageList', 'Initiating scroll to bottom', {
+        messageCount: messages.length,
+        scrollStartTime
+      });
+      
       listRef.current.scrollToItem(messages.length - 1);
+      
+      logger.debug(LogCategory.STATE, 'MessageList', 'Scroll complete', {
+        duration: performance.now() - scrollStartTime
+      });
     }
   }, [messages.length]);
 
   const Row = useCallback(({ index, style }: { index: number, style: React.CSSProperties }) => {
+    const rowRenderStart = performance.now();
     const message = messages[index];
-    logger.debug(LogCategory.RENDER, 'MessageList', 'Rendering row:', { index, messageId: message.id });
+    
+    logger.debug(LogCategory.RENDER, 'MessageList', 'Rendering row:', { 
+      index, 
+      messageId: message.id,
+      renderStartTime: rowRenderStart
+    });
     
     return (
       <div style={style}>
@@ -51,11 +65,16 @@ const MessageList = ({ messages }: { messages: Message[] }) => {
     );
   }
 
+  logger.debug(LogCategory.RENDER, 'MessageList', 'Render complete', {
+    duration: performance.now() - renderStartTime,
+    messageCount: messages.length
+  });
+
   return (
     <div className="flex-1 overflow-hidden pb-32">
       <List
         ref={listRef}
-        height={600} // This will be overridden by CSS
+        height={600}
         itemCount={messages.length}
         itemSize={ITEM_SIZE}
         width="100%"

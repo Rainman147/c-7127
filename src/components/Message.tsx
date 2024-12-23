@@ -13,25 +13,34 @@ type MessageProps = {
 };
 
 const Message = memo(({ role, content, isStreaming, type, id }: MessageProps) => {
+  const renderStartTime = performance.now();
   const [editedContent, setEditedContent] = useState(content);
   const [isEditing, setIsEditing] = useState(false);
   const [wasEdited, setWasEdited] = useState(false);
 
-  logger.debug(LogCategory.RENDER, 'Message', 'Rendering message:', { 
+  logger.debug(LogCategory.RENDER, 'Message', 'Starting message render:', { 
     role, 
-    id, 
-    isEditing, 
-    content: content.substring(0, 50) + '...',
-    hasId: !!id 
+    id,
+    isEditing,
+    contentLength: content.length,
+    renderStartTime
   });
 
   const handleSave = useCallback((newContent: string) => {
-    logger.info(LogCategory.STATE, 'Message', 'Saving edited content:', 
-      { messageId: id, contentPreview: newContent.substring(0, 50) + '...' }
-    );
+    const saveStartTime = performance.now();
+    logger.info(LogCategory.STATE, 'Message', 'Saving edited content:', { 
+      messageId: id,
+      contentLength: newContent.length,
+      saveStartTime
+    });
+    
     setEditedContent(newContent);
     setIsEditing(false);
     setWasEdited(true);
+    
+    logger.debug(LogCategory.STATE, 'Message', 'Save complete', {
+      duration: performance.now() - saveStartTime
+    });
   }, [id]);
 
   const handleCancel = useCallback(() => {
@@ -48,6 +57,11 @@ const Message = memo(({ role, content, isStreaming, type, id }: MessageProps) =>
     }
     setIsEditing(true);
   }, [id]);
+
+  logger.debug(LogCategory.RENDER, 'Message', 'Render complete', {
+    duration: performance.now() - renderStartTime,
+    messageId: id
+  });
 
   return (
     <div className="py-3">
