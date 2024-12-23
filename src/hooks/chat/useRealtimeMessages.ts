@@ -33,7 +33,6 @@ const validateAndMergeMessages = (localMessages: Message[], newMessage: Message)
   return updatedMessages;
 };
 
-// Type guard to check if an object is a valid DatabaseMessage
 const isDatabaseMessage = (obj: any): obj is DatabaseMessage => {
   return obj && 
     typeof obj === 'object' && 
@@ -51,7 +50,8 @@ export const useRealtimeMessages = (
   currentChatId: string | null,
   messages: Message[],
   setMessages: (messages: Message[]) => void,
-  updateCache: (chatId: string, messages: Message[]) => void
+  updateCache: (chatId: string, messages: Message[]) => void,
+  invalidateCache: (chatId: string) => void
 ) => {
   const { toast } = useToast();
 
@@ -122,6 +122,7 @@ export const useRealtimeMessages = (
               
             } else if (payload.eventType === 'UPDATE') {
               console.log('[useRealtimeMessages] Processing message update:', newData.id);
+              invalidateCache(currentChatId);
               
               const updatedMessages = messages.map(msg => 
                 msg.id === newData.id ? {
@@ -164,5 +165,5 @@ export const useRealtimeMessages = (
       isSubscriptionActive = false;
       supabase.removeChannel(channel);
     };
-  }, [currentChatId, messages, setMessages, updateCache, toast]);
+  }, [currentChatId, messages, setMessages, updateCache, invalidateCache, toast]);
 };

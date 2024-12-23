@@ -16,27 +16,11 @@ const sortMessages = (messages: Message[]) => {
   });
 };
 
-const validateAndMergeMessages = (localMessages: Message[], newMessage: Message) => {
-  console.log('[useChat] Validating new message:', { 
-    messageId: newMessage.id,
-    sequence: newMessage.sequence,
-    created_at: newMessage.created_at
-  });
-
-  const isDuplicate = localMessages.some(msg => msg.id === newMessage.id);
-  if (isDuplicate) {
-    console.log('[useChat] Duplicate message detected:', newMessage.id);
-    return localMessages;
-  }
-
-  return sortMessages([...localMessages, newMessage]);
-};
-
 export const useChat = (activeSessionId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const { toast } = useToast();
   const { isLoading, handleSendMessage: sendMessage } = useMessageHandling();
-  const { getCachedMessages, updateCache } = useChatCache();
+  const { getCachedMessages, updateCache, invalidateCache } = useChatCache();
   const { loadMessages, loadMoreMessages, isLoadingMore } = useMessageLoading();
   const { ensureSession } = useSessionCoordinator();
 
@@ -49,7 +33,7 @@ export const useChat = (activeSessionId: string | null) => {
     console.log('[useChat] Loading messages for session:', sessionId);
     const loadedMessages = await loadMessages(sessionId, handleCacheUpdate);
     return sortMessages(loadedMessages);
-  }, [loadMessages]);
+  }, [loadMessages, handleCacheUpdate]);
 
   useEffect(() => {
     console.log('[useChat] Active session changed:', activeSessionId);
@@ -93,6 +77,15 @@ export const useChat = (activeSessionId: string | null) => {
     };
   }, [activeSessionId, getCachedMessages, handleMessagesLoad, toast]);
 
+  // Set up real-time message updates with cache invalidation
+  useRealtimeMessages(
+    activeSessionId,
+    messages,
+    setMessages,
+    handleCacheUpdate,
+    invalidateCache
+  );
+
   const handleSendMessage = async (
     content: string,
     type: 'text' | 'audio' = 'text',
@@ -132,9 +125,6 @@ export const useChat = (activeSessionId: string | null) => {
     }
   };
 
-  // Set up real-time message updates
-  useRealtimeMessages(activeSessionId, messages, setMessages, handleCacheUpdate);
-
   return {
     messages,
     isLoading,
@@ -147,3 +137,5 @@ export const useChat = (activeSessionId: string | null) => {
     setMessages
   };
 };
+
+export default useChat;
