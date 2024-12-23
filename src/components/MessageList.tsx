@@ -22,6 +22,13 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
     isLoading
   });
 
+  // Ensure container height is properly set
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.style.height = `calc(100vh - ${keyboardVisible ? '300px' : '240px'})`;
+    }
+  }, [keyboardVisible]);
+
   // Track message grouping performance
   const messageGroups = (() => {
     const groupStartTime = performance.now();
@@ -57,6 +64,7 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
     <div 
       ref={containerRef}
       className="flex-1 overflow-y-auto chat-scrollbar space-y-6 pb-[180px] pt-4 px-4"
+      style={{ overscrollBehavior: 'contain' }}
     >
       {messageGroups.map((group) => (
         <div key={group.id} className="space-y-4">

@@ -12,6 +12,7 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
   const lastScrollPosition = useRef<number>(0);
   const shouldScrollToBottom = useRef<boolean>(true);
   const scrollTimeout = useRef<NodeJS.Timeout>();
+  const isInitialLoad = useRef<boolean>(true);
 
   // Track scroll position changes
   useEffect(() => {
@@ -20,14 +21,16 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
 
     const handleScroll = () => {
       const currentPosition = container.scrollTop;
+      const maxScroll = container.scrollHeight - container.clientHeight;
       const scrollDelta = currentPosition - lastScrollPosition.current;
-      const isNearBottom = container.scrollHeight - currentPosition - container.clientHeight < 100;
+      const isNearBottom = maxScroll - currentPosition < 100;
       
       shouldScrollToBottom.current = isNearBottom;
       
       logger.debug(LogCategory.STATE, 'ScrollManager', 'Scroll position changed', {
         previousPosition: lastScrollPosition.current,
         currentPosition,
+        maxScroll,
         delta: scrollDelta,
         isNearBottom,
         messageCount: messages.length
@@ -40,12 +43,14 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
     return () => container.removeEventListener('scroll', handleScroll);
   }, [containerRef, messages.length]);
 
-  // Handle automatic scrolling
+  // Handle initial load and new messages
   useEffect(() => {
     const container = containerRef.current;
     if (!container || isLoading) return;
 
-    if (shouldScrollToBottom.current) {
+    const shouldForceScroll = isInitialLoad.current || shouldScrollToBottom.current;
+    
+    if (shouldForceScroll) {
       // Clear any existing scroll timeout
       if (scrollTimeout.current) {
         clearTimeout(scrollTimeout.current);
@@ -56,20 +61,27 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
         const scrollStartTime = performance.now();
         
         try {
-          container.scrollTop = container.scrollHeight;
+          const targetScroll = container.scrollHeight - container.clientHeight;
+          container.scrollTo({
+            top: targetScroll,
+            behavior: isInitialLoad.current ? 'auto' : 'smooth'
+          });
           
           logger.debug(LogCategory.STATE, 'ScrollManager', 'Auto-scroll complete', {
             duration: performance.now() - scrollStartTime,
-            finalScrollPosition: container.scrollTop,
+            targetScroll,
+            isInitialLoad: isInitialLoad.current,
             messageCount: messages.length
           });
+
+          isInitialLoad.current = false;
         } catch (error) {
           logger.error(LogCategory.ERROR, 'ScrollManager', 'Auto-scroll failed', {
             error,
             messageCount: messages.length
           });
         }
-      }, 100);
+      }, isInitialLoad.current ? 0 : 100);
     }
 
     return () => {
