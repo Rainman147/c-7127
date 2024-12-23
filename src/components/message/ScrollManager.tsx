@@ -30,7 +30,14 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
       offsetHeight: container.offsetHeight,
       style: container.style.height,
       hasScrollbar: container.scrollHeight > container.clientHeight,
-      messageCount: messages.length
+      scrollbarWidth: container.offsetWidth - container.clientWidth,
+      computedStyle: {
+        overflow: window.getComputedStyle(container).overflow,
+        overflowY: window.getComputedStyle(container).overflowY,
+        display: window.getComputedStyle(container).display,
+      },
+      messageCount: messages.length,
+      timestamp: new Date().toISOString()
     });
 
     const handleScroll = () => {
@@ -49,7 +56,10 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
         isNearBottom,
         containerHeight: container.clientHeight,
         scrollHeight: container.scrollHeight,
-        messageCount: messages.length
+        hasScrollbar: container.scrollHeight > container.clientHeight,
+        scrollbarVisible: container.offsetWidth - container.clientWidth > 0,
+        messageCount: messages.length,
+        timestamp: new Date().toISOString()
       });
       
       lastScrollPosition.current = currentPosition;
@@ -74,7 +84,14 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
       shouldForceScroll,
       isInitialLoad: isInitialLoad.current,
       containerHeight: container.clientHeight,
-      scrollHeight: container.scrollHeight
+      scrollHeight: container.scrollHeight,
+      hasScrollbar: container.scrollHeight > container.clientHeight,
+      scrollbarWidth: container.offsetWidth - container.clientWidth,
+      computedStyle: {
+        overflow: window.getComputedStyle(container).overflow,
+        display: window.getComputedStyle(container).display,
+      },
+      timestamp: new Date().toISOString()
     });
 
     lastMessageCount.current = messages.length;
@@ -100,7 +117,10 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
             isInitialLoad: isInitialLoad.current,
             messageCount: messages.length,
             containerHeight: container.clientHeight,
-            scrollHeight: container.scrollHeight
+            scrollHeight: container.scrollHeight,
+            hasScrollbar: container.scrollHeight > container.clientHeight,
+            scrollbarWidth: container.offsetWidth - container.clientWidth,
+            timestamp: new Date().toISOString()
           });
 
           isInitialLoad.current = false;
@@ -109,7 +129,8 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
             error,
             messageCount: messages.length,
             containerHeight: container.clientHeight,
-            scrollHeight: container.scrollHeight
+            scrollHeight: container.scrollHeight,
+            timestamp: new Date().toISOString()
           });
         }
       }, isInitialLoad.current ? 0 : 100);

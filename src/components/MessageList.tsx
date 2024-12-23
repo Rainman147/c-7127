@@ -32,11 +32,20 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        logger.debug(LogCategory.STATE, 'MessageList', 'Container resized', {
+        logger.debug(LogCategory.STATE, 'MessageList', 'Container dimensions updated', {
           height: entry.contentRect.height,
           width: entry.contentRect.width,
+          scrollHeight: container.scrollHeight,
+          clientHeight: container.clientHeight,
+          scrollTop: container.scrollTop,
           keyboardVisible,
           messageCount: messages.length,
+          hasScrollbar: container.scrollHeight > container.clientHeight,
+          computedStyle: {
+            overflow: window.getComputedStyle(container).overflow,
+            display: window.getComputedStyle(container).display,
+            position: window.getComputedStyle(container).position,
+          },
           timestamp: new Date().toISOString()
         });
       }
@@ -59,9 +68,13 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
       keyboardVisible,
       containerClientHeight: container.clientHeight,
       containerScrollHeight: container.scrollHeight,
-      messageCount: messages.length
+      messageCount: messages.length,
+      scrollbarWidth: container.offsetWidth - container.clientWidth,
+      hasVerticalScrollbar: container.scrollHeight > container.clientHeight,
+      appliedClasses: container.className,
+      computedOverflow: window.getComputedStyle(container).overflow,
     });
-  }, [keyboardVisible]);
+  }, [keyboardVisible, messages.length]);
 
   // Track message grouping performance
   const messageGroups = (() => {
@@ -91,7 +104,13 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
     groupCount: messageGroups.length,
     viewportHeight,
     keyboardVisible,
-    isNearBottom
+    isNearBottom,
+    containerDimensions: containerRef.current ? {
+      scrollHeight: containerRef.current.scrollHeight,
+      clientHeight: containerRef.current.clientHeight,
+      offsetHeight: containerRef.current.offsetHeight,
+      scrollTop: containerRef.current.scrollTop,
+    } : null
   });
 
   return (
