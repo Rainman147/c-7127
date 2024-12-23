@@ -1,20 +1,21 @@
-import { memo, useCallback, useEffect, useMemo } from "react";
+import { memo, useCallback, useEffect } from "react";
 import { TemplateSelector } from "./TemplateSelector";
 import { ProfileMenu } from "./header/ProfileMenu";
 import { useProfilePhoto } from "@/hooks/useProfilePhoto";
 import { useSessionParams } from "@/hooks/routing/useSessionParams";
+import { useSessionCoordinator } from "@/hooks/chat/useSessionCoordinator";
+import type { Template } from "./template/templateTypes";
 
 interface ChatHeaderProps {
   isSidebarOpen?: boolean;
-  onTemplateChange: (template: any) => void;
 }
 
 const ChatHeaderComponent = ({ 
   isSidebarOpen = true,
-  onTemplateChange 
 }: ChatHeaderProps) => {
   const profilePhotoUrl = useProfilePhoto();
   const { sessionId, templateId } = useSessionParams();
+  const { handleTemplateChange: coordinateTemplateChange } = useSessionCoordinator();
   
   useEffect(() => {
     console.log('[ChatHeader] Component mounted/updated:', { 
@@ -29,28 +30,14 @@ const ChatHeaderComponent = ({
     };
   }, [isSidebarOpen, sessionId, templateId, profilePhotoUrl]);
   
-  const handleTemplateChange = useCallback((template: any) => {
+  const handleTemplateChange = useCallback((template: Template) => {
     console.log('[ChatHeader] Template change requested:', {
       sessionId,
       templateId: template.id,
       templateName: template.name
     });
-    onTemplateChange(template);
-  }, [onTemplateChange, sessionId]);
-
-  const templateSelector = useMemo(() => {
-    console.log('[ChatHeader] Creating TemplateSelector instance for chat:', sessionId);
-    return (
-      <TemplateSelector 
-        onTemplateChange={handleTemplateChange}
-      />
-    );
-  }, [sessionId, handleTemplateChange]);
-
-  const profileMenu = useMemo(() => {
-    console.log('[ChatHeader] Creating ProfileMenu instance');
-    return <ProfileMenu profilePhotoUrl={profilePhotoUrl} />;
-  }, [profilePhotoUrl]);
+    coordinateTemplateChange(template, sessionId);
+  }, [coordinateTemplateChange, sessionId]);
 
   return (
     <div className="fixed top-0 z-30 w-full bg-chatgpt-main/95 backdrop-blur">
@@ -58,10 +45,12 @@ const ChatHeaderComponent = ({
         <div className="flex h-[60px] items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <span className={`${!isSidebarOpen ? 'ml-16' : ''} transition-all duration-300`}>
-              {templateSelector}
+              <TemplateSelector 
+                onTemplateChange={handleTemplateChange}
+              />
             </span>
           </div>
-          {profileMenu}
+          <ProfileMenu profilePhotoUrl={profilePhotoUrl} />
         </div>
       </div>
     </div>
