@@ -8,8 +8,6 @@ import { SidebarToggle } from '@/components/SidebarToggle';
 import { useSessionParams } from '@/hooks/routing/useSessionParams';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { useSessionCoordinator } from '@/hooks/chat/useSessionCoordinator';
-import type { Template } from '@/components/template/templateTypes';
 
 const ChatContent = () => {
   const { isOpen } = useSidebar();
@@ -19,12 +17,10 @@ const ChatContent = () => {
     sessionId, 
     templateId,
     isNewSession,
-    isValidSessionId,
-    redirectToSession
+    isValidSessionId
   } = useSessionParams();
   
   const { messages, isLoading, handleSendMessage } = useChat(isValidSessionId ? sessionId : null);
-  const { handleTemplateChange: coordinateTemplateChange } = useSessionCoordinator();
 
   // Handle invalid routes
   useEffect(() => {
@@ -39,18 +35,10 @@ const ChatContent = () => {
     }
   }, [isNewSession, isValidSessionId, navigate, toast]);
 
-  const handleTemplateChange = useCallback(async (template: Template) => {
-    console.log('[Index] Template changed:', template);
-    await coordinateTemplateChange(template, sessionId);
-  }, [coordinateTemplateChange, sessionId]);
-
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] relative">
       <SidebarToggle />
-      <ChatHeader 
-        isSidebarOpen={isOpen}
-        onTemplateChange={handleTemplateChange}
-      />
+      <ChatHeader isSidebarOpen={isOpen} />
       
       <div className="flex-1 overflow-hidden mt-[60px] relative">
         <div className="max-w-3xl mx-auto px-4 h-full">
