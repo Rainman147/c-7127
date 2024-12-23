@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Template } from '@/components/template/templateTypes';
@@ -12,7 +12,6 @@ interface SessionMetadata {
 export const useSessionCoordinator = () => {
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
   const createOrUpdateSession = useCallback(async (
@@ -107,11 +106,9 @@ export const useSessionCoordinator = () => {
       return null;
     }
 
-    const templateId = searchParams.get('template');
-    console.log('[useSessionCoordinator] Ensuring session exists:', { templateId });
-
-    return await createOrUpdateSession(null, { templateId });
-  }, [createOrUpdateSession, isCreatingSession, searchParams]);
+    console.log('[useSessionCoordinator] Ensuring session exists');
+    return await createOrUpdateSession(null);
+  }, [createOrUpdateSession, isCreatingSession]);
 
   return {
     createOrUpdateSession,
