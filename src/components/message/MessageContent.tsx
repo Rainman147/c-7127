@@ -9,6 +9,7 @@ type MessageContentProps = {
   isEditing: boolean;
   id?: string;
   wasEdited: boolean;
+  isSaving: boolean;
   onSave: (newContent: string) => void;
   onCancel: () => void;
 };
@@ -21,6 +22,7 @@ const MessageContent = ({
   isEditing,
   id,
   wasEdited,
+  isSaving,
   onSave,
   onCancel
 }: MessageContentProps) => {
@@ -61,8 +63,14 @@ const MessageContent = ({
                   messageId={id}
                   onSave={onSave}
                   onCancel={onCancel}
-                  editable={true}
+                  editable={!isSaving}
                 />
+                {isSaving && (
+                  <div className="flex items-center justify-center mt-2 text-gray-400">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Saving changes...
+                  </div>
+                )}
               </div>
             ) : (
               <>

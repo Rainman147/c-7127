@@ -3,6 +3,7 @@ import MessageAvatar from './MessageAvatar';
 import MessageActions from './MessageActions';
 import MessageContent from './message/MessageContent';
 import { logger, LogCategory } from '@/utils/logging';
+import { useToast } from '@/hooks/use-toast';
 
 type MessageProps = {
   role: 'user' | 'assistant';
@@ -21,35 +22,68 @@ const Message = memo(({
   id,
   showAvatar = true 
 }: MessageProps) => {
-  const renderStartTime = performance.now();
+  const { toast } = useToast();
   const [editedContent, setEditedContent] = useState(content);
   const [isEditing, setIsEditing] = useState(false);
   const [wasEdited, setWasEdited] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   logger.debug(LogCategory.RENDER, 'Message', 'Starting message render:', { 
     role, 
     id,
     isEditing,
-    contentLength: content.length,
-    renderStartTime
+    contentLength: content.length
   });
 
-  const handleSave = useCallback((newContent: string) => {
-    const saveStartTime = performance.now();
-    logger.info(LogCategory.STATE, 'Message', 'Saving edited content:', { 
-      messageId: id,
-      contentLength: newContent.length,
-      saveStartTime
-    });
-    
-    setEditedContent(newContent);
-    setIsEditing(false);
-    setWasEdited(true);
-    
-    logger.debug(LogCategory.STATE, 'Message', 'Save complete', {
-      duration: performance.now() - saveStartTime
-    });
-  }, [id]);
+  const handleSave = useCallback(async (newContent: string) => {
+    if (!id) {
+      logger.error(LogCategory.ERROR, 'Message', 'Cannot save edit without message ID');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      logger.info(LogCategory.STATE, 'Message', 'Saving edited content:', { 
+        messageId: id,
+        contentLength: newContent.length
+      });
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase
+        .from('edited_messages')
+        .upsert({
+          message_id: id,
+          user_id: user.id,
+          edited_content: newContent
+        });
+
+      if (error) throw error;
+      
+      setEditedContent(newContent);
+      setIsEditing(false);
+      setWasEdited(true);
+      
+      toast({
+        description: "Changes saved successfully",
+        className: "bg-[#10A37F] text-white",
+      });
+
+      logger.debug(LogCategory.STATE, 'Message', 'Save complete');
+    } catch (error: any) {
+      logger.error(LogCategory.ERROR, 'Message', 'Error saving edit:', error);
+      toast({
+        title: "Error saving changes",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [id, toast]);
 
   const handleCancel = useCallback(() => {
     logger.info(LogCategory.STATE, 'Message', 'Canceling edit:', { messageId: id });
@@ -66,11 +100,6 @@ const Message = memo(({
     setIsEditing(true);
   }, [id]);
 
-  logger.debug(LogCategory.RENDER, 'Message', 'Render complete', {
-    duration: performance.now() - renderStartTime,
-    messageId: id
-  });
-
   return (
     <div className={`group transition-opacity duration-300 ${isStreaming ? 'opacity-70' : 'opacity-100'}`}>
       <div className={`flex gap-4 max-w-4xl mx-auto ${role === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -86,6 +115,7 @@ const Message = memo(({
             isEditing={isEditing}
             id={id}
             wasEdited={wasEdited}
+            isSaving={isSaving}
             onSave={handleSave}
             onCancel={handleCancel}
           />
