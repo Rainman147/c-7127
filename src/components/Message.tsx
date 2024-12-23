@@ -50,8 +50,9 @@ const Message = memo(({
         },
         (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
           logger.debug(LogCategory.COMMUNICATION, 'Message', 'Received real-time update:', payload);
-          if (payload.new && payload.new.content !== editedContent) {
-            setEditedContent(payload.new.content);
+          const newData = payload.new as DatabaseMessage;
+          if (newData && newData.content !== editedContent) {
+            setEditedContent(newData.content);
           }
         }
       )
