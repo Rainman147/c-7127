@@ -19,7 +19,10 @@ serve(async (req) => {
       throw new Error('OpenAI API key is required')
     }
 
-    console.log('Processing chat request with system instructions:', systemInstructions ? 'Present' : 'Not provided')
+    console.log('Processing chat request:', {
+      messageCount: messages.length,
+      hasSystemInstructions: !!systemInstructions
+    });
 
     // Prepare messages array with system instructions if provided
     const messageArray = []
@@ -36,7 +39,10 @@ serve(async (req) => {
       content: msg.content
     })))
 
-    console.log('Sending request to OpenAI with message count:', messageArray.length)
+    console.log('Sending request to OpenAI:', {
+      messageCount: messageArray.length,
+      model: 'gpt-4o-mini'
+    });
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -45,7 +51,7 @@ serve(async (req) => {
         'Authorization': `Bearer ${openAIApiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', // Using the correct model name
+        model: 'gpt-4o-mini',
         messages: messageArray,
         temperature: 0.7,
         max_tokens: 2048,
@@ -54,12 +60,19 @@ serve(async (req) => {
 
     if (!response.ok) {
       const error = await response.json()
-      console.error('OpenAI API error:', error)
+      console.error('OpenAI API error:', {
+        status: response.status,
+        error: error.error?.message || 'Unknown error',
+        type: error.error?.type
+      });
       throw new Error(error.error?.message || 'Error calling OpenAI API')
     }
 
     const data = await response.json()
-    console.log('Received response from OpenAI')
+    console.log('Received response from OpenAI:', {
+      status: response.status,
+      choicesCount: data.choices?.length
+    });
 
     const content = data.choices[0].message.content
 
@@ -68,7 +81,11 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error('Error in chat function:', error)
+    console.error('Error in chat function:', {
+      error: error.message,
+      stack: error.stack
+    });
+    
     return new Response(
       JSON.stringify({ 
         error: error.message,
