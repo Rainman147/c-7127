@@ -6,7 +6,7 @@ export const useSessionParams = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const templateId = searchParams.get('template');
+  const templateId = searchParams.get('template') || 'live-session'; // Set default template
 
   // Enhanced validation logic
   const isNewSession = !sessionId;
@@ -20,6 +20,14 @@ export const useSessionParams = () => {
     /^[0-9a-fA-F-]+$/.test(templateId)
   ) : false;
 
+  console.log('[useSessionParams] Template validation:', {
+    providedTemplateId: templateId,
+    isDefaultTemplate: defaultTemplates.some(t => t.id === templateId),
+    matchingDefaultTemplate: defaultTemplates.find(t => t.id === templateId)?.name,
+    isCustomTemplate: templateId ? /^[0-9a-fA-F-]+$/.test(templateId) : false,
+    isValidTemplateId
+  });
+
   console.log('[useSessionParams] Current state:', {
     sessionId,
     templateId,
@@ -32,13 +40,16 @@ export const useSessionParams = () => {
   });
 
   const redirectToSession = (id: string, params?: { template?: string }) => {
+    const targetTemplateId = params?.template || templateId;
+    
     console.log('[useSessionParams] Redirecting to session:', { 
       id, 
       params,
       currentTemplate: templateId,
-      isValidTemplate: params?.template ? (
-        defaultTemplates.some(t => t.id === params.template) ||
-        /^[0-9a-fA-F-]+$/.test(params.template)
+      targetTemplate: targetTemplateId,
+      isValidTemplate: targetTemplateId ? (
+        defaultTemplates.some(t => t.id === targetTemplateId) ||
+        /^[0-9a-fA-F-]+$/.test(targetTemplateId)
       ) : false
     });
     
@@ -59,12 +70,15 @@ export const useSessionParams = () => {
   };
 
   const redirectToNew = (params?: { template?: string }) => {
+    const targetTemplateId = params?.template || templateId;
+    
     console.log('[useSessionParams] Redirecting to new session with params:', {
       params,
       currentTemplate: templateId,
-      isValidTemplate: params?.template ? (
-        defaultTemplates.some(t => t.id === params.template) ||
-        /^[0-9a-fA-F-]+$/.test(params.template)
+      targetTemplate: targetTemplateId,
+      isValidTemplate: targetTemplateId ? (
+        defaultTemplates.some(t => t.id === targetTemplateId) ||
+        /^[0-9a-fA-F-]+$/.test(targetTemplateId)
       ) : false
     });
     
@@ -86,7 +100,7 @@ export const useSessionParams = () => {
 
   return {
     sessionId: isValidSessionId ? sessionId : null,
-    templateId: isValidTemplateId ? templateId : null,
+    templateId: isValidTemplateId ? templateId : 'live-session', // Fallback to default template
     isNewSession,
     isValidSessionId,
     isValidTemplateId,
