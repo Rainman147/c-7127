@@ -1,129 +1,67 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useMessageState } from './chat/useMessageState';
+import { useMessageLoader } from './chat/useMessageLoader';
+import { useMessageSender } from './chat/useMessageSender';
 import { useMessageHandling } from './chat/useMessageHandling';
 import { useChatCache } from './chat/useChatCache';
 import { useRealtimeMessages } from './chat/useRealtimeMessages';
 import { useMessageLoading } from './chat/useMessageLoading';
-import { useToast } from './use-toast';
 import { useSessionCoordinator } from './chat/useSessionCoordinator';
 import type { Message } from '@/types/chat';
 
-const sortMessages = (messages: Message[]) => {
-  return [...messages].sort((a, b) => {
-    if (a.sequence !== b.sequence) {
-      return (a.sequence || 0) - (b.sequence || 0);
-    }
-    return new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime();
-  });
-};
-
 export const useChat = (activeSessionId: string | null) => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const { toast } = useToast();
+  const { messages, updateMessages, clearMessages, setMessages } = useMessageState();
   const { isLoading, handleSendMessage: sendMessage } = useMessageHandling();
   const { getCachedMessages, updateCache, invalidateCache } = useChatCache();
   const { loadMessages, loadMoreMessages, isLoadingMore } = useMessageLoading();
   const { ensureSession } = useSessionCoordinator();
 
-  const handleCacheUpdate = useCallback((sessionId: string, newMessages: Message[]) => {
-    console.log('[useChat] Updating cache for session:', sessionId);
-    updateCache(sessionId, sortMessages(newMessages));
-  }, [updateCache]);
+  const { handleMessagesLoad } = useMessageLoader(loadMessages, getCachedMessages, updateCache);
+  const { handleSendMessage: messageSender } = useMessageSender(sendMessage, updateCache);
 
-  const handleMessagesLoad = useCallback(async (sessionId: string) => {
-    console.log('[useChat] Loading messages for session:', sessionId);
-    const loadedMessages = await loadMessages(sessionId, handleCacheUpdate);
-    return sortMessages(loadedMessages);
-  }, [loadMessages, handleCacheUpdate]);
-
-  useEffect(() => {
-    console.log('[useChat] Active session changed:', activeSessionId);
-    let isMounted = true;
-    
-    const loadChatMessages = async () => {
-      if (!activeSessionId) {
-        console.log('[useChat] No active session, clearing messages');
-        setMessages([]);
-        return;
-      }
-
-      try {
-        const cachedMessages = getCachedMessages(activeSessionId);
-        if (cachedMessages && isMounted) {
-          console.log('[useChat] Using cached messages for session:', activeSessionId);
-          setMessages(sortMessages(cachedMessages));
-        } else {
-          console.log('[useChat] Fetching messages from database for session:', activeSessionId);
-          const loadedMessages = await handleMessagesLoad(activeSessionId);
-          if (isMounted) {
-            console.log('[useChat] Successfully loaded messages for session:', activeSessionId);
-            setMessages(loadedMessages);
-          }
-        }
-      } catch (error) {
-        console.error('[useChat] Error loading chat messages:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load chat messages",
-          variant: "destructive"
-        });
-      }
-    };
-
-    loadChatMessages();
-
-    return () => {
-      isMounted = false;
-      console.log('[useChat] Cleanup: Session change effect for:', activeSessionId);
-    };
-  }, [activeSessionId, getCachedMessages, handleMessagesLoad, toast]);
-
-  // Set up real-time message updates with cache invalidation
+  // Set up real-time message updates
   useRealtimeMessages(
     activeSessionId,
     messages,
     setMessages,
-    handleCacheUpdate,
+    updateCache,
     invalidateCache
   );
 
-  const handleSendMessage = async (
+  // Handle session changes
+  useEffect(() => {
+    console.log('[useChat] Active session changed:', activeSessionId);
+    
+    if (!activeSessionId) {
+      console.log('[useChat] No active session, clearing messages');
+      clearMessages();
+      return;
+    }
+
+    handleMessagesLoad(activeSessionId, updateMessages);
+  }, [activeSessionId, handleMessagesLoad, clearMessages, updateMessages]);
+
+  const handleSendMessage = useCallback(async (
     content: string,
     type: 'text' | 'audio' = 'text',
     systemInstructions?: string
   ) => {
-    console.log('[useChat] Sending message:', { content, type, systemInstructions });
+    console.log('[useChat] Sending message:', { content, type });
     
-    try {
-      const currentSessionId = activeSessionId || await ensureSession();
-      if (!currentSessionId) {
-        throw new Error('Failed to create or get chat session');
-      }
-
-      const result = await sendMessage(
-        content,
-        type,
-        currentSessionId,
-        messages,
-        systemInstructions
-      );
-
-      if (result) {
-        console.log('[useChat] Message sent successfully for session:', currentSessionId);
-        const sortedMessages = sortMessages(result.messages);
-        setMessages(sortedMessages);
-        handleCacheUpdate(currentSessionId, sortedMessages);
-        return result;
-      }
-    } catch (error) {
-      console.error('[useChat] Error sending message:', error);
-      toast({
-        title: "Error",
-        description: "Failed to send message",
-        variant: "destructive"
-      });
-      throw error;
+    const currentSessionId = activeSessionId || await ensureSession();
+    if (!currentSessionId) {
+      throw new Error('Failed to create or get chat session');
     }
-  };
+
+    return messageSender(
+      content,
+      currentSessionId,
+      messages,
+      updateMessages,
+      type,
+      systemInstructions
+    );
+  }, [activeSessionId, ensureSession, messages, messageSender, updateMessages]);
 
   return {
     messages,
@@ -131,8 +69,8 @@ export const useChat = (activeSessionId: string | null) => {
     isLoadingMore,
     handleSendMessage,
     loadMoreMessages: useCallback(() => 
-      loadMoreMessages(activeSessionId, messages, setMessages, handleCacheUpdate),
-      [activeSessionId, messages, loadMoreMessages, handleCacheUpdate]
+      loadMoreMessages(activeSessionId, messages, setMessages, updateCache),
+      [activeSessionId, messages, loadMoreMessages, updateCache, setMessages]
     ),
     setMessages
   };
