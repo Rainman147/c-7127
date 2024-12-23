@@ -1,5 +1,6 @@
-import { format, isToday, isYesterday, isThisWeek, isThisMonth } from 'date-fns';
+import { format, isToday, isYesterday, isThisWeek, isThisMonth, parseISO } from 'date-fns';
 import type { Message } from '@/types/chat';
+import { logger, LogCategory } from '@/utils/logging';
 
 type MessageGroup = {
   id: string;
@@ -15,32 +16,67 @@ export const groupMessages = (messages: Message[]): MessageGroup[] => {
   let currentGroup: Message[] = [];
   let currentSender: string | null = null;
 
-  const getTimeLabel = (date: Date) => {
-    if (isToday(date)) return 'Today';
-    if (isYesterday(date)) return 'Yesterday';
-    if (isThisWeek(date)) return format(date, 'EEEE');
-    if (isThisMonth(date)) return format(date, 'MMMM d');
-    return format(date, 'MMMM d, yyyy');
+  const getTimeLabel = (dateStr: string) => {
+    try {
+      const date = parseISO(dateStr);
+      
+      if (!date || isNaN(date.getTime())) {
+        logger.error(LogCategory.STATE, 'messageGrouping', 'Invalid date:', { dateStr });
+        return 'Unknown Date';
+      }
+
+      if (isToday(date)) return 'Today';
+      if (isYesterday(date)) return 'Yesterday';
+      if (isThisWeek(date)) return format(date, 'EEEE');
+      if (isThisMonth(date)) return format(date, 'MMMM d');
+      return format(date, 'MMMM d, yyyy');
+    } catch (error) {
+      logger.error(LogCategory.STATE, 'messageGrouping', 'Error formatting date:', { 
+        dateStr, 
+        error 
+      });
+      return 'Unknown Date';
+    }
   };
 
   messages.forEach((message, index) => {
-    const messageDate = new Date(message.created_at || '');
-    const timeLabel = getTimeLabel(messageDate);
+    // Map role to sender for grouping
+    message.sender = message.role;
     
-    // Start a new group if sender changes or more than 5 minutes between messages
+    if (!message.created_at) {
+      logger.warn(LogCategory.STATE, 'messageGrouping', 'Message missing created_at:', { 
+        messageId: message.id 
+      });
+      message.created_at = new Date().toISOString();
+    }
+
     const shouldStartNewGroup = 
       message.sender !== currentSender || 
-      (index > 0 && new Date(message.created_at || '').getTime() - 
+      (index > 0 && new Date(message.created_at).getTime() - 
        new Date(messages[index - 1].created_at || '').getTime() > 5 * 60 * 1000);
 
     if (shouldStartNewGroup && currentGroup.length > 0) {
-      const groupDate = new Date(currentGroup[0].created_at || '');
-      groups.push({
-        id: `group-${groups.length}`,
-        messages: [...currentGroup],
-        timestamp: format(groupDate, 'h:mm a'),
-        label: timeLabel
-      });
+      const firstMessage = currentGroup[0];
+      const timeLabel = getTimeLabel(firstMessage.created_at || '');
+      
+      try {
+        const timestamp = firstMessage.created_at ? 
+          format(parseISO(firstMessage.created_at), 'h:mm a') : 
+          'Unknown time';
+
+        groups.push({
+          id: `group-${groups.length}`,
+          messages: [...currentGroup],
+          timestamp,
+          label: timeLabel
+        });
+      } catch (error) {
+        logger.error(LogCategory.STATE, 'messageGrouping', 'Error creating group:', { 
+          error,
+          firstMessage 
+        });
+      }
+      
       currentGroup = [];
     }
 
@@ -50,13 +86,26 @@ export const groupMessages = (messages: Message[]): MessageGroup[] => {
 
   // Add the last group
   if (currentGroup.length > 0) {
-    const groupDate = new Date(currentGroup[0].created_at || '');
-    groups.push({
-      id: `group-${groups.length}`,
-      messages: [...currentGroup],
-      timestamp: format(groupDate, 'h:mm a'),
-      label: getTimeLabel(groupDate)
-    });
+    const firstMessage = currentGroup[0];
+    const timeLabel = getTimeLabel(firstMessage.created_at || '');
+    
+    try {
+      const timestamp = firstMessage.created_at ? 
+        format(parseISO(firstMessage.created_at), 'h:mm a') : 
+        'Unknown time';
+
+      groups.push({
+        id: `group-${groups.length}`,
+        messages: [...currentGroup],
+        timestamp,
+        label: timeLabel
+      });
+    } catch (error) {
+      logger.error(LogCategory.STATE, 'messageGrouping', 'Error creating final group:', { 
+        error,
+        firstMessage 
+      });
+    }
   }
 
   return groups;

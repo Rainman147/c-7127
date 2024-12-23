@@ -6,4 +6,5 @@ export type Message = {
   id?: string;
   sequence?: number;
   created_at?: string;
+  sender?: string; // Adding this field for compatibility
 };

@@ -63,7 +63,7 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
               <Message 
                 key={message.id || index} 
                 {...message} 
-                showAvatar={index === 0 || message.sender !== group.messages[index - 1].sender}
+                showAvatar={index === 0 || message.role !== group.messages[index - 1].role}
               />
             ))}
           </div>
