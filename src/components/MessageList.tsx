@@ -22,11 +22,45 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
     isLoading
   });
 
+  // Monitor container dimensions
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      logger.warn(LogCategory.STATE, 'MessageList', 'Container ref not available');
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        logger.debug(LogCategory.STATE, 'MessageList', 'Container resized', {
+          height: entry.contentRect.height,
+          width: entry.contentRect.width,
+          keyboardVisible,
+          messageCount: messages.length,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [messages.length, keyboardVisible]);
+
   // Ensure container height is properly set
   useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.style.height = `calc(100vh - ${keyboardVisible ? '300px' : '240px'})`;
-    }
+    const container = containerRef.current;
+    if (!container) return;
+
+    const newHeight = `calc(100vh - ${keyboardVisible ? '300px' : '240px'})`;
+    container.style.height = newHeight;
+    
+    logger.debug(LogCategory.STATE, 'MessageList', 'Container height updated', {
+      newHeight,
+      keyboardVisible,
+      containerClientHeight: container.clientHeight,
+      containerScrollHeight: container.scrollHeight,
+      messageCount: messages.length
+    });
   }, [keyboardVisible]);
 
   // Track message grouping performance
@@ -34,7 +68,7 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
     const groupStartTime = performance.now();
     const groups = groupMessages(messages);
     
-    logger.debug(LogCategory.RENDER, 'MessageList', 'Message grouping complete', {
+    logger.debug(LogCategory.STATE, 'MessageList', 'Message grouping complete', {
       duration: performance.now() - groupStartTime,
       messageCount: messages.length,
       groupCount: groups.length
@@ -64,7 +98,10 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
     <div 
       ref={containerRef}
       className="flex-1 overflow-y-auto chat-scrollbar space-y-6 pb-[180px] pt-4 px-4"
-      style={{ overscrollBehavior: 'contain' }}
+      style={{ 
+        overscrollBehavior: 'contain',
+        willChange: 'transform'
+      }}
     >
       {messageGroups.map((group) => (
         <div key={group.id} className="space-y-4">

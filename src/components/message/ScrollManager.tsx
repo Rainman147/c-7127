@@ -13,11 +13,25 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
   const shouldScrollToBottom = useRef<boolean>(true);
   const scrollTimeout = useRef<NodeJS.Timeout>();
   const isInitialLoad = useRef<boolean>(true);
+  const lastMessageCount = useRef<number>(0);
 
-  // Track scroll position changes
+  // Track container dimensions and scroll state
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container) {
+      logger.warn(LogCategory.STATE, 'ScrollManager', 'Container ref not available');
+      return;
+    }
+
+    // Log initial container state
+    logger.debug(LogCategory.STATE, 'ScrollManager', 'Container initialized', {
+      height: container.clientHeight,
+      scrollHeight: container.scrollHeight,
+      offsetHeight: container.offsetHeight,
+      style: container.style.height,
+      hasScrollbar: container.scrollHeight > container.clientHeight,
+      messageCount: messages.length
+    });
 
     const handleScroll = () => {
       const currentPosition = container.scrollTop;
@@ -33,6 +47,8 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
         maxScroll,
         delta: scrollDelta,
         isNearBottom,
+        containerHeight: container.clientHeight,
+        scrollHeight: container.scrollHeight,
         messageCount: messages.length
       });
       
@@ -43,20 +59,31 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
     return () => container.removeEventListener('scroll', handleScroll);
   }, [containerRef, messages.length]);
 
-  // Handle initial load and new messages
+  // Handle messages updates and scrolling
   useEffect(() => {
     const container = containerRef.current;
     if (!container || isLoading) return;
 
+    const messageCountChanged = messages.length !== lastMessageCount.current;
     const shouldForceScroll = isInitialLoad.current || shouldScrollToBottom.current;
     
+    logger.debug(LogCategory.STATE, 'ScrollManager', 'Messages updated', {
+      previousCount: lastMessageCount.current,
+      newCount: messages.length,
+      messageCountChanged,
+      shouldForceScroll,
+      isInitialLoad: isInitialLoad.current,
+      containerHeight: container.clientHeight,
+      scrollHeight: container.scrollHeight
+    });
+
+    lastMessageCount.current = messages.length;
+    
     if (shouldForceScroll) {
-      // Clear any existing scroll timeout
       if (scrollTimeout.current) {
         clearTimeout(scrollTimeout.current);
       }
 
-      // Set a new timeout for scrolling
       scrollTimeout.current = setTimeout(() => {
         const scrollStartTime = performance.now();
         
@@ -71,14 +98,18 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
             duration: performance.now() - scrollStartTime,
             targetScroll,
             isInitialLoad: isInitialLoad.current,
-            messageCount: messages.length
+            messageCount: messages.length,
+            containerHeight: container.clientHeight,
+            scrollHeight: container.scrollHeight
           });
 
           isInitialLoad.current = false;
         } catch (error) {
           logger.error(LogCategory.ERROR, 'ScrollManager', 'Auto-scroll failed', {
             error,
-            messageCount: messages.length
+            messageCount: messages.length,
+            containerHeight: container.clientHeight,
+            scrollHeight: container.scrollHeight
           });
         }
       }, isInitialLoad.current ? 0 : 100);
