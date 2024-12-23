@@ -4,6 +4,7 @@ import MessageActions from './MessageActions';
 import MessageContent from './message/MessageContent';
 import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 type MessageProps = {
   role: 'user' | 'assistant';
