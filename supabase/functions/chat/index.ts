@@ -34,14 +34,9 @@ serve(async (req) => {
     // Parse request body
     const requestBody = await req.json();
     console.log('[ChatFunction] Request body received:', {
-      messageCount: requestBody.messages?.length || 0,
+      messageCount: requestBody.messageHistory?.length || 0,
       hasSystemInstructions: !!requestBody.systemInstructions
     });
-
-    if (!requestBody.messages || !Array.isArray(requestBody.messages)) {
-      console.error('[ChatFunction] Invalid messages format:', requestBody);
-      throw new Error('Messages must be provided as an array');
-    }
 
     // Prepare messages array
     const messageArray = [];
@@ -53,14 +48,16 @@ serve(async (req) => {
       console.log('[ChatFunction] Added system instructions to message array');
     }
 
-    // Add user messages
-    messageArray.push(...requestBody.messages.map((msg: any) => ({
-      role: msg.role === 'user' ? 'user' : 'assistant',
-      content: msg.content
-    })));
-    console.log('[ChatFunction] Prepared message array:', {
-      totalMessages: messageArray.length,
-      roles: messageArray.map((msg: any) => msg.role)
+    // Add message history
+    if (requestBody.messageHistory) {
+      messageArray.push(...requestBody.messageHistory);
+      console.log('[ChatFunction] Added message history to array');
+    }
+
+    // Add current message
+    messageArray.push({
+      role: 'user',
+      content: requestBody.message
     });
 
     console.log('[ChatFunction] Initiating OpenAI API request');
@@ -78,7 +75,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'gpt-4',  // Fixed model name
           messages: messageArray,
           temperature: 0.7,
           max_tokens: 2048,
