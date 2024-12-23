@@ -29,9 +29,18 @@ export const useMessageDatabase = () => {
       .single();
 
     if (error) {
-      console.error('[useMessageDatabase] Error inserting user message:', error);
+      console.error('[useMessageDatabase] Database error on insert:', {
+        error: error.message,
+        details: error.details,
+        hint: error.hint
+      });
       throw error;
     }
+
+    console.log('[useMessageDatabase] Message inserted successfully:', {
+      messageId: userMessage.id,
+      sequence: userMessage.sequence
+    });
 
     return userMessage as DatabaseMessage;
   };
@@ -47,9 +56,18 @@ export const useMessageDatabase = () => {
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error('[useMessageDatabase] Error fetching messages:', error);
+      console.error('[useMessageDatabase] Database error on fetch:', {
+        error: error.message,
+        details: error.details,
+        hint: error.hint
+      });
       throw error;
     }
+
+    console.log('[useMessageDatabase] Messages fetched successfully:', {
+      count: messages.length,
+      sequences: messages.map(m => m.sequence)
+    });
 
     return messages as DatabaseMessage[];
   };

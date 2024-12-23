@@ -17,37 +17,46 @@ export const useMessageHandling = () => {
     existingMessages: Message[] = [],
     systemInstructions?: string
   ) => {
-    console.log('[useMessageHandling] Sending message:', { 
+    console.log('[useMessageHandling] Starting message send operation:', { 
       contentLength: content.length,
       type,
       chatId,
-      existingMessagesCount: existingMessages.length 
+      existingMessagesCount: existingMessages.length,
+      hasSystemInstructions: !!systemInstructions
     });
 
     if (!content.trim()) {
-      console.error('[useMessageHandling] Empty message content');
-      throw new Error('Message content cannot be empty');
+      const error = new Error('Message content cannot be empty');
+      console.error('[useMessageHandling] Validation error:', error);
+      throw error;
     }
 
     if (!chatId) {
-      console.error('[useMessageHandling] No chat ID provided');
-      throw new Error('Chat ID is required');
+      const error = new Error('Chat ID is required');
+      console.error('[useMessageHandling] Validation error:', error);
+      throw error;
     }
 
     setIsLoading(true);
+    console.log('[useMessageHandling] Set loading state to true');
 
     try {
       const nextSequence = existingMessages.length + 1;
-      
-      console.log('[useMessageHandling] Calculated message metadata:', {
-        sequence: nextSequence
-      });
+      console.log('[useMessageHandling] Calculated next sequence:', nextSequence);
 
+      console.log('[useMessageHandling] Inserting user message to database');
       const userMessage = await insertUserMessage(chatId, content, type, nextSequence);
+      
+      console.log('[useMessageHandling] Fetching updated messages');
       const messages = await fetchMessages(chatId);
+      
+      console.log('[useMessageHandling] Transforming messages:', {
+        fetchedCount: messages.length,
+        sequences: messages.map(m => m.sequence)
+      });
       const transformedMessages = transformDatabaseMessages(messages);
 
-      console.log('[useMessageHandling] Operation complete:', {
+      console.log('[useMessageHandling] Operation complete successfully:', {
         messageCount: transformedMessages.length,
         sequences: transformedMessages.map(m => m.sequence)
       });
@@ -57,15 +66,21 @@ export const useMessageHandling = () => {
         userMessage: transformDatabaseMessage(userMessage)
       };
 
-    } catch (error) {
-      console.error('[useMessageHandling] Error sending message:', error);
+    } catch (error: any) {
+      console.error('[useMessageHandling] Error in message operation:', {
+        error: error.message,
+        stack: error.stack
+      });
+      
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",
         variant: "destructive"
       });
+      
       throw error;
     } finally {
+      console.log('[useMessageHandling] Resetting loading state');
       setIsLoading(false);
     }
   };
