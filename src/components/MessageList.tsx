@@ -12,6 +12,7 @@ type Message = {
 
 const ITEM_SIZE = 150; // Average height of a message
 const OVERSCAN_COUNT = 5; // Number of items to render beyond visible area
+const BOTTOM_PADDING = 180; // Increased padding to prevent overlap with input
 
 const MessageList = ({ messages }: { messages: Message[] }) => {
   const renderStartTime = performance.now();
@@ -71,7 +72,7 @@ const MessageList = ({ messages }: { messages: Message[] }) => {
   });
 
   return (
-    <div className="flex-1 overflow-hidden pb-40"> {/* Increased bottom padding */}
+    <div className="flex-1 overflow-hidden" style={{ paddingBottom: BOTTOM_PADDING }}>
       <List
         ref={listRef}
         height={600}
