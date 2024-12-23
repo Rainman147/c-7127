@@ -1,4 +1,4 @@
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useMemo } from 'react-router-dom';
 import { defaultTemplates } from '@/types/templates/defaults';
 
 export const useSessionParams = () => {
@@ -8,56 +8,42 @@ export const useSessionParams = () => {
 
   const templateId = searchParams.get('template') || 'live-session';
 
-  // Enhanced validation logic
-  const isNewSession = !sessionId;
-  const isValidSessionId = sessionId ? /^[0-9a-fA-F-]+$/.test(sessionId) : false;
-  
-  // Improved template validation to handle both default and custom templates
-  const isValidTemplateId = templateId ? (
-    defaultTemplates.some(template => template.id === templateId) ||
-    /^[0-9a-fA-F-]+$/.test(templateId)
-  ) : false;
-
-  console.log('[useSessionParams] Template validation:', {
-    providedTemplateId: templateId,
-    isDefaultTemplate: defaultTemplates.some(t => t.id === templateId),
-    matchingDefaultTemplate: defaultTemplates.find(t => t.id === templateId)?.name,
-    isCustomTemplate: templateId ? /^[0-9a-fA-F-]+$/.test(templateId) : false,
-    isValidTemplateId
-  });
-
-  console.log('[useSessionParams] Current state:', {
-    sessionId,
-    templateId,
+  const {
     isNewSession,
     isValidSessionId,
     isValidTemplateId,
-    currentPath: window.location.pathname,
-    defaultTemplatesCount: defaultTemplates.length,
-    isDefaultTemplate: templateId ? defaultTemplates.some(t => t.id === templateId) : false
-  });
+    matchingTemplate
+  } = useMemo(() => {
+    const isNewSession = !sessionId;
+    const isValidSessionId = sessionId ? /^[0-9a-fA-F-]+$/.test(sessionId) : false;
+    
+    const matchingTemplate = defaultTemplates.find(t => t.id === templateId);
+    const isValidTemplateId = templateId ? (
+      !!matchingTemplate || /^[0-9a-fA-F-]+$/.test(templateId)
+    ) : false;
+
+    return {
+      isNewSession,
+      isValidSessionId,
+      isValidTemplateId,
+      matchingTemplate
+    };
+  }, [sessionId, templateId]);
 
   const redirectToSession = (id: string, params?: { template?: string }) => {
     const targetTemplateId = params?.template || templateId;
     const currentSearchParams = new URLSearchParams(searchParams);
     const currentTemplate = currentSearchParams.get('template');
     
-    // Only update if there's an actual change
     if (id !== sessionId || targetTemplateId !== currentTemplate) {
       console.log('[useSessionParams] Redirecting to session:', { 
         id, 
         params,
         currentTemplate: templateId,
-        targetTemplate: targetTemplateId,
-        isValidTemplate: targetTemplateId ? (
-          defaultTemplates.some(t => t.id === targetTemplateId) ||
-          /^[0-9a-fA-F-]+$/.test(targetTemplateId)
-        ) : false
+        targetTemplate: targetTemplateId
       });
       
       const newSearchParams = new URLSearchParams();
-      
-      // Preserve template param if not explicitly changed
       if (!params?.template && templateId) {
         newSearchParams.set('template', templateId);
       } else if (params?.template) {
@@ -66,35 +52,19 @@ export const useSessionParams = () => {
 
       const queryString = newSearchParams.toString();
       const newPath = `/c/${id}${queryString ? `?${queryString}` : ''}`;
-      
-      console.log('[useSessionParams] New path:', newPath);
       navigate(newPath);
-    } else {
-      console.log('[useSessionParams] Skipping redirect - no changes detected:', {
-        currentId: sessionId,
-        newId: id,
-        currentTemplate,
-        newTemplate: targetTemplateId
-      });
     }
   };
 
   const redirectToNew = (params?: { template?: string }) => {
     const targetTemplateId = params?.template || templateId;
-    
     console.log('[useSessionParams] Redirecting to new session with params:', {
       params,
       currentTemplate: templateId,
-      targetTemplate: targetTemplateId,
-      isValidTemplate: targetTemplateId ? (
-        defaultTemplates.some(t => t.id === targetTemplateId) ||
-        /^[0-9a-fA-F-]+$/.test(targetTemplateId)
-      ) : false
+      targetTemplate: targetTemplateId
     });
     
     const newSearchParams = new URLSearchParams();
-    
-    // Preserve template param if not explicitly changed
     if (!params?.template && templateId) {
       newSearchParams.set('template', templateId);
     } else if (params?.template) {
@@ -103,17 +73,16 @@ export const useSessionParams = () => {
 
     const queryString = newSearchParams.toString();
     const newPath = `/${queryString ? `?${queryString}` : ''}`;
-    
-    console.log('[useSessionParams] New path:', newPath);
     navigate(newPath);
   };
 
   return {
     sessionId: isValidSessionId ? sessionId : null,
-    templateId: isValidTemplateId ? templateId : 'live-session', // Fallback to default template
+    templateId: isValidTemplateId ? templateId : 'live-session',
     isNewSession,
     isValidSessionId,
     isValidTemplateId,
+    matchingTemplate,
     redirectToNew,
     redirectToSession
   };

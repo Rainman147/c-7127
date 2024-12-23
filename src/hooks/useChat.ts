@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useMessageState } from './chat/useMessageState';
 import { useMessageLoader } from './chat/useMessageLoader';
 import { useMessageSender } from './chat/useMessageSender';
@@ -15,6 +15,7 @@ export const useChat = (activeSessionId: string | null) => {
   const { getCachedMessages, updateCache, invalidateCache } = useChatCache();
   const { loadMessages, loadMoreMessages, isLoadingMore } = useMessageLoading();
   const { ensureSession } = useSessionCoordinator();
+  const prevSessionIdRef = useRef<string | null>(null);
 
   const { handleMessagesLoad } = useMessageLoader(loadMessages, getCachedMessages, updateCache);
   const { handleSendMessage: messageSender } = useMessageSender(sendMessage, updateCache);
@@ -30,7 +31,12 @@ export const useChat = (activeSessionId: string | null) => {
 
   // Handle session changes
   useEffect(() => {
+    if (activeSessionId === prevSessionIdRef.current) {
+      return;
+    }
+
     console.log('[useChat] Active session changed:', activeSessionId);
+    prevSessionIdRef.current = activeSessionId;
     
     if (!activeSessionId) {
       console.log('[useChat] No active session, clearing messages');
@@ -46,6 +52,10 @@ export const useChat = (activeSessionId: string | null) => {
     type: 'text' | 'audio' = 'text',
     systemInstructions?: string
   ) => {
+    if (!content.trim()) {
+      return;
+    }
+
     console.log('[useChat] Sending message:', { content, type });
     
     const currentSessionId = activeSessionId || await ensureSession();
