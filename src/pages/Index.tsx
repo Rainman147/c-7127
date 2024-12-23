@@ -8,6 +8,8 @@ import { SidebarToggle } from '@/components/SidebarToggle';
 import { useSessionParams } from '@/hooks/routing/useSessionParams';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { PostMessageErrorBoundary } from '@/components/error-boundaries/PostMessageErrorBoundary';
+import { logger, LogCategory } from '@/utils/logging';
 
 const ChatContent = () => {
   const { isOpen } = useSidebar();
@@ -25,7 +27,7 @@ const ChatContent = () => {
   // Handle invalid routes
   useEffect(() => {
     if (!isNewSession && !isValidSessionId) {
-      console.log('[Index] Invalid session ID, redirecting to new chat');
+      logger.warn(LogCategory.STATE, 'Index', 'Invalid session ID, redirecting to new chat');
       toast({
         title: "Invalid Session",
         description: "The requested chat session could not be found.",
@@ -42,17 +44,21 @@ const ChatContent = () => {
       
       <div className="flex-1 overflow-hidden mt-[60px] relative">
         <div className="max-w-3xl mx-auto px-4 h-full">
-          <MessageList messages={messages} />
+          <PostMessageErrorBoundary>
+            <MessageList messages={messages} />
+          </PostMessageErrorBoundary>
         </div>
       </div>
       
       <div className="w-full pb-4 pt-2 fixed bottom-0 left-0 right-0 bg-chatgpt-main/95 backdrop-blur">
         <div className="max-w-3xl mx-auto px-4">
-          <ChatInput 
-            onSend={handleSendMessage}
-            onTranscriptionComplete={(text) => handleSendMessage(text, 'audio')}
-            isLoading={isLoading}
-          />
+          <PostMessageErrorBoundary>
+            <ChatInput 
+              onSend={handleSendMessage}
+              onTranscriptionComplete={(text) => handleSendMessage(text, 'audio')}
+              isLoading={isLoading}
+            />
+          </PostMessageErrorBoundary>
         </div>
       </div>
     </div>

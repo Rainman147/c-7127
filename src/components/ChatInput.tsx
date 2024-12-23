@@ -1,5 +1,6 @@
 import { useMessageSubmission } from "@/hooks/chat/useMessageSubmission";
 import { useTranscriptionHandler } from "@/hooks/chat/useTranscriptionHandler";
+import { logger, LogCategory } from "@/utils/logging";
 import ChatInputField from "./chat/ChatInputField";
 import ChatInputActions from "./chat/ChatInputActions";
 import { useState } from "react";
@@ -17,7 +18,7 @@ const ChatInput = ({
   onTranscriptionUpdate,
   isLoading = false 
 }: ChatInputProps) => {
-  console.log('[ChatInput] Rendering with props:', { isLoading });
+  logger.debug(LogCategory.RENDER, 'ChatInput', 'Rendering with props:', { isLoading });
   
   const [message, setMessage] = useState("");
   
@@ -39,31 +40,38 @@ const ChatInput = ({
   });
 
   const handleSubmit = async () => {
-    console.log('[ChatInput] Handling submit with message:', message);
+    logger.info(LogCategory.COMMUNICATION, 'ChatInput', 'Handling submit with message:', 
+      { messageLength: message.length }
+    );
+    
     if (message.trim()) {
       try {
         await originalHandleSubmit();
       } catch (error) {
-        console.error('[ChatInput] Error submitting message:', error);
+        logger.error(LogCategory.ERROR, 'ChatInput', 'Error submitting message:', error);
       }
     }
   };
 
   const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !isLoading && !isProcessing) {
-      console.log('[ChatInput] Enter key pressed, submitting message');
+      logger.debug(LogCategory.COMMUNICATION, 'ChatInput', 'Enter key pressed, submitting message');
       e.preventDefault();
       await handleSubmit();
     }
   };
 
   const handleMessageChange = (newMessage: string) => {
-    console.log('[ChatInput] Message changed:', { length: newMessage.length });
+    logger.debug(LogCategory.STATE, 'ChatInput', 'Message changed:', 
+      { length: newMessage.length }
+    );
     setMessage(newMessage);
   };
 
   const isDisabled = isLoading || isProcessing;
-  console.log('[ChatInput] Component state:', { isDisabled, messageLength: message.length });
+  logger.debug(LogCategory.STATE, 'ChatInput', 'Component state:', 
+    { isDisabled, messageLength: message.length }
+  );
 
   return (
     <div className="relative flex w-full flex-col items-center">
