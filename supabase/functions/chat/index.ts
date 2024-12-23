@@ -75,7 +75,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4',  // Fixed model name
+          model: 'gpt-4o-mini',  // Using the correct model name
           messages: messageArray,
           temperature: 0.7,
           max_tokens: 2048,
