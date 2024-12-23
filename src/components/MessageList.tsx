@@ -71,7 +71,7 @@ const MessageList = ({ messages }: { messages: Message[] }) => {
   });
 
   return (
-    <div className="flex-1 overflow-hidden pb-32">
+    <div className="flex-1 overflow-hidden pb-40"> {/* Increased bottom padding */}
       <List
         ref={listRef}
         height={600}

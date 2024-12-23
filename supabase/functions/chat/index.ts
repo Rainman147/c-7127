@@ -45,8 +45,10 @@ serve(async (req) => {
         'Authorization': `Bearer ${openAIApiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini', // Using the correct model name
         messages: messageArray,
+        temperature: 0.7,
+        max_tokens: 2048,
       }),
     })
 
@@ -68,8 +70,14 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in chat function:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        error: error.message,
+        status: 'error'
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     )
   }
 })
