@@ -7,6 +7,7 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -16,13 +17,19 @@ serve(async (req) => {
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY')
 
     if (!openAIApiKey) {
+      console.error('OpenAI API key is missing');
       throw new Error('OpenAI API key is required')
     }
 
     console.log('Processing chat request:', {
-      messageCount: messages.length,
+      messageCount: messages?.length || 0,
       hasSystemInstructions: !!systemInstructions
     });
+
+    if (!messages || !Array.isArray(messages)) {
+      console.error('Invalid messages format:', messages);
+      throw new Error('Messages must be provided as an array');
+    }
 
     // Prepare messages array with system instructions if provided
     const messageArray = []
@@ -47,8 +54,8 @@ serve(async (req) => {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
@@ -62,6 +69,7 @@ serve(async (req) => {
       const error = await response.json()
       console.error('OpenAI API error:', {
         status: response.status,
+        statusText: response.statusText,
         error: error.error?.message || 'Unknown error',
         type: error.error?.type
       });
