@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useMessageLoadingState } from './useMessageLoadingState';
+import { useMessageDatabase } from './useMessageDatabase';
+import { useMessageTransform } from './useMessageTransform';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
-import type { DatabaseMessage } from '@/types/database/messages';
 
 export const useMessageHandling = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const { isLoading, setIsLoading } = useMessageLoadingState();
+  const { insertUserMessage, fetchMessages } = useMessageDatabase();
+  const { transformDatabaseMessages, transformDatabaseMessage } = useMessageTransform();
   const { toast } = useToast();
 
   const handleSendMessage = async (
@@ -35,74 +37,24 @@ export const useMessageHandling = () => {
     setIsLoading(true);
 
     try {
-      // Calculate next sequence number
       const nextSequence = existingMessages.length + 1;
-
+      
       console.log('[useMessageHandling] Calculated message metadata:', {
         sequence: nextSequence
       });
 
-      // Insert user message
-      const { data: userMessage, error: userMessageError } = await supabase
-        .from('messages')
-        .insert({
-          chat_id: chatId,
-          content,
-          sender: 'user',
-          type,
-          sequence: nextSequence
-        })
-        .select()
-        .single();
+      const userMessage = await insertUserMessage(chatId, content, type, nextSequence);
+      const messages = await fetchMessages(chatId);
+      const transformedMessages = transformDatabaseMessages(messages);
 
-      if (userMessageError) {
-        console.error('[useMessageHandling] Error inserting user message:', userMessageError);
-        throw userMessageError;
-      }
-
-      console.log('[useMessageHandling] User message inserted:', {
-        messageId: userMessage.id,
-        sequence: nextSequence
-      });
-
-      // Get updated messages
-      const { data: messages, error: messagesError } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('chat_id', chatId)
-        .order('sequence', { ascending: true })
-        .order('created_at', { ascending: true });
-
-      if (messagesError) {
-        console.error('[useMessageHandling] Error fetching messages:', messagesError);
-        throw messagesError;
-      }
-
-      // Transform database messages to Message type
-      const transformedMessages: Message[] = (messages as DatabaseMessage[]).map(msg => ({
-        role: msg.sender as 'user' | 'assistant',
-        content: msg.content,
-        type: msg.type as 'text' | 'audio',
-        id: msg.id,
-        sequence: msg.sequence || messages.indexOf(msg) + 1,
-        created_at: msg.created_at
-      }));
-
-      console.log('[useMessageHandling] Retrieved updated messages:', {
-        count: transformedMessages.length,
+      console.log('[useMessageHandling] Operation complete:', {
+        messageCount: transformedMessages.length,
         sequences: transformedMessages.map(m => m.sequence)
       });
 
       return {
         messages: transformedMessages,
-        userMessage: {
-          role: 'user' as const,
-          content: (userMessage as DatabaseMessage).content,
-          type: (userMessage as DatabaseMessage).type as 'text' | 'audio',
-          id: (userMessage as DatabaseMessage).id,
-          sequence: (userMessage as DatabaseMessage).sequence || nextSequence,
-          created_at: (userMessage as DatabaseMessage).created_at
-        }
+        userMessage: transformDatabaseMessage(userMessage)
       };
 
     } catch (error) {
