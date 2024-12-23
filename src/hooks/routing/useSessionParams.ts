@@ -9,8 +9,8 @@ export const useSessionParams = () => {
 
   // Improved validation logic
   const isNewSession = !sessionId;
-  const isValidSessionId = sessionId && /^[0-9a-fA-F-]+$/.test(sessionId);
-  const isValidTemplateId = templateId && /^[0-9a-fA-F-]+$/.test(templateId);
+  const isValidSessionId = sessionId ? /^[0-9a-fA-F-]+$/.test(sessionId) : false;
+  const isValidTemplateId = templateId ? /^[0-9a-fA-F-]+$/.test(templateId) : false;
 
   console.log('[useSessionParams] Current state:', {
     sessionId,
