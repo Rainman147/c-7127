@@ -1,4 +1,5 @@
-import { useParams, useNavigate, useSearchParams, useMemo } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useMemo } from 'react';
 import { defaultTemplates } from '@/types/templates/defaults';
 
 export const useSessionParams = () => {

@@ -5,7 +5,7 @@ import type { Message } from '@/types/chat';
 import type { DatabaseMessage } from '@/types/database/messages';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-const validateAndMergeMessages = (localMessages: Message[], newMessage: Message) => {
+const validateAndMergeMessages = (localMessages: Message[], newMessage: Message): Message[] => {
   const isDuplicate = localMessages.some(msg => msg.id === newMessage.id);
   if (isDuplicate) {
     return localMessages;
@@ -80,23 +80,23 @@ export const useRealtimeMessages = (
                 created_at: newData.created_at
               };
 
-              setMessages(prevMessages => validateAndMergeMessages(prevMessages, newMessage));
-              updateCache(currentChatId, messages);
+              const updatedMessages = validateAndMergeMessages([...messages], newMessage);
+              setMessages(updatedMessages);
+              updateCache(currentChatId, updatedMessages);
               
             } else if (payload.eventType === 'UPDATE') {
               invalidateCache(currentChatId);
               
-              setMessages(prevMessages => 
-                prevMessages.map(msg => 
-                  msg.id === newData.id ? {
-                    ...msg,
-                    content: newData.content,
-                    type: newData.type as 'text' | 'audio',
-                    sequence: newData.sequence || msg.sequence,
-                    created_at: newData.created_at
-                  } : msg
-                )
+              const updatedMessages = messages.map(msg => 
+                msg.id === newData.id ? {
+                  ...msg,
+                  content: newData.content,
+                  type: newData.type as 'text' | 'audio',
+                  sequence: newData.sequence || msg.sequence,
+                  created_at: newData.created_at
+                } : msg
               );
+              setMessages(updatedMessages);
             }
           } catch (error) {
             console.error('[useRealtimeMessages] Error handling update:', error);
