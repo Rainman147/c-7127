@@ -91,7 +91,8 @@ const Message = memo(({
           />
           {role === 'assistant' && id && (
             <MessageActions 
-              content={editedContent} 
+              content={editedContent}
+              messageId={id}
               onEdit={handleEdit}
             />
           )}
