@@ -7,20 +7,30 @@ import { useChatCache } from './chat/useChatCache';
 import { useRealtimeMessages } from './chat/useRealtimeMessages';
 import { useMessageLoading } from './chat/useMessageLoading';
 import { useSessionCoordinator } from './chat/useSessionCoordinator';
+import { useToast } from './use-toast';
+import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 
 export const useChat = (activeSessionId: string | null) => {
-  const { messages, updateMessages, clearMessages, setMessages } = useMessageState();
+  const { 
+    messages, 
+    updateMessages, 
+    clearMessages, 
+    setMessages,
+    addOptimisticMessage,
+    replaceOptimisticMessage 
+  } = useMessageState();
+  
   const { isLoading, handleSendMessage: sendMessage } = useMessageHandling();
   const { getCachedMessages, updateCache, invalidateCache } = useChatCache();
   const { loadMessages, loadMoreMessages, isLoadingMore } = useMessageLoading();
   const { ensureSession } = useSessionCoordinator();
+  const { toast } = useToast();
   const prevSessionIdRef = useRef<string | null>(null);
 
   const { handleMessagesLoad } = useMessageLoader(loadMessages, getCachedMessages, updateCache);
   const { handleSendMessage: messageSender } = useMessageSender(sendMessage, updateCache);
 
-  // Set up real-time message updates
   useRealtimeMessages(
     activeSessionId,
     messages,
@@ -29,17 +39,16 @@ export const useChat = (activeSessionId: string | null) => {
     invalidateCache
   );
 
-  // Handle session changes
   useEffect(() => {
     if (activeSessionId === prevSessionIdRef.current) {
       return;
     }
 
-    console.log('[useChat] Active session changed:', activeSessionId);
+    logger.info(LogCategory.STATE, 'useChat', 'Active session changed:', { activeSessionId });
     prevSessionIdRef.current = activeSessionId;
     
     if (!activeSessionId) {
-      console.log('[useChat] No active session, clearing messages');
+      logger.debug(LogCategory.STATE, 'useChat', 'No active session, clearing messages');
       clearMessages();
       return;
     }
@@ -56,22 +65,67 @@ export const useChat = (activeSessionId: string | null) => {
       return;
     }
 
-    console.log('[useChat] Sending message:', { content, type });
+    logger.info(LogCategory.COMMUNICATION, 'useChat', 'Sending message:', { 
+      contentLength: content.length,
+      type 
+    });
     
     const currentSessionId = activeSessionId || await ensureSession();
     if (!currentSessionId) {
       throw new Error('Failed to create or get chat session');
     }
 
-    return messageSender(
-      content,
-      currentSessionId,
-      messages,
-      updateMessages,
-      type,
-      systemInstructions
-    );
-  }, [activeSessionId, ensureSession, messages, messageSender, updateMessages]);
+    // Add optimistic message immediately
+    const optimisticMessage = addOptimisticMessage(content, type);
+
+    try {
+      const result = await messageSender(
+        content,
+        currentSessionId,
+        messages,
+        updateMessages,
+        type,
+        systemInstructions
+      );
+
+      if (result?.messages) {
+        // Find the actual user message from the response
+        const actualMessage = result.messages.find(
+          msg => msg.role === 'user' && msg.content === content
+        );
+
+        if (actualMessage) {
+          logger.debug(LogCategory.STATE, 'useChat', 'Replacing optimistic message:', {
+            tempId: optimisticMessage.id,
+            actualId: actualMessage.id
+          });
+          replaceOptimisticMessage(optimisticMessage.id, actualMessage);
+        }
+      }
+
+      return result;
+    } catch (error) {
+      logger.error(LogCategory.ERROR, 'useChat', 'Error sending message:', error);
+      // Remove the optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  }, [
+    activeSessionId,
+    ensureSession,
+    messages,
+    messageSender,
+    updateMessages,
+    addOptimisticMessage,
+    replaceOptimisticMessage,
+    setMessages,
+    toast
+  ]);
 
   return {
     messages,

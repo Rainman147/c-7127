@@ -1,10 +1,34 @@
 export type Message = {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
-  isStreaming?: boolean;
   type?: 'text' | 'audio';
-  id?: string;
   sequence?: number;
   created_at?: string;
-  sender?: string; // Adding this field for compatibility
+  isOptimistic?: boolean;
+};
+
+export type MessageGroup = {
+  id: string;
+  label: string;
+  timestamp: string;
+  messages: Message[];
+};
+
+export type MessageUpdate = {
+  id: string;
+  content: string;
+  type?: 'text' | 'audio';
+};
+
+export type MessageAction = {
+  type: 'edit' | 'delete' | 'regenerate';
+  messageId: string;
+};
+
+export type MessageFilter = {
+  role?: 'user' | 'assistant';
+  type?: 'text' | 'audio';
+  startDate?: Date;
+  endDate?: Date;
 };
