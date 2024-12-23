@@ -7,52 +7,68 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  console.log('[ChatFunction] Request received:', {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries())
+  });
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('[ChatFunction] Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const { messages, systemInstructions } = await req.json()
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY')
+    const startTime = performance.now();
+    console.log('[ChatFunction] Starting request processing');
 
+    // Check OpenAI API key
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
-      console.error('OpenAI API key is missing')
-      throw new Error('OpenAI API key is required')
+      console.error('[ChatFunction] OpenAI API key is missing');
+      throw new Error('OpenAI API key is required');
+    }
+    console.log('[ChatFunction] OpenAI API key verified');
+
+    // Parse request body
+    const requestBody = await req.json();
+    console.log('[ChatFunction] Request body received:', {
+      messageCount: requestBody.messages?.length || 0,
+      hasSystemInstructions: !!requestBody.systemInstructions
+    });
+
+    if (!requestBody.messages || !Array.isArray(requestBody.messages)) {
+      console.error('[ChatFunction] Invalid messages format:', requestBody);
+      throw new Error('Messages must be provided as an array');
     }
 
-    console.log('Processing chat request:', {
-      messageCount: messages?.length || 0,
-      hasSystemInstructions: !!systemInstructions
-    })
-
-    if (!messages || !Array.isArray(messages)) {
-      console.error('Invalid messages format:', messages)
-      throw new Error('Messages must be provided as an array')
-    }
-
-    // Prepare messages array with system instructions if provided
-    const messageArray = []
-    if (systemInstructions) {
+    // Prepare messages array
+    const messageArray = [];
+    if (requestBody.systemInstructions) {
       messageArray.push({
         role: 'system',
-        content: systemInstructions
-      })
+        content: requestBody.systemInstructions
+      });
+      console.log('[ChatFunction] Added system instructions to message array');
     }
 
     // Add user messages
-    messageArray.push(...messages.map((msg: any) => ({
+    messageArray.push(...requestBody.messages.map((msg: any) => ({
       role: msg.role === 'user' ? 'user' : 'assistant',
       content: msg.content
-    })))
+    })));
+    console.log('[ChatFunction] Prepared message array:', {
+      totalMessages: messageArray.length,
+      roles: messageArray.map((msg: any) => msg.role)
+    });
 
-    console.log('Sending request to OpenAI:', {
-      messageCount: messageArray.length,
-      model: 'gpt-4o-mini'
-    })
-
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+    console.log('[ChatFunction] Initiating OpenAI API request');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      controller.abort();
+      console.error('[ChatFunction] Request timed out after 30s');
+    }, 30000);
 
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -68,46 +84,58 @@ serve(async (req) => {
           max_tokens: 2048,
         }),
         signal: controller.signal
-      })
+      });
 
-      clearTimeout(timeout)
+      clearTimeout(timeout);
+      console.log('[ChatFunction] OpenAI API response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        console.error('OpenAI API error:', {
+        const error = await response.json();
+        console.error('[ChatFunction] OpenAI API error:', {
           status: response.status,
           statusText: response.statusText,
           error: error.error?.message || 'Unknown error',
           type: error.error?.type
-        })
-        throw new Error(error.error?.message || 'Error calling OpenAI API')
+        });
+        throw new Error(error.error?.message || 'Error calling OpenAI API');
       }
 
-      const data = await response.json()
-      console.log('Received response from OpenAI:', {
-        status: response.status,
-        choicesCount: data.choices?.length
-      })
+      const data = await response.json();
+      console.log('[ChatFunction] Successfully processed OpenAI response:', {
+        choicesCount: data.choices?.length,
+        firstChoiceLength: data.choices?.[0]?.message?.content?.length
+      });
 
       if (!data.choices?.[0]?.message?.content) {
-        throw new Error('Invalid response format from OpenAI')
+        console.error('[ChatFunction] Invalid response format from OpenAI:', data);
+        throw new Error('Invalid response format from OpenAI');
       }
 
-      const content = data.choices[0].message.content
+      const content = data.choices[0].message.content;
+      const duration = performance.now() - startTime;
+      console.log('[ChatFunction] Request completed successfully:', {
+        duration: `${duration.toFixed(2)}ms`,
+        contentLength: content.length
+      });
 
       return new Response(
         JSON.stringify({ content }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      );
     } catch (fetchError) {
-      clearTimeout(timeout)
-      throw fetchError
+      clearTimeout(timeout);
+      throw fetchError;
     }
   } catch (error) {
-    console.error('Error in chat function:', {
+    console.error('[ChatFunction] Error in chat function:', {
       error: error.message,
-      stack: error.stack
-    })
+      stack: error.stack,
+      type: error.constructor.name
+    });
     
     return new Response(
       JSON.stringify({ 
@@ -118,6 +146,6 @@ serve(async (req) => {
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
-    )
+    );
   }
 })
