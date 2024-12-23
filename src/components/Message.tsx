@@ -60,6 +60,8 @@ const Message = memo(({
           message_id: id,
           user_id: user.id,
           edited_content: newContent
+        }, {
+          onConflict: 'message_id,user_id'
         });
 
       if (error) throw error;
