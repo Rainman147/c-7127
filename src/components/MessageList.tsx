@@ -1,34 +1,86 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import Message from './Message';
 import { logger, LogCategory } from '@/utils/logging';
 import { groupMessages } from '@/utils/messageGrouping';
+import { useViewportMonitor } from '@/hooks/useViewportMonitor';
 import type { Message as MessageType } from '@/types/chat';
 
 const MessageList = ({ messages }: { messages: MessageType[] }) => {
   const renderStartTime = performance.now();
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastScrollPosition = useRef<number>(0);
+  const { viewportHeight, keyboardVisible } = useViewportMonitor();
   
-  logger.debug(LogCategory.RENDER, 'MessageList', 'Starting render:', { 
-    messageCount: messages.length,
-    renderStartTime
-  });
+  // Track scroll position changes
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-  // Scroll to bottom when new messages arrive
+    const handleScroll = () => {
+      const currentPosition = container.scrollTop;
+      const scrollDelta = currentPosition - lastScrollPosition.current;
+      
+      logger.debug(LogCategory.STATE, 'MessageList', 'Scroll position changed', {
+        previousPosition: lastScrollPosition.current,
+        currentPosition,
+        delta: scrollDelta,
+        viewportHeight,
+        keyboardVisible,
+        messageCount: messages.length
+      });
+      
+      lastScrollPosition.current = currentPosition;
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [messages.length, viewportHeight, keyboardVisible]);
+
+  // Enhanced scroll to bottom with performance tracking
   useEffect(() => {
     if (containerRef.current && messages.length > 0) {
       const scrollStartTime = performance.now();
+      
       logger.debug(LogCategory.STATE, 'MessageList', 'Initiating scroll to bottom', {
         messageCount: messages.length,
-        scrollStartTime
+        scrollStartTime,
+        viewportHeight,
+        keyboardVisible,
+        currentScrollPosition: containerRef.current.scrollTop,
+        scrollHeight: containerRef.current.scrollHeight
       });
       
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
-      
-      logger.debug(LogCategory.STATE, 'MessageList', 'Scroll complete', {
-        duration: performance.now() - scrollStartTime
-      });
+      try {
+        containerRef.current.scrollTop = containerRef.current.scrollHeight;
+        
+        logger.debug(LogCategory.STATE, 'MessageList', 'Scroll complete', {
+          duration: performance.now() - scrollStartTime,
+          finalScrollPosition: containerRef.current.scrollTop
+        });
+      } catch (error) {
+        logger.error(LogCategory.ERROR, 'MessageList', 'Scroll failed', {
+          error,
+          messageCount: messages.length,
+          viewportHeight,
+          keyboardVisible
+        });
+      }
     }
-  }, [messages.length]);
+  }, [messages.length, viewportHeight, keyboardVisible]);
+
+  // Track message grouping performance
+  const messageGroups = (() => {
+    const groupStartTime = performance.now();
+    const groups = groupMessages(messages);
+    
+    logger.debug(LogCategory.RENDER, 'MessageList', 'Message grouping complete', {
+      duration: performance.now() - groupStartTime,
+      messageCount: messages.length,
+      groupCount: groups.length
+    });
+    
+    return groups;
+  })();
 
   if (messages.length === 0) {
     return (
@@ -38,12 +90,12 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
     );
   }
 
-  const messageGroups = groupMessages(messages);
-
   logger.debug(LogCategory.RENDER, 'MessageList', 'Render complete', {
     duration: performance.now() - renderStartTime,
     messageCount: messages.length,
-    groupCount: messageGroups.length
+    groupCount: messageGroups.length,
+    viewportHeight,
+    keyboardVisible
   });
 
   return (
