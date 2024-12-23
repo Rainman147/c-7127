@@ -17,16 +17,13 @@ const ChatContent = () => {
   const { toast } = useToast();
   const { 
     sessionId, 
-    templateId, 
-    patientId, 
+    templateId,
     isNewSession,
     isValidSessionId,
-    isValidTemplateId,
-    isValidPatientId 
+    redirectToSession
   } = useSessionParams();
   
-  const { messages, isLoading, handleSendMessage } = useChat(sessionId);
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const { messages, isLoading, handleSendMessage } = useChat(isValidSessionId ? sessionId : null);
   const { handleTemplateChange: coordinateTemplateChange } = useSessionCoordinator();
 
   // Handle invalid routes
@@ -39,47 +36,11 @@ const ChatContent = () => {
         variant: "destructive"
       });
       navigate('/');
-      return;
     }
-
-    if (templateId && !isValidTemplateId) {
-      console.log('[Index] Invalid template ID:', templateId);
-      toast({
-        title: "Invalid Template",
-        description: "The requested template could not be found.",
-        variant: "destructive"
-      });
-    }
-
-    if (patientId && !isValidPatientId) {
-      console.log('[Index] Invalid patient ID:', patientId);
-      toast({
-        title: "Invalid Patient",
-        description: "The requested patient could not be found.",
-        variant: "destructive"
-      });
-    }
-  }, [
-    isNewSession, 
-    isValidSessionId, 
-    templateId, 
-    isValidTemplateId, 
-    patientId, 
-    isValidPatientId, 
-    navigate,
-    toast
-  ]);
-
-  console.log('[Index] Rendering with params:', { 
-    sessionId, 
-    templateId, 
-    patientId,
-    messagesCount: messages.length 
-  });
+  }, [isNewSession, isValidSessionId, navigate, toast]);
 
   const handleTemplateChange = useCallback(async (template: Template) => {
     console.log('[Index] Template changed:', template);
-    setSelectedTemplate(template);
     await coordinateTemplateChange(template, sessionId);
   }, [coordinateTemplateChange, sessionId]);
 
