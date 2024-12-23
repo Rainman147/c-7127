@@ -9,7 +9,8 @@ export enum LogCategory {
   RENDER = 'render',
   STATE = 'state',
   COMMUNICATION = 'communication',
-  ERROR = 'error'
+  ERROR = 'error',
+  DATABASE = 'database'  // Added this category
 }
 
 type LogEntry = {
