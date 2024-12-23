@@ -26,10 +26,22 @@ const MessageActions = ({ content, messageId, onEdit }: MessageActionsProps) => 
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('[MessageActions] User not authenticated');
+        toast({
+          title: "Error",
+          description: "You must be logged in to submit feedback",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('feedback')
         .insert({
           message_id: messageId,
+          user_id: user.id,
           feedback_type: type === 'like' ? 'positive' : 'negative'
         });
 
