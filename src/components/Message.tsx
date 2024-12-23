@@ -5,6 +5,8 @@ import MessageContent from './message/MessageContent';
 import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import type { DatabaseMessage } from '@/types/database/messages';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 type MessageProps = {
   role: 'user' | 'assistant';
@@ -46,7 +48,7 @@ const Message = memo(({
           table: 'messages',
           filter: `id=eq.${id}`
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
           logger.debug(LogCategory.COMMUNICATION, 'Message', 'Received real-time update:', payload);
           if (payload.new && payload.new.content !== editedContent) {
             setEditedContent(payload.new.content);
