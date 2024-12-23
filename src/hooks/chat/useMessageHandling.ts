@@ -1,119 +1,88 @@
-import { useMessageLoadingState } from './useMessageLoadingState';
+import { supabase } from '@/integrations/supabase/client';
 import { useMessageDatabase } from './useMessageDatabase';
 import { useMessageTransform } from './useMessageTransform';
-import { useToast } from '@/hooks/use-toast';
+import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 
 export const useMessageHandling = () => {
-  const { isLoading, setIsLoading } = useMessageLoadingState();
-  const { insertUserMessage, fetchMessages } = useMessageDatabase();
-  const { transformDatabaseMessages, transformDatabaseMessage } = useMessageTransform();
-  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const { saveMessage } = useMessageDatabase();
+  const { transformMessage } = useMessageTransform();
 
   const handleSendMessage = async (
     content: string,
-    type: 'text' | 'audio',
+    type: 'text' | 'audio' = 'text',
     chatId: string,
-    existingMessages: Message[] = [],
+    messages: Message[],
     systemInstructions?: string
   ) => {
-    const startTime = performance.now();
-    console.log('[useMessageHandling] Starting message operation:', { 
+    logger.info(LogCategory.COMMUNICATION, 'useMessageHandling', 'Sending message:', {
       contentLength: content.length,
       type,
-      chatId,
-      existingMessagesCount: existingMessages.length,
-      hasSystemInstructions: !!systemInstructions,
-      timestamp: new Date().toISOString()
+      chatId
     });
 
-    if (!content.trim()) {
-      console.error('[useMessageHandling] Validation error: Empty content');
-      throw new Error('Message content cannot be empty');
-    }
-
-    if (!chatId) {
-      console.error('[useMessageHandling] Validation error: Missing chat ID');
-      throw new Error('Chat ID is required');
-    }
-
-    setIsLoading(true);
-    console.log('[useMessageHandling] State transition: Loading started');
-
     try {
-      const nextSequence = existingMessages.length + 1;
-      console.log('[useMessageHandling] Message preparation:', {
-        nextSequence,
-        timestamp: new Date().toISOString()
+      setIsLoading(true);
+
+      // Save user message
+      const userMessage = await saveMessage({
+        content,
+        type,
+        chatId,
+        role: 'user',
+        sequence: messages.length
       });
 
-      const dbStartTime = performance.now();
-      console.log('[useMessageHandling] Database operation starting');
+      const updatedMessages = [...messages, userMessage];
+
+      // Call Edge Function for AI response
+      logger.debug(LogCategory.COMMUNICATION, 'useMessageHandling', 'Invoking chat function');
       
-      const userMessage = await insertUserMessage(chatId, content, type, nextSequence);
-      console.log('[useMessageHandling] User message inserted:', {
-        messageId: userMessage.id,
-        duration: `${(performance.now() - dbStartTime).toFixed(2)}ms`
-      });
-      
-      const messages = await fetchMessages(chatId);
-      console.log('[useMessageHandling] Messages fetched:', {
-        count: messages.length,
-        duration: `${(performance.now() - dbStartTime).toFixed(2)}ms`
-      });
-      
-      const transformStartTime = performance.now();
-      console.log('[useMessageHandling] Starting message transformation');
-      
-      const transformedMessages = transformDatabaseMessages(messages);
-      console.log('[useMessageHandling] Messages transformed:', {
-        inputCount: messages.length,
-        outputCount: transformedMessages.length,
-        duration: `${(performance.now() - transformStartTime).toFixed(2)}ms`
+      const { data: aiResponse, error: functionError } = await supabase.functions.invoke('chat', {
+        body: {
+          message: content,
+          chatId,
+          systemInstructions,
+          messageHistory: messages.slice(-5).map(m => ({
+            role: m.role,
+            content: m.content
+          }))
+        }
       });
 
-      const totalDuration = performance.now() - startTime;
-      console.log('[useMessageHandling] Operation completed successfully:', {
-        totalDuration: `${totalDuration.toFixed(2)}ms`,
-        messageCount: transformedMessages.length,
-        timestamp: new Date().toISOString()
+      if (functionError) {
+        logger.error(LogCategory.ERROR, 'useMessageHandling', 'Edge function error:', functionError);
+        throw new Error('Failed to get AI response');
+      }
+
+      logger.debug(LogCategory.COMMUNICATION, 'useMessageHandling', 'Received AI response:', {
+        responseLength: aiResponse?.content?.length
+      });
+
+      // Save AI response
+      const assistantMessage = await saveMessage({
+        content: aiResponse.content,
+        type: 'text',
+        chatId,
+        role: 'assistant',
+        sequence: updatedMessages.length
       });
 
       return {
-        messages: transformedMessages,
-        userMessage: transformDatabaseMessage(userMessage)
+        messages: [...updatedMessages, assistantMessage]
       };
 
-    } catch (error: any) {
-      const errorDetails = {
-        message: error.message,
-        code: error.code,
-        stack: error.stack,
-        timestamp: new Date().toISOString(),
-        duration: `${(performance.now() - startTime).toFixed(2)}ms`
-      };
-      
-      console.error('[useMessageHandling] Operation failed:', errorDetails);
-      
-      toast({
-        title: "Error",
-        description: "Failed to send message. Please try again.",
-        variant: "destructive"
-      });
-      
+    } catch (error) {
+      logger.error(LogCategory.ERROR, 'useMessageHandling', 'Error handling message:', error);
       throw error;
     } finally {
-      const finalDuration = performance.now() - startTime;
-      console.log('[useMessageHandling] Cleanup:', {
-        duration: `${finalDuration.toFixed(2)}ms`,
-        timestamp: new Date().toISOString()
-      });
       setIsLoading(false);
     }
   };
 
   return {
-    isLoading,
-    handleSendMessage
+    handleSendMessage,
+    isLoading
   };
 };

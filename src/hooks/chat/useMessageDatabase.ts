@@ -1,109 +1,60 @@
 import { supabase } from '@/integrations/supabase/client';
+import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
-import type { DatabaseMessage } from '@/types/database/messages';
 
 export const useMessageDatabase = () => {
-  const insertUserMessage = async (
-    chatId: string,
-    content: string,
-    type: 'text' | 'audio',
-    sequence: number
-  ) => {
-    const startTime = performance.now();
-    console.log('[useMessageDatabase] Inserting user message:', { 
-      chatId, 
+  const saveMessage = async ({
+    content,
+    type = 'text',
+    chatId,
+    role,
+    sequence
+  }: {
+    content: string;
+    type?: 'text' | 'audio';
+    chatId: string;
+    role: 'user' | 'assistant';
+    sequence: number;
+  }): Promise<Message> => {
+    logger.debug(LogCategory.DATABASE, 'useMessageDatabase', 'Saving message:', {
       contentLength: content.length,
       type,
-      sequence,
-      timestamp: new Date().toISOString()
-    });
-
-    try {
-      const { data: userMessage, error } = await supabase
-        .from('messages')
-        .insert({
-          chat_id: chatId,
-          content,
-          sender: 'user',
-          type,
-          sequence
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('[useMessageDatabase] Database error on insert:', {
-          error: error.message,
-          details: error.details,
-          hint: error.hint,
-          duration: `${(performance.now() - startTime).toFixed(2)}ms`
-        });
-        throw error;
-      }
-
-      const duration = performance.now() - startTime;
-      console.log('[useMessageDatabase] Message inserted successfully:', {
-        messageId: userMessage.id,
-        sequence: userMessage.sequence,
-        duration: `${duration.toFixed(2)}ms`
-      });
-
-      return userMessage as DatabaseMessage;
-    } catch (error: any) {
-      console.error('[useMessageDatabase] Unexpected error during insert:', {
-        error: error.message,
-        stack: error.stack,
-        duration: `${(performance.now() - startTime).toFixed(2)}ms`
-      });
-      throw error;
-    }
-  };
-
-  const fetchMessages = async (chatId: string) => {
-    const startTime = performance.now();
-    console.log('[useMessageDatabase] Fetching messages:', {
       chatId,
-      timestamp: new Date().toISOString()
+      role,
+      sequence
     });
 
-    try {
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('chat_id', chatId)
-        .order('sequence', { ascending: true })
-        .order('created_at', { ascending: true });
+    const { data: message, error } = await supabase
+      .from('messages')
+      .insert({
+        content,
+        type,
+        chat_id: chatId,
+        sender: role,
+        sequence
+      })
+      .select()
+      .single();
 
-      if (error) {
-        console.error('[useMessageDatabase] Database error on fetch:', {
-          error: error.message,
-          details: error.details,
-          hint: error.hint,
-          duration: `${(performance.now() - startTime).toFixed(2)}ms`
-        });
-        throw error;
-      }
-
-      const duration = performance.now() - startTime;
-      console.log('[useMessageDatabase] Messages fetched successfully:', {
-        count: messages.length,
-        sequences: messages.map(m => m.sequence),
-        duration: `${duration.toFixed(2)}ms`
-      });
-
-      return messages as DatabaseMessage[];
-    } catch (error: any) {
-      console.error('[useMessageDatabase] Unexpected error during fetch:', {
-        error: error.message,
-        stack: error.stack,
-        duration: `${(performance.now() - startTime).toFixed(2)}ms`
-      });
+    if (error) {
+      logger.error(LogCategory.ERROR, 'useMessageDatabase', 'Error saving message:', error);
       throw error;
     }
+
+    logger.info(LogCategory.DATABASE, 'useMessageDatabase', 'Message saved successfully:', {
+      messageId: message.id
+    });
+
+    return {
+      id: message.id,
+      content: message.content,
+      role: message.sender as 'user' | 'assistant',
+      type: message.type as 'text' | 'audio',
+      sequence: message.sequence
+    };
   };
 
   return {
-    insertUserMessage,
-    fetchMessages
+    saveMessage
   };
 };
