@@ -1,15 +1,10 @@
 import { useRef, useEffect } from 'react';
 import Message from './Message';
 import { logger, LogCategory } from '@/utils/logging';
+import { groupMessages } from '@/utils/messageGrouping';
+import type { Message as MessageType } from '@/types/chat';
 
-type Message = {
-  role: 'user' | 'assistant';
-  content: string;
-  id?: string;
-  type?: 'text' | 'audio';
-};
-
-const MessageList = ({ messages }: { messages: Message[] }) => {
+const MessageList = ({ messages }: { messages: MessageType[] }) => {
   const renderStartTime = performance.now();
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -43,21 +38,36 @@ const MessageList = ({ messages }: { messages: Message[] }) => {
     );
   }
 
+  const messageGroups = groupMessages(messages);
+
   logger.debug(LogCategory.RENDER, 'MessageList', 'Render complete', {
     duration: performance.now() - renderStartTime,
-    messageCount: messages.length
+    messageCount: messages.length,
+    groupCount: messageGroups.length
   });
 
   return (
     <div 
       ref={containerRef}
-      className="flex-1 overflow-y-auto chat-scrollbar space-y-4 pb-[180px] pt-4 px-4"
+      className="flex-1 overflow-y-auto chat-scrollbar space-y-6 pb-[180px] pt-4 px-4"
     >
-      {messages.map((message, index) => (
-        <Message 
-          key={message.id || index} 
-          {...message} 
-        />
+      {messageGroups.map((group) => (
+        <div key={group.id} className="space-y-4">
+          <div className="flex items-center justify-center">
+            <div className="text-xs text-white/50 bg-chatgpt-secondary/30 px-2 py-1 rounded">
+              {group.label} · {group.timestamp}
+            </div>
+          </div>
+          <div className="space-y-2">
+            {group.messages.map((message, index) => (
+              <Message 
+                key={message.id || index} 
+                {...message} 
+                showAvatar={index === 0 || message.sender !== group.messages[index - 1].sender}
+              />
+            ))}
+          </div>
+        </div>
       ))}
     </div>
   );
