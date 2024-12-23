@@ -1,4 +1,4 @@
-import { useState, useCallback, memo } from 'react';
+import { useState, useCallback, memo, useEffect } from 'react';
 import MessageAvatar from './MessageAvatar';
 import MessageActions from './MessageActions';
 import MessageContent from './message/MessageContent';
@@ -28,13 +28,53 @@ const Message = memo(({
   const [isEditing, setIsEditing] = useState(false);
   const [wasEdited, setWasEdited] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
-  logger.debug(LogCategory.RENDER, 'Message', 'Starting message render:', { 
-    role, 
-    id,
-    isEditing,
-    contentLength: content.length
-  });
+  // Set up real-time subscription for message updates
+  useEffect(() => {
+    if (!id) return;
+
+    logger.debug(LogCategory.COMMUNICATION, 'Message', 'Setting up real-time subscription for message:', { id });
+    
+    const channel = supabase
+      .channel(`message-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `id=eq.${id}`
+        },
+        (payload) => {
+          logger.debug(LogCategory.COMMUNICATION, 'Message', 'Received real-time update:', payload);
+          if (payload.new && payload.new.content !== editedContent) {
+            setEditedContent(payload.new.content);
+          }
+        }
+      )
+      .subscribe(status => {
+        logger.debug(LogCategory.COMMUNICATION, 'Message', 'Subscription status:', status);
+      });
+
+    return () => {
+      logger.debug(LogCategory.COMMUNICATION, 'Message', 'Cleaning up real-time subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [id, editedContent]);
+
+  // Simulate typing effect for AI responses
+  useEffect(() => {
+    if (role === 'assistant' && isStreaming) {
+      setIsTyping(true);
+      // Simulate natural typing timing
+      const typingTimeout = setTimeout(() => {
+        setIsTyping(false);
+      }, content.length * 50); // Adjust timing based on content length
+
+      return () => clearTimeout(typingTimeout);
+    }
+  }, [role, isStreaming, content]);
 
   const handleSave = useCallback(async (newContent: string) => {
     if (!id) {
@@ -119,6 +159,7 @@ const Message = memo(({
             id={id}
             wasEdited={wasEdited}
             isSaving={isSaving}
+            isTyping={isTyping}
             onSave={handleSave}
             onCancel={handleCancel}
           />

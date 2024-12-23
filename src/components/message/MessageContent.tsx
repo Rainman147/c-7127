@@ -10,6 +10,7 @@ type MessageContentProps = {
   id?: string;
   wasEdited: boolean;
   isSaving: boolean;
+  isTyping: boolean;
   onSave: (newContent: string) => void;
   onCancel: () => void;
 };
@@ -23,6 +24,7 @@ const MessageContent = ({
   id,
   wasEdited,
   isSaving,
+  isTyping,
   onSave,
   onCancel
 }: MessageContentProps) => {
@@ -30,6 +32,7 @@ const MessageContent = ({
     role, 
     id, 
     isEditing,
+    isTyping,
     hasContent: !!content,
     contentPreview: content.substring(0, 50) + '...'
   });
@@ -89,10 +92,12 @@ const MessageContent = ({
         ) : (
           <div className="text-gray-200 whitespace-pre-wrap">{content}</div>
         )}
-        {isStreaming && (
+        {(isStreaming || isTyping) && role === 'assistant' && (
           <div className="inline-flex items-center gap-2 ml-2 text-gray-400">
             <Loader2 className="h-3 w-3 animate-spin" />
-            <span className="text-xs">Transcribing...</span>
+            <span className="text-xs">
+              {isTyping ? 'Typing...' : 'Processing...'}
+            </span>
           </div>
         )}
       </div>
