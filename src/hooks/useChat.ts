@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useMessageState } from './chat/useMessageState';
 import { useMessageLoader } from './chat/useMessageLoader';
 import { useMessageSender } from './chat/useMessageSender';
