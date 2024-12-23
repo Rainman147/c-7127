@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import MessageAvatar from './MessageAvatar';
 import MessageActions from './MessageActions';
 import MessageContent from './message/MessageContent';
+import { logger, LogCategory } from '@/utils/logging';
 
 type MessageProps = {
   role: 'user' | 'assistant';
@@ -11,12 +12,12 @@ type MessageProps = {
   id?: string;
 };
 
-const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
+const Message = memo(({ role, content, isStreaming, type, id }: MessageProps) => {
   const [editedContent, setEditedContent] = useState(content);
   const [isEditing, setIsEditing] = useState(false);
   const [wasEdited, setWasEdited] = useState(false);
 
-  console.log('[Message] Rendering message:', { 
+  logger.debug(LogCategory.RENDER, 'Message', 'Rendering message:', { 
     role, 
     id, 
     isEditing, 
@@ -24,27 +25,29 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
     hasId: !!id 
   });
 
-  const handleSave = (newContent: string) => {
-    console.log('[Message] Saving edited content:', newContent.substring(0, 50) + '...');
+  const handleSave = useCallback((newContent: string) => {
+    logger.info(LogCategory.STATE, 'Message', 'Saving edited content:', 
+      { messageId: id, contentPreview: newContent.substring(0, 50) + '...' }
+    );
     setEditedContent(newContent);
     setIsEditing(false);
     setWasEdited(true);
-  };
+  }, [id]);
 
-  const handleCancel = () => {
-    console.log('[Message] Canceling edit');
+  const handleCancel = useCallback(() => {
+    logger.info(LogCategory.STATE, 'Message', 'Canceling edit:', { messageId: id });
     setEditedContent(content);
     setIsEditing(false);
-  };
+  }, [content]);
 
-  const handleEdit = () => {
-    console.log('[Message] Starting edit for message:', id);
+  const handleEdit = useCallback(() => {
+    logger.info(LogCategory.STATE, 'Message', 'Starting edit for message:', { id });
     if (!id) {
-      console.error('[Message] Cannot edit message without ID');
+      logger.error(LogCategory.ERROR, 'Message', 'Cannot edit message without ID');
       return;
     }
     setIsEditing(true);
-  };
+  }, [id]);
 
   return (
     <div className="py-3">
@@ -72,6 +75,8 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
       </div>
     </div>
   );
-};
+});
+
+Message.displayName = 'Message';
 
 export default Message;

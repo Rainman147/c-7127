@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, memo } from "react";
+import { logger, LogCategory } from "@/utils/logging";
 
 interface ChatInputFieldProps {
   message: string;
@@ -7,13 +8,15 @@ interface ChatInputFieldProps {
   isLoading: boolean;
 }
 
-const ChatInputField = ({ 
+const ChatInputField = memo(({ 
   message, 
   setMessage, 
   handleKeyDown,
   isLoading 
 }: ChatInputFieldProps) => {
-  console.log('[ChatInputField] Rendering with:', { messageLength: message.length, isLoading });
+  logger.debug(LogCategory.RENDER, 'ChatInputField', 'Rendering with:', 
+    { messageLength: message.length, isLoading }
+  );
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -23,12 +26,12 @@ const ChatInputField = ({
       textarea.style.height = 'auto';
       const newHeight = Math.min(textarea.scrollHeight, 200);
       textarea.style.height = `${newHeight}px`;
-      console.log('[ChatInputField] Adjusted height:', { newHeight });
+      logger.debug(LogCategory.STATE, 'ChatInputField', 'Adjusted height:', { newHeight });
     }
   };
 
   useEffect(() => {
-    console.log('[ChatInputField] Message changed, adjusting height');
+    logger.debug(LogCategory.STATE, 'ChatInputField', 'Message changed, adjusting height');
     adjustTextareaHeight();
   }, [message]);
 
@@ -49,6 +52,8 @@ const ChatInputField = ({
       />
     </div>
   );
-};
+});
+
+ChatInputField.displayName = 'ChatInputField';
 
 export default ChatInputField;
