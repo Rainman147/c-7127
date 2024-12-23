@@ -17,48 +17,66 @@ export const useMessageHandling = () => {
     existingMessages: Message[] = [],
     systemInstructions?: string
   ) => {
-    console.log('[useMessageHandling] Starting message send operation:', { 
+    const startTime = performance.now();
+    console.log('[useMessageHandling] Starting message operation:', { 
       contentLength: content.length,
       type,
       chatId,
       existingMessagesCount: existingMessages.length,
-      hasSystemInstructions: !!systemInstructions
+      hasSystemInstructions: !!systemInstructions,
+      timestamp: new Date().toISOString()
     });
 
     if (!content.trim()) {
-      const error = new Error('Message content cannot be empty');
-      console.error('[useMessageHandling] Validation error:', error);
-      throw error;
+      console.error('[useMessageHandling] Validation error: Empty content');
+      throw new Error('Message content cannot be empty');
     }
 
     if (!chatId) {
-      const error = new Error('Chat ID is required');
-      console.error('[useMessageHandling] Validation error:', error);
-      throw error;
+      console.error('[useMessageHandling] Validation error: Missing chat ID');
+      throw new Error('Chat ID is required');
     }
 
     setIsLoading(true);
-    console.log('[useMessageHandling] Set loading state to true');
+    console.log('[useMessageHandling] State transition: Loading started');
 
     try {
       const nextSequence = existingMessages.length + 1;
-      console.log('[useMessageHandling] Calculated next sequence:', nextSequence);
-
-      console.log('[useMessageHandling] Inserting user message to database');
-      const userMessage = await insertUserMessage(chatId, content, type, nextSequence);
-      
-      console.log('[useMessageHandling] Fetching updated messages');
-      const messages = await fetchMessages(chatId);
-      
-      console.log('[useMessageHandling] Transforming messages:', {
-        fetchedCount: messages.length,
-        sequences: messages.map(m => m.sequence)
+      console.log('[useMessageHandling] Message preparation:', {
+        nextSequence,
+        timestamp: new Date().toISOString()
       });
-      const transformedMessages = transformDatabaseMessages(messages);
 
-      console.log('[useMessageHandling] Operation complete successfully:', {
+      const dbStartTime = performance.now();
+      console.log('[useMessageHandling] Database operation starting');
+      
+      const userMessage = await insertUserMessage(chatId, content, type, nextSequence);
+      console.log('[useMessageHandling] User message inserted:', {
+        messageId: userMessage.id,
+        duration: `${(performance.now() - dbStartTime).toFixed(2)}ms`
+      });
+      
+      const messages = await fetchMessages(chatId);
+      console.log('[useMessageHandling] Messages fetched:', {
+        count: messages.length,
+        duration: `${(performance.now() - dbStartTime).toFixed(2)}ms`
+      });
+      
+      const transformStartTime = performance.now();
+      console.log('[useMessageHandling] Starting message transformation');
+      
+      const transformedMessages = transformDatabaseMessages(messages);
+      console.log('[useMessageHandling] Messages transformed:', {
+        inputCount: messages.length,
+        outputCount: transformedMessages.length,
+        duration: `${(performance.now() - transformStartTime).toFixed(2)}ms`
+      });
+
+      const totalDuration = performance.now() - startTime;
+      console.log('[useMessageHandling] Operation completed successfully:', {
+        totalDuration: `${totalDuration.toFixed(2)}ms`,
         messageCount: transformedMessages.length,
-        sequences: transformedMessages.map(m => m.sequence)
+        timestamp: new Date().toISOString()
       });
 
       return {
@@ -67,10 +85,15 @@ export const useMessageHandling = () => {
       };
 
     } catch (error: any) {
-      console.error('[useMessageHandling] Error in message operation:', {
-        error: error.message,
-        stack: error.stack
-      });
+      const errorDetails = {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+        timestamp: new Date().toISOString(),
+        duration: `${(performance.now() - startTime).toFixed(2)}ms`
+      };
+      
+      console.error('[useMessageHandling] Operation failed:', errorDetails);
       
       toast({
         title: "Error",
@@ -80,7 +103,11 @@ export const useMessageHandling = () => {
       
       throw error;
     } finally {
-      console.log('[useMessageHandling] Resetting loading state');
+      const finalDuration = performance.now() - startTime;
+      console.log('[useMessageHandling] Cleanup:', {
+        duration: `${finalDuration.toFixed(2)}ms`,
+        timestamp: new Date().toISOString()
+      });
       setIsLoading(false);
     }
   };

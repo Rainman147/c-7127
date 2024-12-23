@@ -3,36 +3,50 @@ import type { DatabaseMessage } from '@/types/database/messages';
 
 export const useMessageTransform = () => {
   const transformDatabaseMessages = (messages: DatabaseMessage[]): Message[] => {
-    console.log('[useMessageTransform] Starting messages transformation:', {
+    const startTime = performance.now();
+    console.log('[useMessageTransform] Starting batch transformation:', {
       count: messages.length,
-      sequences: messages.map(m => m.sequence)
+      sequences: messages.map(m => m.sequence),
+      timestamp: new Date().toISOString()
     });
 
-    const transformed = messages.map(msg => ({
-      role: msg.sender as 'user' | 'assistant',
-      content: msg.content,
-      type: msg.type as 'text' | 'audio',
-      id: msg.id,
-      sequence: msg.sequence || messages.indexOf(msg) + 1,
-      created_at: msg.created_at
-    }));
+    const transformed = messages.map((msg, index) => {
+      console.log('[useMessageTransform] Transforming message:', {
+        messageId: msg.id,
+        sequence: msg.sequence || index + 1,
+        type: msg.type
+      });
+      
+      return {
+        role: msg.sender as 'user' | 'assistant',
+        content: msg.content,
+        type: msg.type as 'text' | 'audio',
+        id: msg.id,
+        sequence: msg.sequence || index + 1,
+        created_at: msg.created_at
+      };
+    });
 
-    console.log('[useMessageTransform] Messages transformed:', {
+    const duration = performance.now() - startTime;
+    console.log('[useMessageTransform] Batch transformation complete:', {
       inputCount: messages.length,
       outputCount: transformed.length,
-      sequences: transformed.map(m => m.sequence)
+      duration: `${duration.toFixed(2)}ms`,
+      timestamp: new Date().toISOString()
     });
 
     return transformed;
   };
 
   const transformDatabaseMessage = (msg: DatabaseMessage): Message => {
+    const startTime = performance.now();
     console.log('[useMessageTransform] Transforming single message:', {
       id: msg.id,
-      sequence: msg.sequence
+      sequence: msg.sequence,
+      timestamp: new Date().toISOString()
     });
 
-    return {
+    const transformed = {
       role: msg.sender as 'user' | 'assistant',
       content: msg.content,
       type: msg.type as 'text' | 'audio',
@@ -40,6 +54,15 @@ export const useMessageTransform = () => {
       sequence: msg.sequence,
       created_at: msg.created_at
     };
+
+    const duration = performance.now() - startTime;
+    console.log('[useMessageTransform] Single transformation complete:', {
+      messageId: msg.id,
+      duration: `${duration.toFixed(2)}ms`,
+      timestamp: new Date().toISOString()
+    });
+
+    return transformed;
   };
 
   return {
