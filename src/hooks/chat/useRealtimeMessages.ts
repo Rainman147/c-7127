@@ -56,12 +56,17 @@ export const useRealtimeMessages = (
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!currentChatId) return;
+    if (!currentChatId) {
+      console.log('[useRealtimeMessages] No chat ID provided, skipping subscription');
+      return;
+    }
 
     console.log('[useRealtimeMessages] Setting up subscription for chat:', currentChatId);
     
+    let isSubscriptionActive = true;
+    
     const channel = supabase
-      .channel('chat-updates')
+      .channel(`chat-${currentChatId}`)
       .on(
         'postgres_changes',
         {
@@ -71,6 +76,11 @@ export const useRealtimeMessages = (
           filter: `chat_id=eq.${currentChatId}`
         },
         (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
+          if (!isSubscriptionActive) {
+            console.log('[useRealtimeMessages] Ignoring update for inactive subscription');
+            return;
+          }
+
           const newData = payload.new;
           
           console.log('[useRealtimeMessages] Received update:', {
@@ -135,10 +145,23 @@ export const useRealtimeMessages = (
           }
         }
       )
-      .subscribe();
+      .subscribe(status => {
+        console.log('[useRealtimeMessages] Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('[useRealtimeMessages] Successfully subscribed to chat:', currentChatId);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[useRealtimeMessages] Error subscribing to chat:', currentChatId);
+          toast({
+            title: "Connection Error",
+            description: "Failed to connect to chat updates",
+            variant: "destructive"
+          });
+        }
+      });
 
     return () => {
-      console.log('[useRealtimeMessages] Cleaning up subscription');
+      console.log('[useRealtimeMessages] Cleaning up subscription for chat:', currentChatId);
+      isSubscriptionActive = false;
       supabase.removeChannel(channel);
     };
   }, [currentChatId, messages, setMessages, updateCache, toast]);
