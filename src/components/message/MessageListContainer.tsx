@@ -17,7 +17,10 @@ const MessageListContainer = ({
   useEffect(() => {
     if (containerRef.current) {
       logger.debug(LogCategory.RENDER, 'MessageListContainer', 'Container mounted, updating metrics');
-      metrics.logMetrics('container_mounted');
+      metrics.logMetrics('container_mounted', {
+        component: 'MessageListContainer',
+        event: 'mount'
+      });
       onContainerMount?.();
     }
   }, [onContainerMount, metrics]);
