@@ -1,8 +1,9 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
 import Message from './Message';
 import { logger, LogCategory } from '@/utils/logging';
 import { groupMessages } from '@/utils/messageGrouping';
 import { useViewportMonitor } from '@/hooks/useViewportMonitor';
+import { useRealTime } from '@/contexts/RealTimeContext';
 import type { Message as MessageType } from '@/types/chat';
 
 const MessageList = ({ messages }: { messages: MessageType[] }) => {
@@ -10,6 +11,7 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const lastScrollPosition = useRef<number>(0);
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
+  const { connectionState } = useRealTime();
   
   // Track scroll position changes
   useEffect(() => {
@@ -26,7 +28,8 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
         delta: scrollDelta,
         viewportHeight,
         keyboardVisible,
-        messageCount: messages.length
+        messageCount: messages.length,
+        connectionState
       });
       
       lastScrollPosition.current = currentPosition;
@@ -34,7 +37,7 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
 
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [messages.length, viewportHeight, keyboardVisible]);
+  }, [messages.length, viewportHeight, keyboardVisible, connectionState]);
 
   // Enhanced scroll to bottom with performance tracking
   useEffect(() => {
@@ -47,7 +50,8 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
         viewportHeight,
         keyboardVisible,
         currentScrollPosition: containerRef.current.scrollTop,
-        scrollHeight: containerRef.current.scrollHeight
+        scrollHeight: containerRef.current.scrollHeight,
+        connectionState
       });
       
       try {
@@ -76,7 +80,8 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
     logger.debug(LogCategory.RENDER, 'MessageList', 'Message grouping complete', {
       duration: performance.now() - groupStartTime,
       messageCount: messages.length,
-      groupCount: groups.length
+      groupCount: groups.length,
+      connectionState
     });
     
     return groups;
@@ -95,7 +100,8 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
     messageCount: messages.length,
     groupCount: messageGroups.length,
     viewportHeight,
-    keyboardVisible
+    keyboardVisible,
+    connectionState
   });
 
   return (
@@ -103,6 +109,16 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
       ref={containerRef}
       className="flex-1 overflow-y-auto chat-scrollbar space-y-6 pb-[180px] pt-4 px-4"
     >
+      {connectionState.status === 'connecting' && (
+        <div className="text-center text-yellow-500 bg-yellow-500/10 py-2 rounded-md mb-4">
+          Reconnecting to chat...
+        </div>
+      )}
+      {connectionState.status === 'disconnected' && (
+        <div className="text-center text-red-500 bg-red-500/10 py-2 rounded-md mb-4">
+          Connection lost. Retrying...
+        </div>
+      )}
       {messageGroups.map((group) => (
         <div key={group.id} className="space-y-4">
           <div className="flex items-center justify-center">

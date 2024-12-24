@@ -1,6 +1,7 @@
 import { useMessageSubmission } from "@/hooks/chat/useMessageSubmission";
 import { useTranscriptionHandler } from "@/hooks/chat/useTranscriptionHandler";
 import { logger, LogCategory } from "@/utils/logging";
+import { useRealTime } from "@/contexts/RealTimeContext";
 import ChatInputField from "./chat/ChatInputField";
 import ChatInputActions from "./chat/ChatInputActions";
 import { useState } from "react";
@@ -21,6 +22,7 @@ const ChatInput = ({
   logger.debug(LogCategory.RENDER, 'ChatInput', 'Rendering with props:', { isLoading });
   
   const [message, setMessage] = useState("");
+  const { connectionState } = useRealTime();
   
   const {
     handleSubmit: originalHandleSubmit,
@@ -41,14 +43,17 @@ const ChatInput = ({
 
   const handleSubmit = async () => {
     logger.info(LogCategory.COMMUNICATION, 'ChatInput', 'Handling submit with message:', 
-      { messageLength: message.length }
+      { messageLength: message.length, connectionState }
     );
     
     if (message.trim()) {
       try {
         await originalHandleSubmit();
       } catch (error) {
-        logger.error(LogCategory.ERROR, 'ChatInput', 'Error submitting message:', error);
+        logger.error(LogCategory.ERROR, 'ChatInput', 'Error submitting message:', {
+          error,
+          connectionState
+        });
       }
     }
   };
@@ -68,15 +73,22 @@ const ChatInput = ({
     setMessage(newMessage);
   };
 
-  const isDisabled = isLoading || isProcessing;
+  const isDisabled = isLoading || isProcessing || connectionState.status === 'disconnected';
   logger.debug(LogCategory.STATE, 'ChatInput', 'Component state:', 
-    { isDisabled, messageLength: message.length }
+    { isDisabled, messageLength: message.length, connectionState }
   );
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-[#1E1E1E]/80 backdrop-blur-sm py-4 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="relative flex w-full flex-col items-center">
+          {connectionState.status === 'disconnected' && (
+            <div className="absolute -top-8 left-0 right-0">
+              <div className="bg-red-500/10 text-red-500 text-sm py-1 px-3 rounded-md text-center">
+                Connection lost. Messages will be sent when reconnected.
+              </div>
+            </div>
+          )}
           <div className="w-full rounded-xl overflow-hidden bg-[#2F2F2F] border border-white/[0.05] shadow-lg">
             <ChatInputField
               message={message}
