@@ -40,11 +40,13 @@ export const useTemplatePersistence = () => {
 
       if (error) {
         console.error('[useTemplatePersistence] Database error:', error);
-        toast({
-          title: "Error loading template",
-          description: "Failed to load chat template",
-          variant: "destructive"
-        });
+        if (isMounted.current) {
+          toast({
+            title: "Error loading template",
+            description: "Failed to load chat template",
+            variant: "destructive"
+          });
+        }
         return null;
       }
 
@@ -93,11 +95,13 @@ export const useTemplatePersistence = () => {
 
       if (error) {
         console.error('[useTemplatePersistence] Failed to save template:', error);
-        toast({
-          title: "Error",
-          description: "Failed to save template changes",
-          variant: "destructive"
-        });
+        if (isMounted.current) {
+          toast({
+            title: "Error",
+            description: "Failed to save template changes",
+            variant: "destructive"
+          });
+        }
       } else {
         console.log('[useTemplatePersistence] Template saved successfully');
       }
