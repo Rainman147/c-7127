@@ -6,7 +6,6 @@ import { useToast } from '@/hooks/use-toast';
 import { debounce } from 'lodash';
 import type { Message } from '@/types/chat';
 
-const MESSAGES_QUERY_KEY = 'messages';
 const DEBOUNCE_MS = 100;
 
 interface DatabaseMessage {
@@ -34,7 +33,9 @@ export const useMessageQuery = (chatId: string | null) => {
   
   // Debounced invalidation to prevent excessive refetches
   const debouncedInvalidate = debounce(
-    () => queryClient.invalidateQueries({ queryKey: [MESSAGES_QUERY_KEY, chatId] }),
+    () => queryClient.invalidateQueries({ 
+      queryKey: ['messages', chatId] 
+    }),
     DEBOUNCE_MS
   );
 
@@ -58,7 +59,7 @@ export const useMessageQuery = (chatId: string | null) => {
   };
 
   const { data: messages, isLoading, error } = useQuery({
-    queryKey: [MESSAGES_QUERY_KEY, chatId],
+    queryKey: ['messages', chatId],
     queryFn: () => chatId ? fetchMessages(chatId) : Promise.resolve([]),
     enabled: !!chatId,
     staleTime: 1000 * 60,
@@ -88,8 +89,7 @@ export const useMessageQuery = (chatId: string | null) => {
       return mapDatabaseMessageToMessage(data as DatabaseMessage);
     },
     onSuccess: (newMessage) => {
-      queryClient.setQueryData<Message[]>([MESSAGES_QUERY_KEY, chatId], (old = []) => {
-        // Prevent duplicate messages
+      queryClient.setQueryData<Message[]>(['messages', chatId], (old = []) => {
         if (old.some(msg => msg.id === newMessage.id)) {
           return old;
         }
@@ -125,7 +125,7 @@ export const useMessageQuery = (chatId: string | null) => {
       return mapDatabaseMessageToMessage(data as DatabaseMessage);
     },
     onSuccess: (updatedMessage) => {
-      queryClient.setQueryData<Message[]>([MESSAGES_QUERY_KEY, chatId], (old = []) => {
+      queryClient.setQueryData<Message[]>(['messages', chatId], (old = []) => {
         return old.map(msg => 
           msg.id === updatedMessage.id ? updatedMessage : msg
         );
