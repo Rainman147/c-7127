@@ -6,6 +6,25 @@ import type { Message } from '@/types/chat';
 
 const MESSAGES_QUERY_KEY = 'messages';
 
+interface DatabaseMessage {
+  id: string;
+  chat_id: string;
+  content: string;
+  sender: string;
+  type: string;
+  created_at: string;
+  sequence: number | null;
+}
+
+const mapDatabaseMessageToMessage = (dbMessage: DatabaseMessage): Message => ({
+  id: dbMessage.id,
+  content: dbMessage.content,
+  role: dbMessage.sender as 'user' | 'assistant',
+  type: dbMessage.type as 'text' | 'audio',
+  sequence: dbMessage.sequence || undefined,
+  created_at: dbMessage.created_at
+});
+
 export const useMessageQuery = (chatId: string | null) => {
   const queryClient = useQueryClient();
 
@@ -23,7 +42,7 @@ export const useMessageQuery = (chatId: string | null) => {
       throw error;
     }
 
-    return data as Message[];
+    return (data as DatabaseMessage[]).map(mapDatabaseMessageToMessage);
   };
 
   const { data: messages, isLoading, error } = useQuery({
@@ -31,17 +50,22 @@ export const useMessageQuery = (chatId: string | null) => {
     queryFn: () => chatId ? fetchMessages(chatId) : Promise.resolve([]),
     enabled: !!chatId,
     staleTime: 1000 * 60, // Consider data fresh for 1 minute
-    onError: (error: Error) => {
-      ErrorTracker.trackError(error, {
-        component: 'useMessageQuery',
-        errorType: 'QueryError',
-        severity: 'medium'
-      });
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
+    meta: {
+      errorHandler: (error: Error) => {
+        ErrorTracker.trackError(error, {
+          component: 'useMessageQuery',
+          errorType: 'QueryError',
+          severity: 'medium',
+          timestamp: new Date().toISOString()
+        });
+      }
     }
   });
 
   const addMessage = useMutation({
-    mutationFn: async (newMessage: Omit<Message, 'id'>) => {
+    mutationFn: async (newMessage: Omit<DatabaseMessage, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
         .from('messages')
         .insert([newMessage])
@@ -49,7 +73,7 @@ export const useMessageQuery = (chatId: string | null) => {
         .single();
 
       if (error) throw error;
-      return data as Message;
+      return mapDatabaseMessageToMessage(data as DatabaseMessage);
     },
     onSuccess: (newMessage) => {
       queryClient.setQueryData<Message[]>([MESSAGES_QUERY_KEY, chatId], (old = []) => {
@@ -60,7 +84,8 @@ export const useMessageQuery = (chatId: string | null) => {
       ErrorTracker.trackError(error, {
         component: 'useMessageQuery',
         errorType: 'MutationError',
-        severity: 'medium'
+        severity: 'medium',
+        timestamp: new Date().toISOString()
       });
     }
   });
@@ -75,7 +100,7 @@ export const useMessageQuery = (chatId: string | null) => {
         .single();
 
       if (error) throw error;
-      return data as Message;
+      return mapDatabaseMessageToMessage(data as DatabaseMessage);
     },
     onSuccess: (updatedMessage) => {
       queryClient.setQueryData<Message[]>([MESSAGES_QUERY_KEY, chatId], (old = []) => {

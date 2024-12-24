@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
+import { ErrorTracker } from '@/utils/errorTracking';
 import type { Message } from '@/types/chat';
 
 interface RealtimeSyncConfig {
@@ -12,35 +13,62 @@ interface RealtimeSyncConfig {
   };
 }
 
+const DEFAULT_RETRY_CONFIG = {
+  retryDelay: 1000,
+  maxRetries: 3
+};
+
 export const useRealtimeSync = ({ 
   setMessages, 
   onError,
-  retryConfig = { retryDelay: 1000, maxRetries: 3 }
+  retryConfig = DEFAULT_RETRY_CONFIG
 }: RealtimeSyncConfig) => {
   const { toast } = useToast();
   const pendingMessagesRef = useRef<Message[]>([]);
   const batchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messageUpdateTimeRef = useRef<number>(Date.now());
   const retryCountRef = useRef<number>(0);
+  const isRecoveringRef = useRef<boolean>(false);
 
   const handleSyncError = useCallback((error: Error) => {
     logger.error(LogCategory.ERROR, 'useRealtimeSync', 'State sync error:', {
       error,
       retryCount: retryCountRef.current,
-      pendingMessages: pendingMessagesRef.current.length
+      pendingMessages: pendingMessagesRef.current.length,
+      isRecovering: isRecoveringRef.current
     });
 
-    if (retryCountRef.current < retryConfig.maxRetries) {
+    ErrorTracker.trackError(error, {
+      component: 'useRealtimeSync',
+      errorType: 'SyncError',
+      severity: 'high',
+      timestamp: new Date().toISOString(),
+      additionalInfo: {
+        retryCount: retryCountRef.current,
+        pendingMessages: pendingMessagesRef.current.length
+      }
+    });
+
+    if (retryCountRef.current < retryConfig.maxRetries && !isRecoveringRef.current) {
+      isRecoveringRef.current = true;
       retryCountRef.current++;
+      
       const delay = retryConfig.retryDelay * Math.pow(2, retryCountRef.current - 1);
       
+      toast({
+        title: "Connection Issue",
+        description: `Attempting to recover (${retryCountRef.current}/${retryConfig.maxRetries})...`,
+        duration: delay
+      });
+
       setTimeout(() => {
+        isRecoveringRef.current = false;
         processBatch();
       }, delay);
     } else {
       toast({
         title: "Sync Error",
-        description: "Failed to sync messages after multiple attempts",
+        description: "Failed to sync messages after multiple attempts. Please refresh the page.",
         variant: "destructive"
       });
       onError?.(error);
@@ -63,7 +91,8 @@ export const useRealtimeSync = ({
 
         logger.debug(LogCategory.STATE, 'useRealtimeSync', 'Adding batch of messages:', {
           uniqueCount: uniqueMessages.length,
-          totalMessages: prev.length + uniqueMessages.length
+          totalMessages: prev.length + uniqueMessages.length,
+          isRecovering: isRecoveringRef.current
         });
 
         return [...prev, ...uniqueMessages];
@@ -71,11 +100,20 @@ export const useRealtimeSync = ({
 
       pendingMessagesRef.current = [];
       messageUpdateTimeRef.current = Date.now();
-      retryCountRef.current = 0;
+      
+      if (isRecoveringRef.current) {
+        isRecoveringRef.current = false;
+        retryCountRef.current = 0;
+        toast({
+          title: "Connection Recovered",
+          description: "Successfully synchronized messages",
+          variant: "default"
+        });
+      }
     } catch (error) {
       handleSyncError(error as Error);
     }
-  }, [setMessages, handleSyncError]);
+  }, [setMessages, handleSyncError, toast]);
 
   const handleNewMessage = useCallback((newMessage: Message) => {
     const currentTime = Date.now();
@@ -86,7 +124,8 @@ export const useRealtimeSync = ({
         
         logger.debug(LogCategory.STATE, 'useRealtimeSync', 'Queuing message for batch:', {
           messageId: newMessage.id,
-          pendingCount: pendingMessagesRef.current.length
+          pendingCount: pendingMessagesRef.current.length,
+          isRecovering: isRecoveringRef.current
         });
 
         if (batchTimeoutRef.current) {
@@ -120,10 +159,13 @@ export const useRealtimeSync = ({
     }
     pendingMessagesRef.current = [];
     retryCountRef.current = 0;
+    isRecoveringRef.current = false;
   }, []);
 
   return {
     handleNewMessage,
-    cleanup
+    cleanup,
+    isRecovering: isRecoveringRef.current,
+    retryCount: retryCountRef.current
   };
 };
