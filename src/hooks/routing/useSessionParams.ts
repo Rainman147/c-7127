@@ -1,6 +1,7 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { defaultTemplates } from '@/types/templates/defaults';
+import { logger, LogCategory } from '@/utils/logging';
 
 export const useSessionParams = () => {
   const { sessionId } = useParams();
@@ -15,6 +16,11 @@ export const useSessionParams = () => {
     isValidTemplateId,
     matchingTemplate
   } = useMemo(() => {
+    logger.debug(LogCategory.ROUTING, 'useSessionParams', 'Validating route parameters:', {
+      sessionId,
+      templateId
+    });
+
     const isNewSession = !sessionId;
     const isValidSessionId = sessionId ? /^[0-9a-fA-F-]+$/.test(sessionId) : false;
     
@@ -22,6 +28,10 @@ export const useSessionParams = () => {
     const isValidTemplateId = templateId ? (
       !!matchingTemplate || /^[0-9a-fA-F-]+$/.test(templateId)
     ) : false;
+
+    if (!isValidSessionId && sessionId) {
+      logger.warn(LogCategory.ROUTING, 'useSessionParams', 'Invalid session ID detected:', sessionId);
+    }
 
     return {
       isNewSession,
@@ -31,13 +41,13 @@ export const useSessionParams = () => {
     };
   }, [sessionId, templateId]);
 
-  const redirectToSession = (id: string, params?: { template?: string }) => {
+  const redirectToSession = useCallback((id: string, params?: { template?: string }) => {
     const targetTemplateId = params?.template || templateId;
     const currentSearchParams = new URLSearchParams(searchParams);
     const currentTemplate = currentSearchParams.get('template');
     
     if (id !== sessionId || targetTemplateId !== currentTemplate) {
-      console.log('[useSessionParams] Redirecting to session:', { 
+      logger.info(LogCategory.ROUTING, 'useSessionParams', 'Redirecting to session:', { 
         id, 
         params,
         currentTemplate: templateId,
@@ -53,13 +63,13 @@ export const useSessionParams = () => {
 
       const queryString = newSearchParams.toString();
       const newPath = `/c/${id}${queryString ? `?${queryString}` : ''}`;
-      navigate(newPath);
+      navigate(newPath, { replace: true });
     }
-  };
+  }, [navigate, searchParams, sessionId, templateId]);
 
-  const redirectToNew = (params?: { template?: string }) => {
+  const redirectToNew = useCallback((params?: { template?: string }) => {
     const targetTemplateId = params?.template || templateId;
-    console.log('[useSessionParams] Redirecting to new session with params:', {
+    logger.info(LogCategory.ROUTING, 'useSessionParams', 'Redirecting to new session with params:', {
       params,
       currentTemplate: templateId,
       targetTemplate: targetTemplateId
@@ -74,8 +84,8 @@ export const useSessionParams = () => {
 
     const queryString = newSearchParams.toString();
     const newPath = `/${queryString ? `?${queryString}` : ''}`;
-    navigate(newPath);
-  };
+    navigate(newPath, { replace: true });
+  }, [navigate, templateId]);
 
   return {
     sessionId: isValidSessionId ? sessionId : null,
