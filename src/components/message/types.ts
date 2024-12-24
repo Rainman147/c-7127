@@ -15,22 +15,13 @@ export type MessageGroup = {
   messages: Message[];
 };
 
-export type MessageUpdate = {
-  id: string;
+export type MessageProps = {
+  role: 'user' | 'assistant';
   content: string;
+  isStreaming?: boolean;
   type?: 'text' | 'audio';
-};
-
-export type MessageAction = {
-  type: 'edit' | 'delete' | 'regenerate';
-  messageId: string;
-};
-
-export type MessageFilter = {
-  role?: 'user' | 'assistant';
-  type?: 'text' | 'audio';
-  startDate?: Date;
-  endDate?: Date;
+  id?: string;
+  showAvatar?: boolean;
 };
 
 export interface MountResolution {
@@ -45,4 +36,8 @@ export interface MessageListContainerProps {
   mountResolution: MountResolution;
   onContainerMount?: () => void;
   onMessagesLoad?: () => void;
+}
+
+export interface MessageGroupsProps {
+  messages: Message[];
 }

@@ -12,15 +12,15 @@ const MessageListContainer = ({
   onMessagesLoad
 }: MessageListContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { updateMetrics } = useMessageListMetrics();
+  const { metrics } = useMessageListMetrics();
 
   useEffect(() => {
     if (containerRef.current) {
       logger.debug(LogCategory.RENDER, 'MessageListContainer', 'Container mounted, updating metrics');
-      updateMetrics(containerRef.current);
+      metrics.logMetrics('container_mounted');
       onContainerMount?.();
     }
-  }, [onContainerMount, updateMetrics]);
+  }, [onContainerMount, metrics]);
 
   useEffect(() => {
     if (messages.length > 0) {

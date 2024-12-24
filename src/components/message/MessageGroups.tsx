@@ -1,32 +1,17 @@
 import Message from '../Message';
-import { MessageGroup } from '@/types/chat';
+import type { MessageGroupsProps } from './types';
 
-interface MessageGroupsProps {
-  groups: MessageGroup[];
-}
-
-const MessageGroups = ({ groups }: MessageGroupsProps) => {
+const MessageGroups = ({ messages }: MessageGroupsProps) => {
   return (
-    <>
-      {groups.map((group) => (
-        <div key={group.id} className="space-y-4">
-          <div className="flex items-center justify-center">
-            <div className="text-xs text-white/50 bg-chatgpt-secondary/30 px-2 py-1 rounded">
-              {group.label} · {group.timestamp}
-            </div>
-          </div>
-          <div className="space-y-2">
-            {group.messages.map((message, index) => (
-              <Message 
-                key={message.id || index} 
-                {...message} 
-                showAvatar={index === 0 || message.role !== group.messages[index - 1].role}
-              />
-            ))}
-          </div>
-        </div>
+    <div className="space-y-2">
+      {messages.map((message, index) => (
+        <Message 
+          key={message.id || index} 
+          {...message} 
+          showAvatar={index === 0 || message.role !== messages[index - 1]?.role}
+        />
       ))}
-    </>
+    </div>
   );
 };
 
