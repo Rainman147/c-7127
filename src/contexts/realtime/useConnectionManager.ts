@@ -1,9 +1,7 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
 import { getNextRetryDelay, retryConfig } from './config';
 import type { ConnectionState } from './config';
-import type { Message } from '@/types/chat';
 
 export const useConnectionManager = (
   retryTimeouts: React.MutableRefObject<Map<string, NodeJS.Timeout>>,
@@ -20,6 +18,7 @@ export const useConnectionManager = (
       chatId,
       error,
       retryCount: connectionState.retryCount,
+      timestamp: new Date().toISOString()
     });
 
     if (connectionState.retryCount < retryConfig.maxAttempts) {
@@ -37,15 +36,21 @@ export const useConnectionManager = (
       }
 
       const timeout = setTimeout(() => {
+        logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Attempting reconnection:', {
+          chatId,
+          attempt: connectionState.retryCount + 1,
+          timestamp: new Date().toISOString()
+        });
         subscribeToChat(chatId);
       }, nextRetryDelay);
 
       retryTimeouts.current.set(chatId, timeout);
       
-      logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Scheduling retry:', {
+      logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Scheduled retry:', {
         chatId,
         delay: nextRetryDelay,
         attempt: connectionState.retryCount + 1,
+        timestamp: new Date().toISOString()
       });
     } else {
       setConnectionState(prev => ({
@@ -57,6 +62,7 @@ export const useConnectionManager = (
       logger.error(LogCategory.COMMUNICATION, 'RealTimeContext', 'Max retry attempts reached:', {
         chatId,
         maxAttempts: retryConfig.maxAttempts,
+        timestamp: new Date().toISOString()
       });
     }
   }, [connectionState.retryCount, retryTimeouts, subscribeToChat]);

@@ -23,10 +23,14 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Subscribing to chat:', { 
       chatId,
       activeSubscriptions: Array.from(activeSubscriptions.current),
+      timestamp: new Date().toISOString()
     });
 
     if (channels.current.has(chatId)) {
-      logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Already subscribed to chat:', { chatId });
+      logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Already subscribed to chat:', { 
+        chatId,
+        timestamp: new Date().toISOString()
+      });
       return;
     }
 
@@ -49,7 +53,8 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         (payload) => {
           logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Received message:', { 
             payload,
-            chatId 
+            chatId,
+            timestamp: new Date().toISOString()
           });
           
           if (payload.eventType === 'INSERT') {
@@ -61,6 +66,8 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Subscription status changed:', {
           chatId,
           status,
+          timestamp: new Date().toISOString(),
+          retryCount: connectionState.retryCount
         });
 
         if (status === 'SUBSCRIBED') {
@@ -75,6 +82,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
           logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Successfully subscribed to chat:', {
             chatId,
             activeSubscriptions: Array.from(activeSubscriptions.current),
+            timestamp: new Date().toISOString()
           });
         } else if (status === 'CHANNEL_ERROR') {
           handleConnectionError(chatId, new Error(`Failed to subscribe to chat ${chatId}`));
@@ -92,12 +100,20 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Unsubscribing from chat:', { 
       chatId,
       activeSubscriptions: Array.from(activeSubscriptions.current),
+      timestamp: new Date().toISOString()
     });
     cleanupSubscription(chatId);
   }, [cleanupSubscription]);
 
   useEffect(() => {
-    return cleanupAllSubscriptions;
+    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Setting up cleanup on unmount');
+    return () => {
+      logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Cleaning up all subscriptions', {
+        activeSubscriptions: Array.from(activeSubscriptions.current),
+        timestamp: new Date().toISOString()
+      });
+      cleanupAllSubscriptions();
+    };
   }, [cleanupAllSubscriptions]);
 
   const value: RealTimeContextValue = {

@@ -12,23 +12,43 @@ export const useSubscriptionManager = (
   const activeSubscriptions = useRef(new Set<string>());
 
   const cleanupSubscription = useCallback((chatId: string) => {
-    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Cleaning up subscription:', { chatId });
+    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Cleaning up subscription:', { 
+      chatId,
+      timestamp: new Date().toISOString()
+    });
     
     const channel = channels.current.get(chatId);
     if (channel) {
-      supabase.removeChannel(channel);
-      channels.current.delete(chatId);
-      activeSubscriptions.current.delete(chatId);
-      
-      if (retryTimeouts.current.has(chatId)) {
-        clearTimeout(retryTimeouts.current.get(chatId));
-        retryTimeouts.current.delete(chatId);
+      try {
+        supabase.removeChannel(channel);
+        channels.current.delete(chatId);
+        activeSubscriptions.current.delete(chatId);
+        
+        if (retryTimeouts.current.has(chatId)) {
+          clearTimeout(retryTimeouts.current.get(chatId));
+          retryTimeouts.current.delete(chatId);
+        }
+
+        logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Successfully cleaned up subscription:', {
+          chatId,
+          remainingSubscriptions: Array.from(activeSubscriptions.current),
+          timestamp: new Date().toISOString()
+        });
+      } catch (error) {
+        logger.error(LogCategory.ERROR, 'RealTimeContext', 'Error cleaning up subscription:', {
+          chatId,
+          error,
+          timestamp: new Date().toISOString()
+        });
       }
     }
   }, []);
 
   const cleanupAllSubscriptions = useCallback(() => {
-    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Cleaning up all subscriptions');
+    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Cleaning up all subscriptions', {
+      subscriptionCount: activeSubscriptions.current.size,
+      timestamp: new Date().toISOString()
+    });
     
     channels.current.forEach((_, chatId) => {
       cleanupSubscription(chatId);
