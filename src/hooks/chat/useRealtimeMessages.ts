@@ -27,6 +27,7 @@ export const useRealtimeMessages = (
       component: 'useRealtimeMessages',
       severity: retryCount >= MAX_RETRIES ? 'high' : 'medium',
       timestamp: new Date().toISOString(),
+      errorType: error.name,
       operation,
       additionalInfo: {
         chatId,
@@ -40,6 +41,7 @@ export const useRealtimeMessages = (
         description: `Attempting to reconnect... (${retryCount + 1}/${MAX_RETRIES})`,
         variant: "default",
       });
+      setRetryCount(prev => prev + 1);
     } else {
       toast({
         title: "Connection Error",
@@ -55,54 +57,31 @@ export const useRealtimeMessages = (
       return;
     }
 
-    const setupSubscription = () => {
-      try {
-        logger.info(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'Setting up subscription:', {
-          chatId,
-          connectionState,
-          timestamp: new Date().toISOString()
-        });
-
-        subscribeToChat(chatId);
-        setRetryCount(0);
-      } catch (error) {
-        handleError(error as Error, 'setup subscription');
-        if (retryCount < MAX_RETRIES) {
-          setRetryCount(prev => prev + 1);
-          setTimeout(setupSubscription, Math.pow(2, retryCount) * 1000);
-        }
-      }
-    };
-
-    setupSubscription();
+    try {
+      subscribeToChat(chatId);
+      setRetryCount(0);
+    } catch (error) {
+      handleError(error as Error, 'subscribe');
+    }
 
     return () => {
       try {
-        logger.info(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'Cleaning up subscription:', {
-          chatId,
-          timestamp: new Date().toISOString()
-        });
         unsubscribeFromChat(chatId);
       } catch (error) {
-        handleError(error as Error, 'cleanup subscription');
+        handleError(error as Error, 'unsubscribe');
       }
     };
-  }, [chatId, subscribeToChat, unsubscribeFromChat, handleError, retryCount]);
+  }, [chatId, subscribeToChat, unsubscribeFromChat, handleError]);
 
   useEffect(() => {
     if (lastMessage) {
       try {
-        logger.debug(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'New message received:', {
-          messageId: lastMessage.id,
-          chatId,
-          timestamp: new Date().toISOString()
-        });
         onMessageReceived(lastMessage);
       } catch (error) {
-        handleError(error as Error, 'process new message');
+        handleError(error as Error, 'process message');
       }
     }
-  }, [lastMessage, onMessageReceived, chatId, handleError]);
+  }, [lastMessage, onMessageReceived, handleError]);
 
   return {
     connectionState,

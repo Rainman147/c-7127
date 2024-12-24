@@ -28,6 +28,7 @@ export const useChat = (activeSessionId: string | null) => {
       component: 'useChat',
       timestamp: new Date().toISOString(),
       severity: 'medium',
+      errorType: error.name,
       operation: 'chat-message-handling',
       additionalInfo: {
         activeSessionId,

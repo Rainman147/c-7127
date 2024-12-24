@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { ErrorTracker } from '@/utils/errorTracking';
 import { useToast } from '@/hooks/use-toast';
-import type { Message } from '@/types/chat';
 
 export const useErrorHandler = (
   retryCount: number,
@@ -22,6 +21,7 @@ export const useErrorHandler = (
       component: 'RealTimeContext',
       severity: retryCount >= MAX_RETRIES ? 'high' : 'medium',
       timestamp: new Date().toISOString(),
+      errorType: error.name,
       operation,
       additionalInfo: {
         activeSubscriptions: Array.from(activeSubscriptions.current)
