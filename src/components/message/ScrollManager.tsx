@@ -1,5 +1,6 @@
 import { useEffect, useRef, RefObject } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
+import { useScrollMetrics } from './ScrollManagerMetrics';
 import type { Message } from '@/types/chat';
 
 interface ScrollManagerProps {
@@ -28,8 +29,9 @@ export const useScrollManager = ({
   const lastMessageCount = useRef<number>(0);
   const scrollQueue = useRef<QueuedScroll[]>([]);
   const processingQueue = useRef<boolean>(false);
+  const { logMetrics, measureOperation } = useScrollMetrics(containerRef);
 
-  // Process queued scroll operations with retry logic
+  // Process queued scroll operations with retry logic and metrics
   const processScrollQueue = async () => {
     if (processingQueue.current || !isMounted) return;
     
@@ -43,29 +45,28 @@ export const useScrollManager = ({
     }
 
     processingQueue.current = true;
-    const startTime = performance.now();
+    const performance = measureOperation('Queue processing');
 
     try {
       while (scrollQueue.current.length > 0) {
         const nextScroll = scrollQueue.current[0];
+        const scrollPerformance = measureOperation('Individual scroll');
         
         container.scrollTo({
           top: nextScroll.targetScroll,
           behavior: nextScroll.behavior
         });
 
-        // Wait for scroll to complete
+        // Wait for scroll to complete and log metrics
         await new Promise(resolve => setTimeout(resolve, 100));
-        
-        logger.debug(LogCategory.STATE, 'ScrollManager', 'Processed scroll operation', {
+        logMetrics('Scroll operation complete', {
           targetScroll: nextScroll.targetScroll,
           actualScroll: container.scrollTop,
           behavior: nextScroll.behavior,
-          queueAge: performance.now() - nextScroll.timestamp,
-          remainingQueue: scrollQueue.current.length - 1,
-          timestamp: new Date().toISOString()
+          queueAge: performance.now() - nextScroll.timestamp
         });
-
+        
+        scrollPerformance.end();
         scrollQueue.current.shift();
       }
     } catch (error) {
@@ -76,10 +77,7 @@ export const useScrollManager = ({
       });
     } finally {
       processingQueue.current = false;
-      logger.debug(LogCategory.STATE, 'ScrollManager', 'Queue processing complete', {
-        duration: performance.now() - startTime,
-        timestamp: new Date().toISOString()
-      });
+      performance.end();
     }
   };
 
@@ -182,6 +180,10 @@ export const useScrollManager = ({
   }, [messages, containerRef, isLoading, isMounted]);
 
   return {
-    isNearBottom: shouldScrollToBottom.current
+    isNearBottom: shouldScrollToBottom.current,
+    metrics: {
+      logMetrics,
+      measureOperation
+    }
   };
 };

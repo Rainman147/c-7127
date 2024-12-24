@@ -18,7 +18,7 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
   const [isMounted, setIsMounted] = useState(false);
   const initialHeightSet = useRef(false);
   
-  const { isNearBottom } = useScrollManager({
+  const { isNearBottom, metrics } = useScrollManager({
     containerRef,
     messages,
     isLoading,
@@ -27,23 +27,23 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
 
   // Track mount status with performance timing
   useEffect(() => {
-    const mountTime = performance.now();
+    const mountPerformance = metrics.measureOperation('Component mounting');
+    
     logger.debug(LogCategory.STATE, 'MessageList', 'Component mounting started', {
-      mountTime,
       timestamp: new Date().toISOString()
     });
 
     setIsMounted(true);
 
     return () => {
+      const unmountDuration = mountPerformance.end();
       logger.debug(LogCategory.STATE, 'MessageList', 'Component unmounted', {
-        unmountTime: performance.now(),
-        mountDuration: performance.now() - mountTime,
+        unmountDuration,
         timestamp: new Date().toISOString()
       });
       setIsMounted(false);
     };
-  }, []);
+  }, [metrics]);
 
   // Monitor container dimensions with cleanup
   useEffect(() => {
@@ -59,28 +59,16 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        logger.debug(LogCategory.STATE, 'MessageList', 'Container dimensions updated', {
-          height: entry.contentRect.height,
-          width: entry.contentRect.width,
-          scrollHeight: container.scrollHeight,
-          clientHeight: container.clientHeight,
-          scrollTop: container.scrollTop,
-          keyboardVisible,
-          messageCount: messages.length,
-          hasScrollbar: container.scrollHeight > container.clientHeight,
-          computedStyle: {
-            overflow: window.getComputedStyle(container).overflow,
-            display: window.getComputedStyle(container).display,
-            position: window.getComputedStyle(container).position,
-          },
-          timestamp: new Date().toISOString()
+        metrics.logMetrics('Container dimensions updated', {
+          dimensions: entry.contentRect,
+          keyboardVisible
         });
       }
     });
 
     observer.observe(container);
     return () => observer.disconnect();
-  }, [messages.length, keyboardVisible, isMounted]);
+  }, [messages.length, keyboardVisible, isMounted, metrics]);
 
   // Dedicated height calculation effect with fallback
   useEffect(() => {
@@ -159,12 +147,7 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
     keyboardVisible,
     isNearBottom,
     isMounted,
-    containerDimensions: containerRef.current ? {
-      scrollHeight: containerRef.current.scrollHeight,
-      clientHeight: containerRef.current.clientHeight,
-      offsetHeight: containerRef.current.offsetHeight,
-      scrollTop: containerRef.current.scrollTop,
-    } : null,
+    containerMetrics: containerRef.current ? metrics.logMetrics('Render metrics') : null,
     timestamp: new Date().toISOString()
   });
 
