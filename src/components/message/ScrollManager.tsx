@@ -49,7 +49,16 @@ export const useScrollManager = ({
   // Handle messages updates and scrolling
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || isLoading || !isMounted) return;
+    if (!container || isLoading || !isMounted) {
+      logger.debug(LogCategory.STATE, 'ScrollManager', 'Skipping scroll update', {
+        hasContainer: !!container,
+        isLoading,
+        isMounted,
+        messageCount: messages.length,
+        timestamp: new Date().toISOString()
+      });
+      return;
+    }
 
     const messageCountChanged = messages.length !== lastMessageCount.current;
     const shouldForceScroll = isInitialLoad.current || shouldScrollToBottom.current;
@@ -60,19 +69,31 @@ export const useScrollManager = ({
       messageCountChanged,
       shouldForceScroll,
       isInitialLoad: isInitialLoad.current,
+      containerHeight: container.clientHeight,
+      scrollHeight: container.scrollHeight,
       timestamp: new Date().toISOString()
     });
 
     lastMessageCount.current = messages.length;
     
-    if (shouldForceScroll) {
+    if (shouldForceScroll && messageCountChanged) {
       if (scrollTimeout.current) {
         clearTimeout(scrollTimeout.current);
       }
 
+      // Use a shorter delay for initial load
+      const scrollDelay = isInitialLoad.current ? 50 : 100;
+
       scrollTimeout.current = setTimeout(() => {
         const targetScroll = container.scrollHeight - container.clientHeight;
         
+        logger.debug(LogCategory.STATE, 'ScrollManager', 'Executing scroll', {
+          targetScroll,
+          isInitialLoad: isInitialLoad.current,
+          behavior: isInitialLoad.current ? 'auto' : 'smooth',
+          timestamp: new Date().toISOString()
+        });
+
         queueScroll({
           targetScroll,
           behavior: isInitialLoad.current ? 'auto' : 'smooth',
@@ -81,8 +102,10 @@ export const useScrollManager = ({
         
         processQueue(container, { logMetrics, measureOperation });
         
-        isInitialLoad.current = false;
-      }, isInitialLoad.current ? 0 : 100);
+        if (isInitialLoad.current) {
+          isInitialLoad.current = false;
+        }
+      }, scrollDelay);
     }
 
     return () => {
