@@ -63,7 +63,11 @@ export const useChat = (activeSessionId: string | null) => {
 
   const { handleNewMessage, cleanup: cleanupRealtimeSync } = useRealtimeSync({
     setMessages,
-    onError: handleError
+    onError: handleError,
+    config: {
+      retryDelay: ErrorTracker.getBackoffDelay(retryCountRef.current),
+      maxRetries: 5
+    }
   });
 
   useRealtimeMessages(activeSessionId, handleNewMessage);
