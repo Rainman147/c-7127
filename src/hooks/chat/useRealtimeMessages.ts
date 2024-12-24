@@ -3,7 +3,7 @@ import { useRealTime } from '@/contexts/RealTimeContext';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 
-export const useRealtimeMessages = (
+export const useRealTimeMessages = (
   chatId: string | null,
   onMessageReceived: (message: Message) => void
 ) => {
@@ -11,11 +11,11 @@ export const useRealtimeMessages = (
 
   useEffect(() => {
     if (!chatId) {
-      logger.debug(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'No chat ID provided');
+      logger.debug(LogCategory.COMMUNICATION, 'useRealTimeMessages', 'No chat ID provided');
       return;
     }
 
-    logger.info(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'Setting up subscription:', {
+    logger.info(LogCategory.COMMUNICATION, 'useRealTimeMessages', 'Setting up subscription:', {
       chatId,
       connectionState,
     });
@@ -23,7 +23,7 @@ export const useRealtimeMessages = (
     subscribeToChat(chatId);
 
     return () => {
-      logger.info(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'Cleaning up subscription:', {
+      logger.info(LogCategory.COMMUNICATION, 'useRealTimeMessages', 'Cleaning up subscription:', {
         chatId,
       });
       unsubscribeFromChat(chatId);
@@ -33,7 +33,7 @@ export const useRealtimeMessages = (
   // Handle new messages
   useEffect(() => {
     if (lastMessage) {
-      logger.debug(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'New message received:', {
+      logger.debug(LogCategory.COMMUNICATION, 'useRealTimeMessages', 'New message received:', {
         messageId: lastMessage.id,
         chatId,
       });
