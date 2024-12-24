@@ -1,3 +1,5 @@
+import type { Message } from '@/types/chat';
+
 export const retryConfig = {
   initialDelay: 1000,
   maxDelay: 30000,
