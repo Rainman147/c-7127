@@ -5,29 +5,6 @@ import type { Message } from '@/types/chat';
 import type { DatabaseMessage } from '@/types/database/messages';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-const validateAndMergeMessages = (localMessages: Message[], newMessage: Message): Message[] => {
-  const isDuplicate = localMessages.some(msg => msg.id === newMessage.id);
-  if (isDuplicate) {
-    return localMessages;
-  }
-
-  return [...localMessages, newMessage].sort((a, b) => {
-    if (a.sequence !== b.sequence) {
-      return (a.sequence || 0) - (b.sequence || 0);
-    }
-    return new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime();
-  });
-};
-
-const isDatabaseMessage = (obj: any): obj is DatabaseMessage => {
-  return obj && 
-    typeof obj === 'object' && 
-    'id' in obj && 
-    'content' in obj && 
-    'sender' in obj &&
-    'type' in obj;
-};
-
 export const useRealtimeMessages = (
   currentChatId: string | null,
   messages: Message[],
@@ -41,14 +18,25 @@ export const useRealtimeMessages = (
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
-    if (!currentChatId || currentChatId === prevChatIdRef.current) {
+    if (!currentChatId) {
+      console.log('[useRealtimeMessages] No chat ID provided, skipping subscription');
       return;
+    }
+
+    if (currentChatId === prevChatIdRef.current) {
+      console.log('[useRealtimeMessages] Chat ID unchanged, keeping existing subscription');
+      return;
+    }
+
+    // Clean up previous subscription if it exists
+    if (channelRef.current) {
+      console.log('[useRealtimeMessages] Cleaning up previous subscription');
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
     }
 
     prevChatIdRef.current = currentChatId;
     console.log('[useRealtimeMessages] Setting up subscription for chat:', currentChatId);
-    
-    let isSubscriptionActive = true;
     
     const channel = supabase
       .channel(`chat-${currentChatId}`)
@@ -61,55 +49,37 @@ export const useRealtimeMessages = (
           filter: `chat_id=eq.${currentChatId}`
         },
         (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
-          if (!isSubscriptionActive) {
+          console.log('[useRealtimeMessages] Received message update:', payload);
+          
+          if (!payload.new) {
+            console.log('[useRealtimeMessages] No new data in payload, skipping');
             return;
           }
 
-          const newData = payload.new;
-          if (!newData || !isDatabaseMessage(newData)) {
-            return;
-          }
+          const newMessage = {
+            id: payload.new.id,
+            role: payload.new.sender as 'user' | 'assistant',
+            content: payload.new.content,
+            type: payload.new.type as 'text' | 'audio',
+            sequence: payload.new.sequence || messages.length + 1,
+            created_at: payload.new.created_at
+          };
 
-          try {
-            if (payload.eventType === 'INSERT') {
-              const newMessage: Message = {
-                role: newData.sender as 'user' | 'assistant',
-                content: newData.content,
-                type: newData.type as 'text' | 'audio',
-                id: newData.id,
-                sequence: newData.sequence || messages.length + 1,
-                created_at: newData.created_at
-              };
-
-              const updatedMessages = validateAndMergeMessages([...messages], newMessage);
-              setMessages(updatedMessages);
-              updateCache(currentChatId, updatedMessages);
-              
-            } else if (payload.eventType === 'UPDATE') {
-              invalidateCache(currentChatId);
-              
-              const updatedMessages = messages.map(msg => 
-                msg.id === newData.id ? {
-                  ...msg,
-                  content: newData.content,
-                  type: newData.type as 'text' | 'audio',
-                  sequence: newData.sequence || msg.sequence,
-                  created_at: newData.created_at
-                } : msg
-              );
-              setMessages(updatedMessages);
-            }
-          } catch (error) {
-            console.error('[useRealtimeMessages] Error handling update:', error);
-            toast({
-              title: "Error",
-              description: "Failed to process message update",
-              variant: "destructive"
-            });
+          if (payload.eventType === 'INSERT') {
+            console.log('[useRealtimeMessages] Handling INSERT event');
+            setMessages(prev => [...prev, newMessage]);
+            updateCache(currentChatId, [...messages, newMessage]);
+          } else if (payload.eventType === 'UPDATE') {
+            console.log('[useRealtimeMessages] Handling UPDATE event');
+            setMessages(prev => 
+              prev.map(msg => msg.id === payload.new.id ? newMessage : msg)
+            );
+            invalidateCache(currentChatId);
           }
         }
       )
       .subscribe(status => {
+        console.log('[useRealtimeMessages] Subscription status:', status);
         if (status === 'SUBSCRIBED') {
           console.log('[useRealtimeMessages] Successfully subscribed to chat:', currentChatId);
           onSubscriptionReady?.();
@@ -117,7 +87,7 @@ export const useRealtimeMessages = (
           console.error('[useRealtimeMessages] Error subscribing to chat:', currentChatId);
           toast({
             title: "Connection Error",
-            description: "Failed to connect to chat updates",
+            description: "Failed to connect to chat updates. Please refresh the page.",
             variant: "destructive"
           });
         }
@@ -127,7 +97,6 @@ export const useRealtimeMessages = (
 
     return () => {
       console.log('[useRealtimeMessages] Cleaning up subscription for chat:', currentChatId);
-      isSubscriptionActive = false;
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
