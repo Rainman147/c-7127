@@ -25,7 +25,7 @@ const MessageList = memo(({ messages, isLoading = false }: MessageListProps) => 
   useEffect(() => {
     if (messages.length > 0) {
       logger.debug(LogCategory.STATE, 'MessageList', 'Messages loaded:', { count: messages.length });
-      setMessagesLoaded(true);
+      setMessagesLoaded(); // Removed the argument here
     }
   }, [messages, setMessagesLoaded]);
 

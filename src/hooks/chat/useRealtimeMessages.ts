@@ -51,12 +51,12 @@ export const useRealtimeMessages = (
         (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
           console.log('[useRealtimeMessages] Received message update:', payload);
           
-          if (!payload.new) {
+          if (!payload.new || !('id' in payload.new)) {
             console.log('[useRealtimeMessages] No new data in payload, skipping');
             return;
           }
 
-          const newMessage = {
+          const newMessage: Message = {
             id: payload.new.id,
             role: payload.new.sender as 'user' | 'assistant',
             content: payload.new.content,
@@ -67,13 +67,11 @@ export const useRealtimeMessages = (
 
           if (payload.eventType === 'INSERT') {
             console.log('[useRealtimeMessages] Handling INSERT event');
-            setMessages(prev => [...prev, newMessage]);
+            setMessages([...messages, newMessage]);
             updateCache(currentChatId, [...messages, newMessage]);
           } else if (payload.eventType === 'UPDATE') {
             console.log('[useRealtimeMessages] Handling UPDATE event');
-            setMessages(prev => 
-              prev.map(msg => msg.id === payload.new.id ? newMessage : msg)
-            );
+            setMessages(messages.map(msg => msg.id === payload.new.id ? newMessage : msg));
             invalidateCache(currentChatId);
           }
         }
