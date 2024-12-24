@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import type { Message } from '@/types/chat';
 import { logger, LogCategory } from '@/utils/logging';
+import type { Message } from '@/types/chat';
 
 export const useMessageState = () => {
   const [messages, setMessages] = useState<Message[]>([]);
