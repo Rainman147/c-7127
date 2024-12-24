@@ -28,26 +28,69 @@ export const useChat = (activeSessionId: string | null) => {
   const { toast } = useToast();
   const prevSessionIdRef = useRef<string | null>(null);
   const messageUpdateTimeRef = useRef<number>(Date.now());
+  const pendingMessagesRef = useRef<Message[]>([]);
+  const batchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { handleMessagesLoad } = useMessageLoader(loadMessages, getCachedMessages, updateCache);
   const { handleSendMessage: messageSender } = useMessageSender(sendMessage, updateCache);
 
-  // Enhanced real-time message handling with debouncing and deduplication
+  const processBatch = useCallback(() => {
+    if (pendingMessagesRef.current.length === 0) return;
+
+    const batchSize = pendingMessagesRef.current.length;
+    logger.debug(LogCategory.STATE, 'useChat', 'Processing message batch:', {
+      batchSize,
+      timestamp: new Date().toISOString()
+    });
+
+    setMessages(prev => {
+      const uniqueMessages = pendingMessagesRef.current.filter(
+        newMsg => !prev.some(existingMsg => existingMsg.id === newMsg.id)
+      );
+
+      if (uniqueMessages.length === 0) {
+        logger.debug(LogCategory.STATE, 'useChat', 'No new unique messages in batch');
+        return prev;
+      }
+
+      logger.debug(LogCategory.STATE, 'useChat', 'Adding batch of messages:', {
+        uniqueCount: uniqueMessages.length,
+        totalMessages: prev.length + uniqueMessages.length
+      });
+
+      return [...prev, ...uniqueMessages];
+    });
+
+    pendingMessagesRef.current = [];
+    messageUpdateTimeRef.current = Date.now();
+  }, [setMessages]);
+
+  // Enhanced real-time message handling with batching
   useRealtimeMessages(
     activeSessionId,
     (newMessage: Message) => {
       const currentTime = Date.now();
-      // Prevent rapid updates (debounce)
-      if (currentTime - messageUpdateTimeRef.current < 100) {
-        logger.debug(LogCategory.STATE, 'useChat', 'Skipping rapid update:', {
+      if (currentTime - messageUpdateTimeRef.current < 50) {
+        pendingMessagesRef.current.push(newMessage);
+        
+        logger.debug(LogCategory.STATE, 'useChat', 'Queuing message for batch:', {
           messageId: newMessage.id,
-          timeSinceLastUpdate: currentTime - messageUpdateTimeRef.current
+          pendingCount: pendingMessagesRef.current.length
         });
+
+        if (batchTimeoutRef.current) {
+          clearTimeout(batchTimeoutRef.current);
+        }
+
+        batchTimeoutRef.current = setTimeout(() => {
+          processBatch();
+        }, 100);
+
         return;
       }
 
+      // If enough time has passed, process immediately
       setMessages(prev => {
-        // Check for duplicates
         const isDuplicate = prev.some(msg => msg.id === newMessage.id);
         if (isDuplicate) {
           logger.debug(LogCategory.STATE, 'useChat', 'Skipping duplicate message:', {
@@ -56,7 +99,7 @@ export const useChat = (activeSessionId: string | null) => {
           return prev;
         }
 
-        logger.debug(LogCategory.STATE, 'useChat', 'Adding new message:', {
+        logger.debug(LogCategory.STATE, 'useChat', 'Adding single message:', {
           messageId: newMessage.id,
           currentCount: prev.length
         });
@@ -154,6 +197,15 @@ export const useChat = (activeSessionId: string | null) => {
     setMessages,
     toast
   ]);
+
+  // Cleanup batch timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (batchTimeoutRef.current) {
+        clearTimeout(batchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return {
     messages,
