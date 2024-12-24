@@ -1,5 +1,3 @@
-import { logger, LogCategory } from '@/utils/logging';
-
 export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 
 interface ErrorMetadata {
@@ -33,7 +31,7 @@ class ErrorTracker {
 
     this.lastErrorTime.set(errorKey, currentTime);
 
-    logger.error(LogCategory.ERROR, metadata.component, error.message, {
+    console.error(`[${metadata.component}] ${error.message}`, {
       ...metadata,
       errorCount: count,
       stackTrace: error.stack,
@@ -42,7 +40,7 @@ class ErrorTracker {
 
     // Check if we should trigger circuit breaker
     if (count >= this.ERROR_THRESHOLD) {
-      logger.error(LogCategory.ERROR, metadata.component, 'Circuit breaker triggered', {
+      console.error(`[${metadata.component}] Circuit breaker triggered`, {
         errorKey,
         errorCount: count,
         cooldownPeriod: this.ERROR_COOLDOWN
