@@ -4,10 +4,17 @@ import { useTemplateLoading } from "@/hooks/template/useTemplateLoading";
 import { useTemplateUpdates } from "@/hooks/template/useTemplateUpdates";
 import { useSessionParams } from "@/hooks/routing/useSessionParams";
 
+export interface UseTemplateSelectionResult {
+  selectedTemplate: Template | null;
+  availableTemplates: Template[];
+  isLoading: boolean;
+  handleTemplateChange: (template: Template) => void;
+}
+
 export const useTemplateSelection = (
   onTemplateChange: (template: Template) => void,
   globalTemplate: Template
-) => {
+): UseTemplateSelectionResult => {
   const { sessionId } = useSessionParams();
   console.log('[useTemplateSelection] Hook initialized with sessionId:', sessionId);
   
@@ -19,13 +26,7 @@ export const useTemplateSelection = (
     globalTemplateRef
   } = useTemplateState(globalTemplate);
 
-  const { availableTemplates } = useTemplateLoading(
-    onTemplateChange,
-    selectedTemplate,
-    setSelectedTemplate,
-    setIsLoading,
-    globalTemplateRef
-  );
+  const { availableTemplates } = useTemplateLoading();
 
   const { handleTemplateChange } = useTemplateUpdates(
     selectedTemplate,

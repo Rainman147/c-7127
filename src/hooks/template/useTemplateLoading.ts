@@ -5,7 +5,15 @@ import { useToast } from '@/hooks/use-toast';
 import { useAvailableTemplates } from './useAvailableTemplates';
 import type { Template } from '@/components/template/templateTypes';
 
-export const useTemplateLoading = () => {
+export interface UseTemplateLoadingResult {
+  isLoading: boolean;
+  setIsLoading: (loading: boolean) => void;
+  error: Error | null;
+  handleError: (error: Error, operation: string) => void;
+  availableTemplates: Template[];
+}
+
+export const useTemplateLoading = (): UseTemplateLoadingResult => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const { toast } = useToast();

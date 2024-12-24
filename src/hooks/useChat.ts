@@ -1,10 +1,13 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { ErrorTracker } from '@/utils/errorTracking';
 import { useToast } from '@/hooks/use-toast';
+import type { Message } from '@/types/chat';
 
-export const useChat = () => {
+export const useChat = (sessionId: string | null) => {
   const { toast } = useToast();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleError = useCallback((error: Error, operation: string) => {
     logger.error(LogCategory.COMMUNICATION, 'useChat', `Error during ${operation}:`, {
@@ -30,7 +33,32 @@ export const useChat = () => {
     });
   }, [toast]);
 
+  const handleSendMessage = useCallback(async (message: string, type: 'text' | 'audio' = 'text') => {
+    if (!sessionId) return;
+    
+    setIsLoading(true);
+    try {
+      // Add message implementation here
+      const newMessage: Message = {
+        id: crypto.randomUUID(),
+        content: message,
+        role: 'user',
+        type,
+        sequence: messages.length + 1,
+        created_at: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, newMessage]);
+    } catch (error) {
+      handleError(error as Error, 'sendMessage');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [sessionId, messages, handleError]);
+
   return {
+    messages,
+    isLoading,
+    handleSendMessage,
     handleError
   };
 };
