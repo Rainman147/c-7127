@@ -20,7 +20,24 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
   const { metrics } = useMessageListMetrics(containerRef, isMounted, keyboardVisible);
   const prevMessagesLength = useRef<number>(0);
   
-  // Enhanced mount status tracking with detailed performance timing
+  // Mount resolution tracking
+  const mountResolution = useRef({
+    containerMounted: false,
+    messagesLoaded: false,
+    initialScrollExecuted: false,
+    lastMessageCount: 0
+  });
+
+  // Enhanced scroll manager with mount resolution
+  const { isNearBottom, metrics: scrollMetrics } = useScrollManager({
+    containerRef,
+    messages,
+    isLoading,
+    isMounted,
+    mountResolution: mountResolution.current
+  });
+  
+  // Enhanced mount status tracking with mount resolution
   useEffect(() => {
     const mountPerformance = metrics.measureOperation('Component mounting');
     const mountTimestamp = new Date().toISOString();
@@ -40,20 +57,28 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
       } : null,
       viewportHeight,
       route: window.location.pathname,
-      isMountedState: isMounted
+      isMountedState: isMounted,
+      mountResolutionState: mountResolution.current
     });
+
+    if (containerRef.current) {
+      mountResolution.current.containerMounted = true;
+      logger.debug(LogCategory.STATE, 'MessageList', 'Container mounted', {
+        timestamp: new Date().toISOString(),
+        mountResolution: mountResolution.current
+      });
+    }
 
     setIsMounted(true);
 
-    // Log after state update
-    logger.debug(LogCategory.STATE, 'MessageList', 'Mount state updated', {
-      timestamp: new Date().toISOString(),
-      newMountedState: true,
-      timeSinceMountStart: Date.now() - new Date(mountTimestamp).getTime()
-    });
-
     return () => {
       const unmountDuration = mountPerformance.end();
+      mountResolution.current = {
+        containerMounted: false,
+        messagesLoaded: false,
+        initialScrollExecuted: false,
+        lastMessageCount: 0
+      };
       logger.debug(LogCategory.STATE, 'MessageList', 'Component unmounted', {
         unmountDuration,
         timestamp: new Date().toISOString(),
@@ -65,15 +90,18 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
           offsetHeight: containerRef.current.offsetHeight,
           offsetTop: containerRef.current.offsetTop
         } : null,
-        route: window.location.pathname
+        route: window.location.pathname,
+        finalMountResolution: mountResolution.current
       });
-      setIsMounted(false);
     };
   }, [metrics, messages.length, isLoading, keyboardVisible, viewportHeight]);
 
-  // Enhanced message count change tracking
+  // Enhanced message tracking with mount resolution
   useEffect(() => {
-    if (messages.length !== prevMessagesLength.current) {
+    if (messages.length > 0 && messages.length !== mountResolution.current.lastMessageCount) {
+      mountResolution.current.messagesLoaded = true;
+      mountResolution.current.lastMessageCount = messages.length;
+      
       logger.debug(LogCategory.STATE, 'MessageList', 'Messages array changed', {
         previousCount: prevMessagesLength.current,
         newCount: messages.length,
@@ -87,8 +115,10 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
           offsetHeight: containerRef.current.offsetHeight,
           scrollRatio: containerRef.current.scrollTop / containerRef.current.scrollHeight
         } : null,
-        route: window.location.pathname
+        route: window.location.pathname,
+        mountResolution: mountResolution.current
       });
+      
       prevMessagesLength.current = messages.length;
     }
   }, [messages]);
@@ -141,7 +171,8 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
     logger.debug(LogCategory.STATE, 'MessageList', 'No messages to display', {
       timestamp: new Date().toISOString(),
       containerExists: !!containerRef.current,
-      route: window.location.pathname
+      route: window.location.pathname,
+      mountResolution: mountResolution.current
     });
     return (
       <div className="text-center text-white/70 mt-8">
@@ -155,6 +186,7 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
       ref={containerRef}
       isMounted={isMounted}
       keyboardVisible={keyboardVisible}
+      mountResolution={mountResolution.current}
     >
       <MessageGroups groups={messageGroups} />
     </MessageListContainer>

@@ -5,18 +5,27 @@ import { useScrollPosition } from './scroll/useScrollPosition';
 import { ScrollLogger } from './scroll/ScrollLogger';
 import type { Message } from '@/types/chat';
 
+interface MountResolution {
+  containerMounted: boolean;
+  messagesLoaded: boolean;
+  initialScrollExecuted: boolean;
+  lastMessageCount: number;
+}
+
 interface ScrollManagerProps {
   containerRef: RefObject<HTMLDivElement>;
   messages: Message[];
   isLoading: boolean;
   isMounted: boolean;
+  mountResolution: MountResolution;
 }
 
 export const useScrollManager = ({ 
   containerRef, 
   messages, 
   isLoading,
-  isMounted 
+  isMounted,
+  mountResolution 
 }: ScrollManagerProps) => {
   const shouldScrollToBottom = useRef<boolean>(true);
   const scrollTimeout = useRef<NodeJS.Timeout>();
@@ -45,10 +54,13 @@ export const useScrollManager = ({
 
     const messageCountChanged = messages.length !== lastMessageCount.current;
     const shouldForceScroll = isInitialLoad.current || shouldScrollToBottom.current;
+    const readyForScroll = mountResolution.containerMounted && 
+                          mountResolution.messagesLoaded && 
+                          !mountResolution.initialScrollExecuted;
     
     lastMessageCount.current = messages.length;
     
-    if (shouldForceScroll && messageCountChanged) {
+    if ((shouldForceScroll && messageCountChanged) || readyForScroll) {
       if (scrollTimeout.current) {
         clearTimeout(scrollTimeout.current);
       }
@@ -71,12 +83,12 @@ export const useScrollManager = ({
           measureOperation,
           onComplete: () => {
             ScrollLogger.scrollComplete(container, targetScroll, scrollStartTime);
+            if (isInitialLoad.current) {
+              mountResolution.initialScrollExecuted = true;
+              isInitialLoad.current = false;
+            }
           }
         });
-        
-        if (isInitialLoad.current) {
-          isInitialLoad.current = false;
-        }
       }, scrollDelay);
     }
 
@@ -85,7 +97,7 @@ export const useScrollManager = ({
         clearTimeout(scrollTimeout.current);
       }
     };
-  }, [messages, containerRef, isLoading, isMounted, processQueue, queueScroll, logMetrics, measureOperation]);
+  }, [messages, containerRef, isLoading, isMounted, processQueue, queueScroll, logMetrics, measureOperation, mountResolution]);
 
   return {
     isNearBottom: shouldScrollToBottom.current,
