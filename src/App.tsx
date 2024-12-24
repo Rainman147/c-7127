@@ -1,26 +1,24 @@
-import { RealTimeProvider } from '@/contexts/RealTimeContext';
 import { BrowserRouter } from 'react-router-dom';
-import { Toaster } from '@/components/ui/toaster';
-import { SidebarProvider } from '@/contexts/SidebarContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import AppRoutes from '@/routes';
+import { TemplateProvider } from '@/contexts/TemplateContext';
+import { AppRoutes } from '@/routes';
+import { Toaster } from '@/components/ui/toaster';
+import './App.css';
 
-const App = () => {
+function App() {
   return (
-    <RealTimeProvider>
+    <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <BrowserRouter>
-            <SidebarProvider>
-              <AppRoutes />
-              <Toaster />
-            </SidebarProvider>
-          </BrowserRouter>
+          <TemplateProvider>
+            <AppRoutes />
+            <Toaster />
+          </TemplateProvider>
         </AuthProvider>
       </ThemeProvider>
-    </RealTimeProvider>
+    </BrowserRouter>
   );
-};
+}
 
 export default App;
