@@ -20,12 +20,13 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
   const { metrics } = useMessageListMetrics(containerRef, isMounted, keyboardVisible);
   const prevMessagesLength = useRef<number>(0);
   
-  // Enhanced mount status tracking with performance timing
+  // Enhanced mount status tracking with detailed performance timing
   useEffect(() => {
     const mountPerformance = metrics.measureOperation('Component mounting');
+    const mountTimestamp = new Date().toISOString();
     
     logger.debug(LogCategory.STATE, 'MessageList', 'Component mounting started', {
-      timestamp: new Date().toISOString(),
+      timestamp: mountTimestamp,
       messageCount: messages.length,
       isLoading,
       keyboardVisible,
@@ -33,12 +34,23 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
       containerDimensions: containerRef.current ? {
         scrollHeight: containerRef.current.scrollHeight,
         clientHeight: containerRef.current.clientHeight,
-        scrollTop: containerRef.current.scrollTop
+        scrollTop: containerRef.current.scrollTop,
+        offsetHeight: containerRef.current.offsetHeight,
+        offsetTop: containerRef.current.offsetTop
       } : null,
-      viewportHeight
+      viewportHeight,
+      route: window.location.pathname,
+      isMountedState: isMounted
     });
 
     setIsMounted(true);
+
+    // Log after state update
+    logger.debug(LogCategory.STATE, 'MessageList', 'Mount state updated', {
+      timestamp: new Date().toISOString(),
+      newMountedState: true,
+      timeSinceMountStart: Date.now() - new Date(mountTimestamp).getTime()
+    });
 
     return () => {
       const unmountDuration = mountPerformance.end();
@@ -49,14 +61,17 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
         containerFinalState: containerRef.current ? {
           scrollHeight: containerRef.current.scrollHeight,
           clientHeight: containerRef.current.clientHeight,
-          scrollTop: containerRef.current.scrollTop
-        } : null
+          scrollTop: containerRef.current.scrollTop,
+          offsetHeight: containerRef.current.offsetHeight,
+          offsetTop: containerRef.current.offsetTop
+        } : null,
+        route: window.location.pathname
       });
       setIsMounted(false);
     };
   }, [metrics, messages.length, isLoading, keyboardVisible, viewportHeight]);
 
-  // Track message count changes
+  // Enhanced message count change tracking
   useEffect(() => {
     if (messages.length !== prevMessagesLength.current) {
       logger.debug(LogCategory.STATE, 'MessageList', 'Messages array changed', {
@@ -64,42 +79,69 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
         newCount: messages.length,
         timestamp: new Date().toISOString(),
         isInitialLoad: prevMessagesLength.current === 0,
+        messageIds: messages.map(m => m.id),
         containerState: containerRef.current ? {
           scrollHeight: containerRef.current.scrollHeight,
           clientHeight: containerRef.current.clientHeight,
-          scrollTop: containerRef.current.scrollTop
-        } : null
+          scrollTop: containerRef.current.scrollTop,
+          offsetHeight: containerRef.current.offsetHeight,
+          scrollRatio: containerRef.current.scrollTop / containerRef.current.scrollHeight
+        } : null,
+        route: window.location.pathname
       });
       prevMessagesLength.current = messages.length;
     }
-  }, [messages.length]);
+  }, [messages]);
 
-  // Message grouping with enhanced performance tracking
+  // Enhanced message grouping with detailed performance tracking
   const messageGroups = (() => {
     const groupStartTime = performance.now();
     const groups = groupMessages(messages);
+    const groupingDuration = performance.now() - groupStartTime;
     
     logger.debug(LogCategory.STATE, 'MessageList', 'Message grouping complete', {
-      duration: performance.now() - groupStartTime,
+      duration: groupingDuration,
       messageCount: messages.length,
       groupCount: groups.length,
       timestamp: new Date().toISOString(),
       isLoading,
       isMounted,
+      groupSizes: groups.map(g => g.messages.length),
       containerState: containerRef.current ? {
         scrollHeight: containerRef.current.scrollHeight,
         clientHeight: containerRef.current.clientHeight,
-        scrollTop: containerRef.current.scrollTop
-      } : null
+        scrollTop: containerRef.current.scrollTop,
+        offsetHeight: containerRef.current.offsetHeight,
+        visibleRatio: containerRef.current.clientHeight / containerRef.current.scrollHeight
+      } : null,
+      route: window.location.pathname
     });
     
     return groups;
   })();
 
+  // Log container ref updates
+  useEffect(() => {
+    logger.debug(LogCategory.STATE, 'MessageList', 'Container ref status update', {
+      timestamp: new Date().toISOString(),
+      hasContainer: !!containerRef.current,
+      containerDimensions: containerRef.current ? {
+        scrollHeight: containerRef.current.scrollHeight,
+        clientHeight: containerRef.current.clientHeight,
+        scrollTop: containerRef.current.scrollTop,
+        offsetHeight: containerRef.current.offsetHeight,
+        offsetTop: containerRef.current.offsetTop
+      } : null,
+      route: window.location.pathname,
+      isMounted
+    });
+  }, [containerRef.current, isMounted]);
+
   if (messages.length === 0) {
     logger.debug(LogCategory.STATE, 'MessageList', 'No messages to display', {
       timestamp: new Date().toISOString(),
-      containerExists: !!containerRef.current
+      containerExists: !!containerRef.current,
+      route: window.location.pathname
     });
     return (
       <div className="text-center text-white/70 mt-8">

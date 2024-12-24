@@ -24,13 +24,31 @@ export const useScrollManager = ({
   const isInitialLoad = useRef<boolean>(true);
   const lastMessageCount = useRef<number>(0);
   const scrollAttempts = useRef<number>(0);
+  const lastScrollTime = useRef<number>(Date.now());
   const { logMetrics, measureOperation } = useScrollMetrics(containerRef);
   const { processQueue, queueScroll } = useScrollQueue();
+
+  // Log initial state
+  useEffect(() => {
+    logger.debug(LogCategory.STATE, 'ScrollManager', 'Initial state', {
+      timestamp: new Date().toISOString(),
+      isInitialLoad: isInitialLoad.current,
+      shouldScrollToBottom: shouldScrollToBottom.current,
+      messageCount: messages.length,
+      lastMessageCount: lastMessageCount.current,
+      scrollAttempts: scrollAttempts.current,
+      isMounted,
+      isLoading,
+      route: window.location.pathname
+    });
+  }, []);
 
   // Enhanced scroll position tracking
   const handleScroll = (currentPosition: number, maxScroll: number) => {
     const scrollDelta = currentPosition - lastScrollPosition.current;
     const isNearBottom = maxScroll - currentPosition < 100;
+    const scrollTime = Date.now();
+    const timeSinceLastScroll = scrollTime - lastScrollTime.current;
     
     shouldScrollToBottom.current = isNearBottom;
     
@@ -43,15 +61,20 @@ export const useScrollManager = ({
       messageCount: messages.length,
       isInitialLoad: isInitialLoad.current,
       scrollAttempts: scrollAttempts.current,
+      timeSinceLastScroll,
       containerDimensions: containerRef.current ? {
         scrollHeight: containerRef.current.scrollHeight,
         clientHeight: containerRef.current.clientHeight,
-        scrollTop: containerRef.current.scrollTop
+        scrollTop: containerRef.current.scrollTop,
+        offsetHeight: containerRef.current.offsetHeight,
+        scrollRatio: containerRef.current.scrollTop / containerRef.current.scrollHeight
       } : null,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      route: window.location.pathname
     });
     
     lastScrollPosition.current = currentPosition;
+    lastScrollTime.current = scrollTime;
   };
 
   useScrollDimensions(containerRef, isMounted, handleScroll);
@@ -59,13 +82,17 @@ export const useScrollManager = ({
   // Enhanced message updates and scrolling tracking
   useEffect(() => {
     const container = containerRef.current;
+    const startTime = performance.now();
+    
     if (!container || isLoading || !isMounted) {
       logger.debug(LogCategory.STATE, 'ScrollManager', 'Skipping scroll update', {
         hasContainer: !!container,
         containerDimensions: container ? {
           scrollHeight: container.scrollHeight,
           clientHeight: container.clientHeight,
-          scrollTop: container.scrollTop
+          scrollTop: container.scrollTop,
+          offsetHeight: container.offsetHeight,
+          scrollRatio: container?.scrollTop / container?.scrollHeight
         } : null,
         isLoading,
         isMounted,
@@ -74,7 +101,8 @@ export const useScrollManager = ({
         isInitialLoad: isInitialLoad.current,
         shouldScrollToBottom: shouldScrollToBottom.current,
         scrollAttempts: scrollAttempts.current,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        route: window.location.pathname
       });
       return;
     }
@@ -90,12 +118,16 @@ export const useScrollManager = ({
       isInitialLoad: isInitialLoad.current,
       shouldScrollToBottom: shouldScrollToBottom.current,
       scrollAttempts: scrollAttempts.current,
+      processingTime: performance.now() - startTime,
       containerDimensions: {
         scrollHeight: container.scrollHeight,
         clientHeight: container.clientHeight,
-        scrollTop: container.scrollTop
+        scrollTop: container.scrollTop,
+        offsetHeight: container.offsetHeight,
+        scrollRatio: container.scrollTop / container.scrollHeight
       },
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      route: window.location.pathname
     });
 
     lastMessageCount.current = messages.length;
@@ -103,6 +135,10 @@ export const useScrollManager = ({
     if (shouldForceScroll && messageCountChanged) {
       if (scrollTimeout.current) {
         clearTimeout(scrollTimeout.current);
+        logger.debug(LogCategory.STATE, 'ScrollManager', 'Cleared existing scroll timeout', {
+          timestamp: new Date().toISOString(),
+          route: window.location.pathname
+        });
       }
 
       scrollAttempts.current++;
@@ -113,11 +149,13 @@ export const useScrollManager = ({
         isInitialLoad: isInitialLoad.current,
         messageCount: messages.length,
         scrollAttempts: scrollAttempts.current,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        route: window.location.pathname
       });
 
       scrollTimeout.current = setTimeout(() => {
         const targetScroll = container.scrollHeight - container.clientHeight;
+        const scrollStartTime = performance.now();
         
         logger.debug(LogCategory.STATE, 'ScrollManager', 'Executing scroll', {
           targetScroll,
@@ -125,12 +163,16 @@ export const useScrollManager = ({
           isInitialLoad: isInitialLoad.current,
           behavior: isInitialLoad.current ? 'auto' : 'smooth',
           scrollAttempts: scrollAttempts.current,
+          timeSinceUpdate: performance.now() - startTime,
           containerDimensions: {
             scrollHeight: container.scrollHeight,
             clientHeight: container.clientHeight,
-            scrollTop: container.scrollTop
+            scrollTop: container.scrollTop,
+            offsetHeight: container.offsetHeight,
+            scrollRatio: container.scrollTop / container.scrollHeight
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          route: window.location.pathname
         });
 
         queueScroll({
@@ -139,12 +181,26 @@ export const useScrollManager = ({
           timestamp: performance.now()
         });
         
-        processQueue(container, { logMetrics, measureOperation });
+        processQueue(container, { 
+          logMetrics, 
+          measureOperation,
+          onComplete: () => {
+            logger.debug(LogCategory.STATE, 'ScrollManager', 'Scroll operation complete', {
+              duration: performance.now() - scrollStartTime,
+              finalPosition: container.scrollTop,
+              targetAchieved: Math.abs(container.scrollTop - targetScroll) < 1,
+              timestamp: new Date().toISOString(),
+              route: window.location.pathname
+            });
+          }
+        });
         
         if (isInitialLoad.current) {
           logger.debug(LogCategory.STATE, 'ScrollManager', 'Initial load complete', {
             scrollAttempts: scrollAttempts.current,
-            timestamp: new Date().toISOString()
+            totalDuration: performance.now() - startTime,
+            timestamp: new Date().toISOString(),
+            route: window.location.pathname
           });
           isInitialLoad.current = false;
         }
@@ -154,6 +210,10 @@ export const useScrollManager = ({
     return () => {
       if (scrollTimeout.current) {
         clearTimeout(scrollTimeout.current);
+        logger.debug(LogCategory.STATE, 'ScrollManager', 'Cleanup: Cleared scroll timeout', {
+          timestamp: new Date().toISOString(),
+          route: window.location.pathname
+        });
       }
     };
   }, [messages, containerRef, isLoading, isMounted, processQueue, queueScroll, logMetrics, measureOperation]);

@@ -12,6 +12,7 @@ const MessageListContainer = forwardRef<HTMLDivElement, MessageListContainerProp
     const initialHeightSet = useRef(false);
     const lastHeight = useRef<string>('100vh');
     const resizeCount = useRef(0);
+    const lastDimensions = useRef<any>(null);
 
     // Enhanced height calculation effect with detailed logging
     useEffect(() => {
@@ -22,7 +23,9 @@ const MessageListContainer = forwardRef<HTMLDivElement, MessageListContainerProp
           isMounted,
           keyboardVisible,
           initialHeightSet: initialHeightSet.current,
-          lastHeight: lastHeight.current
+          lastHeight: lastHeight.current,
+          resizeCount: resizeCount.current,
+          route: window.location.pathname
         });
         return;
       }
@@ -31,6 +34,15 @@ const MessageListContainer = forwardRef<HTMLDivElement, MessageListContainerProp
         const startTime = performance.now();
         resizeCount.current++;
         
+        const currentDimensions = {
+          scrollHeight: container.scrollHeight,
+          clientHeight: container.clientHeight,
+          scrollTop: container.scrollTop,
+          offsetHeight: container.offsetHeight,
+          offsetTop: container.offsetTop,
+          viewportHeight: window.innerHeight
+        };
+
         // Log initial state
         logger.debug(LogCategory.STATE, 'MessageListContainer', 'Starting height calculation', {
           timestamp: new Date().toISOString(),
@@ -38,14 +50,11 @@ const MessageListContainer = forwardRef<HTMLDivElement, MessageListContainerProp
           initialHeightSet: initialHeightSet.current,
           currentHeight: container.style.height,
           lastHeight: lastHeight.current,
-          containerDimensions: {
-            scrollHeight: container.scrollHeight,
-            clientHeight: container.clientHeight,
-            scrollTop: container.scrollTop,
-            offsetHeight: container.offsetHeight
-          },
+          dimensions: currentDimensions,
+          dimensionsChanged: JSON.stringify(currentDimensions) !== JSON.stringify(lastDimensions.current),
           keyboardVisible,
-          isMounted
+          isMounted,
+          route: window.location.pathname
         });
 
         // Set initial fallback height if not set
@@ -55,7 +64,9 @@ const MessageListContainer = forwardRef<HTMLDivElement, MessageListContainerProp
           logger.debug(LogCategory.STATE, 'MessageListContainer', 'Initial fallback height set', {
             height: '100vh',
             timestamp: new Date().toISOString(),
-            isMounted
+            isMounted,
+            dimensions: currentDimensions,
+            route: window.location.pathname
           });
         }
 
@@ -66,37 +77,30 @@ const MessageListContainer = forwardRef<HTMLDivElement, MessageListContainerProp
           const previousHeight = lastHeight.current;
           container.style.height = newHeight;
           lastHeight.current = newHeight;
+          lastDimensions.current = currentDimensions;
 
           logger.debug(LogCategory.STATE, 'MessageListContainer', 'Height calculation complete', {
             duration: performance.now() - startTime,
             previousHeight,
             newHeight,
             keyboardVisible,
-            containerDimensions: {
-              scrollHeight: container.scrollHeight,
-              clientHeight: container.clientHeight,
-              scrollTop: container.scrollTop,
-              offsetHeight: container.offsetHeight
-            },
+            dimensions: currentDimensions,
             hasScrollbar: container.scrollHeight > container.clientHeight,
             timestamp: new Date().toISOString(),
             isMounted,
-            resizeCount: resizeCount.current
+            resizeCount: resizeCount.current,
+            route: window.location.pathname
           });
         } else {
           logger.debug(LogCategory.STATE, 'MessageListContainer', 'Height unchanged', {
             duration: performance.now() - startTime,
             currentHeight: newHeight,
             keyboardVisible,
-            containerDimensions: {
-              scrollHeight: container.scrollHeight,
-              clientHeight: container.clientHeight,
-              scrollTop: container.scrollTop,
-              offsetHeight: container.offsetHeight
-            },
+            dimensions: currentDimensions,
             timestamp: new Date().toISOString(),
             isMounted,
-            resizeCount: resizeCount.current
+            resizeCount: resizeCount.current,
+            route: window.location.pathname
           });
         }
       };
@@ -107,13 +111,31 @@ const MessageListContainer = forwardRef<HTMLDivElement, MessageListContainerProp
           timestamp: new Date().toISOString(),
           isMounted,
           keyboardVisible,
-          resizeCount: resizeCount.current
+          resizeCount: resizeCount.current,
+          route: window.location.pathname
         });
         requestAnimationFrame(calculateHeight);
       }
 
-      window.addEventListener('resize', calculateHeight);
-      return () => window.removeEventListener('resize', calculateHeight);
+      const resizeObserver = new ResizeObserver((entries) => {
+        logger.debug(LogCategory.STATE, 'MessageListContainer', 'Resize observed', {
+          timestamp: new Date().toISOString(),
+          dimensions: entries[0].contentRect,
+          isMounted,
+          route: window.location.pathname
+        });
+        calculateHeight();
+      });
+
+      resizeObserver.observe(container);
+      
+      return () => {
+        resizeObserver.disconnect();
+        logger.debug(LogCategory.STATE, 'MessageListContainer', 'Cleanup: ResizeObserver disconnected', {
+          timestamp: new Date().toISOString(),
+          route: window.location.pathname
+        });
+      };
     }, [keyboardVisible, isMounted, ref]);
 
     return (
