@@ -27,8 +27,8 @@ const MessageList = ({ messages }: { messages: Message[] }) => {
   // Log comprehensive render metrics
   logger.debug(LogCategory.RENDER, 'MessageList', 'Render metrics', {
     duration: performance.now() - renderStartTime,
-    messageCount: messages.length,
-    groupCount: messageGroups.length,
+    messageCount: messages?.length ?? 0,
+    groupCount: messageGroups?.length ?? 0,
     scrollMetrics,
     viewportHeight,
     keyboardVisible,
@@ -36,7 +36,7 @@ const MessageList = ({ messages }: { messages: Message[] }) => {
     timestamp: new Date().toISOString()
   });
 
-  if (messages.length === 0) {
+  if (!Array.isArray(messages) || messages.length === 0) {
     return (
       <div className="text-center text-white/70 mt-8">
         No messages yet. Start a conversation!

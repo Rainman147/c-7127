@@ -27,6 +27,9 @@ const formatMessageTime = (date: Date): string => {
 const getTimeLabel = (dateStr: string): string => {
   try {
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      throw new Error('Invalid date string');
+    }
     return formatMessageTime(date);
   } catch (error) {
     logger.error(LogCategory.STATE, 'useMessageGrouping', 'Error parsing date string', { 
@@ -40,6 +43,14 @@ const getTimeLabel = (dateStr: string): string => {
 export const useMessageGrouping = (messages: Message[]) => {
   return useMemo(() => {
     const startTime = performance.now();
+    
+    if (!Array.isArray(messages)) {
+      logger.error(LogCategory.STATE, 'useMessageGrouping', 'Invalid messages array', {
+        messages
+      });
+      return [];
+    }
+
     logger.debug(LogCategory.STATE, 'useMessageGrouping', 'Starting message grouping', { 
       messageCount: messages.length 
     });
@@ -55,8 +66,24 @@ export const useMessageGrouping = (messages: Message[]) => {
       if (!previousMessage) return false;
       
       try {
-        const currentTime = new Date(currentMessage.created_at || '');
-        const previousTime = new Date(previousMessage.created_at || '');
+        if (!currentMessage.created_at || !previousMessage.created_at) {
+          logger.warn(LogCategory.STATE, 'useMessageGrouping', 'Missing timestamp', {
+            currentMessage,
+            previousMessage
+          });
+          return true;
+        }
+
+        const currentTime = new Date(currentMessage.created_at);
+        const previousTime = new Date(previousMessage.created_at);
+        
+        if (isNaN(currentTime.getTime()) || isNaN(previousTime.getTime())) {
+          logger.warn(LogCategory.STATE, 'useMessageGrouping', 'Invalid timestamp', {
+            currentTime,
+            previousTime
+          });
+          return true;
+        }
         
         const timeDiff = differenceInMinutes(currentTime, previousTime);
         logger.debug(LogCategory.STATE, 'useMessageGrouping', 'Time difference between messages', {
@@ -100,6 +127,11 @@ export const useMessageGrouping = (messages: Message[]) => {
     };
 
     messages.forEach((message, index) => {
+      if (!message) {
+        logger.warn(LogCategory.STATE, 'useMessageGrouping', 'Encountered null message', { index });
+        return;
+      }
+
       if (shouldStartNewGroup(message, messages[index - 1]) && currentGroup.length > 0) {
         groups.push(createMessageGroup(currentGroup, currentGroup[0]));
         currentGroup = [];

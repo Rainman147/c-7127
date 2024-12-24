@@ -15,14 +15,19 @@ export const MessageGroup = memo(({ group }: MessageGroupProps) => {
     
     return () => {
       logger.debug(LogCategory.RENDER, 'MessageGroup', 'Group render complete', {
-        groupId: group.id,
-        messageCount: group.messages.length,
+        groupId: group?.id,
+        messageCount: group?.messages?.length ?? 0,
         renderDuration: performance.now() - renderStart,
-        firstMessageId: group.messages[0]?.id,
+        firstMessageId: group?.messages?.[0]?.id,
         timestamp: new Date().toISOString()
       });
     };
-  }, [group.id, group.messages]);
+  }, [group?.id, group?.messages]);
+
+  if (!group || !Array.isArray(group.messages)) {
+    logger.error(LogCategory.RENDER, 'MessageGroup', 'Invalid group data', { group });
+    return null;
+  }
 
   return (
     <div key={group.id} className="space-y-4">
@@ -35,7 +40,15 @@ export const MessageGroup = memo(({ group }: MessageGroupProps) => {
       </div>
       <div className="space-y-2">
         {group.messages.map((message, index) => {
-          const showAvatar = index === 0 || message.role !== group.messages[index - 1].role;
+          if (!message) {
+            logger.warn(LogCategory.RENDER, 'MessageGroup', 'Encountered null message', { 
+              groupId: group.id, 
+              index 
+            });
+            return null;
+          }
+
+          const showAvatar = index === 0 || message.role !== group.messages[index - 1]?.role;
           return (
             <Message 
               key={message.id || index} 
