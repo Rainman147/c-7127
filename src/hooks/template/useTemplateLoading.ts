@@ -29,9 +29,9 @@ export const useTemplateLoading = (
 
     ErrorTracker.trackError(error, {
       component: 'useTemplateLoading',
-      operation,
       severity: retryCount >= MAX_RETRIES ? 'high' : 'medium',
       timestamp: new Date().toISOString(),
+      operation,
       additionalInfo: {
         selectedTemplateId: selectedTemplate?.id,
         availableTemplatesCount: availableTemplates.length
