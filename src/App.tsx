@@ -8,6 +8,8 @@ import { Toaster } from '@/components/ui/toaster';
 import './App.css';
 
 function App() {
+  console.log('[App] Initializing app with providers');
+  
   return (
     <BrowserRouter>
       <ThemeProvider>
