@@ -23,9 +23,11 @@ export const useScrollManager = ({
   const scrollTimeout = useRef<NodeJS.Timeout>();
   const isInitialLoad = useRef<boolean>(true);
   const lastMessageCount = useRef<number>(0);
+  const scrollAttempts = useRef<number>(0);
   const { logMetrics, measureOperation } = useScrollMetrics(containerRef);
   const { processQueue, queueScroll } = useScrollQueue();
 
+  // Enhanced scroll position tracking
   const handleScroll = (currentPosition: number, maxScroll: number) => {
     const scrollDelta = currentPosition - lastScrollPosition.current;
     const isNearBottom = maxScroll - currentPosition < 100;
@@ -40,6 +42,12 @@ export const useScrollManager = ({
       isNearBottom,
       messageCount: messages.length,
       isInitialLoad: isInitialLoad.current,
+      scrollAttempts: scrollAttempts.current,
+      containerDimensions: containerRef.current ? {
+        scrollHeight: containerRef.current.scrollHeight,
+        clientHeight: containerRef.current.clientHeight,
+        scrollTop: containerRef.current.scrollTop
+      } : null,
       timestamp: new Date().toISOString()
     });
     
@@ -48,18 +56,24 @@ export const useScrollManager = ({
 
   useScrollDimensions(containerRef, isMounted, handleScroll);
 
-  // Handle messages updates and scrolling
+  // Enhanced message updates and scrolling tracking
   useEffect(() => {
     const container = containerRef.current;
     if (!container || isLoading || !isMounted) {
       logger.debug(LogCategory.STATE, 'ScrollManager', 'Skipping scroll update', {
         hasContainer: !!container,
+        containerDimensions: container ? {
+          scrollHeight: container.scrollHeight,
+          clientHeight: container.clientHeight,
+          scrollTop: container.scrollTop
+        } : null,
         isLoading,
         isMounted,
         messageCount: messages.length,
         lastMessageCount: lastMessageCount.current,
         isInitialLoad: isInitialLoad.current,
         shouldScrollToBottom: shouldScrollToBottom.current,
+        scrollAttempts: scrollAttempts.current,
         timestamp: new Date().toISOString()
       });
       return;
@@ -75,9 +89,12 @@ export const useScrollManager = ({
       shouldForceScroll,
       isInitialLoad: isInitialLoad.current,
       shouldScrollToBottom: shouldScrollToBottom.current,
-      containerHeight: container.clientHeight,
-      scrollHeight: container.scrollHeight,
-      currentScrollPosition: container.scrollTop,
+      scrollAttempts: scrollAttempts.current,
+      containerDimensions: {
+        scrollHeight: container.scrollHeight,
+        clientHeight: container.clientHeight,
+        scrollTop: container.scrollTop
+      },
       timestamp: new Date().toISOString()
     });
 
@@ -88,13 +105,14 @@ export const useScrollManager = ({
         clearTimeout(scrollTimeout.current);
       }
 
-      // Use a shorter delay for initial load
+      scrollAttempts.current++;
       const scrollDelay = isInitialLoad.current ? 50 : 100;
 
       logger.debug(LogCategory.STATE, 'ScrollManager', 'Scheduling scroll', {
         delay: scrollDelay,
         isInitialLoad: isInitialLoad.current,
         messageCount: messages.length,
+        scrollAttempts: scrollAttempts.current,
         timestamp: new Date().toISOString()
       });
 
@@ -106,8 +124,12 @@ export const useScrollManager = ({
           currentScroll: container.scrollTop,
           isInitialLoad: isInitialLoad.current,
           behavior: isInitialLoad.current ? 'auto' : 'smooth',
-          containerHeight: container.clientHeight,
-          scrollHeight: container.scrollHeight,
+          scrollAttempts: scrollAttempts.current,
+          containerDimensions: {
+            scrollHeight: container.scrollHeight,
+            clientHeight: container.clientHeight,
+            scrollTop: container.scrollTop
+          },
           timestamp: new Date().toISOString()
         });
 
@@ -121,6 +143,7 @@ export const useScrollManager = ({
         
         if (isInitialLoad.current) {
           logger.debug(LogCategory.STATE, 'ScrollManager', 'Initial load complete', {
+            scrollAttempts: scrollAttempts.current,
             timestamp: new Date().toISOString()
           });
           isInitialLoad.current = false;

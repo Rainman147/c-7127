@@ -11,21 +11,43 @@ const MessageListContainer = forwardRef<HTMLDivElement, MessageListContainerProp
   ({ children, isMounted, keyboardVisible }, ref) => {
     const initialHeightSet = useRef(false);
     const lastHeight = useRef<string>('100vh');
+    const resizeCount = useRef(0);
 
-    // Dedicated height calculation effect with fallback
+    // Enhanced height calculation effect with detailed logging
     useEffect(() => {
       const container = ref && 'current' in ref ? ref.current : null;
       if (!container) {
         logger.debug(LogCategory.STATE, 'MessageListContainer', 'Container not available for height calculation', {
           timestamp: new Date().toISOString(),
           isMounted,
-          keyboardVisible
+          keyboardVisible,
+          initialHeightSet: initialHeightSet.current,
+          lastHeight: lastHeight.current
         });
         return;
       }
 
       const calculateHeight = () => {
         const startTime = performance.now();
+        resizeCount.current++;
+        
+        // Log initial state
+        logger.debug(LogCategory.STATE, 'MessageListContainer', 'Starting height calculation', {
+          timestamp: new Date().toISOString(),
+          resizeCount: resizeCount.current,
+          initialHeightSet: initialHeightSet.current,
+          currentHeight: container.style.height,
+          lastHeight: lastHeight.current,
+          containerDimensions: {
+            scrollHeight: container.scrollHeight,
+            clientHeight: container.clientHeight,
+            scrollTop: container.scrollTop,
+            offsetHeight: container.offsetHeight
+          },
+          keyboardVisible,
+          isMounted
+        });
+
         // Set initial fallback height if not set
         if (!initialHeightSet.current) {
           container.style.height = '100vh';
@@ -39,21 +61,42 @@ const MessageListContainer = forwardRef<HTMLDivElement, MessageListContainerProp
 
         const newHeight = `calc(100vh - ${keyboardVisible ? '300px' : '240px'})`;
         
-        // Only log if height actually changed
+        // Log height change
         if (newHeight !== lastHeight.current) {
+          const previousHeight = lastHeight.current;
           container.style.height = newHeight;
           lastHeight.current = newHeight;
 
           logger.debug(LogCategory.STATE, 'MessageListContainer', 'Height calculation complete', {
             duration: performance.now() - startTime,
-            previousHeight: lastHeight.current,
+            previousHeight,
             newHeight,
             keyboardVisible,
-            containerClientHeight: container.clientHeight,
-            containerScrollHeight: container.scrollHeight,
+            containerDimensions: {
+              scrollHeight: container.scrollHeight,
+              clientHeight: container.clientHeight,
+              scrollTop: container.scrollTop,
+              offsetHeight: container.offsetHeight
+            },
             hasScrollbar: container.scrollHeight > container.clientHeight,
             timestamp: new Date().toISOString(),
-            isMounted
+            isMounted,
+            resizeCount: resizeCount.current
+          });
+        } else {
+          logger.debug(LogCategory.STATE, 'MessageListContainer', 'Height unchanged', {
+            duration: performance.now() - startTime,
+            currentHeight: newHeight,
+            keyboardVisible,
+            containerDimensions: {
+              scrollHeight: container.scrollHeight,
+              clientHeight: container.clientHeight,
+              scrollTop: container.scrollTop,
+              offsetHeight: container.offsetHeight
+            },
+            timestamp: new Date().toISOString(),
+            isMounted,
+            resizeCount: resizeCount.current
           });
         }
       };
@@ -63,7 +106,8 @@ const MessageListContainer = forwardRef<HTMLDivElement, MessageListContainerProp
         logger.debug(LogCategory.STATE, 'MessageListContainer', 'Requesting height calculation', {
           timestamp: new Date().toISOString(),
           isMounted,
-          keyboardVisible
+          keyboardVisible,
+          resizeCount: resizeCount.current
         });
         requestAnimationFrame(calculateHeight);
       }

@@ -18,8 +18,9 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
   const [isMounted, setIsMounted] = useState(false);
   const { metrics } = useMessageListMetrics(containerRef, isMounted, keyboardVisible);
+  const prevMessagesLength = useRef<number>(0);
   
-  // Track mount status with performance timing
+  // Enhanced mount status tracking with performance timing
   useEffect(() => {
     const mountPerformance = metrics.measureOperation('Component mounting');
     
@@ -28,7 +29,13 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
       messageCount: messages.length,
       isLoading,
       keyboardVisible,
-      containerExists: !!containerRef.current
+      containerExists: !!containerRef.current,
+      containerDimensions: containerRef.current ? {
+        scrollHeight: containerRef.current.scrollHeight,
+        clientHeight: containerRef.current.clientHeight,
+        scrollTop: containerRef.current.scrollTop
+      } : null,
+      viewportHeight
     });
 
     setIsMounted(true);
@@ -38,13 +45,36 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
       logger.debug(LogCategory.STATE, 'MessageList', 'Component unmounted', {
         unmountDuration,
         timestamp: new Date().toISOString(),
-        finalMessageCount: messages.length
+        finalMessageCount: messages.length,
+        containerFinalState: containerRef.current ? {
+          scrollHeight: containerRef.current.scrollHeight,
+          clientHeight: containerRef.current.clientHeight,
+          scrollTop: containerRef.current.scrollTop
+        } : null
       });
       setIsMounted(false);
     };
-  }, [metrics, messages.length, isLoading, keyboardVisible]);
+  }, [metrics, messages.length, isLoading, keyboardVisible, viewportHeight]);
 
-  // Message grouping with performance tracking
+  // Track message count changes
+  useEffect(() => {
+    if (messages.length !== prevMessagesLength.current) {
+      logger.debug(LogCategory.STATE, 'MessageList', 'Messages array changed', {
+        previousCount: prevMessagesLength.current,
+        newCount: messages.length,
+        timestamp: new Date().toISOString(),
+        isInitialLoad: prevMessagesLength.current === 0,
+        containerState: containerRef.current ? {
+          scrollHeight: containerRef.current.scrollHeight,
+          clientHeight: containerRef.current.clientHeight,
+          scrollTop: containerRef.current.scrollTop
+        } : null
+      });
+      prevMessagesLength.current = messages.length;
+    }
+  }, [messages.length]);
+
+  // Message grouping with enhanced performance tracking
   const messageGroups = (() => {
     const groupStartTime = performance.now();
     const groups = groupMessages(messages);
@@ -55,7 +85,12 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
       groupCount: groups.length,
       timestamp: new Date().toISOString(),
       isLoading,
-      isMounted
+      isMounted,
+      containerState: containerRef.current ? {
+        scrollHeight: containerRef.current.scrollHeight,
+        clientHeight: containerRef.current.clientHeight,
+        scrollTop: containerRef.current.scrollTop
+      } : null
     });
     
     return groups;
@@ -63,7 +98,8 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
 
   if (messages.length === 0) {
     logger.debug(LogCategory.STATE, 'MessageList', 'No messages to display', {
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      containerExists: !!containerRef.current
     });
     return (
       <div className="text-center text-white/70 mt-8">
