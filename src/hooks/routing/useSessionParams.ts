@@ -1,12 +1,14 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect } from 'react';
 import { defaultTemplates } from '@/types/templates/defaults';
 import { logger, LogCategory } from '@/utils/logging';
+import { useToast } from '@/hooks/use-toast';
 
 export const useSessionParams = () => {
   const { sessionId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const templateId = searchParams.get('template') || 'live-session';
 
@@ -18,7 +20,8 @@ export const useSessionParams = () => {
   } = useMemo(() => {
     logger.debug(LogCategory.ROUTING, 'useSessionParams', 'Validating route parameters:', {
       sessionId,
-      templateId
+      templateId,
+      timestamp: new Date().toISOString()
     });
 
     const isNewSession = !sessionId;
@@ -30,7 +33,10 @@ export const useSessionParams = () => {
     ) : false;
 
     if (!isValidSessionId && sessionId) {
-      logger.warn(LogCategory.ROUTING, 'useSessionParams', 'Invalid session ID detected:', sessionId);
+      logger.warn(LogCategory.ROUTING, 'useSessionParams', 'Invalid session ID detected:', {
+        sessionId,
+        timestamp: new Date().toISOString()
+      });
     }
 
     return {
@@ -40,6 +46,28 @@ export const useSessionParams = () => {
       matchingTemplate
     };
   }, [sessionId, templateId]);
+
+  // Monitor route parameter validity
+  useEffect(() => {
+    if (!isValidSessionId && sessionId) {
+      logger.warn(LogCategory.ROUTING, 'useSessionParams', 'Invalid session detected, redirecting to home');
+      toast({
+        title: "Invalid Session",
+        description: "The requested chat session could not be found.",
+        variant: "destructive"
+      });
+      navigate('/', { replace: true });
+    }
+
+    if (!isValidTemplateId) {
+      logger.warn(LogCategory.ROUTING, 'useSessionParams', 'Invalid template detected, using default');
+      toast({
+        title: "Invalid Template",
+        description: "Using default template instead.",
+        variant: "default"
+      });
+    }
+  }, [isValidSessionId, isValidTemplateId, sessionId, navigate, toast]);
 
   const redirectToSession = useCallback((id: string, params?: { template?: string }) => {
     const targetTemplateId = params?.template || templateId;
@@ -51,7 +79,8 @@ export const useSessionParams = () => {
         id, 
         params,
         currentTemplate: templateId,
-        targetTemplate: targetTemplateId
+        targetTemplate: targetTemplateId,
+        timestamp: new Date().toISOString()
       });
       
       const newSearchParams = new URLSearchParams();
@@ -72,7 +101,8 @@ export const useSessionParams = () => {
     logger.info(LogCategory.ROUTING, 'useSessionParams', 'Redirecting to new session with params:', {
       params,
       currentTemplate: templateId,
-      targetTemplate: targetTemplateId
+      targetTemplate: targetTemplateId,
+      timestamp: new Date().toISOString()
     });
     
     const newSearchParams = new URLSearchParams();
