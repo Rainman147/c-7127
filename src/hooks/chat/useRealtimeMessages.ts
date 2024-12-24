@@ -25,9 +25,9 @@ export const useRealtimeMessages = (
 
     ErrorTracker.trackError(error, {
       component: 'useRealtimeMessages',
-      operation,
       severity: retryCount >= MAX_RETRIES ? 'high' : 'medium',
       timestamp: new Date().toISOString(),
+      operation,
       additionalInfo: {
         chatId,
         connectionState: connectionState.status

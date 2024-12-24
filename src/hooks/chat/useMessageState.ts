@@ -20,9 +20,13 @@ export const useMessageState = () => {
 
     ErrorTracker.trackError(error, {
       component: 'useMessageState',
-      operation,
       severity: retryCount >= MAX_RETRIES ? 'high' : 'medium',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      operation,
+      additionalInfo: {
+        messageCount: messages.length,
+        retryCount
+      }
     });
 
     toast({
