@@ -1,6 +1,5 @@
-import { forwardRef, useEffect } from 'react';
+import { forwardRef, useEffect, useRef } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
-import { useViewportMonitor } from '@/hooks/useViewportMonitor';
 
 interface MessageListContainerProps {
   children: React.ReactNode;
