@@ -1,12 +1,13 @@
 import { useRef, useEffect } from 'react';
-import Message from './Message';
 import { logger, LogCategory } from '@/utils/logging';
 import { groupMessages } from '@/utils/messageGrouping';
 import { useViewportMonitor } from '@/hooks/useViewportMonitor';
 import { useRealTime } from '@/contexts/RealTimeContext';
-import type { Message as MessageType } from '@/types/chat';
+import { ConnectionStatus } from './message/ConnectionStatus';
+import { MessageGroup } from './message/MessageGroup';
+import type { Message } from '@/types/chat';
 
-const MessageList = ({ messages }: { messages: MessageType[] }) => {
+const MessageList = ({ messages }: { messages: Message[] }) => {
   const renderStartTime = performance.now();
   const containerRef = useRef<HTMLDivElement>(null);
   const lastScrollPosition = useRef<number>(0);
@@ -113,33 +114,9 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
       ref={containerRef}
       className="flex-1 overflow-y-auto chat-scrollbar space-y-6 pb-[180px] pt-4 px-4"
     >
-      {connectionState.status === 'connecting' && (
-        <div className="text-center text-yellow-500 bg-yellow-500/10 py-2 rounded-md mb-4">
-          Reconnecting to chat... (Attempt {connectionState.retryCount})
-        </div>
-      )}
-      {connectionState.status === 'disconnected' && (
-        <div className="text-center text-red-500 bg-red-500/10 py-2 rounded-md mb-4">
-          Connection lost. Retrying... (Attempt {connectionState.retryCount})
-        </div>
-      )}
+      <ConnectionStatus />
       {messageGroups.map((group) => (
-        <div key={group.id} className="space-y-4">
-          <div className="flex items-center justify-center">
-            <div className="text-xs text-white/50 bg-chatgpt-secondary/30 px-2 py-1 rounded">
-              {group.label} · {group.timestamp}
-            </div>
-          </div>
-          <div className="space-y-2">
-            {group.messages.map((message, index) => (
-              <Message 
-                key={message.id || index} 
-                {...message} 
-                showAvatar={index === 0 || message.role !== group.messages[index - 1].role}
-              />
-            ))}
-          </div>
-        </div>
+        <MessageGroup key={group.id} group={group} />
       ))}
     </div>
   );
