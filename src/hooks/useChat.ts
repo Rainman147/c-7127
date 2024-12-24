@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useMessageState } from './chat/useMessageState';
-import { useMessageLoader } from './chat/useMessageLoader';
+import { useMessageQuery } from './chat/useMessageQuery';
 import { useMessageSender } from './chat/useMessageSender';
 import { useMessageHandling } from './chat/useMessageHandling';
-import { useChatCache } from './chat/useChatCache';
 import { useRealtimeMessages } from './chat/useRealtimeMessages';
-import { useMessageLoading } from './chat/useMessageLoading';
-import { useSessionCoordinator } from './chat/useSessionCoordinator';
 import { useRealtimeSync } from './chat/useRealtimeSync';
 import { useToast } from './use-toast';
 import { ErrorTracker } from '@/utils/errorTracking';
@@ -14,22 +11,17 @@ import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 
 export const useChat = (activeSessionId: string | null) => {
-  const { 
-    messages, 
-    updateMessages, 
-    clearMessages, 
-    setMessages,
-    addOptimisticMessage,
-    replaceOptimisticMessage 
-  } = useMessageState();
-  
+  const { messages, setMessages, addOptimisticMessage, replaceOptimisticMessage } = useMessageState();
   const { isLoading, handleSendMessage: sendMessage } = useMessageHandling();
-  const { getCachedMessages, updateCache, invalidateCache } = useChatCache();
-  const { loadMessages, loadMoreMessages, isLoadingMore } = useMessageLoading();
-  const { ensureSession } = useSessionCoordinator();
   const { toast } = useToast();
-  const prevSessionIdRef = useRef<string | null>(null);
   const retryCountRef = useRef(0);
+  
+  const {
+    messages: queryMessages,
+    isLoading: isLoadingMessages,
+    addMessage,
+    updateMessage
+  } = useMessageQuery(activeSessionId);
 
   const handleError = useCallback((error: Error) => {
     ErrorTracker.trackError(error, {
@@ -44,27 +36,17 @@ export const useChat = (activeSessionId: string | null) => {
       }
     });
 
-    if (ErrorTracker.shouldRetry('useChat', error.name)) {
-      const delay = ErrorTracker.getBackoffDelay(retryCountRef.current);
-      retryCountRef.current += 1;
-      
-      setTimeout(() => {
-        if (activeSessionId) {
-          handleMessagesLoad(activeSessionId, updateMessages);
-        }
-      }, delay);
-    }
-
-    invalidateCache();
-  }, [activeSessionId, messages.length, invalidateCache]);
-
-  const { handleMessagesLoad } = useMessageLoader(loadMessages, getCachedMessages, updateCache);
-  const { handleSendMessage: messageSender } = useMessageSender(sendMessage, updateCache);
+    toast({
+      title: "Error",
+      description: "An error occurred. Please try again.",
+      variant: "destructive"
+    });
+  }, [activeSessionId, messages.length, toast]);
 
   const { handleNewMessage, cleanup: cleanupRealtimeSync } = useRealtimeSync({
     setMessages,
     onError: handleError,
-    config: {
+    retryConfig: {
       retryDelay: ErrorTracker.getBackoffDelay(retryCountRef.current),
       maxRetries: 5
     }
@@ -72,109 +54,51 @@ export const useChat = (activeSessionId: string | null) => {
 
   useRealtimeMessages(activeSessionId, handleNewMessage);
 
+  // Sync messages from React Query to local state
   useEffect(() => {
-    if (activeSessionId === prevSessionIdRef.current) {
-      return;
+    if (queryMessages) {
+      setMessages(queryMessages);
     }
-
-    logger.info(LogCategory.STATE, 'useChat', 'Active session changed:', { 
-      activeSessionId,
-      previousSessionId: prevSessionIdRef.current,
-      retryCount: retryCountRef.current
-    });
-    
-    prevSessionIdRef.current = activeSessionId;
-    retryCountRef.current = 0;
-    
-    if (!activeSessionId) {
-      logger.debug(LogCategory.STATE, 'useChat', 'No active session, clearing messages');
-      clearMessages();
-      return;
-    }
-
-    handleMessagesLoad(activeSessionId, updateMessages).catch(handleError);
-  }, [activeSessionId, handleMessagesLoad, clearMessages, updateMessages, handleError]);
+  }, [queryMessages, setMessages]);
 
   const handleSendMessage = useCallback(async (
     content: string,
-    type: 'text' | 'audio' = 'text',
-    systemInstructions?: string
+    type: 'text' | 'audio' = 'text'
   ) => {
-    if (!content.trim()) {
-      return;
-    }
+    if (!content.trim() || !activeSessionId) return;
 
     logger.info(LogCategory.COMMUNICATION, 'useChat', 'Sending message:', { 
       contentLength: content.length,
       type,
       retryCount: retryCountRef.current
     });
-    
-    const currentSessionId = activeSessionId || await ensureSession();
-    if (!currentSessionId) {
-      throw new Error('Failed to create or get chat session');
-    }
 
     const optimisticMessage = addOptimisticMessage(content, type);
 
     try {
-      const result = await messageSender(
+      const newMessage = await addMessage.mutateAsync({
+        chat_id: activeSessionId,
         content,
-        currentSessionId,
-        messages,
-        updateMessages,
         type,
-        systemInstructions
-      );
+        sender: 'user',
+        sequence: messages.length
+      });
 
-      if (result?.messages) {
-        const actualMessage = result.messages.find(
-          msg => msg.role === 'user' && msg.content === content
-        );
-
-        if (actualMessage) {
-          logger.debug(LogCategory.STATE, 'useChat', 'Replacing optimistic message:', {
-            tempId: optimisticMessage.id,
-            actualId: actualMessage.id
-          });
-          replaceOptimisticMessage(optimisticMessage.id, actualMessage);
-        }
-      }
-
+      replaceOptimisticMessage(optimisticMessage.id, newMessage);
       retryCountRef.current = 0;
-      return result;
+      return newMessage;
     } catch (error) {
       logger.error(LogCategory.ERROR, 'useChat', 'Error sending message:', error);
-      ErrorTracker.trackError(error as Error, {
-        component: 'useChat',
-        timestamp: new Date().toISOString(),
-        errorType: 'SendMessageError',
-        severity: 'medium',
-        retryCount: retryCountRef.current,
-        additionalInfo: {
-          messageType: type,
-          contentLength: content.length
-        }
-      });
-
-      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
-      toast({
-        title: "Error",
-        description: "Failed to send message. Please try again.",
-        variant: "destructive"
-      });
+      handleError(error as Error);
       throw error;
     }
   }, [
     activeSessionId,
-    ensureSession,
-    messages,
-    messageSender,
-    updateMessages,
+    messages.length,
+    addMessage,
     addOptimisticMessage,
     replaceOptimisticMessage,
-    setMessages,
-    toast
+    handleError
   ]);
 
   useEffect(() => {
@@ -185,14 +109,8 @@ export const useChat = (activeSessionId: string | null) => {
 
   return {
     messages,
-    isLoading,
-    isLoadingMore,
+    isLoading: isLoading || isLoadingMessages,
     handleSendMessage,
-    loadMoreMessages: useCallback(() => 
-      loadMoreMessages(activeSessionId, messages, setMessages, updateCache)
-        .catch(handleError),
-      [activeSessionId, messages, loadMoreMessages, updateCache, setMessages, handleError]
-    ),
     setMessages
   };
 };
