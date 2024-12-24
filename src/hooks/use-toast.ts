@@ -15,7 +15,7 @@ function toast({ ...props }: Toast) {
   console.log('[Toast] Creating new toast with ID:', id);
 
   const update = (props: ToasterToast) => {
-    console.log('[Toast] Updating toast:', id);
+    console.log('[Toast] Updating toast:', id, props);
     dispatch({
       type: "UPDATE_TOAST",
       toast: { ...props, id },
@@ -51,13 +51,24 @@ function toast({ ...props }: Toast) {
 
 function useToast() {
   const [state, setState] = React.useState({ toasts: [] })
+  const mounted = React.useRef(false)
 
   React.useEffect(() => {
+    mounted.current = true
     console.log('[useToast] Setting up listener');
-    listeners.add(setState)
+    
+    const handleStateChange = (newState: typeof state) => {
+      if (mounted.current) {
+        console.log('[useToast] State updated:', newState);
+        setState(newState)
+      }
+    }
+    
+    listeners.add(handleStateChange)
     return () => {
       console.log('[useToast] Cleaning up listener');
-      listeners.delete(setState)
+      mounted.current = false
+      listeners.delete(handleStateChange)
     }
   }, [])
 
