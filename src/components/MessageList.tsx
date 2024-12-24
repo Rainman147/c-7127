@@ -1,11 +1,11 @@
 import { useRef } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
-import { groupMessages } from '@/utils/messageGrouping';
 import { useViewportMonitor } from '@/hooks/useViewportMonitor';
 import { useRealTime } from '@/contexts/RealTimeContext';
 import { ConnectionStatus } from './message/ConnectionStatus';
 import { MessageGroup } from './message/MessageGroup';
 import { useScrollHandler } from './message/ScrollHandler';
+import { useMessageGrouping } from '@/hooks/chat/useMessageGrouping';
 import type { Message } from '@/types/chat';
 
 const MessageList = ({ messages }: { messages: Message[] }) => {
@@ -22,20 +22,7 @@ const MessageList = ({ messages }: { messages: Message[] }) => {
     containerRef
   });
 
-  const messageGroups = (() => {
-    const groupStartTime = performance.now();
-    const groups = groupMessages(messages);
-    
-    logger.debug(LogCategory.RENDER, 'MessageList', 'Message grouping performance', {
-      duration: performance.now() - groupStartTime,
-      messageCount: messages.length,
-      groupCount: groups.length,
-      averageMessagesPerGroup: messages.length / groups.length,
-      timestamp: new Date().toISOString()
-    });
-    
-    return groups;
-  })();
+  const messageGroups = useMessageGrouping(messages);
 
   // Log comprehensive render metrics
   logger.debug(LogCategory.RENDER, 'MessageList', 'Render metrics', {
