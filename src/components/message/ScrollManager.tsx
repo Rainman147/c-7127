@@ -1,6 +1,8 @@
-import { useEffect, useRef, RefObject } from 'react';
+import { useRef, RefObject } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { useScrollMetrics } from './ScrollManagerMetrics';
+import { useScrollQueue } from './useScrollQueue';
+import { useScrollDimensions } from './useScrollDimensions';
 import type { Message } from '@/types/chat';
 
 interface ScrollManagerProps {
@@ -8,12 +10,6 @@ interface ScrollManagerProps {
   messages: Message[];
   isLoading: boolean;
   isMounted: boolean;
-}
-
-interface QueuedScroll {
-  targetScroll: number;
-  behavior: ScrollBehavior;
-  timestamp: number;
 }
 
 export const useScrollManager = ({ 
@@ -27,98 +23,28 @@ export const useScrollManager = ({
   const scrollTimeout = useRef<NodeJS.Timeout>();
   const isInitialLoad = useRef<boolean>(true);
   const lastMessageCount = useRef<number>(0);
-  const scrollQueue = useRef<QueuedScroll[]>([]);
-  const processingQueue = useRef<boolean>(false);
   const { logMetrics, measureOperation } = useScrollMetrics(containerRef);
+  const { processQueue, queueScroll } = useScrollQueue();
 
-  // Process queued scroll operations with retry logic and metrics
-  const processScrollQueue = async () => {
-    if (processingQueue.current || !isMounted) return;
+  const handleScroll = (currentPosition: number, maxScroll: number) => {
+    const scrollDelta = currentPosition - lastScrollPosition.current;
+    const isNearBottom = maxScroll - currentPosition < 100;
     
-    const container = containerRef.current;
-    if (!container || scrollQueue.current.length === 0) {
-      logger.debug(LogCategory.STATE, 'ScrollManager', 'Skip queue processing', {
-        reason: !container ? 'No container' : 'Empty queue',
-        timestamp: new Date().toISOString()
-      });
-      return;
-    }
-
-    processingQueue.current = true;
-    const performance = measureOperation('Queue processing');
-
-    try {
-      while (scrollQueue.current.length > 0) {
-        const nextScroll = scrollQueue.current[0];
-        const scrollPerformance = measureOperation('Individual scroll');
-        
-        container.scrollTo({
-          top: nextScroll.targetScroll,
-          behavior: nextScroll.behavior
-        });
-
-        // Wait for scroll to complete and log metrics
-        await new Promise(resolve => setTimeout(resolve, 100));
-        logMetrics('Scroll operation complete', {
-          targetScroll: nextScroll.targetScroll,
-          actualScroll: container.scrollTop,
-          behavior: nextScroll.behavior,
-          queueAge: performance.now() - nextScroll.timestamp
-        });
-        
-        scrollPerformance.end();
-        scrollQueue.current.shift();
-      }
-    } catch (error) {
-      logger.error(LogCategory.ERROR, 'ScrollManager', 'Failed to process scroll queue', {
-        error,
-        queueLength: scrollQueue.current.length,
-        timestamp: new Date().toISOString()
-      });
-    } finally {
-      processingQueue.current = false;
-      performance.end();
-    }
+    shouldScrollToBottom.current = isNearBottom;
+    
+    logger.debug(LogCategory.STATE, 'ScrollManager', 'Scroll position changed', {
+      previousPosition: lastScrollPosition.current,
+      currentPosition,
+      maxScroll,
+      delta: scrollDelta,
+      isNearBottom,
+      timestamp: new Date().toISOString()
+    });
+    
+    lastScrollPosition.current = currentPosition;
   };
 
-  // Track container dimensions and scroll state
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || !isMounted) {
-      logger.debug(LogCategory.STATE, 'ScrollManager', 'Container not ready for scroll tracking', {
-        isMounted,
-        hasContainer: !!container,
-        timestamp: new Date().toISOString()
-      });
-      return;
-    }
-
-    const handleScroll = () => {
-      const currentPosition = container.scrollTop;
-      const maxScroll = container.scrollHeight - container.clientHeight;
-      const scrollDelta = currentPosition - lastScrollPosition.current;
-      const isNearBottom = maxScroll - currentPosition < 100;
-      
-      shouldScrollToBottom.current = isNearBottom;
-      
-      logger.debug(LogCategory.STATE, 'ScrollManager', 'Scroll position changed', {
-        previousPosition: lastScrollPosition.current,
-        currentPosition,
-        maxScroll,
-        delta: scrollDelta,
-        isNearBottom,
-        containerHeight: container.clientHeight,
-        scrollHeight: container.scrollHeight,
-        hasScrollbar: container.scrollHeight > container.clientHeight,
-        timestamp: new Date().toISOString()
-      });
-      
-      lastScrollPosition.current = currentPosition;
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [containerRef, messages.length, isMounted]);
+  useScrollDimensions(containerRef, isMounted, handleScroll);
 
   // Handle messages updates and scrolling
   useEffect(() => {
@@ -134,9 +60,6 @@ export const useScrollManager = ({
       messageCountChanged,
       shouldForceScroll,
       isInitialLoad: isInitialLoad.current,
-      containerHeight: container.clientHeight,
-      scrollHeight: container.scrollHeight,
-      hasScrollbar: container.scrollHeight > container.clientHeight,
       timestamp: new Date().toISOString()
     });
 
@@ -148,26 +71,16 @@ export const useScrollManager = ({
       }
 
       scrollTimeout.current = setTimeout(() => {
-        const scrollStartTime = performance.now();
         const targetScroll = container.scrollHeight - container.clientHeight;
         
-        // Queue the scroll operation
-        scrollQueue.current.push({
+        queueScroll({
           targetScroll,
           behavior: isInitialLoad.current ? 'auto' : 'smooth',
           timestamp: performance.now()
         });
         
-        processScrollQueue();
+        processQueue(container, { logMetrics, measureOperation });
         
-        logger.debug(LogCategory.STATE, 'ScrollManager', 'Scroll operation queued', {
-          duration: performance.now() - scrollStartTime,
-          targetScroll,
-          isInitialLoad: isInitialLoad.current,
-          queueLength: scrollQueue.current.length,
-          timestamp: new Date().toISOString()
-        });
-
         isInitialLoad.current = false;
       }, isInitialLoad.current ? 0 : 100);
     }
@@ -177,7 +90,7 @@ export const useScrollManager = ({
         clearTimeout(scrollTimeout.current);
       }
     };
-  }, [messages, containerRef, isLoading, isMounted]);
+  }, [messages, containerRef, isLoading, isMounted, processQueue, queueScroll, logMetrics, measureOperation]);
 
   return {
     isNearBottom: shouldScrollToBottom.current,
