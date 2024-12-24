@@ -42,17 +42,21 @@ const ChatInput = ({
   });
 
   const handleSubmit = async () => {
-    logger.info(LogCategory.COMMUNICATION, 'ChatInput', 'Handling submit with message:', 
-      { messageLength: message.length, connectionState }
-    );
+    logger.info(LogCategory.COMMUNICATION, 'ChatInput', 'Handling submit with message:', { 
+      messageLength: message.length, 
+      connectionState,
+      isOptimistic: connectionState.status === 'disconnected'
+    });
     
     if (message.trim()) {
       try {
         await originalHandleSubmit();
+        logger.debug(LogCategory.STATE, 'ChatInput', 'Message submitted successfully');
       } catch (error) {
         logger.error(LogCategory.ERROR, 'ChatInput', 'Error submitting message:', {
           error,
-          connectionState
+          connectionState,
+          messageLength: message.length
         });
       }
     }
@@ -67,16 +71,20 @@ const ChatInput = ({
   };
 
   const handleMessageChange = (newMessage: string) => {
-    logger.debug(LogCategory.STATE, 'ChatInput', 'Message changed:', 
-      { length: newMessage.length }
-    );
+    logger.debug(LogCategory.STATE, 'ChatInput', 'Message changed:', { 
+      length: newMessage.length,
+      connectionState: connectionState.status
+    });
     setMessage(newMessage);
   };
 
   const isDisabled = isLoading || isProcessing || connectionState.status === 'disconnected';
-  logger.debug(LogCategory.STATE, 'ChatInput', 'Component state:', 
-    { isDisabled, messageLength: message.length, connectionState }
-  );
+  logger.debug(LogCategory.STATE, 'ChatInput', 'Component state:', { 
+    isDisabled, 
+    messageLength: message.length, 
+    connectionState,
+    retryCount: connectionState.retryCount
+  });
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-[#1E1E1E]/80 backdrop-blur-sm py-4 px-4">
@@ -85,7 +93,14 @@ const ChatInput = ({
           {connectionState.status === 'disconnected' && (
             <div className="absolute -top-8 left-0 right-0">
               <div className="bg-red-500/10 text-red-500 text-sm py-1 px-3 rounded-md text-center">
-                Connection lost. Messages will be sent when reconnected.
+                Connection lost. Messages will be sent when reconnected. (Attempt {connectionState.retryCount})
+              </div>
+            </div>
+          )}
+          {connectionState.status === 'connecting' && (
+            <div className="absolute -top-8 left-0 right-0">
+              <div className="bg-yellow-500/10 text-yellow-500 text-sm py-1 px-3 rounded-md text-center">
+                Reconnecting... (Attempt {connectionState.retryCount})
               </div>
             </div>
           )}

@@ -29,7 +29,7 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
         viewportHeight,
         keyboardVisible,
         messageCount: messages.length,
-        connectionState
+        connectionState: connectionState.status
       });
       
       lastScrollPosition.current = currentPosition;
@@ -51,7 +51,8 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
         keyboardVisible,
         currentScrollPosition: containerRef.current.scrollTop,
         scrollHeight: containerRef.current.scrollHeight,
-        connectionState
+        connectionState: connectionState.status,
+        retryCount: connectionState.retryCount
       });
       
       try {
@@ -59,18 +60,20 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
         
         logger.debug(LogCategory.STATE, 'MessageList', 'Scroll complete', {
           duration: performance.now() - scrollStartTime,
-          finalScrollPosition: containerRef.current.scrollTop
+          finalScrollPosition: containerRef.current.scrollTop,
+          connectionState: connectionState.status
         });
       } catch (error) {
         logger.error(LogCategory.ERROR, 'MessageList', 'Scroll failed', {
           error,
           messageCount: messages.length,
           viewportHeight,
-          keyboardVisible
+          keyboardVisible,
+          connectionState: connectionState.status
         });
       }
     }
-  }, [messages.length, viewportHeight, keyboardVisible]);
+  }, [messages.length, viewportHeight, keyboardVisible, connectionState]);
 
   // Track message grouping performance
   const messageGroups = (() => {
@@ -81,7 +84,7 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
       duration: performance.now() - groupStartTime,
       messageCount: messages.length,
       groupCount: groups.length,
-      connectionState
+      connectionState: connectionState.status
     });
     
     return groups;
@@ -101,7 +104,8 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
     groupCount: messageGroups.length,
     viewportHeight,
     keyboardVisible,
-    connectionState
+    connectionState: connectionState.status,
+    retryCount: connectionState.retryCount
   });
 
   return (
@@ -111,12 +115,12 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
     >
       {connectionState.status === 'connecting' && (
         <div className="text-center text-yellow-500 bg-yellow-500/10 py-2 rounded-md mb-4">
-          Reconnecting to chat...
+          Reconnecting to chat... (Attempt {connectionState.retryCount})
         </div>
       )}
       {connectionState.status === 'disconnected' && (
         <div className="text-center text-red-500 bg-red-500/10 py-2 rounded-md mb-4">
-          Connection lost. Retrying...
+          Connection lost. Retrying... (Attempt {connectionState.retryCount})
         </div>
       )}
       {messageGroups.map((group) => (
