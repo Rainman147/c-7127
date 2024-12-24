@@ -24,7 +24,11 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
     const mountPerformance = metrics.measureOperation('Component mounting');
     
     logger.debug(LogCategory.STATE, 'MessageList', 'Component mounting started', {
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      messageCount: messages.length,
+      isLoading,
+      keyboardVisible,
+      containerExists: !!containerRef.current
     });
 
     setIsMounted(true);
@@ -33,11 +37,12 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
       const unmountDuration = mountPerformance.end();
       logger.debug(LogCategory.STATE, 'MessageList', 'Component unmounted', {
         unmountDuration,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        finalMessageCount: messages.length
       });
       setIsMounted(false);
     };
-  }, [metrics]);
+  }, [metrics, messages.length, isLoading, keyboardVisible]);
 
   // Message grouping with performance tracking
   const messageGroups = (() => {
@@ -48,13 +53,18 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
       duration: performance.now() - groupStartTime,
       messageCount: messages.length,
       groupCount: groups.length,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      isLoading,
+      isMounted
     });
     
     return groups;
   })();
 
   if (messages.length === 0) {
+    logger.debug(LogCategory.STATE, 'MessageList', 'No messages to display', {
+      timestamp: new Date().toISOString()
+    });
     return (
       <div className="text-center text-white/70 mt-8">
         No messages yet. Start a conversation!

@@ -10,13 +10,16 @@ interface MessageListContainerProps {
 const MessageListContainer = forwardRef<HTMLDivElement, MessageListContainerProps>(
   ({ children, isMounted, keyboardVisible }, ref) => {
     const initialHeightSet = useRef(false);
+    const lastHeight = useRef<string>('100vh');
 
     // Dedicated height calculation effect with fallback
     useEffect(() => {
       const container = ref && 'current' in ref ? ref.current : null;
       if (!container) {
         logger.debug(LogCategory.STATE, 'MessageListContainer', 'Container not available for height calculation', {
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          isMounted,
+          keyboardVisible
         });
         return;
       }
@@ -29,26 +32,39 @@ const MessageListContainer = forwardRef<HTMLDivElement, MessageListContainerProp
           initialHeightSet.current = true;
           logger.debug(LogCategory.STATE, 'MessageListContainer', 'Initial fallback height set', {
             height: '100vh',
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            isMounted
           });
         }
 
         const newHeight = `calc(100vh - ${keyboardVisible ? '300px' : '240px'})`;
-        container.style.height = newHeight;
+        
+        // Only log if height actually changed
+        if (newHeight !== lastHeight.current) {
+          container.style.height = newHeight;
+          lastHeight.current = newHeight;
 
-        logger.debug(LogCategory.STATE, 'MessageListContainer', 'Height calculation complete', {
-          duration: performance.now() - startTime,
-          newHeight,
-          keyboardVisible,
-          containerClientHeight: container.clientHeight,
-          containerScrollHeight: container.scrollHeight,
-          hasScrollbar: container.scrollHeight > container.clientHeight,
-          timestamp: new Date().toISOString()
-        });
+          logger.debug(LogCategory.STATE, 'MessageListContainer', 'Height calculation complete', {
+            duration: performance.now() - startTime,
+            previousHeight: lastHeight.current,
+            newHeight,
+            keyboardVisible,
+            containerClientHeight: container.clientHeight,
+            containerScrollHeight: container.scrollHeight,
+            hasScrollbar: container.scrollHeight > container.clientHeight,
+            timestamp: new Date().toISOString(),
+            isMounted
+          });
+        }
       };
 
       // Calculate height with requestAnimationFrame for smoother updates
       if (isMounted) {
+        logger.debug(LogCategory.STATE, 'MessageListContainer', 'Requesting height calculation', {
+          timestamp: new Date().toISOString(),
+          isMounted,
+          keyboardVisible
+        });
         requestAnimationFrame(calculateHeight);
       }
 
