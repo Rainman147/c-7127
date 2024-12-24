@@ -1,116 +1,25 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
+import { useSubscriptionManager } from './realtime/useSubscriptionManager';
+import { useConnectionManager } from './realtime/useConnectionManager';
 import type { Message } from '@/types/chat';
-import type { RealtimeChannel } from '@supabase/supabase-js';
-
-export type ConnectionState = {
-  status: 'connected' | 'connecting' | 'disconnected';
-  lastAttempt: number;
-  retryCount: number;
-  error?: Error;
-};
-
-type RealTimeContextValue = {
-  connectionState: ConnectionState;
-  subscribeToChat: (chatId: string) => void;
-  unsubscribeFromChat: (chatId: string) => void;
-  activeSubscriptions: Set<string>;
-  lastMessage?: Message;
-};
+import type { RealTimeContextValue, ConnectionState } from './realtime/config';
 
 const RealTimeContext = createContext<RealTimeContextValue | undefined>(undefined);
 
-export const retryConfig = {
-  initialDelay: 1000,
-  maxDelay: 30000,
-  maxAttempts: 5,
-  backoffFactor: 1.5,
-};
-
-export const getNextRetryDelay = (attempt: number): number => {
-  const delay = retryConfig.initialDelay * Math.pow(retryConfig.backoffFactor, attempt);
-  return Math.min(delay, retryConfig.maxDelay);
-};
-
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [connectionState, setConnectionState] = useState<ConnectionState>({
-    status: 'disconnected',
-    lastAttempt: 0,
-    retryCount: 0,
-  });
   const [lastMessage, setLastMessage] = useState<Message>();
-  const activeSubscriptions = useRef(new Set<string>());
-  const channels = useRef(new Map<string, RealtimeChannel>());
-  const retryTimeouts = useRef(new Map<string, NodeJS.Timeout>());
+  
+  const {
+    channels,
+    retryTimeouts,
+    activeSubscriptions,
+    cleanupSubscription,
+    cleanupAllSubscriptions
+  } = useSubscriptionManager(setLastMessage);
 
-  // Cleanup function for subscriptions
-  const cleanupSubscription = (chatId: string) => {
-    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Cleaning up subscription:', { chatId });
-    
-    const channel = channels.current.get(chatId);
-    if (channel) {
-      supabase.removeChannel(channel);
-      channels.current.delete(chatId);
-      activeSubscriptions.current.delete(chatId);
-      
-      // Clear any pending retry timeouts
-      if (retryTimeouts.current.has(chatId)) {
-        clearTimeout(retryTimeouts.current.get(chatId));
-        retryTimeouts.current.delete(chatId);
-      }
-    }
-  };
-
-  const handleConnectionError = (chatId: string, error: Error) => {
-    logger.error(LogCategory.COMMUNICATION, 'RealTimeContext', 'Connection error:', {
-      chatId,
-      error,
-      retryCount: connectionState.retryCount,
-    });
-
-    if (connectionState.retryCount < retryConfig.maxAttempts) {
-      const nextRetryDelay = getNextRetryDelay(connectionState.retryCount);
-      
-      setConnectionState(prev => ({
-        status: 'connecting',
-        lastAttempt: Date.now(),
-        retryCount: prev.retryCount + 1,
-        error,
-      }));
-
-      // Clear any existing retry timeout for this chat
-      if (retryTimeouts.current.has(chatId)) {
-        clearTimeout(retryTimeouts.current.get(chatId));
-      }
-
-      // Set new retry timeout
-      const timeout = setTimeout(() => {
-        subscribeToChat(chatId);
-      }, nextRetryDelay);
-
-      retryTimeouts.current.set(chatId, timeout);
-      
-      logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Scheduling retry:', {
-        chatId,
-        delay: nextRetryDelay,
-        attempt: connectionState.retryCount + 1,
-      });
-    } else {
-      setConnectionState(prev => ({
-        ...prev,
-        status: 'disconnected',
-        error,
-      }));
-      
-      logger.error(LogCategory.COMMUNICATION, 'RealTimeContext', 'Max retry attempts reached:', {
-        chatId,
-        maxAttempts: retryConfig.maxAttempts,
-      });
-    }
-  };
-
-  const subscribeToChat = (chatId: string) => {
+  const subscribeToChat = useCallback((chatId: string) => {
     logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Subscribing to chat:', { 
       chatId,
       activeSubscriptions: Array.from(activeSubscriptions.current),
@@ -143,7 +52,6 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
             chatId 
           });
           
-          // Update last message if it's a new message
           if (payload.eventType === 'INSERT') {
             setLastMessage(payload.new as Message);
           }
@@ -172,31 +80,25 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
           handleConnectionError(chatId, new Error(`Failed to subscribe to chat ${chatId}`));
         }
       });
-  };
+  }, []);
 
-  const unsubscribeFromChat = (chatId: string) => {
+  const {
+    connectionState,
+    setConnectionState,
+    handleConnectionError
+  } = useConnectionManager(retryTimeouts, subscribeToChat);
+
+  const unsubscribeFromChat = useCallback((chatId: string) => {
     logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Unsubscribing from chat:', { 
       chatId,
       activeSubscriptions: Array.from(activeSubscriptions.current),
     });
     cleanupSubscription(chatId);
-  };
+  }, [cleanupSubscription]);
 
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Cleaning up all subscriptions');
-      
-      // Clear all subscriptions and timeouts
-      channels.current.forEach((channel, chatId) => {
-        cleanupSubscription(chatId);
-      });
-      
-      channels.current.clear();
-      retryTimeouts.current.clear();
-      activeSubscriptions.current.clear();
-    };
-  }, []);
+    return cleanupAllSubscriptions;
+  }, [cleanupAllSubscriptions]);
 
   const value: RealTimeContextValue = {
     connectionState,
