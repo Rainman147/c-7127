@@ -27,24 +27,21 @@ export const TemplateListItem = ({ template, onEdit, onDelete }: TemplateListIte
       <div className="flex items-center gap-2">
         <span className="font-medium">{template.name}</span>
         <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Info className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="menu-box p-3 max-w-xs">
-              <div className="space-y-2">
-                <p className="font-medium">Instructions:</p>
-                {template.instructions && (
-                  <div className="text-sm">
-                    <p>Formatting: {template.instructions.dataFormatting}</p>
-                    <p>Priority Rules: {template.instructions.priorityRules}</p>
-                    <p>Special Conditions: {template.instructions.specialConditions}</p>
-                  </div>
-                )}
-              </div>
-            </TooltipContent>
+          <Tooltip content={
+            <div className="space-y-2">
+              <p className="font-medium">Instructions:</p>
+              {template.instructions && (
+                <div className="text-sm">
+                  <p>Formatting: {template.instructions.dataFormatting}</p>
+                  <p>Priority Rules: {template.instructions.priorityRules}</p>
+                  <p>Special Conditions: {template.instructions.specialConditions}</p>
+                </div>
+              )}
+            </div>
+          }>
+            <Button variant="ghost" size="icon">
+              <Info className="h-4 w-4" />
+            </Button>
           </Tooltip>
         </TooltipProvider>
       </div>
