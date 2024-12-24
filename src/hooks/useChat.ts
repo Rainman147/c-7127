@@ -27,14 +27,42 @@ export const useChat = (activeSessionId: string | null) => {
   const { ensureSession } = useSessionCoordinator();
   const { toast } = useToast();
   const prevSessionIdRef = useRef<string | null>(null);
+  const messageUpdateTimeRef = useRef<number>(Date.now());
 
   const { handleMessagesLoad } = useMessageLoader(loadMessages, getCachedMessages, updateCache);
   const { handleSendMessage: messageSender } = useMessageSender(sendMessage, updateCache);
 
+  // Enhanced real-time message handling with debouncing and deduplication
   useRealtimeMessages(
     activeSessionId,
     (newMessage: Message) => {
-      setMessages(prev => [...prev, newMessage]);
+      const currentTime = Date.now();
+      // Prevent rapid updates (debounce)
+      if (currentTime - messageUpdateTimeRef.current < 100) {
+        logger.debug(LogCategory.STATE, 'useChat', 'Skipping rapid update:', {
+          messageId: newMessage.id,
+          timeSinceLastUpdate: currentTime - messageUpdateTimeRef.current
+        });
+        return;
+      }
+
+      setMessages(prev => {
+        // Check for duplicates
+        const isDuplicate = prev.some(msg => msg.id === newMessage.id);
+        if (isDuplicate) {
+          logger.debug(LogCategory.STATE, 'useChat', 'Skipping duplicate message:', {
+            messageId: newMessage.id
+          });
+          return prev;
+        }
+
+        logger.debug(LogCategory.STATE, 'useChat', 'Adding new message:', {
+          messageId: newMessage.id,
+          currentCount: prev.length
+        });
+        messageUpdateTimeRef.current = currentTime;
+        return [...prev, newMessage];
+      });
     }
   );
 
@@ -43,7 +71,11 @@ export const useChat = (activeSessionId: string | null) => {
       return;
     }
 
-    logger.info(LogCategory.STATE, 'useChat', 'Active session changed:', { activeSessionId });
+    logger.info(LogCategory.STATE, 'useChat', 'Active session changed:', { 
+      activeSessionId,
+      previousSessionId: prevSessionIdRef.current
+    });
+    
     prevSessionIdRef.current = activeSessionId;
     
     if (!activeSessionId) {
@@ -74,7 +106,6 @@ export const useChat = (activeSessionId: string | null) => {
       throw new Error('Failed to create or get chat session');
     }
 
-    // Add optimistic message immediately
     const optimisticMessage = addOptimisticMessage(content, type);
 
     try {
@@ -88,7 +119,6 @@ export const useChat = (activeSessionId: string | null) => {
       );
 
       if (result?.messages) {
-        // Find the actual user message from the response
         const actualMessage = result.messages.find(
           msg => msg.role === 'user' && msg.content === content
         );
@@ -105,7 +135,6 @@ export const useChat = (activeSessionId: string | null) => {
       return result;
     } catch (error) {
       logger.error(LogCategory.ERROR, 'useChat', 'Error sending message:', error);
-      // Remove the optimistic message on error
       setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
       toast({
         title: "Error",

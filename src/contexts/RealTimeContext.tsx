@@ -54,11 +54,26 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
           logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Received message:', { 
             payload,
             chatId,
+            eventType: payload.eventType,
             timestamp: new Date().toISOString()
           });
           
+          // Only set lastMessage for new messages to prevent duplicate updates
           if (payload.eventType === 'INSERT') {
-            setLastMessage(payload.new as Message);
+            const newMessage = payload.new as Message;
+            
+            // Add additional validation to prevent duplicate messages
+            if (lastMessage?.id !== newMessage.id) {
+              logger.debug(LogCategory.STATE, 'RealTimeContext', 'Setting new last message:', {
+                messageId: newMessage.id,
+                previousMessageId: lastMessage?.id
+              });
+              setLastMessage(newMessage);
+            } else {
+              logger.debug(LogCategory.STATE, 'RealTimeContext', 'Skipping duplicate message:', {
+                messageId: newMessage.id
+              });
+            }
           }
         }
       )
@@ -88,7 +103,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
           handleConnectionError(chatId, new Error(`Failed to subscribe to chat ${chatId}`));
         }
       });
-  }, []);
+  }, [lastMessage]);
 
   const {
     connectionState,
