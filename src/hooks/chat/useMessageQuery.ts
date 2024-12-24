@@ -2,9 +2,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
 import { ErrorTracker } from '@/utils/errorTracking';
+import { useToast } from '@/hooks/use-toast';
+import { debounce } from 'lodash';
 import type { Message } from '@/types/chat';
 
 const MESSAGES_QUERY_KEY = 'messages';
+const DEBOUNCE_MS = 100;
 
 interface DatabaseMessage {
   id: string;
@@ -27,9 +30,18 @@ const mapDatabaseMessageToMessage = (dbMessage: DatabaseMessage): Message => ({
 
 export const useMessageQuery = (chatId: string | null) => {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  // Debounced invalidation to prevent excessive refetches
+  const debouncedInvalidate = debounce(
+    () => queryClient.invalidateQueries({ queryKey: [MESSAGES_QUERY_KEY, chatId] }),
+    DEBOUNCE_MS
+  );
 
   const fetchMessages = async (id: string): Promise<Message[]> => {
-    logger.debug(LogCategory.COMMUNICATION, 'useMessageQuery', 'Fetching messages:', { chatId: id });
+    logger.debug(LogCategory.COMMUNICATION, 'useMessageQuery', 'Fetching messages:', { 
+      chatId: id 
+    });
     
     const { data, error } = await supabase
       .from('messages')
@@ -49,7 +61,7 @@ export const useMessageQuery = (chatId: string | null) => {
     queryKey: [MESSAGES_QUERY_KEY, chatId],
     queryFn: () => chatId ? fetchMessages(chatId) : Promise.resolve([]),
     enabled: !!chatId,
-    staleTime: 1000 * 60, // Consider data fresh for 1 minute
+    staleTime: 1000 * 60,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
     meta: {
@@ -77,8 +89,13 @@ export const useMessageQuery = (chatId: string | null) => {
     },
     onSuccess: (newMessage) => {
       queryClient.setQueryData<Message[]>([MESSAGES_QUERY_KEY, chatId], (old = []) => {
+        // Prevent duplicate messages
+        if (old.some(msg => msg.id === newMessage.id)) {
+          return old;
+        }
         return [...old, newMessage];
       });
+      debouncedInvalidate();
     },
     onError: (error: Error) => {
       ErrorTracker.trackError(error, {
@@ -86,6 +103,11 @@ export const useMessageQuery = (chatId: string | null) => {
         errorType: 'MutationError',
         severity: 'medium',
         timestamp: new Date().toISOString()
+      });
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
       });
     }
   });
@@ -107,6 +129,14 @@ export const useMessageQuery = (chatId: string | null) => {
         return old.map(msg => 
           msg.id === updatedMessage.id ? updatedMessage : msg
         );
+      });
+      debouncedInvalidate();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update message. Please try again.",
+        variant: "destructive",
       });
     }
   });
