@@ -9,6 +9,7 @@ import { useMessageLoading } from './chat/useMessageLoading';
 import { useSessionCoordinator } from './chat/useSessionCoordinator';
 import { useRealtimeSync } from './chat/useRealtimeSync';
 import { useToast } from './use-toast';
+import { ErrorTracker } from '@/utils/errorTracking';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 
@@ -28,23 +29,43 @@ export const useChat = (activeSessionId: string | null) => {
   const { ensureSession } = useSessionCoordinator();
   const { toast } = useToast();
   const prevSessionIdRef = useRef<string | null>(null);
+  const retryCountRef = useRef(0);
+
+  const handleError = useCallback((error: Error) => {
+    ErrorTracker.trackError(error, {
+      component: 'useChat',
+      timestamp: new Date().toISOString(),
+      errorType: error.name,
+      severity: 'medium',
+      retryCount: retryCountRef.current,
+      additionalInfo: {
+        activeSessionId,
+        messageCount: messages.length
+      }
+    });
+
+    if (ErrorTracker.shouldRetry('useChat', error.name)) {
+      const delay = ErrorTracker.getBackoffDelay(retryCountRef.current);
+      retryCountRef.current += 1;
+      
+      setTimeout(() => {
+        if (activeSessionId) {
+          handleMessagesLoad(activeSessionId, updateMessages);
+        }
+      }, delay);
+    }
+
+    invalidateCache();
+  }, [activeSessionId, messages.length, invalidateCache]);
 
   const { handleMessagesLoad } = useMessageLoader(loadMessages, getCachedMessages, updateCache);
   const { handleSendMessage: messageSender } = useMessageSender(sendMessage, updateCache);
 
   const { handleNewMessage, cleanup: cleanupRealtimeSync } = useRealtimeSync({
     setMessages,
-    onError: (error) => {
-      logger.error(LogCategory.ERROR, 'useChat', 'Realtime sync error:', error);
-      invalidateCache();
-      // Reload messages on severe sync errors
-      if (activeSessionId) {
-        handleMessagesLoad(activeSessionId, updateMessages);
-      }
-    }
+    onError: handleError
   });
 
-  // Set up realtime message handling
   useRealtimeMessages(activeSessionId, handleNewMessage);
 
   useEffect(() => {
@@ -54,10 +75,12 @@ export const useChat = (activeSessionId: string | null) => {
 
     logger.info(LogCategory.STATE, 'useChat', 'Active session changed:', { 
       activeSessionId,
-      previousSessionId: prevSessionIdRef.current
+      previousSessionId: prevSessionIdRef.current,
+      retryCount: retryCountRef.current
     });
     
     prevSessionIdRef.current = activeSessionId;
+    retryCountRef.current = 0;
     
     if (!activeSessionId) {
       logger.debug(LogCategory.STATE, 'useChat', 'No active session, clearing messages');
@@ -65,8 +88,8 @@ export const useChat = (activeSessionId: string | null) => {
       return;
     }
 
-    handleMessagesLoad(activeSessionId, updateMessages);
-  }, [activeSessionId, handleMessagesLoad, clearMessages, updateMessages]);
+    handleMessagesLoad(activeSessionId, updateMessages).catch(handleError);
+  }, [activeSessionId, handleMessagesLoad, clearMessages, updateMessages, handleError]);
 
   const handleSendMessage = useCallback(async (
     content: string,
@@ -79,7 +102,8 @@ export const useChat = (activeSessionId: string | null) => {
 
     logger.info(LogCategory.COMMUNICATION, 'useChat', 'Sending message:', { 
       contentLength: content.length,
-      type 
+      type,
+      retryCount: retryCountRef.current
     });
     
     const currentSessionId = activeSessionId || await ensureSession();
@@ -113,9 +137,22 @@ export const useChat = (activeSessionId: string | null) => {
         }
       }
 
+      retryCountRef.current = 0;
       return result;
     } catch (error) {
       logger.error(LogCategory.ERROR, 'useChat', 'Error sending message:', error);
+      ErrorTracker.trackError(error as Error, {
+        component: 'useChat',
+        timestamp: new Date().toISOString(),
+        errorType: 'SendMessageError',
+        severity: 'medium',
+        retryCount: retryCountRef.current,
+        additionalInfo: {
+          messageType: type,
+          contentLength: content.length
+        }
+      });
+
       setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
       toast({
         title: "Error",
@@ -136,7 +173,6 @@ export const useChat = (activeSessionId: string | null) => {
     toast
   ]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       cleanupRealtimeSync();
@@ -149,8 +185,9 @@ export const useChat = (activeSessionId: string | null) => {
     isLoadingMore,
     handleSendMessage,
     loadMoreMessages: useCallback(() => 
-      loadMoreMessages(activeSessionId, messages, setMessages, updateCache),
-      [activeSessionId, messages, loadMoreMessages, updateCache, setMessages]
+      loadMoreMessages(activeSessionId, messages, setMessages, updateCache)
+        .catch(handleError),
+      [activeSessionId, messages, loadMoreMessages, updateCache, setMessages, handleError]
     ),
     setMessages
   };
