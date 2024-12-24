@@ -2,7 +2,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { TemplateProvider } from '@/contexts/TemplateContext';
-import { AppRoutes } from '@/routes';
+import AppRoutes from '@/routes';
 import { Toaster } from '@/components/ui/toaster';
 import './App.css';
 
