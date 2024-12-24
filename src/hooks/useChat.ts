@@ -27,7 +27,6 @@ export const useChat = (activeSessionId: string | null) => {
     ErrorTracker.trackError(error, {
       component: 'useChat',
       timestamp: new Date().toISOString(),
-      errorType: error.name,
       severity: 'medium',
       operation: 'chat-message-handling',
       additionalInfo: {
