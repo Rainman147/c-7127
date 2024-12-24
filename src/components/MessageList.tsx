@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { groupMessages } from '@/utils/messageGrouping';
 import { useViewportMonitor } from '@/hooks/useViewportMonitor';
@@ -14,9 +14,10 @@ interface MessageListProps {
 }
 
 const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
   const [isMounted, setIsMounted] = useState(false);
-  const { metrics } = useMessageListMetrics(null, isMounted, keyboardVisible);
+  const { metrics } = useMessageListMetrics(containerRef, isMounted, keyboardVisible);
   
   // Track mount status with performance timing
   useEffect(() => {
@@ -63,6 +64,7 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
 
   return (
     <MessageListContainer 
+      ref={containerRef}
       isMounted={isMounted}
       keyboardVisible={keyboardVisible}
     >
