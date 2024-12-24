@@ -3,6 +3,6 @@ export interface ErrorMetadata {
   severity: 'low' | 'medium' | 'high' | 'critical';
   timestamp: string;
   errorType: string;
-  operation?: string;
+  operation: string;
   additionalInfo?: Record<string, unknown>;
 }
