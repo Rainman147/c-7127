@@ -1,6 +1,13 @@
 import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns';
 import { logger, LogCategory } from './logging';
-import type { Message, MessageGroup } from '@/types/chat';
+import type { Message } from '@/types/chat';
+
+export interface MessageGroup {
+  id: string;
+  label: string;
+  timestamp: string;
+  messages: Message[];
+}
 
 const TIME_THRESHOLD_MINUTES = 5;
 

@@ -1,5 +1,6 @@
-import { MessageGroup as MessageGroupType } from '@/utils/messageGrouping';
+import { type MessageGroup as MessageGroupType } from '@/utils/messageGrouping';
 import Message from '../Message';
+import { Tooltip } from '../ui/tooltip';
 
 interface MessageGroupProps {
   group: MessageGroupType;
@@ -9,9 +10,11 @@ export const MessageGroup = ({ group }: MessageGroupProps) => {
   return (
     <div key={group.id} className="space-y-4">
       <div className="flex items-center justify-center">
-        <div className="text-xs text-white/50 bg-chatgpt-secondary/30 px-2 py-1 rounded">
-          {group.label} · {group.timestamp}
-        </div>
+        <Tooltip content={`Messages from ${group.label}`}>
+          <div className="text-xs text-white/50 bg-chatgpt-secondary/30 px-2 py-1 rounded hover:bg-chatgpt-secondary/40 transition-colors cursor-help">
+            {group.label}
+          </div>
+        </Tooltip>
       </div>
       <div className="space-y-2">
         {group.messages.map((message, index) => (
