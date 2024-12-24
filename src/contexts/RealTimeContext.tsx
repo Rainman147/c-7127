@@ -44,6 +44,24 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   const channels = useRef(new Map<string, RealtimeChannel>());
   const retryTimeouts = useRef(new Map<string, NodeJS.Timeout>());
 
+  // Cleanup function for subscriptions
+  const cleanupSubscription = (chatId: string) => {
+    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Cleaning up subscription:', { chatId });
+    
+    const channel = channels.current.get(chatId);
+    if (channel) {
+      supabase.removeChannel(channel);
+      channels.current.delete(chatId);
+      activeSubscriptions.current.delete(chatId);
+      
+      // Clear any pending retry timeouts
+      if (retryTimeouts.current.has(chatId)) {
+        clearTimeout(retryTimeouts.current.get(chatId));
+        retryTimeouts.current.delete(chatId);
+      }
+    }
+  };
+
   const handleConnectionError = (chatId: string, error: Error) => {
     logger.error(LogCategory.COMMUNICATION, 'RealTimeContext', 'Connection error:', {
       chatId,
@@ -72,17 +90,31 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       }, nextRetryDelay);
 
       retryTimeouts.current.set(chatId, timeout);
+      
+      logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Scheduling retry:', {
+        chatId,
+        delay: nextRetryDelay,
+        attempt: connectionState.retryCount + 1,
+      });
     } else {
       setConnectionState(prev => ({
         ...prev,
         status: 'disconnected',
         error,
       }));
+      
+      logger.error(LogCategory.COMMUNICATION, 'RealTimeContext', 'Max retry attempts reached:', {
+        chatId,
+        maxAttempts: retryConfig.maxAttempts,
+      });
     }
   };
 
   const subscribeToChat = (chatId: string) => {
-    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Subscribing to chat:', { chatId });
+    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Subscribing to chat:', { 
+      chatId,
+      activeSubscriptions: Array.from(activeSubscriptions.current),
+    });
 
     if (channels.current.has(chatId)) {
       logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Already subscribed to chat:', { chatId });
@@ -131,6 +163,11 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
             lastAttempt: Date.now(),
             retryCount: 0,
           });
+          
+          logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Successfully subscribed to chat:', {
+            chatId,
+            activeSubscriptions: Array.from(activeSubscriptions.current),
+          });
         } else if (status === 'CHANNEL_ERROR') {
           handleConnectionError(chatId, new Error(`Failed to subscribe to chat ${chatId}`));
         }
@@ -138,32 +175,23 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   };
 
   const unsubscribeFromChat = (chatId: string) => {
-    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Unsubscribing from chat:', { chatId });
-
-    const channel = channels.current.get(chatId);
-    if (channel) {
-      supabase.removeChannel(channel);
-      channels.current.delete(chatId);
-      activeSubscriptions.current.delete(chatId);
-
-      // Clear any pending retry timeouts
-      if (retryTimeouts.current.has(chatId)) {
-        clearTimeout(retryTimeouts.current.get(chatId));
-        retryTimeouts.current.delete(chatId);
-      }
-    }
+    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Unsubscribing from chat:', { 
+      chatId,
+      activeSubscriptions: Array.from(activeSubscriptions.current),
+    });
+    cleanupSubscription(chatId);
   };
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Cleaning up all subscriptions');
+      
       // Clear all subscriptions and timeouts
       channels.current.forEach((channel, chatId) => {
-        supabase.removeChannel(channel);
-        if (retryTimeouts.current.has(chatId)) {
-          clearTimeout(retryTimeouts.current.get(chatId));
-        }
+        cleanupSubscription(chatId);
       });
+      
       channels.current.clear();
       retryTimeouts.current.clear();
       activeSubscriptions.current.clear();
@@ -188,6 +216,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 export const useRealTime = () => {
   const context = useContext(RealTimeContext);
   if (context === undefined) {
+    logger.error(LogCategory.ERROR, 'RealTimeContext', 'useRealTime must be used within a RealTimeProvider');
     throw new Error('useRealTime must be used within a RealTimeProvider');
   }
   return context;
