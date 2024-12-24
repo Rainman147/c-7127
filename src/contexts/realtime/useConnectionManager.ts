@@ -3,8 +3,7 @@ import { logger, LogCategory } from '@/utils/logging';
 import type { ConnectionState } from './config';
 
 export const useConnectionManager = (
-  retryTimeouts: React.MutableRefObject<Record<string, NodeJS.Timeout>>,
-  subscribeToChat: (chatId: string) => void
+  retryTimeouts: React.MutableRefObject<Record<string, NodeJS.Timeout>>
 ) => {
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     status: 'disconnected',
@@ -32,11 +31,9 @@ export const useConnectionManager = (
       clearTimeout(retryTimeouts.current[timeoutKey]);
     }
 
-    retryTimeouts.current[timeoutKey] = setTimeout(
-      () => subscribeToChat(chatId),
-      Math.min(1000 * Math.pow(2, connectionState.retryCount), 30000)
-    );
-  }, [connectionState.retryCount, retryTimeouts, subscribeToChat]);
+    // We'll handle the retry logic in the parent component
+    return timeoutKey;
+  }, [retryTimeouts]);
 
   return {
     connectionState,

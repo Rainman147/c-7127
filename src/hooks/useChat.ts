@@ -11,7 +11,7 @@ import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 
 export const useChat = (activeSessionId: string | null) => {
-  const { messages, setMessages, addOptimisticMessage, replaceOptimisticMessage } = useMessageState();
+  const messageState = useMessageState();
   const { isLoading, handleSendMessage: sendMessage } = useMessageHandling();
   const { toast } = useToast();
   const retryCountRef = useRef(0);
@@ -29,10 +29,10 @@ export const useChat = (activeSessionId: string | null) => {
       timestamp: new Date().toISOString(),
       errorType: error.name,
       severity: 'medium',
-      retryCount: retryCountRef.current,
+      operation: 'chat-message-handling',
       additionalInfo: {
         activeSessionId,
-        messageCount: messages.length
+        messageCount: messageState.messages.length
       }
     });
 
@@ -41,10 +41,10 @@ export const useChat = (activeSessionId: string | null) => {
       description: "An error occurred. Please try again.",
       variant: "destructive"
     });
-  }, [activeSessionId, messages.length, toast]);
+  }, [activeSessionId, messageState.messages.length, toast]);
 
   const { handleNewMessage, cleanup: cleanupRealtimeSync } = useRealtimeSync({
-    setMessages,
+    setMessages: messageState.setMessages,
     onError: handleError,
     retryConfig: {
       retryDelay: ErrorTracker.getBackoffDelay(retryCountRef.current),
@@ -57,9 +57,9 @@ export const useChat = (activeSessionId: string | null) => {
   // Sync messages from React Query to local state
   useEffect(() => {
     if (queryMessages) {
-      setMessages(queryMessages);
+      messageState.setMessages(queryMessages);
     }
-  }, [queryMessages, setMessages]);
+  }, [queryMessages, messageState.setMessages]);
 
   const handleSendMessage = useCallback(async (
     content: string,
@@ -73,7 +73,7 @@ export const useChat = (activeSessionId: string | null) => {
       retryCount: retryCountRef.current
     });
 
-    const optimisticMessage = addOptimisticMessage(content, type);
+    const optimisticMessage = messageState.addOptimisticMessage(content, type);
 
     try {
       const newMessage = await addMessage.mutateAsync({
@@ -81,10 +81,10 @@ export const useChat = (activeSessionId: string | null) => {
         content,
         type,
         sender: 'user',
-        sequence: messages.length
+        sequence: messageState.messages.length
       });
 
-      replaceOptimisticMessage(optimisticMessage.id, newMessage);
+      messageState.replaceOptimisticMessage(optimisticMessage.id, newMessage);
       retryCountRef.current = 0;
       return newMessage;
     } catch (error) {
@@ -94,10 +94,8 @@ export const useChat = (activeSessionId: string | null) => {
     }
   }, [
     activeSessionId,
-    messages.length,
+    messageState,
     addMessage,
-    addOptimisticMessage,
-    replaceOptimisticMessage,
     handleError
   ]);
 
@@ -108,10 +106,10 @@ export const useChat = (activeSessionId: string | null) => {
   }, [cleanupRealtimeSync]);
 
   return {
-    messages,
+    messages: messageState.messages,
     isLoading: isLoading || isLoadingMessages,
     handleSendMessage,
-    setMessages
+    setMessages: messageState.setMessages
   };
 };
 
