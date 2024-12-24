@@ -1,11 +1,10 @@
-import type { Message } from '@/types/chat';
-
-export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
+export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected';
 
 export interface ConnectionState {
   status: ConnectionStatus;
   lastAttempt: number;
   retryCount: number;
+  error?: Error;  // Added error property
 }
 
 export interface RealTimeContextValue {
@@ -16,3 +15,5 @@ export interface RealTimeContextValue {
   lastMessage?: Message;
   retryCount: number;
 }
+
+import type { Message } from '@/types/chat';

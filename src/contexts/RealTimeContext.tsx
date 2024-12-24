@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
@@ -6,7 +6,7 @@ import { ErrorTracker } from '@/utils/errorTracking';
 import { useSubscriptionManager } from './realtime/useSubscriptionManager';
 import { useConnectionManager } from './realtime/useConnectionManager';
 import type { Message } from '@/types/chat';
-import type { RealTimeContextValue, ConnectionState } from './realtime/config';
+import type { RealTimeContextValue } from './realtime/config';
 
 const RealTimeContext = createContext<RealTimeContextValue | undefined>(undefined);
 
@@ -15,6 +15,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   const { toast } = useToast();
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 3;
+  const retryTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
   
   const handleError = useCallback((error: Error, operation: string) => {
     logger.error(LogCategory.COMMUNICATION, 'RealTimeContext', `Error during ${operation}:`, {
@@ -25,9 +26,9 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
     ErrorTracker.trackError(error, {
       component: 'RealTimeContext',
-      operation,
       severity: retryCount >= MAX_RETRIES ? 'high' : 'medium',
       timestamp: new Date().toISOString(),
+      operation,
       additionalInfo: {
         activeSubscriptions: Array.from(activeSubscriptions.current)
       }
@@ -50,7 +51,6 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
   const {
     channels,
-    retryTimeouts,
     activeSubscriptions,
     cleanupSubscription,
     cleanupAllSubscriptions
@@ -177,13 +177,8 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   }, [cleanupSubscription, handleError]);
 
   useEffect(() => {
-    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Setting up cleanup on unmount');
     return () => {
       try {
-        logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Cleaning up all subscriptions', {
-          activeSubscriptions: Array.from(activeSubscriptions.current),
-          timestamp: new Date().toISOString()
-        });
         cleanupAllSubscriptions();
       } catch (error) {
         handleError(error as Error, 'cleanup all subscriptions');

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import type { ConnectionState } from './config';
 import { logger, LogCategory } from '@/utils/logging';
+import type { ConnectionState } from './config';
 
 export const useConnectionManager = (
   retryTimeouts: React.MutableRefObject<Record<string, NodeJS.Timeout>>,
@@ -20,16 +20,18 @@ export const useConnectionManager = (
     });
 
     setConnectionState(prev => ({
-      status: 'error',
+      status: 'disconnected',
       lastAttempt: Date.now(),
-      retryCount: prev.retryCount + 1
+      retryCount: prev.retryCount + 1,
+      error
     }));
 
-    if (retryTimeouts.current[chatId]) {
-      clearTimeout(retryTimeouts.current[chatId]);
+    const timeoutKey = `retry-${chatId}`;
+    if (retryTimeouts.current[timeoutKey]) {
+      clearTimeout(retryTimeouts.current[timeoutKey]);
     }
 
-    retryTimeouts.current[chatId] = setTimeout(
+    retryTimeouts.current[timeoutKey] = setTimeout(
       () => subscribeToChat(chatId),
       Math.min(1000 * Math.pow(2, connectionState.retryCount), 30000)
     );
