@@ -16,6 +16,7 @@ interface MessageListProps {
 const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
   const [isMounted, setIsMounted] = useState(false);
+  const { metrics } = useMessageListMetrics(null, isMounted, keyboardVisible);
   
   // Track mount status with performance timing
   useEffect(() => {
@@ -35,7 +36,7 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
       });
       setIsMounted(false);
     };
-  }, []);
+  }, [metrics]);
 
   // Message grouping with performance tracking
   const messageGroups = (() => {

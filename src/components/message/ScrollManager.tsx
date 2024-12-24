@@ -1,4 +1,4 @@
-import { useRef, RefObject } from 'react';
+import { useRef, RefObject, useEffect } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { useScrollMetrics } from './ScrollManagerMetrics';
 import { useScrollQueue } from './useScrollQueue';
