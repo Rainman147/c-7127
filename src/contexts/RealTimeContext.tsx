@@ -13,18 +13,18 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   const [lastMessage, setLastMessage] = useState<Message>();
   const [retryCount, setRetryCount] = useState(0);
   const retryTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
-  
+  const activeSubscriptions = useRef(new Set<string>());
+  const channels = useRef(new Map());
+
   const {
     connectionState,
     setConnectionState,
     handleConnectionError
-  } = useConnectionManager(retryTimeouts, subscribeToChat);
+  } = useConnectionManager(retryTimeouts);
 
   const handleError = useErrorHandler(retryCount, activeSubscriptions);
 
   const {
-    channels,
-    activeSubscriptions,
     cleanupSubscription,
     cleanupAllSubscriptions,
     processMessage

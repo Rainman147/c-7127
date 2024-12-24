@@ -64,12 +64,11 @@ export const useRealtimeMessages = (
         });
 
         subscribeToChat(chatId);
-        setRetryCount(0); // Reset retry count on successful subscription
+        setRetryCount(0);
       } catch (error) {
         handleError(error as Error, 'setup subscription');
         if (retryCount < MAX_RETRIES) {
           setRetryCount(prev => prev + 1);
-          // Retry with exponential backoff
           setTimeout(setupSubscription, Math.pow(2, retryCount) * 1000);
         }
       }

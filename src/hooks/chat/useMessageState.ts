@@ -1,135 +1,98 @@
 import { useState, useCallback } from 'react';
-import { logger, LogCategory } from '@/utils/logging';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { logger, LogCategory } from '@/utils/logging';
 import { ErrorTracker } from '@/utils/errorTracking';
-import type { Message } from '@/types/chat';
 
-export const useMessageState = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+export const useMessageState = (initialContent: string, messageId?: string) => {
   const { toast } = useToast();
-  const [retryCount, setRetryCount] = useState(0);
-  const MAX_RETRIES = 3;
+  const [editedContent, setEditedContent] = useState(initialContent);
+  const [isEditing, setIsEditing] = useState(false);
+  const [wasEdited, setWasEdited] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleError = useCallback((error: Error, operation: string) => {
-    logger.error(LogCategory.STATE, 'useMessageState', `Error during ${operation}:`, {
-      error,
-      timestamp: new Date().toISOString(),
-      retryCount,
-      messageCount: messages.length
-    });
-
-    ErrorTracker.trackError(error, {
-      component: 'useMessageState',
-      severity: retryCount >= MAX_RETRIES ? 'high' : 'medium',
-      timestamp: new Date().toISOString(),
-      operation,
-      additionalInfo: {
-        messageCount: messages.length,
-        retryCount
-      }
-    });
-
-    toast({
-      title: "Error",
-      description: `Failed to ${operation}. ${retryCount < MAX_RETRIES ? 'Retrying...' : 'Please try again later.'}`,
-      variant: "destructive",
-    });
-  }, [retryCount, messages.length, toast]);
-
-  const updateMessages = useCallback((newMessages: Message[]) => {
-    try {
-      logger.debug(LogCategory.STATE, 'useMessageState', 'Updating messages:', { 
-        count: newMessages.length,
-        timestamp: new Date().toISOString()
-      });
-      setMessages(sortMessages(newMessages));
-      setRetryCount(0); // Reset retry count on success
-    } catch (error) {
-      handleError(error as Error, 'update messages');
-      if (retryCount < MAX_RETRIES) {
-        setRetryCount(prev => prev + 1);
-        // Retry with exponential backoff
-        setTimeout(() => updateMessages(newMessages), Math.pow(2, retryCount) * 1000);
-      }
+  const handleSave = useCallback(async (newContent: string) => {
+    if (!messageId) {
+      logger.error(LogCategory.ERROR, 'Message', 'Cannot save edit without message ID');
+      return;
     }
-  }, [handleError, retryCount]);
 
-  const addOptimisticMessage = useCallback((content: string, type: 'text' | 'audio' = 'text') => {
     try {
-      logger.debug(LogCategory.STATE, 'useMessageState', 'Adding optimistic message:', { 
-        contentLength: content.length,
-        type,
-        timestamp: new Date().toISOString()
+      setIsSaving(true);
+      logger.info(LogCategory.STATE, 'Message', 'Saving edited content:', { 
+        messageId,
+        contentLength: newContent.length
       });
       
-      const optimisticMessage: Message = {
-        id: `temp-${Date.now()}`,
-        role: 'user',
-        content,
-        type,
-        sequence: messages.length,
-        created_at: new Date().toISOString(),
-        isOptimistic: true
-      };
-
-      setMessages(prev => sortMessages([...prev, optimisticMessage]));
-      return optimisticMessage;
-    } catch (error) {
-      handleError(error as Error, 'add optimistic message');
-      throw error; // Re-throw to handle in UI
-    }
-  }, [messages.length, handleError]);
-
-  const replaceOptimisticMessage = useCallback((tempId: string, actualMessage: Message) => {
-    try {
-      logger.debug(LogCategory.STATE, 'useMessageState', 'Replacing optimistic message:', { 
-        tempId,
-        actualMessageId: actualMessage.id,
-        timestamp: new Date().toISOString()
-      });
-      
-      setMessages(prev => 
-        sortMessages(prev.map(msg => 
-          msg.id === tempId ? { ...actualMessage, isOptimistic: false } : msg
-        ))
-      );
-    } catch (error) {
-      handleError(error as Error, 'replace optimistic message');
-      if (retryCount < MAX_RETRIES) {
-        setRetryCount(prev => prev + 1);
-        setTimeout(() => replaceOptimisticMessage(tempId, actualMessage), Math.pow(2, retryCount) * 1000);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
       }
-    }
-  }, [handleError, retryCount]);
 
-  const clearMessages = useCallback(() => {
-    try {
-      logger.debug(LogCategory.STATE, 'useMessageState', 'Clearing messages', {
-        timestamp: new Date().toISOString()
+      const { error } = await supabase
+        .from('edited_messages')
+        .upsert({
+          message_id: messageId,
+          user_id: user.id,
+          edited_content: newContent
+        }, {
+          onConflict: 'message_id,user_id'
+        });
+
+      if (error) throw error;
+      
+      setEditedContent(newContent);
+      setIsEditing(false);
+      setWasEdited(true);
+      
+      toast({
+        description: "Changes saved successfully",
+        className: "bg-[#10A37F] text-white",
       });
-      setMessages([]);
-      setRetryCount(0);
-    } catch (error) {
-      handleError(error as Error, 'clear messages');
+
+      logger.debug(LogCategory.STATE, 'Message', 'Save complete');
+    } catch (error: any) {
+      logger.error(LogCategory.ERROR, 'Message', 'Error saving edit:', error);
+      ErrorTracker.trackError(error, {
+        component: 'MessageState',
+        severity: 'medium',
+        timestamp: new Date().toISOString(),
+        operation: 'save message edit',
+        additionalInfo: { messageId }
+      });
+      toast({
+        title: "Error saving changes",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
-  }, [handleError]);
+  }, [messageId, toast]);
+
+  const handleCancel = useCallback(() => {
+    logger.info(LogCategory.STATE, 'Message', 'Canceling edit:', { messageId });
+    setEditedContent(initialContent);
+    setIsEditing(false);
+  }, [initialContent]);
+
+  const handleEdit = useCallback(() => {
+    logger.info(LogCategory.STATE, 'Message', 'Starting edit for message:', { messageId });
+    if (!messageId) {
+      logger.error(LogCategory.ERROR, 'Message', 'Cannot edit message without ID');
+      return;
+    }
+    setIsEditing(true);
+  }, [messageId]);
 
   return {
-    messages,
-    updateMessages,
-    addOptimisticMessage,
-    replaceOptimisticMessage,
-    clearMessages,
-    setMessages,
-    retryCount
+    editedContent,
+    setEditedContent,
+    isEditing,
+    wasEdited,
+    isSaving,
+    handleSave,
+    handleCancel,
+    handleEdit
   };
-};
-
-const sortMessages = (messages: Message[]) => {
-  return [...messages].sort((a, b) => {
-    if (a.sequence !== b.sequence) {
-      return (a.sequence || 0) - (b.sequence || 0);
-    }
-    return new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime();
-  });
 };
