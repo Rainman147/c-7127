@@ -3,7 +3,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useFunctionCalling } from "@/hooks/useFunctionCalling";
 import { useChatSessions } from "@/hooks/useChatSessions";
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 
 interface UseMessageSubmissionProps {
   onSend: (message: string, type?: 'text' | 'audio') => Promise<any>;
@@ -25,24 +24,7 @@ export const useMessageSubmission = ({ onSend, message, setMessage }: UseMessage
     }
 
     try {
-      // Check authentication first
-      const { data: { session }, error: authError } = await supabase.auth.getSession();
-      
-      if (authError || !session) {
-        console.error('[useMessageSubmission] Authentication error:', authError);
-        toast({
-          title: "Authentication Error",
-          description: "Please sign in to send messages",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('[useMessageSubmission] Submitting message:', { 
-        messageLength: message.length,
-        activeSessionId 
-      });
-
+      console.log('[useMessageSubmission] Submitting message:', message);
       const response = await onSend(message, 'text');
       
       if (response) {
