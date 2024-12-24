@@ -2,7 +2,9 @@ import { useMemo } from 'react';
 import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
-import type { MessageGroup } from '@/utils/messageGrouping';
+import type { MessageGroup } from '@/types/messageGrouping';
+
+const TIME_THRESHOLD_MINUTES = 5;
 
 const formatMessageTime = (date: Date): string => {
   try {
@@ -34,8 +36,6 @@ const getTimeLabel = (dateStr: string): string => {
     return 'Unknown time';
   }
 };
-
-const TIME_THRESHOLD_MINUTES = 5;
 
 export const useMessageGrouping = (messages: Message[]) => {
   return useMemo(() => {

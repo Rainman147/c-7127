@@ -1,5 +1,5 @@
 import { memo, useEffect } from 'react';
-import { type MessageGroup as MessageGroupType } from '@/utils/messageGrouping';
+import { type MessageGroup as MessageGroupType } from '@/types/messageGrouping';
 import Message from '../Message';
 import { Tooltip } from '../ui/tooltip';
 import { logger, LogCategory } from '@/utils/logging';
