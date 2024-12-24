@@ -7,8 +7,9 @@ import { logger, LogCategory } from '@/utils/logging';
 const MessageListContainer = ({ 
   messages,
   isLoading,
-  mountResolution,
+  isInitialized,
   onContainerMount,
+  onSubscriptionReady,
   onMessagesLoad
 }: MessageListContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -16,7 +17,7 @@ const MessageListContainer = ({
 
   useEffect(() => {
     if (containerRef.current) {
-      logger.debug(LogCategory.RENDER, 'MessageListContainer', 'Container mounted, updating metrics');
+      logger.debug(LogCategory.RENDER, 'MessageListContainer', 'Container mounted');
       metrics.logMetrics('container_mounted', {
         component: 'MessageListContainer',
         event: 'mount'
@@ -35,7 +36,7 @@ const MessageListContainer = ({
   return (
     <div 
       ref={containerRef}
-      className="flex flex-col space-y-4 pb-[200px] pt-4"
+      className={`flex flex-col space-y-4 pb-[200px] pt-4 overflow-y-auto ${isInitialized ? '' : 'invisible'}`}
     >
       <MessageGroups messages={messages} />
     </div>

@@ -33,7 +33,8 @@ export const useRealtimeMessages = (
   messages: Message[],
   setMessages: (messages: Message[]) => void,
   updateCache: (chatId: string, messages: Message[]) => void,
-  invalidateCache: (chatId: string) => void
+  invalidateCache: (chatId: string) => void,
+  onSubscriptionReady?: () => void
 ) => {
   const { toast } = useToast();
   const prevChatIdRef = useRef<string | null>(null);
@@ -111,6 +112,7 @@ export const useRealtimeMessages = (
       .subscribe(status => {
         if (status === 'SUBSCRIBED') {
           console.log('[useRealtimeMessages] Successfully subscribed to chat:', currentChatId);
+          onSubscriptionReady?.();
         } else if (status === 'CHANNEL_ERROR') {
           console.error('[useRealtimeMessages] Error subscribing to chat:', currentChatId);
           toast({
@@ -131,5 +133,5 @@ export const useRealtimeMessages = (
         channelRef.current = null;
       }
     };
-  }, [currentChatId, messages, setMessages, updateCache, invalidateCache, toast]);
+  }, [currentChatId, messages, setMessages, updateCache, invalidateCache, toast, onSubscriptionReady]);
 };
