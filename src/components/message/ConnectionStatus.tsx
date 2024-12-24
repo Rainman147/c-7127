@@ -1,7 +1,8 @@
 import { useRealTime } from '@/contexts/RealTimeContext';
-import { Loader2, WifiOff, Wifi } from 'lucide-react';
+import { Loader2, WifiOff, Wifi, AlertCircle } from 'lucide-react';
 import { logger, LogCategory } from '@/utils/logging';
 import { Tooltip } from '../ui/tooltip';
+import { Alert } from '../ui/alert';
 
 export const ConnectionStatus = () => {
   const { connectionState } = useRealTime();
@@ -19,7 +20,8 @@ export const ConnectionStatus = () => {
 
   logger.debug(LogCategory.RENDER, 'ConnectionStatus', 'Rendering connection status:', {
     status: connectionState.status,
-    retryCount: connectionState.retryCount
+    retryCount: connectionState.retryCount,
+    error: connectionState.error?.message
   });
 
   const statusConfig = {
@@ -41,11 +43,22 @@ export const ConnectionStatus = () => {
   const Icon = config.icon;
 
   return (
-    <Tooltip content={config.tooltipContent}>
-      <div className={`flex items-center justify-center gap-2 py-2 rounded-md mb-4 ${config.className} cursor-help transition-colors animate-fade-in`}>
-        <Icon className={`h-4 w-4 ${connectionState.status === 'connecting' ? 'animate-spin' : ''}`} />
-        <span>{config.message}</span>
-      </div>
-    </Tooltip>
+    <div className="space-y-4">
+      <Tooltip content={config.tooltipContent}>
+        <div className={`flex items-center justify-center gap-2 py-2 rounded-md mb-2 ${config.className} cursor-help transition-colors animate-fade-in`}>
+          <Icon className={`h-4 w-4 ${connectionState.status === 'connecting' ? 'animate-spin' : ''}`} />
+          <span>{config.message}</span>
+        </div>
+      </Tooltip>
+      
+      {connectionState.error && (
+        <Alert variant="destructive" className="animate-fade-in">
+          <AlertCircle className="h-4 w-4" />
+          <span className="ml-2">
+            Error: {connectionState.error.message}
+          </span>
+        </Alert>
+      )}
+    </div>
   );
 };
