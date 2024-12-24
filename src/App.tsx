@@ -11,12 +11,14 @@ function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <RealTimeProvider>
-          <TemplateProvider>
-            <AppRoutes />
-            <Toaster />
-          </TemplateProvider>
-        </RealTimeProvider>
+        <AuthProvider>
+          <RealTimeProvider>
+            <TemplateProvider>
+              <AppRoutes />
+              <Toaster />
+            </TemplateProvider>
+          </RealTimeProvider>
+        </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
   );
