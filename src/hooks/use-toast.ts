@@ -123,11 +123,11 @@ const reducer = (state: State, action: Action): State => {
   }
 }
 
-const listeners: Array<(state: State) => void> = []
-
-let memoryState: State = { toasts: [] }
+const listeners = new Set<(state: State) => void>()
+const memoryState: State = { toasts: [] }
 
 function dispatch(action: Action) {
+  console.log('[Toast] Dispatching action:', action.type);
   memoryState = reducer(memoryState, action)
   listeners.forEach((listener) => {
     listener(memoryState)
@@ -138,13 +138,20 @@ type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
   const id = genId()
+  console.log('[Toast] Creating new toast with ID:', id);
 
-  const update = (props: ToasterToast) =>
+  const update = (props: ToasterToast) => {
+    console.log('[Toast] Updating toast:', id);
     dispatch({
       type: "UPDATE_TOAST",
       toast: { ...props, id },
     })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+  }
+
+  const dismiss = () => {
+    console.log('[Toast] Dismissing toast:', id);
+    dispatch({ type: "DISMISS_TOAST", toastId: id })
+  }
 
   dispatch({
     type: "ADD_TOAST",
@@ -153,13 +160,16 @@ function toast({ ...props }: Toast) {
       id,
       open: true,
       onOpenChange: (open) => {
-        if (!open) dismiss()
+        if (!open) {
+          console.log('[Toast] Toast closed:', id);
+          dismiss()
+        }
       },
     },
   })
 
   return {
-    id: id,
+    id,
     dismiss,
     update,
   }
@@ -169,19 +179,22 @@ function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
   React.useEffect(() => {
-    listeners.push(setState)
+    console.log('[useToast] Setting up listener');
+    listeners.add(setState)
+
     return () => {
-      const index = listeners.indexOf(setState)
-      if (index > -1) {
-        listeners.splice(index, 1)
-      }
+      console.log('[useToast] Cleaning up listener');
+      listeners.delete(setState)
     }
-  }, [state])
+  }, [])
 
   return {
     ...state,
     toast,
-    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+    dismiss: (toastId?: string) => {
+      console.log('[useToast] Dismissing toast:', toastId || 'all');
+      dispatch({ type: "DISMISS_TOAST", toastId })
+    },
   }
 }
 

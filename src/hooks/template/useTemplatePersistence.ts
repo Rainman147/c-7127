@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { useSessionParams } from "@/hooks/routing/useSessionParams";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -7,6 +7,16 @@ import type { Template } from "@/components/template/templateTypes";
 export const useTemplatePersistence = () => {
   const { sessionId } = useSessionParams();
   const { toast } = useToast();
+  const isMounted = useRef(false);
+
+  useEffect(() => {
+    console.log('[useTemplatePersistence] Component mounted');
+    isMounted.current = true;
+    return () => {
+      console.log('[useTemplatePersistence] Component unmounting');
+      isMounted.current = false;
+    };
+  }, []);
 
   const loadTemplate = useCallback(async () => {
     if (!sessionId) {
@@ -22,6 +32,11 @@ export const useTemplatePersistence = () => {
         .select('template_type')
         .eq('id', sessionId)
         .maybeSingle();
+
+      if (!isMounted.current) {
+        console.log('[useTemplatePersistence] Component unmounted, skipping state update');
+        return null;
+      }
 
       if (error) {
         console.error('[useTemplatePersistence] Database error:', error);
@@ -42,12 +57,14 @@ export const useTemplatePersistence = () => {
       return chat.template_type;
       
     } catch (error) {
-      console.error('[useTemplatePersistence] Failed to load template:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load chat template",
-        variant: "destructive"
-      });
+      if (isMounted.current) {
+        console.error('[useTemplatePersistence] Failed to load template:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load chat template",
+          variant: "destructive"
+        });
+      }
       return null;
     }
   }, [sessionId, toast]);
@@ -69,6 +86,11 @@ export const useTemplatePersistence = () => {
         .update({ template_type: template.id })
         .eq('id', sessionId);
 
+      if (!isMounted.current) {
+        console.log('[useTemplatePersistence] Component unmounted, skipping state update');
+        return;
+      }
+
       if (error) {
         console.error('[useTemplatePersistence] Failed to save template:', error);
         toast({
@@ -80,12 +102,14 @@ export const useTemplatePersistence = () => {
         console.log('[useTemplatePersistence] Template saved successfully');
       }
     } catch (error) {
-      console.error('[useTemplatePersistence] Error saving template:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save template changes",
-        variant: "destructive"
-      });
+      if (isMounted.current) {
+        console.error('[useTemplatePersistence] Error saving template:', error);
+        toast({
+          title: "Error",
+          description: "Failed to save template changes",
+          variant: "destructive"
+        });
+      }
     }
   }, [sessionId, toast]);
 
