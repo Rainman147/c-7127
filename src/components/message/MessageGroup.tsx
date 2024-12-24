@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 import { type MessageGroup as MessageGroupType } from '@/utils/messageGrouping';
 import Message from '../Message';
 import { Tooltip } from '../ui/tooltip';
@@ -9,10 +9,20 @@ interface MessageGroupProps {
 }
 
 export const MessageGroup = memo(({ group }: MessageGroupProps) => {
-  logger.debug(LogCategory.RENDER, 'MessageGroup', 'Rendering message group', {
-    groupId: group.id,
-    messageCount: group.messages.length
-  });
+  // Log render performance for each group
+  useEffect(() => {
+    const renderStart = performance.now();
+    
+    return () => {
+      logger.debug(LogCategory.RENDER, 'MessageGroup', 'Group render complete', {
+        groupId: group.id,
+        messageCount: group.messages.length,
+        renderDuration: performance.now() - renderStart,
+        firstMessageId: group.messages[0]?.id,
+        timestamp: new Date().toISOString()
+      });
+    };
+  }, [group.id, group.messages]);
 
   return (
     <div key={group.id} className="space-y-4">

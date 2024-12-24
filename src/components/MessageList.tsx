@@ -14,7 +14,7 @@ const MessageList = ({ messages }: { messages: Message[] }) => {
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
   const { connectionState } = useRealTime();
   
-  useScrollHandler({
+  const { metrics: scrollMetrics } = useScrollHandler({
     messages,
     viewportHeight,
     keyboardVisible,
@@ -26,14 +26,28 @@ const MessageList = ({ messages }: { messages: Message[] }) => {
     const groupStartTime = performance.now();
     const groups = groupMessages(messages);
     
-    logger.debug(LogCategory.RENDER, 'MessageList', 'Message grouping complete', {
+    logger.debug(LogCategory.RENDER, 'MessageList', 'Message grouping performance', {
       duration: performance.now() - groupStartTime,
       messageCount: messages.length,
-      groupCount: groups.length
+      groupCount: groups.length,
+      averageMessagesPerGroup: messages.length / groups.length,
+      timestamp: new Date().toISOString()
     });
     
     return groups;
   })();
+
+  // Log comprehensive render metrics
+  logger.debug(LogCategory.RENDER, 'MessageList', 'Render metrics', {
+    duration: performance.now() - renderStartTime,
+    messageCount: messages.length,
+    groupCount: messageGroups.length,
+    scrollMetrics,
+    viewportHeight,
+    keyboardVisible,
+    connectionState: connectionState?.toString() || 'unknown',
+    timestamp: new Date().toISOString()
+  });
 
   if (messages.length === 0) {
     return (
@@ -42,12 +56,6 @@ const MessageList = ({ messages }: { messages: Message[] }) => {
       </div>
     );
   }
-
-  logger.debug(LogCategory.RENDER, 'MessageList', 'Render complete', {
-    duration: performance.now() - renderStartTime,
-    messageCount: messages.length,
-    groupCount: messageGroups.length
-  });
 
   return (
     <div 
