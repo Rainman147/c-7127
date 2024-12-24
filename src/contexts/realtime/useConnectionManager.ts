@@ -9,7 +9,8 @@ export const useConnectionManager = (
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     status: 'disconnected',
     lastAttempt: 0,
-    retryCount: 0
+    retryCount: 0,
+    error: undefined
   });
 
   const handleConnectionError = useCallback((chatId: string, error: Error) => {

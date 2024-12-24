@@ -1,10 +1,9 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import { useToast } from '@/hooks/use-toast';
-import { ErrorTracker } from '@/utils/errorTracking';
 import { useSubscriptionManager } from './realtime/useSubscriptionManager';
 import { useConnectionManager } from './realtime/useConnectionManager';
+import { useErrorHandler } from './realtime/useErrorHandler';
 import type { Message } from '@/types/chat';
 import type { RealTimeContextValue } from './realtime/config';
 
@@ -12,49 +11,24 @@ const RealTimeContext = createContext<RealTimeContextValue | undefined>(undefine
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
-  const { toast } = useToast();
   const [retryCount, setRetryCount] = useState(0);
-  const MAX_RETRIES = 3;
   const retryTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
   
-  const handleError = useCallback((error: Error, operation: string) => {
-    logger.error(LogCategory.COMMUNICATION, 'RealTimeContext', `Error during ${operation}:`, {
-      error,
-      retryCount,
-      timestamp: new Date().toISOString()
-    });
+  const {
+    connectionState,
+    setConnectionState,
+    handleConnectionError
+  } = useConnectionManager(retryTimeouts, subscribeToChat);
 
-    ErrorTracker.trackError(error, {
-      component: 'RealTimeContext',
-      severity: retryCount >= MAX_RETRIES ? 'high' : 'medium',
-      timestamp: new Date().toISOString(),
-      operation,
-      additionalInfo: {
-        activeSubscriptions: Array.from(activeSubscriptions.current)
-      }
-    });
-
-    if (retryCount < MAX_RETRIES) {
-      toast({
-        title: "Connection Issue",
-        description: `Attempting to reconnect... (${retryCount + 1}/${MAX_RETRIES})`,
-        variant: "default",
-      });
-    } else {
-      toast({
-        title: "Connection Error",
-        description: "Unable to establish connection. Please refresh the page.",
-        variant: "destructive",
-      });
-    }
-  }, [retryCount, toast]);
+  const handleError = useErrorHandler(retryCount, activeSubscriptions);
 
   const {
     channels,
     activeSubscriptions,
     cleanupSubscription,
-    cleanupAllSubscriptions
-  } = useSubscriptionManager(setLastMessage);
+    cleanupAllSubscriptions,
+    processMessage
+  } = useSubscriptionManager(setLastMessage, setConnectionState, handleConnectionError, lastMessage);
 
   const subscribeToChat = useCallback((chatId: string) => {
     try {
@@ -88,35 +62,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
             table: 'messages',
             filter: `chat_id=eq.${chatId}`,
           },
-          (payload) => {
-            try {
-              logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Received message:', { 
-                payload,
-                chatId,
-                eventType: payload.eventType,
-                timestamp: new Date().toISOString()
-              });
-              
-              if (payload.eventType === 'INSERT') {
-                const newMessage = payload.new as Message;
-                
-                if (lastMessage?.id !== newMessage.id) {
-                  logger.debug(LogCategory.STATE, 'RealTimeContext', 'Setting new last message:', {
-                    messageId: newMessage.id,
-                    previousMessageId: lastMessage?.id
-                  });
-                  setLastMessage(newMessage);
-                  setRetryCount(0); // Reset retry count on successful message
-                } else {
-                  logger.debug(LogCategory.STATE, 'RealTimeContext', 'Skipping duplicate message:', {
-                    messageId: newMessage.id
-                  });
-                }
-              }
-            } catch (error) {
-              handleError(error as Error, 'process message payload');
-            }
-          }
+          (payload) => processMessage(payload, chatId)
         )
         .subscribe(status => {
           try {
@@ -150,18 +96,12 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         });
     } catch (error) {
       handleError(error as Error, 'subscribe to chat');
-      if (retryCount < MAX_RETRIES) {
+      if (retryCount < 3) {
         setRetryCount(prev => prev + 1);
         setTimeout(() => subscribeToChat(chatId), Math.pow(2, retryCount) * 1000);
       }
     }
-  }, [lastMessage, handleError, retryCount]);
-
-  const {
-    connectionState,
-    setConnectionState,
-    handleConnectionError
-  } = useConnectionManager(retryTimeouts, subscribeToChat);
+  }, [channels, activeSubscriptions, setConnectionState, processMessage, handleConnectionError, handleError, retryCount]);
 
   const unsubscribeFromChat = useCallback((chatId: string) => {
     try {
