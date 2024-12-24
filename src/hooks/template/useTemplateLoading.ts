@@ -1,6 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { useAvailableTemplates } from "./useAvailableTemplates";
 import { useTemplatePersistence } from "./useTemplatePersistence";
+import { logger, LogCategory } from '@/utils/logging';
+import { useToast } from '@/hooks/use-toast';
+import { ErrorTracker } from '@/utils/errorTracking';
 import type { Template } from "@/components/template/templateTypes";
 
 export const useTemplateLoading = (
@@ -12,56 +15,108 @@ export const useTemplateLoading = (
 ) => {
   const availableTemplates = useAvailableTemplates();
   const { loadTemplate } = useTemplatePersistence();
+  const { toast } = useToast();
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
+
+  const handleError = useCallback((error: Error, operation: string) => {
+    logger.error(LogCategory.STATE, 'useTemplateLoading', `Error during ${operation}:`, {
+      error,
+      selectedTemplateId: selectedTemplate?.id,
+      retryCount,
+      timestamp: new Date().toISOString()
+    });
+
+    ErrorTracker.trackError(error, {
+      component: 'useTemplateLoading',
+      operation,
+      severity: retryCount >= MAX_RETRIES ? 'high' : 'medium',
+      timestamp: new Date().toISOString(),
+      additionalInfo: {
+        selectedTemplateId: selectedTemplate?.id,
+        availableTemplatesCount: availableTemplates.length
+      }
+    });
+
+    toast({
+      title: "Template Error",
+      description: `Failed to ${operation}. ${retryCount < MAX_RETRIES ? 'Retrying...' : 'Using default template.'}`,
+      variant: "destructive",
+    });
+  }, [selectedTemplate?.id, retryCount, availableTemplates.length, toast]);
 
   useEffect(() => {
     const loadTemplateForChat = async () => {
       try {
         setIsLoading(true);
+        logger.debug(LogCategory.STATE, 'useTemplateLoading', 'Loading template:', {
+          timestamp: new Date().toISOString()
+        });
+
         const templateId = await loadTemplate();
         
         if (templateId) {
-          // Find the template object from available templates using the ID
           const loadedTemplate = availableTemplates.find(t => t.id === templateId);
           
           if (loadedTemplate) {
-            console.log('[useTemplateLoading] Loaded template:', loadedTemplate.name);
+            logger.debug(LogCategory.STATE, 'useTemplateLoading', 'Loaded template:', {
+              templateName: loadedTemplate.name,
+              timestamp: new Date().toISOString()
+            });
+
             if (selectedTemplate?.id === loadedTemplate.id) {
-              console.log('[useTemplateLoading] Loaded template matches current, skipping update');
+              logger.debug(LogCategory.STATE, 'useTemplateLoading', 'Template already selected, skipping update');
               return;
             }
+
             setSelectedTemplate(loadedTemplate);
             onTemplateChange(loadedTemplate);
+            setRetryCount(0); // Reset retry count on success
           } else {
-            console.log('[useTemplateLoading] Template ID not found in available templates, using global template');
-            if (selectedTemplate?.id === globalTemplateRef.current.id) {
-              console.log('[useTemplateLoading] Global template matches current, skipping update');
-              return;
-            }
-            setSelectedTemplate(globalTemplateRef.current);
-            onTemplateChange(globalTemplateRef.current);
+            logger.debug(LogCategory.STATE, 'useTemplateLoading', 'Using global template (template not found)');
+            handleFallbackToGlobalTemplate();
           }
         } else {
-          console.log('[useTemplateLoading] No saved template, using global template');
-          if (selectedTemplate?.id === globalTemplateRef.current.id) {
-            console.log('[useTemplateLoading] Global template matches current, skipping update');
-            return;
-          }
-          setSelectedTemplate(globalTemplateRef.current);
-          onTemplateChange(globalTemplateRef.current);
+          logger.debug(LogCategory.STATE, 'useTemplateLoading', 'Using global template (no saved template)');
+          handleFallbackToGlobalTemplate();
         }
       } catch (error) {
-        console.error('[useTemplateLoading] Failed to load template:', error);
-        setSelectedTemplate(globalTemplateRef.current);
-        onTemplateChange(globalTemplateRef.current);
+        handleError(error as Error, 'load template');
+        if (retryCount < MAX_RETRIES) {
+          setRetryCount(prev => prev + 1);
+          setTimeout(loadTemplateForChat, Math.pow(2, retryCount) * 1000);
+        } else {
+          handleFallbackToGlobalTemplate();
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
+    const handleFallbackToGlobalTemplate = () => {
+      if (selectedTemplate?.id === globalTemplateRef.current.id) {
+        logger.debug(LogCategory.STATE, 'useTemplateLoading', 'Global template already selected');
+        return;
+      }
+      setSelectedTemplate(globalTemplateRef.current);
+      onTemplateChange(globalTemplateRef.current);
+    };
+
     loadTemplateForChat();
-  }, [onTemplateChange, loadTemplate, selectedTemplate, setSelectedTemplate, setIsLoading, globalTemplateRef, availableTemplates]);
+  }, [
+    onTemplateChange,
+    loadTemplate,
+    selectedTemplate,
+    setSelectedTemplate,
+    setIsLoading,
+    globalTemplateRef,
+    availableTemplates,
+    handleError,
+    retryCount
+  ]);
 
   return {
-    availableTemplates
+    availableTemplates,
+    retryCount
   };
 };

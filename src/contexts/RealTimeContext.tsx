@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
+import { useToast } from '@/hooks/use-toast';
+import { ErrorTracker } from '@/utils/errorTracking';
 import { useSubscriptionManager } from './realtime/useSubscriptionManager';
 import { useConnectionManager } from './realtime/useConnectionManager';
 import type { Message } from '@/types/chat';
@@ -10,7 +12,42 @@ const RealTimeContext = createContext<RealTimeContextValue | undefined>(undefine
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
+  const { toast } = useToast();
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
   
+  const handleError = useCallback((error: Error, operation: string) => {
+    logger.error(LogCategory.COMMUNICATION, 'RealTimeContext', `Error during ${operation}:`, {
+      error,
+      retryCount,
+      timestamp: new Date().toISOString()
+    });
+
+    ErrorTracker.trackError(error, {
+      component: 'RealTimeContext',
+      operation,
+      severity: retryCount >= MAX_RETRIES ? 'high' : 'medium',
+      timestamp: new Date().toISOString(),
+      additionalInfo: {
+        activeSubscriptions: Array.from(activeSubscriptions.current)
+      }
+    });
+
+    if (retryCount < MAX_RETRIES) {
+      toast({
+        title: "Connection Issue",
+        description: `Attempting to reconnect... (${retryCount + 1}/${MAX_RETRIES})`,
+        variant: "default",
+      });
+    } else {
+      toast({
+        title: "Connection Error",
+        description: "Unable to establish connection. Please refresh the page.",
+        variant: "destructive",
+      });
+    }
+  }, [retryCount, toast]);
+
   const {
     channels,
     retryTimeouts,
@@ -20,90 +57,105 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   } = useSubscriptionManager(setLastMessage);
 
   const subscribeToChat = useCallback((chatId: string) => {
-    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Subscribing to chat:', { 
-      chatId,
-      activeSubscriptions: Array.from(activeSubscriptions.current),
-      timestamp: new Date().toISOString()
-    });
-
-    if (channels.current.has(chatId)) {
-      logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Already subscribed to chat:', { 
+    try {
+      logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Subscribing to chat:', { 
         chatId,
+        activeSubscriptions: Array.from(activeSubscriptions.current),
         timestamp: new Date().toISOString()
       });
-      return;
-    }
 
-    setConnectionState(prev => ({
-      ...prev,
-      status: 'connecting',
-      lastAttempt: Date.now(),
-    }));
+      if (channels.current.has(chatId)) {
+        logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Already subscribed to chat:', { 
+          chatId,
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
 
-    const channel = supabase
-      .channel(`chat-${chatId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `chat_id=eq.${chatId}`,
-        },
-        (payload) => {
-          logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Received message:', { 
-            payload,
-            chatId,
-            eventType: payload.eventType,
-            timestamp: new Date().toISOString()
-          });
-          
-          // Only set lastMessage for new messages to prevent duplicate updates
-          if (payload.eventType === 'INSERT') {
-            const newMessage = payload.new as Message;
-            
-            // Add additional validation to prevent duplicate messages
-            if (lastMessage?.id !== newMessage.id) {
-              logger.debug(LogCategory.STATE, 'RealTimeContext', 'Setting new last message:', {
-                messageId: newMessage.id,
-                previousMessageId: lastMessage?.id
+      setConnectionState(prev => ({
+        ...prev,
+        status: 'connecting',
+        lastAttempt: Date.now(),
+      }));
+
+      const channel = supabase
+        .channel(`chat-${chatId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'messages',
+            filter: `chat_id=eq.${chatId}`,
+          },
+          (payload) => {
+            try {
+              logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Received message:', { 
+                payload,
+                chatId,
+                eventType: payload.eventType,
+                timestamp: new Date().toISOString()
               });
-              setLastMessage(newMessage);
-            } else {
-              logger.debug(LogCategory.STATE, 'RealTimeContext', 'Skipping duplicate message:', {
-                messageId: newMessage.id
-              });
+              
+              if (payload.eventType === 'INSERT') {
+                const newMessage = payload.new as Message;
+                
+                if (lastMessage?.id !== newMessage.id) {
+                  logger.debug(LogCategory.STATE, 'RealTimeContext', 'Setting new last message:', {
+                    messageId: newMessage.id,
+                    previousMessageId: lastMessage?.id
+                  });
+                  setLastMessage(newMessage);
+                  setRetryCount(0); // Reset retry count on successful message
+                } else {
+                  logger.debug(LogCategory.STATE, 'RealTimeContext', 'Skipping duplicate message:', {
+                    messageId: newMessage.id
+                  });
+                }
+              }
+            } catch (error) {
+              handleError(error as Error, 'process message payload');
             }
           }
-        }
-      )
-      .subscribe(status => {
-        logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Subscription status changed:', {
-          chatId,
-          status,
-          timestamp: new Date().toISOString(),
-          retryCount: connectionState.retryCount
-        });
+        )
+        .subscribe(status => {
+          try {
+            logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Subscription status changed:', {
+              chatId,
+              status,
+              timestamp: new Date().toISOString(),
+              retryCount
+            });
 
-        if (status === 'SUBSCRIBED') {
-          activeSubscriptions.current.add(chatId);
-          channels.current.set(chatId, channel);
-          setConnectionState({
-            status: 'connected',
-            lastAttempt: Date.now(),
-            retryCount: 0,
-          });
-          
-          logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Successfully subscribed to chat:', {
-            chatId,
-            activeSubscriptions: Array.from(activeSubscriptions.current),
-            timestamp: new Date().toISOString()
-          });
-        } else if (status === 'CHANNEL_ERROR') {
-          handleConnectionError(chatId, new Error(`Failed to subscribe to chat ${chatId}`));
-        }
-      });
-  }, [lastMessage]);
+            if (status === 'SUBSCRIBED') {
+              activeSubscriptions.current.add(chatId);
+              channels.current.set(chatId, channel);
+              setConnectionState({
+                status: 'connected',
+                lastAttempt: Date.now(),
+                retryCount: 0,
+              });
+              
+              logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Successfully subscribed to chat:', {
+                chatId,
+                activeSubscriptions: Array.from(activeSubscriptions.current),
+                timestamp: new Date().toISOString()
+              });
+            } else if (status === 'CHANNEL_ERROR') {
+              handleConnectionError(chatId, new Error(`Failed to subscribe to chat ${chatId}`));
+            }
+          } catch (error) {
+            handleError(error as Error, 'handle subscription status');
+          }
+        });
+    } catch (error) {
+      handleError(error as Error, 'subscribe to chat');
+      if (retryCount < MAX_RETRIES) {
+        setRetryCount(prev => prev + 1);
+        setTimeout(() => subscribeToChat(chatId), Math.pow(2, retryCount) * 1000);
+      }
+    }
+  }, [lastMessage, handleError, retryCount]);
 
   const {
     connectionState,
@@ -112,24 +164,32 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   } = useConnectionManager(retryTimeouts, subscribeToChat);
 
   const unsubscribeFromChat = useCallback((chatId: string) => {
-    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Unsubscribing from chat:', { 
-      chatId,
-      activeSubscriptions: Array.from(activeSubscriptions.current),
-      timestamp: new Date().toISOString()
-    });
-    cleanupSubscription(chatId);
-  }, [cleanupSubscription]);
+    try {
+      logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Unsubscribing from chat:', { 
+        chatId,
+        activeSubscriptions: Array.from(activeSubscriptions.current),
+        timestamp: new Date().toISOString()
+      });
+      cleanupSubscription(chatId);
+    } catch (error) {
+      handleError(error as Error, 'unsubscribe from chat');
+    }
+  }, [cleanupSubscription, handleError]);
 
   useEffect(() => {
     logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Setting up cleanup on unmount');
     return () => {
-      logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Cleaning up all subscriptions', {
-        activeSubscriptions: Array.from(activeSubscriptions.current),
-        timestamp: new Date().toISOString()
-      });
-      cleanupAllSubscriptions();
+      try {
+        logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Cleaning up all subscriptions', {
+          activeSubscriptions: Array.from(activeSubscriptions.current),
+          timestamp: new Date().toISOString()
+        });
+        cleanupAllSubscriptions();
+      } catch (error) {
+        handleError(error as Error, 'cleanup all subscriptions');
+      }
     };
-  }, [cleanupAllSubscriptions]);
+  }, [cleanupAllSubscriptions, handleError]);
 
   const value: RealTimeContextValue = {
     connectionState,
@@ -137,6 +197,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     unsubscribeFromChat,
     activeSubscriptions: activeSubscriptions.current,
     lastMessage,
+    retryCount
   };
 
   return (
