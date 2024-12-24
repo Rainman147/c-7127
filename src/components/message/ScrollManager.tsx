@@ -12,6 +12,7 @@ interface ScrollManagerProps {
 interface QueuedScroll {
   targetScroll: number;
   behavior: ScrollBehavior;
+  timestamp: number;
 }
 
 export const useScrollManager = ({ 
@@ -26,31 +27,57 @@ export const useScrollManager = ({
   const isInitialLoad = useRef<boolean>(true);
   const lastMessageCount = useRef<number>(0);
   const scrollQueue = useRef<QueuedScroll[]>([]);
+  const processingQueue = useRef<boolean>(false);
 
-  // Process queued scroll operations
-  const processScrollQueue = () => {
+  // Process queued scroll operations with retry logic
+  const processScrollQueue = async () => {
+    if (processingQueue.current || !isMounted) return;
+    
     const container = containerRef.current;
-    if (!container || !isMounted || scrollQueue.current.length === 0) return;
-
-    const nextScroll = scrollQueue.current.shift();
-    if (!nextScroll) return;
-
-    try {
-      container.scrollTo({
-        top: nextScroll.targetScroll,
-        behavior: nextScroll.behavior
-      });
-      
-      logger.debug(LogCategory.STATE, 'ScrollManager', 'Processed queued scroll', {
-        targetScroll: nextScroll.targetScroll,
-        behavior: nextScroll.behavior,
-        queueLength: scrollQueue.current.length,
+    if (!container || scrollQueue.current.length === 0) {
+      logger.debug(LogCategory.STATE, 'ScrollManager', 'Skip queue processing', {
+        reason: !container ? 'No container' : 'Empty queue',
         timestamp: new Date().toISOString()
       });
+      return;
+    }
+
+    processingQueue.current = true;
+    const startTime = performance.now();
+
+    try {
+      while (scrollQueue.current.length > 0) {
+        const nextScroll = scrollQueue.current[0];
+        
+        container.scrollTo({
+          top: nextScroll.targetScroll,
+          behavior: nextScroll.behavior
+        });
+
+        // Wait for scroll to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        logger.debug(LogCategory.STATE, 'ScrollManager', 'Processed scroll operation', {
+          targetScroll: nextScroll.targetScroll,
+          actualScroll: container.scrollTop,
+          behavior: nextScroll.behavior,
+          queueAge: performance.now() - nextScroll.timestamp,
+          remainingQueue: scrollQueue.current.length - 1,
+          timestamp: new Date().toISOString()
+        });
+
+        scrollQueue.current.shift();
+      }
     } catch (error) {
       logger.error(LogCategory.ERROR, 'ScrollManager', 'Failed to process scroll queue', {
         error,
         queueLength: scrollQueue.current.length,
+        timestamp: new Date().toISOString()
+      });
+    } finally {
+      processingQueue.current = false;
+      logger.debug(LogCategory.STATE, 'ScrollManager', 'Queue processing complete', {
+        duration: performance.now() - startTime,
         timestamp: new Date().toISOString()
       });
     }
@@ -85,8 +112,6 @@ export const useScrollManager = ({
         containerHeight: container.clientHeight,
         scrollHeight: container.scrollHeight,
         hasScrollbar: container.scrollHeight > container.clientHeight,
-        scrollbarVisible: container.offsetWidth - container.clientWidth > 0,
-        messageCount: messages.length,
         timestamp: new Date().toISOString()
       });
       
@@ -114,8 +139,6 @@ export const useScrollManager = ({
       containerHeight: container.clientHeight,
       scrollHeight: container.scrollHeight,
       hasScrollbar: container.scrollHeight > container.clientHeight,
-      scrollbarWidth: container.offsetWidth - container.clientWidth,
-      isMounted,
       timestamp: new Date().toISOString()
     });
 
@@ -133,7 +156,8 @@ export const useScrollManager = ({
         // Queue the scroll operation
         scrollQueue.current.push({
           targetScroll,
-          behavior: isInitialLoad.current ? 'auto' : 'smooth'
+          behavior: isInitialLoad.current ? 'auto' : 'smooth',
+          timestamp: performance.now()
         });
         
         processScrollQueue();
