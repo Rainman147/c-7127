@@ -33,10 +33,7 @@ export const useChat = (activeSessionId: string | null) => {
 
   useRealtimeMessages(
     activeSessionId,
-    messages,
-    setMessages,
-    updateCache,
-    invalidateCache
+    setMessages
   );
 
   useEffect(() => {
