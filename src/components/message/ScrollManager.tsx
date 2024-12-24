@@ -6,39 +6,67 @@ interface ScrollManagerProps {
   containerRef: RefObject<HTMLDivElement>;
   messages: Message[];
   isLoading: boolean;
+  isMounted: boolean;
 }
 
-export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollManagerProps) => {
+interface QueuedScroll {
+  targetScroll: number;
+  behavior: ScrollBehavior;
+}
+
+export const useScrollManager = ({ 
+  containerRef, 
+  messages, 
+  isLoading,
+  isMounted 
+}: ScrollManagerProps) => {
   const lastScrollPosition = useRef<number>(0);
   const shouldScrollToBottom = useRef<boolean>(true);
   const scrollTimeout = useRef<NodeJS.Timeout>();
   const isInitialLoad = useRef<boolean>(true);
   const lastMessageCount = useRef<number>(0);
+  const scrollQueue = useRef<QueuedScroll[]>([]);
+
+  // Process queued scroll operations
+  const processScrollQueue = () => {
+    const container = containerRef.current;
+    if (!container || !isMounted || scrollQueue.current.length === 0) return;
+
+    const nextScroll = scrollQueue.current.shift();
+    if (!nextScroll) return;
+
+    try {
+      container.scrollTo({
+        top: nextScroll.targetScroll,
+        behavior: nextScroll.behavior
+      });
+      
+      logger.debug(LogCategory.STATE, 'ScrollManager', 'Processed queued scroll', {
+        targetScroll: nextScroll.targetScroll,
+        behavior: nextScroll.behavior,
+        queueLength: scrollQueue.current.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error(LogCategory.ERROR, 'ScrollManager', 'Failed to process scroll queue', {
+        error,
+        queueLength: scrollQueue.current.length,
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
 
   // Track container dimensions and scroll state
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) {
-      logger.warn(LogCategory.STATE, 'ScrollManager', 'Container ref not available');
+    if (!container || !isMounted) {
+      logger.debug(LogCategory.STATE, 'ScrollManager', 'Container not ready for scroll tracking', {
+        isMounted,
+        hasContainer: !!container,
+        timestamp: new Date().toISOString()
+      });
       return;
     }
-
-    // Log initial container state
-    logger.debug(LogCategory.STATE, 'ScrollManager', 'Container initialized', {
-      height: container.clientHeight,
-      scrollHeight: container.scrollHeight,
-      offsetHeight: container.offsetHeight,
-      style: container.style.height,
-      hasScrollbar: container.scrollHeight > container.clientHeight,
-      scrollbarWidth: container.offsetWidth - container.clientWidth,
-      computedStyle: {
-        overflow: window.getComputedStyle(container).overflow,
-        overflowY: window.getComputedStyle(container).overflowY,
-        display: window.getComputedStyle(container).display,
-      },
-      messageCount: messages.length,
-      timestamp: new Date().toISOString()
-    });
 
     const handleScroll = () => {
       const currentPosition = container.scrollTop;
@@ -67,12 +95,12 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
 
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [containerRef, messages.length]);
+  }, [containerRef, messages.length, isMounted]);
 
   // Handle messages updates and scrolling
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || isLoading) return;
+    if (!container || isLoading || !isMounted) return;
 
     const messageCountChanged = messages.length !== lastMessageCount.current;
     const shouldForceScroll = isInitialLoad.current || shouldScrollToBottom.current;
@@ -87,10 +115,7 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
       scrollHeight: container.scrollHeight,
       hasScrollbar: container.scrollHeight > container.clientHeight,
       scrollbarWidth: container.offsetWidth - container.clientWidth,
-      computedStyle: {
-        overflow: window.getComputedStyle(container).overflow,
-        display: window.getComputedStyle(container).display,
-      },
+      isMounted,
       timestamp: new Date().toISOString()
     });
 
@@ -103,36 +128,25 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
 
       scrollTimeout.current = setTimeout(() => {
         const scrollStartTime = performance.now();
+        const targetScroll = container.scrollHeight - container.clientHeight;
         
-        try {
-          const targetScroll = container.scrollHeight - container.clientHeight;
-          container.scrollTo({
-            top: targetScroll,
-            behavior: isInitialLoad.current ? 'auto' : 'smooth'
-          });
-          
-          logger.debug(LogCategory.STATE, 'ScrollManager', 'Auto-scroll complete', {
-            duration: performance.now() - scrollStartTime,
-            targetScroll,
-            isInitialLoad: isInitialLoad.current,
-            messageCount: messages.length,
-            containerHeight: container.clientHeight,
-            scrollHeight: container.scrollHeight,
-            hasScrollbar: container.scrollHeight > container.clientHeight,
-            scrollbarWidth: container.offsetWidth - container.clientWidth,
-            timestamp: new Date().toISOString()
-          });
+        // Queue the scroll operation
+        scrollQueue.current.push({
+          targetScroll,
+          behavior: isInitialLoad.current ? 'auto' : 'smooth'
+        });
+        
+        processScrollQueue();
+        
+        logger.debug(LogCategory.STATE, 'ScrollManager', 'Scroll operation queued', {
+          duration: performance.now() - scrollStartTime,
+          targetScroll,
+          isInitialLoad: isInitialLoad.current,
+          queueLength: scrollQueue.current.length,
+          timestamp: new Date().toISOString()
+        });
 
-          isInitialLoad.current = false;
-        } catch (error) {
-          logger.error(LogCategory.ERROR, 'ScrollManager', 'Auto-scroll failed', {
-            error,
-            messageCount: messages.length,
-            containerHeight: container.clientHeight,
-            scrollHeight: container.scrollHeight,
-            timestamp: new Date().toISOString()
-          });
-        }
+        isInitialLoad.current = false;
       }, isInitialLoad.current ? 0 : 100);
     }
 
@@ -141,7 +155,7 @@ export const useScrollManager = ({ containerRef, messages, isLoading }: ScrollMa
         clearTimeout(scrollTimeout.current);
       }
     };
-  }, [messages, containerRef, isLoading]);
+  }, [messages, containerRef, isLoading, isMounted]);
 
   return {
     isNearBottom: shouldScrollToBottom.current

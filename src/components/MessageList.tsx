@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import Message from './Message';
 import { logger, LogCategory } from '@/utils/logging';
 import { groupMessages } from '@/utils/messageGrouping';
@@ -15,18 +15,33 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
   const renderStartTime = performance.now();
   const containerRef = useRef<HTMLDivElement>(null);
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
+  const [isMounted, setIsMounted] = useState(false);
   
   const { isNearBottom } = useScrollManager({
     containerRef,
     messages,
-    isLoading
+    isLoading,
+    isMounted
   });
 
-  // Monitor container dimensions
+  // Track mount status
+  useEffect(() => {
+    logger.debug(LogCategory.STATE, 'MessageList', 'Component mounted');
+    setIsMounted(true);
+    return () => {
+      logger.debug(LogCategory.STATE, 'MessageList', 'Component unmounted');
+      setIsMounted(false);
+    };
+  }, []);
+
+  // Monitor container dimensions with cleanup
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) {
-      logger.warn(LogCategory.STATE, 'MessageList', 'Container ref not available');
+    if (!container || !isMounted) {
+      logger.debug(LogCategory.STATE, 'MessageList', 'Container not ready for dimension monitoring', {
+        isMounted,
+        hasContainer: !!container
+      });
       return;
     }
 
@@ -53,30 +68,53 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
 
     observer.observe(container);
     return () => observer.disconnect();
-  }, [messages.length, keyboardVisible]);
+  }, [messages.length, keyboardVisible, isMounted]);
 
-  // Ensure container height is properly set
+  // Dedicated height calculation effect
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container || !isMounted) {
+      logger.debug(LogCategory.STATE, 'MessageList', 'Container not ready for height calculation', {
+        isMounted,
+        hasContainer: !!container
+      });
+      return;
+    }
 
-    const newHeight = `calc(100vh - ${keyboardVisible ? '300px' : '240px'})`;
-    container.style.height = newHeight;
+    const calculateHeight = () => {
+      const fallbackHeight = '100vh';
+      const newHeight = `calc(100vh - ${keyboardVisible ? '300px' : '240px'})`;
+      
+      // Set initial fallback height if needed
+      if (!container.style.height) {
+        container.style.height = fallbackHeight;
+      }
+      
+      // Apply calculated height
+      container.style.height = newHeight;
+      
+      logger.debug(LogCategory.STATE, 'MessageList', 'Container height calculated', {
+        newHeight,
+        keyboardVisible,
+        containerClientHeight: container.clientHeight,
+        containerScrollHeight: container.scrollHeight,
+        messageCount: messages.length,
+        scrollbarWidth: container.offsetWidth - container.clientWidth,
+        hasVerticalScrollbar: container.scrollHeight > container.clientHeight,
+        appliedClasses: container.className,
+        computedOverflow: window.getComputedStyle(container).overflow,
+        timestamp: new Date().toISOString()
+      });
+    };
+
+    // Calculate height immediately and on resize
+    calculateHeight();
+    window.addEventListener('resize', calculateHeight);
     
-    logger.debug(LogCategory.STATE, 'MessageList', 'Container height updated', {
-      newHeight,
-      keyboardVisible,
-      containerClientHeight: container.clientHeight,
-      containerScrollHeight: container.scrollHeight,
-      messageCount: messages.length,
-      scrollbarWidth: container.offsetWidth - container.clientWidth,
-      hasVerticalScrollbar: container.scrollHeight > container.clientHeight,
-      appliedClasses: container.className,
-      computedOverflow: window.getComputedStyle(container).overflow,
-    });
-  }, [keyboardVisible, messages.length]);
+    return () => window.removeEventListener('resize', calculateHeight);
+  }, [keyboardVisible, messages.length, isMounted]);
 
-  // Track message grouping performance
+  // Message grouping with performance tracking
   const messageGroups = (() => {
     const groupStartTime = performance.now();
     const groups = groupMessages(messages);
@@ -84,7 +122,8 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
     logger.debug(LogCategory.STATE, 'MessageList', 'Message grouping complete', {
       duration: performance.now() - groupStartTime,
       messageCount: messages.length,
-      groupCount: groups.length
+      groupCount: groups.length,
+      timestamp: new Date().toISOString()
     });
     
     return groups;
@@ -105,12 +144,14 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
     viewportHeight,
     keyboardVisible,
     isNearBottom,
+    isMounted,
     containerDimensions: containerRef.current ? {
       scrollHeight: containerRef.current.scrollHeight,
       clientHeight: containerRef.current.clientHeight,
       offsetHeight: containerRef.current.offsetHeight,
       scrollTop: containerRef.current.scrollTop,
-    } : null
+    } : null,
+    timestamp: new Date().toISOString()
   });
 
   return (
@@ -119,7 +160,8 @@ const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
       className="flex-1 overflow-y-auto chat-scrollbar space-y-6 pb-[180px] pt-4 px-4"
       style={{ 
         overscrollBehavior: 'contain',
-        willChange: 'transform'
+        willChange: 'transform',
+        minHeight: '100px' // Fallback minimum height
       }}
     >
       {messageGroups.map((group) => (
