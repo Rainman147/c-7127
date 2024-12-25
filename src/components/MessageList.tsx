@@ -49,9 +49,10 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
     if (renderTime > PERFORMANCE_WARNING_THRESHOLD) {
       const metadata: ErrorMetadata = {
         component: 'MessageList',
-        severity: 'warning',
+        severity: 'medium', // Changed from 'warning' to 'medium'
         errorType: 'performance',
         operation: 'initial-render',
+        timestamp: new Date().toISOString(), // Added timestamp
         additionalInfo: {
           renderTime,
           messageCount: propMessages?.length,
@@ -107,6 +108,7 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
       severity: 'medium',
       errorType: 'data',
       operation: 'message-deduplication',
+      timestamp: new Date().toISOString(), // Added timestamp
       additionalInfo: {
         messageId: lastMessage.id,
         duplicateCount: propMessages.filter(m => m.id === lastMessage.id).length,

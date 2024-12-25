@@ -38,9 +38,10 @@ export const usePerformanceMetrics = (messageCount: number, groupCount: number) 
       if (nodeCount > NODE_COUNT_WARNING) {
         const metadata: ErrorMetadata = {
           component: 'MessageList',
-          severity: 'warning',
+          severity: 'medium', // Changed from 'warning' to 'medium'
           errorType: 'performance',
           operation: 'virtual-scrolling',
+          timestamp: new Date().toISOString(), // Added timestamp
           additionalInfo: {
             nodeCount,
             messageCount,
