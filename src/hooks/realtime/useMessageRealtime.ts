@@ -5,13 +5,14 @@ import { subscriptionManager } from '@/utils/realtime/SubscriptionManager';
 import { useMessageQueue } from './useMessageQueue';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { DatabaseMessage } from '@/types/database/messages';
+import { useConnectionState } from '@/hooks/realtime/useConnectionState';
 
 export const useMessageRealtime = (
   messageId: string | undefined,
   editedContent: string,
   setEditedContent: (content: string) => void
 ) => {
-  const { state: connectionState, subscribe, cleanup } = subscriptionManager;
+  const { connectionState } = useConnectionState();
   const { addToQueue, processQueue, clearQueue } = useMessageQueue();
   const currentMessageId = useRef<string>();
 
