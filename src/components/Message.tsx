@@ -36,7 +36,7 @@ const Message = memo(({
     handleEdit
   } = useMessageState(content, id);
 
-  const { connectionStatus, lastUpdateTime, retryCount } = useMessageRealtime(id, editedContent, setEditedContent);
+  const { connectionState, lastUpdateTime, retryCount } = useMessageRealtime(id, editedContent, setEditedContent);
 
   const { isTyping } = useTypingEffect(role, isStreaming, content);
 
@@ -46,14 +46,14 @@ const Message = memo(({
     isEditing,
     wasEdited,
     isSaving,
-    connectionStatus,
+    connectionStatus: connectionState.status,
     lastUpdateTime,
     retryCount,
     isTyping
   });
 
   // Show toast for reconnection success
-  if (connectionStatus === 'SUBSCRIBED' && retryCount > 0) {
+  if (connectionState.status === 'connected' && retryCount > 0) {
     toast({
       description: "Message sync restored",
       className: "bg-green-500 text-white",

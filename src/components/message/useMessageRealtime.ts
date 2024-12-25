@@ -40,7 +40,7 @@ export const useMessageRealtime = (
         timestamp: new Date().toISOString(),
         additionalInfo: {
           messageId,
-          connectionState,
+          connectionState: connectionState.status,
           error: error instanceof Error ? error.message : String(error)
         }
       };
@@ -90,7 +90,7 @@ export const useMessageRealtime = (
   }, [messageId, editedContent, setEditedContent, handleConnectionSuccess, handleConnectionError, clearQueue]);
 
   return {
-    connectionStatus: connectionState.status,
+    connectionState,
     lastUpdateTime: lastUpdateTimeRef.current,
     retryCount: connectionState.retryCount
   };

@@ -4,7 +4,7 @@ export interface ConnectionState {
   status: ConnectionStatus;
   lastAttempt: number;
   retryCount: number;
-  error?: Error;  // Added error property
+  error?: Error;
 }
 
 export interface RealTimeContextValue {
