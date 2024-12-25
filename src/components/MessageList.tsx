@@ -39,17 +39,22 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
     messageGroups?.length ?? 0
   );
 
+  // Monitor resize observer performance
   useEffect(() => {
     if (containerRef.current) {
+      const resizeStartTime = performance.now();
       const height = containerRef.current.clientHeight;
       setListHeight(height);
+      
       logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'List height updated', {
         height,
         viewportHeight,
-        keyboardVisible
+        keyboardVisible,
+        resizeTime: performance.now() - resizeStartTime,
+        renderedNodes: performanceMetrics.renderedNodes
       });
     }
-  }, [viewportHeight, keyboardVisible]);
+  }, [viewportHeight, keyboardVisible, performanceMetrics.renderedNodes]);
 
   // Enhanced error tracking for duplicate messages
   const lastMessage = propMessages[propMessages.length - 1];
@@ -62,7 +67,8 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
       operation: 'message-deduplication',
       additionalInfo: {
         messageId: lastMessage.id,
-        duplicateCount: propMessages.filter(m => m.id === lastMessage.id).length
+        duplicateCount: propMessages.filter(m => m.id === lastMessage.id).length,
+        renderedNodes: performanceMetrics.renderedNodes
       }
     };
 
@@ -71,47 +77,41 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
     lastMessageRef.current = lastMessage.id;
   }
 
-  // Enhanced connection state monitoring
-  if (connectionState.status === 'disconnected' && connectionState.error) {
-    const metadata: ErrorMetadata = {
-      component: 'MessageList',
-      severity: 'high',
-      timestamp: new Date().toISOString(),
-      errorType: 'network',
-      operation: 'connection-monitoring',
-      additionalInfo: {
-        connectionStatus: connectionState.status,
-        retryCount: connectionState.retryCount,
-        error: connectionState.error.message
-      }
-    };
-
-    ErrorTracker.trackError(connectionState.error, metadata);
-    toast({
-      title: "Connection Lost",
-      description: "Attempting to reconnect...",
-      variant: "destructive",
-    });
-  } else if (connectionState.status === 'connected' && connectionState.retryCount > 0) {
-    toast({
-      title: "Connection Restored",
-      description: "You're back online!",
-      variant: "default",
-    });
-  }
-
+  // Monitor virtual list performance
   const getItemSize = (index: number) => {
+    const startTime = performance.now();
     const groupId = messageGroups[index]?.id;
     if (!groupId) return 100; // Default height
-    return sizeMap.current[groupId] || 100;
+    
+    const size = sizeMap.current[groupId] || 100;
+    const measureTime = performance.now() - startTime;
+    
+    if (measureTime > 1) { // Log slow measurements
+      logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'Slow size measurement', {
+        groupId,
+        size,
+        measureTime,
+        index
+      });
+    }
+    
+    return size;
   };
 
   const setItemSize = (index: number, size: number) => {
     const groupId = messageGroups[index]?.id;
     if (groupId && sizeMap.current[groupId] !== size) {
+      const updateStartTime = performance.now();
       sizeMap.current[groupId] = size;
+      
       if (listRef.current) {
         listRef.current.resetAfterIndex(index);
+        logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'Size cache updated', {
+          groupId,
+          size,
+          index,
+          updateTime: performance.now() - updateStartTime
+        });
       }
     }
   };
