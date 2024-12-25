@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
-import { useSubscriptionManager } from './useSubscriptionManager';
+import { supabase } from '@/integrations/supabase/client';
+import { subscriptionManager } from '@/utils/realtime/SubscriptionManager';
 import { useMessageQueue } from './useMessageQueue';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { DatabaseMessage } from '@/types/database/messages';
@@ -13,7 +14,6 @@ export const useMessageRealtime = (
   const { state: connectionState, subscribe, cleanup } = useSubscriptionManager();
   const { addToQueue, processQueue, clearQueue } = useMessageQueue();
   const currentMessageId = useRef<string>();
-  const channelRef = useRef<RealtimeChannel>();
 
   const handleMessageUpdate = useCallback((content: string) => {
     logger.debug(LogCategory.WEBSOCKET, 'MessageRealtime', 'Received message update', {
@@ -40,60 +40,62 @@ export const useMessageRealtime = (
     }
 
     // Cleanup previous subscription if exists
-    if (channelRef.current) {
-      logger.debug(LogCategory.WEBSOCKET, 'MessageRealtime', 'Cleaning up previous subscription', {
-        previousMessageId: currentMessageId.current
-      });
-      cleanup();
-      channelRef.current = undefined;
+    if (currentMessageId.current) {
+      subscriptionManager.removeChannel(currentMessageId.current);
     }
 
     currentMessageId.current = messageId;
 
     try {
-      const channel = subscribe({
-        event: '*',
-        schema: 'public',
-        table: 'messages',
-        filter: `id=eq.${messageId}`,
-        onMessage: (payload) => {
-          const newMessage = payload.new as DatabaseMessage;
-          handleMessageUpdate(newMessage.content);
-        },
-        onError: (error) => {
-          logger.error(LogCategory.WEBSOCKET, 'MessageRealtime', 'Subscription error', {
-            messageId,
-            error: error.message
-          });
-        },
-        onSubscriptionChange: (status) => {
+      // Check if channel already exists
+      let channel = subscriptionManager.getChannel(messageId);
+
+      if (!channel) {
+        // Create new channel if none exists
+        channel = supabase.channel(`message-${messageId}`);
+        
+        channel.on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'messages',
+            filter: `id=eq.${messageId}`
+          },
+          (payload) => {
+            const newMessage = payload.new as DatabaseMessage;
+            handleMessageUpdate(newMessage.content);
+          }
+        ).subscribe(status => {
           logger.info(LogCategory.WEBSOCKET, 'MessageRealtime', 'Subscription status changed', {
             messageId,
-            status
+            status,
+            timestamp: new Date().toISOString()
           });
-        }
-      });
+        });
 
-      channelRef.current = channel;
+        subscriptionManager.addChannel(messageId, channel);
+      }
     } catch (error) {
       logger.error(LogCategory.WEBSOCKET, 'MessageRealtime', 'Failed to setup subscription', {
         messageId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
       });
     }
 
     return () => {
-      if (channelRef.current) {
+      if (currentMessageId.current) {
         logger.info(LogCategory.WEBSOCKET, 'MessageRealtime', 'Cleaning up subscription', {
-          messageId: currentMessageId.current
+          messageId: currentMessageId.current,
+          timestamp: new Date().toISOString()
         });
-        cleanup();
-        channelRef.current = undefined;
+        subscriptionManager.removeChannel(currentMessageId.current);
         currentMessageId.current = undefined;
         clearQueue();
       }
     };
-  }, [messageId, subscribe, cleanup, handleMessageUpdate, clearQueue]);
+  }, [messageId, handleMessageUpdate, clearQueue]);
 
   return {
     connectionState,
