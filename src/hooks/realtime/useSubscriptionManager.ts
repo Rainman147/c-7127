@@ -95,6 +95,11 @@ export const useSubscriptionManager = () => {
     return channel;
   }, [updateState]);
 
+  const cleanupSubscription = useCallback((channel: RealtimeChannel) => {
+    logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up channel');
+    supabase.removeChannel(channel);
+  }, []);
+
   const cleanup = useCallback(() => {
     activeChannels.current.forEach((channel, key) => {
       logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up channel', {
@@ -110,6 +115,7 @@ export const useSubscriptionManager = () => {
     state,
     updateState,
     subscribe,
-    cleanup
+    cleanup,
+    cleanupSubscription
   };
 };
