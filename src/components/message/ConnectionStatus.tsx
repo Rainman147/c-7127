@@ -3,9 +3,33 @@ import { Loader2, WifiOff, Wifi, AlertCircle } from 'lucide-react';
 import { logger, LogCategory } from '@/utils/logging';
 import { Tooltip } from '../ui/tooltip';
 import { Alert } from '../ui/alert';
+import { useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 export const ConnectionStatus = () => {
   const { connectionState } = useRealTime();
+  const { toast } = useToast();
+  
+  useEffect(() => {
+    logger.debug(LogCategory.STATE, 'ConnectionStatus', 'Connection state changed:', {
+      status: connectionState.status,
+      retryCount: connectionState.retryCount,
+      error: connectionState.error?.message
+    });
+
+    if (connectionState.status === 'connected') {
+      toast({
+        description: "Connected to chat service",
+        className: "bg-green-500 text-white",
+      });
+    } else if (connectionState.status === 'disconnected') {
+      toast({
+        title: "Connection Lost",
+        description: `Attempting to reconnect (Attempt ${connectionState.retryCount})`,
+        variant: "destructive",
+      });
+    }
+  }, [connectionState.status, connectionState.retryCount, toast]);
   
   if (connectionState.status === 'connected') {
     return (
