@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { Message } from '@/types/chat';
-import type { ConnectionState } from './config';
 
 // Global channel registry
 const globalChannels = new Map<string, RealtimeChannel>();
@@ -46,25 +45,33 @@ export const useSubscriptionManager = (
       timestamp: new Date().toISOString()
     });
     
-    const channel = channels.current.get(channelName);
-    if (channel) {
-      supabase.removeChannel(channel)
-        .then(() => {
-          channels.current.delete(channelName);
-          activeSubscriptions.current.delete(channelName);
-          logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription cleanup complete', {
-            channelName,
-            remainingSubscriptions: Array.from(activeSubscriptions.current),
-            timestamp: new Date().toISOString()
+    try {
+      const channel = channels.current.get(channelName);
+      if (channel) {
+        supabase.removeChannel(channel)
+          .then(() => {
+            channels.current.delete(channelName);
+            activeSubscriptions.current.delete(channelName);
+            logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription cleanup complete', {
+              channelName,
+              remainingSubscriptions: Array.from(activeSubscriptions.current),
+              timestamp: new Date().toISOString()
+            });
+          })
+          .catch(error => {
+            logger.error(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Error cleaning up subscription', {
+              channelName,
+              error: error instanceof Error ? error.message : String(error),
+              timestamp: new Date().toISOString()
+            });
           });
-        })
-        .catch(error => {
-          logger.error(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Error cleaning up subscription', {
-            channelName,
-            error: error instanceof Error ? error.message : String(error),
-            timestamp: new Date().toISOString()
-          });
-        });
+      }
+    } catch (error) {
+      logger.error(LogCategory.ERROR, 'SubscriptionManager', 'Error during cleanup', {
+        error: error instanceof Error ? error.message : String(error),
+        channelName,
+        timestamp: new Date().toISOString()
+      });
     }
   }, []);
 
@@ -85,28 +92,28 @@ export const useSubscriptionManager = (
     onMessage: (payload: any) => void;
     onError?: (error: Error) => void;
     onSubscriptionChange?: (status: string) => void;
-  }): RealtimeChannel => {
-    // Check if channel already exists
-    if (channels.current.has(channelName)) {
-      logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Reusing existing channel', {
+  }): RealtimeChannel | null => {
+    try {
+      // Check if channel already exists
+      if (channels.current.has(channelName)) {
+        logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Reusing existing channel', {
+          channelName,
+          timestamp: new Date().toISOString()
+        });
+        return channels.current.get(channelName)!;
+      }
+
+      logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Creating new channel', {
         channelName,
+        filter,
         timestamp: new Date().toISOString()
       });
-      return channels.current.get(channelName)!;
-    }
 
-    logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Creating new channel', {
-      channelName,
-      filter,
-      timestamp: new Date().toISOString()
-    });
-
-    try {
       const channel = supabase.channel(channelName);
       
       channel
         .on(
-          'postgres_changes',
+          'postgres_changes' as any, // Type assertion to handle TS error
           filter,
           (payload: RealtimePostgresChangesPayload<any>) => {
             logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received postgres change', {
@@ -147,7 +154,8 @@ export const useSubscriptionManager = (
         error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString()
       });
-      throw error;
+      onError?.(error as Error);
+      return null;
     }
   }, []);
 
