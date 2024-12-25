@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { memo, useRef, useEffect } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { ErrorTracker } from '@/utils/errorTracking';
 import type { ErrorMetadata } from '@/types/errorTracking';
@@ -8,11 +8,10 @@ import { ConnectionStatus } from './message/ConnectionStatus';
 import { MessageGroup } from './message/MessageGroup';
 import { useScrollHandler } from './message/ScrollHandler';
 import { useMessageGrouping } from '@/hooks/chat/useMessageGrouping';
-import { useMessageQuery } from '@/hooks/chat/useMessageQuery';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
 
-const MessageList = ({ messages: propMessages }: { messages: Message[] }) => {
+const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) => {
   const renderStartTime = performance.now();
   const lastRenderTime = useRef(performance.now());
   const renderCount = useRef(0);
