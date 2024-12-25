@@ -17,6 +17,9 @@ interface ExtendedPerformance extends Performance {
   };
 }
 
+const MEMORY_WARNING_THRESHOLD = 0.85; // 85% of total heap size
+const RENDER_TIME_THRESHOLD = 16.67; // ms
+
 export const usePerformanceMetrics = (messageCount: number, groupCount: number) => {
   const renderStartTime = useRef(performance.now());
   const lastRenderTime = useRef(performance.now());
@@ -40,15 +43,22 @@ export const usePerformanceMetrics = (messageCount: number, groupCount: number) 
     const timeSinceLastRender = currentTime - lastRenderTime.current;
     renderCount.current += 1;
 
-    if (timeSinceLastRender > 16.67 || renderCount.current % 10 === 0) {
-      logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'Performance metrics', {
-        ...calculateMetrics(),
-        timeSinceLastRender: `${timeSinceLastRender.toFixed(2)}ms`
+    if (timeSinceLastRender > RENDER_TIME_THRESHOLD) {
+      logger.warn(LogCategory.PERFORMANCE, 'MessageList', 'Render time exceeded threshold', {
+        renderTime: `${timeSinceLastRender.toFixed(2)}ms`,
+        threshold: `${RENDER_TIME_THRESHOLD}ms`,
+        messageCount,
+        groupCount
       });
     }
 
+    logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'Performance metrics', {
+      ...calculateMetrics(),
+      timeSinceLastRender: `${timeSinceLastRender.toFixed(2)}ms`
+    });
+
     lastRenderTime.current = currentTime;
-  }, [calculateMetrics]);
+  }, [calculateMetrics, messageCount, groupCount]);
 
   const monitorMemory = useCallback(() => {
     const extendedPerf = performance as ExtendedPerformance;
@@ -56,11 +66,18 @@ export const usePerformanceMetrics = (messageCount: number, groupCount: number) 
       const memoryUsage = {
         usedJSHeapSize: extendedPerf.memory.usedJSHeapSize,
         totalJSHeapSize: extendedPerf.memory.totalJSHeapSize,
+        usageRatio: extendedPerf.memory.usedJSHeapSize / extendedPerf.memory.totalJSHeapSize,
         timestamp: new Date().toISOString()
       };
 
-      if (memoryUsage.usedJSHeapSize > 0.8 * memoryUsage.totalJSHeapSize) {
-        logger.warn(LogCategory.PERFORMANCE, 'MessageList', 'High memory usage detected', memoryUsage);
+      if (memoryUsage.usageRatio > MEMORY_WARNING_THRESHOLD) {
+        logger.warn(LogCategory.PERFORMANCE, 'MessageList', 'High memory usage detected', {
+          ...memoryUsage,
+          thresholdExceeded: `${(memoryUsage.usageRatio * 100).toFixed(1)}%`,
+          recommendedAction: 'Consider implementing virtual scrolling or pagination'
+        });
+      } else {
+        logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'Memory usage normal', memoryUsage);
       }
     }
   }, []);
