@@ -65,24 +65,37 @@ export const useSubscriptionManager = () => {
 
     try {
       const channel = supabase.channel(channelName);
+      
+      // Store the channel before subscribing
       activeChannels.current.set(channelName, channel);
       subscriptionTimes.current.set(channelName, Date.now());
 
-      channel.on(
-        'postgres_changes',
-        filter,
-        (payload) => {
-          const latency = Date.now() - (subscriptionTimes.current.get(channelName) || Date.now());
-          logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
+      // Set up channel configuration
+      channel
+        .on(
+          'postgres_changes',
+          filter,
+          (payload) => {
+            const latency = Date.now() - (subscriptionTimes.current.get(channelName) || Date.now());
+            logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
+              channelName,
+              payload,
+              latency,
+              timestamp: new Date().toISOString()
+            });
+            onMessage?.(payload);
+          }
+        )
+        .on('error', (error: Error) => {
+          logger.error(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Channel error', {
             channelName,
-            payload,
-            latency,
+            error: error.message,
             timestamp: new Date().toISOString()
           });
-          onMessage?.(payload);
-        }
-      );
+          onError?.(error);
+        });
 
+      // Subscribe to the channel
       channel.subscribe((status) => {
         logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription status changed', {
           channelName,

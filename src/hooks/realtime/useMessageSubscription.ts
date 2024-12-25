@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { useSubscriptionManager } from './useSubscriptionManager';
 import { useRetryManager } from './useRetryManager';
@@ -9,13 +9,19 @@ export const useMessageSubscription = (
 ) => {
   const { subscribe, cleanup } = useSubscriptionManager();
   const { handleRetry, resetRetryCount, retryCount } = useRetryManager();
+  const currentMessageId = useRef<string>();
 
   const setupSubscription = useCallback(async () => {
-    if (!messageId) {
-      logger.debug(LogCategory.WEBSOCKET, 'MessageSubscription', 'No message ID provided');
+    if (!messageId || messageId === currentMessageId.current) {
+      logger.debug(LogCategory.WEBSOCKET, 'MessageSubscription', 'Skipping subscription setup', {
+        messageId,
+        currentMessageId: currentMessageId.current
+      });
       return;
     }
 
+    // Update the current message ID
+    currentMessageId.current = messageId;
     const channelName = `message-${messageId}`;
 
     try {
@@ -63,12 +69,13 @@ export const useMessageSubscription = (
   useEffect(() => {
     setupSubscription();
     return () => {
-      if (messageId) {
+      if (currentMessageId.current) {
         logger.info(LogCategory.WEBSOCKET, 'MessageSubscription', 'Cleaning up subscription', {
-          messageId,
+          messageId: currentMessageId.current,
           timestamp: new Date().toISOString()
         });
-        cleanup(`message-${messageId}`);
+        cleanup(`message-${currentMessageId.current}`);
+        currentMessageId.current = undefined;
       }
     };
   }, [messageId, setupSubscription, cleanup]);
