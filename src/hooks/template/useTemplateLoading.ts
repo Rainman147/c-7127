@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { ErrorTracker } from '@/utils/errorTracking';
 import { useToast } from '@/hooks/use-toast';
+import type { ErrorMetadata } from '@/types/errorTracking';
 import type { Template } from '@/components/template/templateTypes';
 import { useAvailableTemplates } from './useAvailableTemplates';
 
@@ -26,7 +27,7 @@ export const useTemplateLoading = (): UseTemplateLoadingResult => {
       timestamp: new Date().toISOString()
     });
 
-    ErrorTracker.trackError(error, {
+    const metadata: ErrorMetadata = {
       component: 'useTemplateLoading',
       severity: 'medium',
       timestamp: new Date().toISOString(),
@@ -36,7 +37,9 @@ export const useTemplateLoading = (): UseTemplateLoadingResult => {
         isLoading,
         hasError: !!error
       }
-    });
+    };
+
+    ErrorTracker.trackError(error, metadata);
 
     setError(error);
     toast({

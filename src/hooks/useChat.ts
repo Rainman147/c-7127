@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { ErrorTracker } from '@/utils/errorTracking';
 import { useToast } from '@/hooks/use-toast';
+import type { ErrorMetadata } from '@/types/errorTracking';
 import type { Message } from '@/types/chat';
 
 export const useChat = (sessionId: string | null) => {
@@ -15,18 +16,20 @@ export const useChat = (sessionId: string | null) => {
       timestamp: new Date().toISOString()
     });
 
-    ErrorTracker.trackError(error, {
+    const metadata: ErrorMetadata = {
       component: 'useChat',
       severity: 'medium',
       timestamp: new Date().toISOString(),
-      errorType: error.name,
+      errorType: 'runtime',
       operation,
       additionalInfo: {
         sessionId,
         messageCount: messages.length,
         isLoading
       }
-    });
+    };
+
+    ErrorTracker.trackError(error, metadata);
 
     toast({
       title: "Chat Error",

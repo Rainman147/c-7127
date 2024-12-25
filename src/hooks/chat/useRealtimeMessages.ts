@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { ErrorTracker } from '@/utils/errorTracking';
 import { useToast } from '@/hooks/use-toast';
+import type { ErrorMetadata } from '@/types/errorTracking';
 import type { Message } from '@/types/chat';
 
 export const useRealtimeMessages = () => {
@@ -13,7 +14,7 @@ export const useRealtimeMessages = () => {
       timestamp: new Date().toISOString()
     });
 
-    ErrorTracker.trackError(error, {
+    const metadata: ErrorMetadata = {
       component: 'useRealtimeMessages',
       severity: 'medium',
       timestamp: new Date().toISOString(),
@@ -22,7 +23,9 @@ export const useRealtimeMessages = () => {
       additionalInfo: {
         timestamp: new Date().toISOString()
       }
-    });
+    };
+
+    ErrorTracker.trackError(error, metadata);
 
     toast({
       title: "Error",

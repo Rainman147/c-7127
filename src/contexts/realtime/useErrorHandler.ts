@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { ErrorTracker } from '@/utils/errorTracking';
 import { useToast } from '@/hooks/use-toast';
+import type { ErrorMetadata } from '@/types/errorTracking';
 
 export const useErrorHandler = (
   retryCount: number,
@@ -17,7 +18,7 @@ export const useErrorHandler = (
       timestamp: new Date().toISOString()
     });
 
-    ErrorTracker.trackError(error, {
+    const metadata: ErrorMetadata = {
       component: 'RealTimeContext',
       severity: retryCount >= MAX_RETRIES ? 'high' : 'medium',
       timestamp: new Date().toISOString(),
@@ -27,7 +28,9 @@ export const useErrorHandler = (
         activeSubscriptions: Array.from(activeSubscriptions.current),
         retryCount
       }
-    });
+    };
+
+    ErrorTracker.trackError(error, metadata);
 
     if (retryCount < MAX_RETRIES) {
       toast({
