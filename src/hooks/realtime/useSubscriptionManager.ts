@@ -1,63 +1,103 @@
 import { useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { Message } from '@/types/chat';
+import type { ConnectionState } from './config';
 
-interface SubscriptionConfig {
-  channelName: string;
-  filter: {
-    event: 'INSERT' | 'UPDATE' | 'DELETE' | '*';
-    schema: string;
-    table: string;
-    filter?: string;
-  };
-  onMessage?: (payload: RealtimePostgresChangesPayload<any>) => void;
-  onError?: (error: Error) => void;
-  onSubscriptionChange?: (status: string) => void;
-}
+export const useSubscriptionManager = (
+  setLastMessage: (message: Message) => void,
+  setConnectionState: (state: ConnectionState | ((prev: ConnectionState) => ConnectionState)) => void,
+  handleConnectionError: (chatId: string, error: Error) => void,
+  lastMessage?: Message
+) => {
+  const channels = useRef(new Map<string, RealtimeChannel>());
+  const activeSubscriptions = useRef(new Set<string>());
 
-export const useSubscriptionManager = () => {
-  const activeChannels = useRef<Map<string, RealtimeChannel>>(new Map());
-  const subscriptionTimes = useRef<Map<string, number>>(new Map());
-
-  const cleanup = useCallback((channelName: string) => {
-    const channel = activeChannels.current.get(channelName);
-    if (channel) {
-      const startTime = subscriptionTimes.current.get(channelName) || Date.now();
-      const duration = Date.now() - startTime;
-
-      logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up subscription', {
-        channelName,
-        duration,
+  const processMessage = useCallback((payload: any, chatId: string) => {
+    try {
+      logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Processing message', { 
+        payload,
+        chatId,
+        eventType: payload.eventType,
         timestamp: new Date().toISOString()
       });
+      
+      if (payload.eventType === 'INSERT') {
+        const newMessage = payload.new as Message;
+        
+        if (lastMessage?.id !== newMessage.id) {
+          logger.debug(LogCategory.STATE, 'SubscriptionManager', 'Setting new message', {
+            messageId: newMessage.id,
+            previousMessageId: lastMessage?.id,
+            chatId
+          });
+          setLastMessage(newMessage);
+        } else {
+          logger.debug(LogCategory.STATE, 'SubscriptionManager', 'Skipping duplicate message', {
+            messageId: newMessage.id,
+            chatId
+          });
+        }
+      }
+    } catch (error) {
+      logger.error(LogCategory.ERROR, 'SubscriptionManager', 'Error processing message', {
+        error: error instanceof Error ? error.message : String(error),
+        chatId,
+        timestamp: new Date().toISOString()
+      });
+      handleConnectionError(chatId, error as Error);
+    }
+  }, [lastMessage, setLastMessage, handleConnectionError]);
 
+  const cleanupSubscription = useCallback((chatId: string) => {
+    logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up subscription', { 
+      chatId,
+      hasExistingChannel: channels.current.has(chatId),
+      timestamp: new Date().toISOString()
+    });
+    
+    const channel = channels.current.get(chatId);
+    if (channel) {
+      logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Removing channel', {
+        chatId,
+        channelStatus: channel.state,
+        timestamp: new Date().toISOString()
+      });
+      
       supabase.removeChannel(channel);
-      activeChannels.current.delete(channelName);
-      subscriptionTimes.current.delete(channelName);
+      channels.current.delete(chatId);
+      activeSubscriptions.current.delete(chatId);
+      
+      logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription cleanup complete', {
+        chatId,
+        remainingSubscriptions: Array.from(activeSubscriptions.current),
+        timestamp: new Date().toISOString()
+      });
     }
   }, []);
 
-  const cleanupAll = useCallback(() => {
-    logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up all subscriptions', {
-      activeCount: activeChannels.current.size,
-      timestamp: new Date().toISOString()
-    });
+  const subscribe = useCallback(({ channelName, filter, onMessage, onError, onSubscriptionChange }: {
+    channelName: string;
+    filter: {
+      event: string;
+      schema: string;
+      table: string;
+      filter?: string;
+    };
+    onMessage: (payload: any) => void;
+    onError?: (error: Error) => void;
+    onSubscriptionChange?: (status: string) => void;
+  }) => {
+    if (channels.current.has(channelName)) {
+      logger.warn(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Channel already exists', {
+        channelName,
+        timestamp: new Date().toISOString()
+      });
+      return null;
+    }
 
-    activeChannels.current.forEach((_, channelName) => cleanup(channelName));
-  }, [cleanup]);
-
-  const subscribe = useCallback(({
-    channelName,
-    filter,
-    onMessage,
-    onError,
-    onSubscriptionChange
-  }: SubscriptionConfig) => {
-    // Clean up existing subscription if it exists
-    cleanup(channelName);
-
-    logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Setting up subscription', {
+    logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Creating new channel', {
       channelName,
       filter,
       timestamp: new Date().toISOString()
@@ -66,26 +106,15 @@ export const useSubscriptionManager = () => {
     try {
       const channel = supabase.channel(channelName);
       
-      // Store the channel before subscribing
-      activeChannels.current.set(channelName, channel);
-      subscriptionTimes.current.set(channelName, Date.now());
-
-      // Set up channel configuration
       channel
-        .on(
-          'postgres_changes',
-          filter,
-          (payload) => {
-            const latency = Date.now() - (subscriptionTimes.current.get(channelName) || Date.now());
-            logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
-              channelName,
-              payload,
-              latency,
-              timestamp: new Date().toISOString()
-            });
-            onMessage?.(payload);
-          }
-        )
+        .on('postgres_changes', filter, (payload) => {
+          logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received postgres change', {
+            channelName,
+            eventType: payload.eventType,
+            timestamp: new Date().toISOString()
+          });
+          onMessage(payload);
+        })
         .on('error', (error: Error) => {
           logger.error(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Channel error', {
             channelName,
@@ -95,7 +124,6 @@ export const useSubscriptionManager = () => {
           onError?.(error);
         });
 
-      // Subscribe to the channel
       channel.subscribe((status) => {
         logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription status changed', {
           channelName,
@@ -104,10 +132,8 @@ export const useSubscriptionManager = () => {
         });
 
         if (status === 'SUBSCRIBED') {
-          subscriptionTimes.current.set(channelName, Date.now());
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          const error = new Error(`Channel ${status} for ${channelName}`);
-          onError?.(error);
+          channels.current.set(channelName, channel);
+          activeSubscriptions.current.add(channelName);
         }
 
         onSubscriptionChange?.(status);
@@ -115,20 +141,40 @@ export const useSubscriptionManager = () => {
 
       return channel;
     } catch (error) {
-      logger.error(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Failed to setup subscription', {
+      logger.error(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Failed to create channel', {
         channelName,
         error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString()
       });
-      onError?.(error as Error);
-      return null;
+      throw error;
     }
-  }, [cleanup]);
+  }, []);
+
+  const cleanupAllSubscriptions = useCallback(() => {
+    logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up all subscriptions', {
+      subscriptionCount: activeSubscriptions.current.size,
+      activeChannels: Array.from(channels.current.keys()),
+      timestamp: new Date().toISOString()
+    });
+    
+    channels.current.forEach((_, channelName) => {
+      cleanupSubscription(channelName);
+    });
+    
+    channels.current.clear();
+    activeSubscriptions.current.clear();
+    
+    logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'All subscriptions cleaned up', {
+      timestamp: new Date().toISOString()
+    });
+  }, [cleanupSubscription]);
 
   return {
+    channels,
+    activeSubscriptions,
     subscribe,
-    cleanup,
-    cleanupAll,
-    getActiveChannels: () => Array.from(activeChannels.current.keys())
+    cleanupSubscription,
+    cleanupAllSubscriptions,
+    processMessage
   };
 };
