@@ -4,6 +4,7 @@ import { logger, LogCategory } from '@/utils/logging';
 import { useSubscriptionManager } from './realtime/useSubscriptionManager';
 import { useConnectionManager } from './realtime/useConnectionManager';
 import { useErrorHandler } from './realtime/useErrorHandler';
+import { debounce } from 'lodash';
 import type { Message } from '@/types/chat';
 import type { RealTimeContextValue } from './realtime/config';
 
@@ -15,6 +16,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   const retryTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
   const activeSubscriptions = useRef(new Set<string>());
   const channels = useRef(new Map());
+  const reconnectAttempts = useRef(0);
 
   const {
     connectionState,
@@ -29,6 +31,58 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     cleanupAllSubscriptions,
     processMessage
   } = useSubscriptionManager(setLastMessage, setConnectionState, handleConnectionError, lastMessage);
+
+  // Debounced connection state update
+  const debouncedSetConnectionState = useCallback(
+    debounce((newState) => {
+      logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Connection state change:', {
+        from: connectionState.status,
+        to: newState.status,
+        retryCount: newState.retryCount,
+        timestamp: new Date().toISOString()
+      });
+      setConnectionState(newState);
+    }, 300),
+    [connectionState.status, setConnectionState]
+  );
+
+  // Exponential backoff for reconnection
+  const getReconnectDelay = useCallback(() => {
+    const baseDelay = 1000;
+    const maxDelay = 30000;
+    const delay = Math.min(baseDelay * Math.pow(2, reconnectAttempts.current), maxDelay);
+    logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Calculating reconnect delay:', {
+      attempt: reconnectAttempts.current,
+      delay,
+      timestamp: new Date().toISOString()
+    });
+    return delay;
+  }, []);
+
+  const handleReconnect = useCallback(() => {
+    if (connectionState.status === 'disconnected') {
+      const delay = getReconnectDelay();
+      logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Attempting reconnection:', {
+        attempt: reconnectAttempts.current + 1,
+        delay,
+        timestamp: new Date().toISOString()
+      });
+
+      retryTimeouts.current.reconnect = setTimeout(() => {
+        reconnectAttempts.current += 1;
+        debouncedSetConnectionState({
+          status: 'connecting',
+          lastAttempt: Date.now(),
+          retryCount: reconnectAttempts.current
+        });
+        
+        // Re-establish all active subscriptions
+        activeSubscriptions.current.forEach(chatId => {
+          subscribeToChat(chatId);
+        });
+      }, delay);
+    }
+  }, [connectionState.status, debouncedSetConnectionState, getReconnectDelay]);
 
   const subscribeToChat = useCallback((chatId: string) => {
     try {
@@ -45,12 +99,6 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         });
         return;
       }
-
-      setConnectionState(prev => ({
-        ...prev,
-        status: 'connecting',
-        lastAttempt: Date.now(),
-      }));
 
       const channel = supabase
         .channel(`chat-${chatId}`)
@@ -70,13 +118,14 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
               chatId,
               status,
               timestamp: new Date().toISOString(),
-              retryCount
+              retryCount: reconnectAttempts.current
             });
 
             if (status === 'SUBSCRIBED') {
               activeSubscriptions.current.add(chatId);
               channels.current.set(chatId, channel);
-              setConnectionState({
+              reconnectAttempts.current = 0;
+              debouncedSetConnectionState({
                 status: 'connected',
                 lastAttempt: Date.now(),
                 retryCount: 0,
@@ -89,19 +138,20 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
               });
             } else if (status === 'CHANNEL_ERROR') {
               handleConnectionError(chatId, new Error(`Failed to subscribe to chat ${chatId}`));
+              handleReconnect();
             }
           } catch (error) {
             handleError(error as Error, 'handle subscription status');
           }
         });
+
     } catch (error) {
       handleError(error as Error, 'subscribe to chat');
-      if (retryCount < 3) {
-        setRetryCount(prev => prev + 1);
-        setTimeout(() => subscribeToChat(chatId), Math.pow(2, retryCount) * 1000);
+      if (reconnectAttempts.current < 5) {
+        handleReconnect();
       }
     }
-  }, [channels, activeSubscriptions, setConnectionState, processMessage, handleConnectionError, handleError, retryCount]);
+  }, [debouncedSetConnectionState, handleConnectionError, handleError, handleReconnect, processMessage]);
 
   const unsubscribeFromChat = useCallback((chatId: string) => {
     try {
@@ -116,15 +166,18 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }, [cleanupSubscription, handleError]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       try {
+        Object.values(retryTimeouts.current).forEach(clearTimeout);
         cleanupAllSubscriptions();
+        debouncedSetConnectionState.cancel();
       } catch (error) {
-        handleError(error as Error, 'cleanup all subscriptions');
+        handleError(error as Error, 'cleanup on unmount');
       }
     };
-  }, [cleanupAllSubscriptions, handleError]);
+  }, [cleanupAllSubscriptions, debouncedSetConnectionState, handleError]);
 
   const value: RealTimeContextValue = {
     connectionState,
@@ -132,7 +185,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     unsubscribeFromChat,
     activeSubscriptions: activeSubscriptions.current,
     lastMessage,
-    retryCount
+    retryCount: reconnectAttempts.current
   };
 
   return (

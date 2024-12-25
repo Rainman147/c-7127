@@ -30,16 +30,29 @@ export const useWebSocketEvents = (
   }, [onError]);
 
   useEffect(() => {
-    if (!channel) return;
+    if (!channel) {
+      logger.debug(LogCategory.COMMUNICATION, 'WebSocket', 'No channel provided');
+      return;
+    }
 
     const socket = (channel as any).socket;
-    if (!socket) return;
+    if (!socket) {
+      logger.warn(LogCategory.COMMUNICATION, 'WebSocket', 'No socket found in channel');
+      return;
+    }
 
     socket.onopen = handleWebSocketOpen;
     socket.onclose = handleWebSocketClose;
     socket.onerror = handleWebSocketError;
 
+    logger.debug(LogCategory.COMMUNICATION, 'WebSocket', 'Event listeners attached', {
+      timestamp: new Date().toISOString()
+    });
+
     return () => {
+      logger.debug(LogCategory.COMMUNICATION, 'WebSocket', 'Cleaning up event listeners', {
+        timestamp: new Date().toISOString()
+      });
       socket.onopen = null;
       socket.onclose = null;
       socket.onerror = null;
