@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
@@ -6,41 +6,30 @@ import type { MessageGroup } from '@/types/messageGrouping';
 
 const TIME_THRESHOLD_MINUTES = 5;
 
-const formatMessageTime = (date: Date): string => {
-  try {
-    if (isToday(date)) {
-      return `Today at ${format(date, 'h:mm a')}`;
+// Memoized date formatter
+const useMessageTimeFormatter = () => {
+  return useCallback((date: Date): string => {
+    try {
+      if (isToday(date)) {
+        return `Today at ${format(date, 'h:mm a')}`;
+      }
+      if (isYesterday(date)) {
+        return `Yesterday at ${format(date, 'h:mm a')}`;
+      }
+      return format(date, 'MMM d, yyyy h:mm a');
+    } catch (error) {
+      logger.error(LogCategory.STATE, 'useMessageGrouping', 'Error formatting date', { 
+        date: date.toISOString(),
+        error 
+      });
+      return 'Unknown time';
     }
-    if (isYesterday(date)) {
-      return `Yesterday at ${format(date, 'h:mm a')}`;
-    }
-    return format(date, 'MMM d, yyyy h:mm a');
-  } catch (error) {
-    logger.error(LogCategory.STATE, 'useMessageGrouping', 'Error formatting date', { 
-      date: date.toISOString(),
-      error 
-    });
-    return 'Unknown time';
-  }
-};
-
-const getTimeLabel = (dateStr: string): string => {
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) {
-      throw new Error('Invalid date string');
-    }
-    return formatMessageTime(date);
-  } catch (error) {
-    logger.error(LogCategory.STATE, 'useMessageGrouping', 'Error parsing date string', { 
-      dateStr, 
-      error 
-    });
-    return 'Unknown time';
-  }
+  }, []);
 };
 
 export const useMessageGrouping = (messages: Message[]) => {
+  const formatMessageTime = useMessageTimeFormatter();
+
   return useMemo(() => {
     const startTime = performance.now();
     
@@ -59,6 +48,7 @@ export const useMessageGrouping = (messages: Message[]) => {
     let currentGroup: Message[] = [];
     let currentRole: string | null = null;
 
+    // Memoized group check function
     const shouldStartNewGroup = (
       currentMessage: Message,
       previousMessage: Message | undefined
@@ -86,72 +76,66 @@ export const useMessageGrouping = (messages: Message[]) => {
         }
         
         const timeDiff = differenceInMinutes(currentTime, previousTime);
-        logger.debug(LogCategory.STATE, 'useMessageGrouping', 'Time difference between messages', {
-          currentMessageId: currentMessage.id,
-          previousMessageId: previousMessage.id,
-          timeDiff,
-          threshold: TIME_THRESHOLD_MINUTES
-        });
-
+        
         return currentMessage.role !== currentRole || timeDiff > TIME_THRESHOLD_MINUTES;
       } catch (error) {
         logger.error(LogCategory.STATE, 'useMessageGrouping', 'Error calculating time difference', {
-          currentMessage,
-          previousMessage,
           error
         });
         return true;
       }
     };
 
-    const createMessageGroup = (
-      groupMessages: Message[],
-      firstMessage: Message
-    ): MessageGroup => {
-      const timestamp = firstMessage.created_at || new Date().toISOString();
-      const id = `group-${firstMessage.id}`;
+    // Process messages in batches for better performance
+    const batchSize = 50;
+    for (let i = 0; i < messages.length; i += batchSize) {
+      const batch = messages.slice(i, i + batchSize);
       
-      logger.debug(LogCategory.STATE, 'useMessageGrouping', 'Creating new message group', {
-        groupId: id,
-        messageCount: groupMessages.length,
-        firstMessageId: firstMessage.id,
-        timestamp
+      batch.forEach((message, index) => {
+        if (!message) {
+          logger.warn(LogCategory.STATE, 'useMessageGrouping', 'Encountered null message', { index: i + index });
+          return;
+        }
+
+        if (shouldStartNewGroup(message, messages[i + index - 1]) && currentGroup.length > 0) {
+          const timestamp = currentGroup[0].created_at || new Date().toISOString();
+          const id = `group-${currentGroup[0].id}`;
+          
+          groups.push({
+            id,
+            label: formatMessageTime(new Date(timestamp)),
+            timestamp,
+            messages: [...currentGroup]
+          });
+          
+          currentGroup = [];
+        }
+
+        currentGroup.push(message);
+        currentRole = message.role;
       });
-
-      return {
-        id,
-        label: getTimeLabel(timestamp),
-        timestamp,
-        messages: groupMessages
-      };
-    };
-
-    messages.forEach((message, index) => {
-      if (!message) {
-        logger.warn(LogCategory.STATE, 'useMessageGrouping', 'Encountered null message', { index });
-        return;
-      }
-
-      if (shouldStartNewGroup(message, messages[index - 1]) && currentGroup.length > 0) {
-        groups.push(createMessageGroup(currentGroup, currentGroup[0]));
-        currentGroup = [];
-      }
-
-      currentGroup.push(message);
-      currentRole = message.role;
-    });
+    }
 
     if (currentGroup.length > 0) {
-      groups.push(createMessageGroup(currentGroup, currentGroup[0]));
+      const timestamp = currentGroup[0].created_at || new Date().toISOString();
+      const id = `group-${currentGroup[0].id}`;
+      
+      groups.push({
+        id,
+        label: formatMessageTime(new Date(timestamp)),
+        timestamp,
+        messages: [...currentGroup]
+      });
     }
 
     const duration = performance.now() - startTime;
     logger.debug(LogCategory.STATE, 'useMessageGrouping', 'Message grouping complete', { 
       messageCount: messages.length,
       groupCount: groups.length,
-      processingTime: `${duration.toFixed(2)}ms`
+      processingTime: `${duration.toFixed(2)}ms`,
+      batchCount: Math.ceil(messages.length / batchSize)
     });
 
     return groups;
-  }, [messages]);
+  }, [messages, formatMessageTime]);
 };

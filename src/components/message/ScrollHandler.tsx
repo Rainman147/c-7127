@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
+import { debounce } from 'lodash';
 
 interface ScrollHandlerProps {
   messages: any[];
@@ -22,18 +23,13 @@ export const useScrollHandler = ({
     lastScrollTime: Date.now(),
     averageScrollDuration: 0
   });
+  const isScrolling = useRef(false);
 
-  // Enhanced scroll position tracking
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const currentPosition = container.scrollTop;
-      const scrollTime = Date.now();
+  // Debounced scroll metrics update
+  const updateScrollMetrics = useCallback(
+    debounce((currentPosition: number, scrollTime: number) => {
       const scrollDuration = scrollTime - scrollMetrics.current.lastScrollTime;
       
-      // Update scroll metrics
       scrollMetrics.current = {
         scrollCount: scrollMetrics.current.scrollCount + 1,
         lastScrollTime: scrollTime,
@@ -42,7 +38,6 @@ export const useScrollHandler = ({
           (scrollMetrics.current.scrollCount + 1)
       };
 
-      // Log detailed scroll metrics for performance monitoring
       logger.debug(LogCategory.STATE, 'ScrollHandler', 'Scroll metrics updated', {
         previousPosition: lastScrollPosition.current,
         currentPosition,
@@ -50,18 +45,34 @@ export const useScrollHandler = ({
         viewportHeight,
         messageCount: messages.length,
         averageScrollDuration: scrollMetrics.current.averageScrollDuration,
-        totalScrolls: scrollMetrics.current.scrollCount,
-        timestamp: new Date().toISOString()
+        totalScrolls: scrollMetrics.current.scrollCount
       });
       
       lastScrollPosition.current = currentPosition;
+      isScrolling.current = false;
+    }, 150),
+    [messages.length, viewportHeight]
+  );
+
+  // Optimized scroll event handler
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      if (!isScrolling.current) {
+        isScrolling.current = true;
+        requestAnimationFrame(() => {
+          updateScrollMetrics(container.scrollTop, Date.now());
+        });
+      }
     };
 
-    container.addEventListener('scroll', handleScroll);
+    container.addEventListener('scroll', handleScroll, { passive: true });
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [messages.length, viewportHeight, containerRef]);
+  }, [updateScrollMetrics]);
 
-  // Optimized scroll to bottom with performance tracking
+  // Optimized scroll to bottom
   useEffect(() => {
     if (containerRef.current && messages.length > 0) {
       const scrollStartTime = performance.now();
@@ -69,16 +80,18 @@ export const useScrollHandler = ({
       try {
         const container = containerRef.current;
         const previousScroll = container.scrollTop;
-        container.scrollTop = container.scrollHeight;
-        
-        logger.debug(LogCategory.STATE, 'ScrollHandler', 'Scroll to bottom complete', {
-          duration: performance.now() - scrollStartTime,
-          messageCount: messages.length,
-          scrollDistance: container.scrollHeight - previousScroll,
-          success: Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 1,
-          viewportHeight,
-          keyboardVisible,
-          connectionState: connectionState?.toString() || 'unknown'
+
+        requestAnimationFrame(() => {
+          container.scrollTop = container.scrollHeight;
+          
+          logger.debug(LogCategory.STATE, 'ScrollHandler', 'Scroll to bottom complete', {
+            duration: performance.now() - scrollStartTime,
+            messageCount: messages.length,
+            scrollDistance: container.scrollHeight - previousScroll,
+            success: Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 1,
+            viewportHeight,
+            keyboardVisible
+          });
         });
       } catch (error) {
         logger.error(LogCategory.ERROR, 'ScrollHandler', 'Scroll to bottom failed', { 
@@ -89,10 +102,11 @@ export const useScrollHandler = ({
         });
       }
     }
-  }, [messages.length, viewportHeight, keyboardVisible, connectionState]);
+  }, [messages.length, viewportHeight, keyboardVisible]);
 
   return {
     metrics: scrollMetrics.current,
-    lastPosition: lastScrollPosition.current
+    lastPosition: lastScrollPosition.current,
+    isScrolling: isScrolling.current
   };
 };
