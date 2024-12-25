@@ -7,7 +7,7 @@ export const useMessageSubscription = (
   messageId: string | undefined,
   onMessageUpdate: (content: string) => void
 ) => {
-  const { subscribe, cleanup } = useSubscriptionManager();
+  const { subscribe, cleanupSubscription } = useSubscriptionManager();
   const { handleRetry, resetRetryCount, retryCount } = useRetryManager();
   const currentMessageId = useRef<string>();
 
@@ -20,12 +20,11 @@ export const useMessageSubscription = (
       return;
     }
 
-    // Update the current message ID
     currentMessageId.current = messageId;
     const channelName = `message-${messageId}`;
 
     try {
-      const channel = subscribe({
+      subscribe({
         channelName,
         filter: {
           event: '*',
@@ -49,17 +48,21 @@ export const useMessageSubscription = (
               timestamp: new Date().toISOString()
             });
           }
+        },
+        onError: (error) => {
+          logger.error(LogCategory.WEBSOCKET, 'MessageSubscription', 'Subscription error', {
+            error,
+            messageId,
+            retryCount,
+            timestamp: new Date().toISOString()
+          });
+          handleRetry(() => setupSubscription(), 'message-subscription');
         }
       });
-
-      if (!channel) {
-        throw new Error('Failed to create channel');
-      }
     } catch (error) {
-      logger.error(LogCategory.WEBSOCKET, 'MessageSubscription', 'Subscription error', {
-        error,
+      logger.error(LogCategory.WEBSOCKET, 'MessageSubscription', 'Failed to setup subscription', {
         messageId,
-        retryCount,
+        error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString()
       });
       await handleRetry(() => setupSubscription(), 'message-subscription');
@@ -74,11 +77,11 @@ export const useMessageSubscription = (
           messageId: currentMessageId.current,
           timestamp: new Date().toISOString()
         });
-        cleanup(`message-${currentMessageId.current}`);
+        cleanupSubscription(`message-${currentMessageId.current}`);
         currentMessageId.current = undefined;
       }
     };
-  }, [messageId, setupSubscription, cleanup]);
+  }, [messageId, setupSubscription, cleanupSubscription]);
 
   return {
     retryCount
