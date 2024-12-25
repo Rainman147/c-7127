@@ -25,7 +25,7 @@ export const useMessageRealtime = (
 
   const {
     setupSubscription,
-    cleanup,
+    cleanup: cleanupSubscription,
     retryCount
   } = useMessageSubscription(messageId, handleMessageUpdate);
 
@@ -42,6 +42,9 @@ export const useMessageRealtime = (
       timestamp: new Date().toISOString()
     });
 
+    // Clean up any existing subscription before setting up a new one
+    cleanupSubscription();
+
     setupSubscription().catch(error => {
       logger.error(LogCategory.WEBSOCKET, 'MessageRealtime', 'Failed to setup subscription', {
         messageId,
@@ -56,10 +59,10 @@ export const useMessageRealtime = (
         messageId,
         timestamp: new Date().toISOString()
       });
-      cleanup();
+      cleanupSubscription();
       clearQueue();
     };
-  }, [messageId, setupSubscription, cleanup, clearQueue, handleConnectionError, connectionState.status, retryCount]);
+  }, [messageId, setupSubscription, cleanupSubscription, clearQueue, handleConnectionError, connectionState.status, retryCount]);
 
   return {
     connectionState,

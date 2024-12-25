@@ -20,11 +20,13 @@ export const useMessageSubscription = (
       logger.info(LogCategory.WEBSOCKET, 'MessageSubscription', 'Cleaning up subscription', {
         messageId,
         subscriptionDuration: duration,
+        channelName: channelRef.current.topic,
         timestamp: new Date().toISOString()
       });
       
       supabase.removeChannel(channelRef.current);
       channelRef.current = undefined;
+      subscriptionTimeRef.current = Date.now();
     }
   }, [messageId]);
 
@@ -74,6 +76,7 @@ export const useMessageSubscription = (
           logger.info(LogCategory.WEBSOCKET, 'MessageSubscription', 'Subscription status changed', {
             status,
             messageId,
+            channelName,
             timestamp: new Date().toISOString()
           });
 
