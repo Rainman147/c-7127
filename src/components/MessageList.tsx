@@ -14,6 +14,8 @@ import type { Message } from '@/types/chat';
 
 const MessageList = ({ messages: propMessages }: { messages: Message[] }) => {
   const renderStartTime = performance.now();
+  const lastRenderTime = useRef(performance.now());
+  const renderCount = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
   const { connectionState } = useRealTime();
@@ -30,6 +32,42 @@ const MessageList = ({ messages: propMessages }: { messages: Message[] }) => {
 
   const messageGroups = useMessageGrouping(propMessages);
 
+  // Enhanced performance monitoring
+  useEffect(() => {
+    const currentTime = performance.now();
+    const timeSinceLastRender = currentTime - lastRenderTime.current;
+    renderCount.current += 1;
+
+    logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'Render performance metrics', {
+      renderCount: renderCount.current,
+      timeSinceLastRender: `${timeSinceLastRender.toFixed(2)}ms`,
+      messageCount: propMessages?.length ?? 0,
+      groupCount: messageGroups?.length ?? 0,
+      averageRenderTime: `${(currentTime - renderStartTime) / renderCount.current}ms`,
+      timestamp: new Date().toISOString()
+    });
+
+    // Log warning for potentially problematic render times
+    if (timeSinceLastRender > 16.67) { // More than 60fps threshold
+      logger.warn(LogCategory.PERFORMANCE, 'MessageList', 'Render time exceeded frame budget', {
+        renderTime: timeSinceLastRender,
+        messageCount: propMessages?.length,
+        groupCount: messageGroups?.length
+      });
+    }
+
+    lastRenderTime.current = currentTime;
+
+    // Memory usage monitoring
+    if (performance?.memory) {
+      logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'Memory usage', {
+        usedJSHeapSize: performance.memory.usedJSHeapSize,
+        totalJSHeapSize: performance.memory.totalJSHeapSize,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Enhanced error tracking for duplicate messages
   useEffect(() => {
     const lastMessage = propMessages[propMessages.length - 1];
@@ -42,17 +80,12 @@ const MessageList = ({ messages: propMessages }: { messages: Message[] }) => {
         operation: 'message-deduplication',
         additionalInfo: {
           messageId: lastMessage.id,
-          duplicateCount: propMessages.filter(m => m.id === lastMessage.id).length
+          duplicateCount: propMessages.filter(m => m.id === lastMessage.id).length,
+          renderCount: renderCount.current
         }
       };
 
-      const error = new Error('Duplicate message detected');
-      ErrorTracker.trackError(error, metadata);
-
-      logger.warn(LogCategory.STATE, 'MessageList', 'Duplicate message detected:', {
-        messageId: lastMessage.id,
-        timestamp: new Date().toISOString()
-      });
+      ErrorTracker.trackError(new Error('Duplicate message detected'), metadata);
       return;
     }
     
@@ -73,7 +106,8 @@ const MessageList = ({ messages: propMessages }: { messages: Message[] }) => {
         additionalInfo: {
           connectionStatus: connectionState.status,
           retryCount: connectionState.retryCount,
-          error: connectionState.error.message
+          error: connectionState.error.message,
+          renderCount: renderCount.current
         }
       };
 
@@ -98,18 +132,6 @@ const MessageList = ({ messages: propMessages }: { messages: Message[] }) => {
     }
   }, [connectionState.status, connectionState.error, connectionState.retryCount, toast]);
 
-  // Enhanced render metrics logging
-  logger.debug(LogCategory.RENDER, 'MessageList', 'Render metrics', {
-    duration: performance.now() - renderStartTime,
-    messageCount: propMessages?.length ?? 0,
-    groupCount: messageGroups?.length ?? 0,
-    scrollMetrics,
-    viewportHeight,
-    keyboardVisible,
-    connectionState: connectionState?.status || 'unknown',
-    timestamp: new Date().toISOString()
-  });
-
   if (!Array.isArray(propMessages) || propMessages.length === 0) {
     return (
       <div className="text-center text-white/70 mt-8">
@@ -129,6 +151,8 @@ const MessageList = ({ messages: propMessages }: { messages: Message[] }) => {
       ))}
     </div>
   );
-};
+});
+
+MessageList.displayName = 'MessageList';
 
 export default MessageList;
