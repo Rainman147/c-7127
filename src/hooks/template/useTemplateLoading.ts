@@ -2,8 +2,8 @@ import { useState, useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { ErrorTracker } from '@/utils/errorTracking';
 import { useToast } from '@/hooks/use-toast';
-import { useAvailableTemplates } from './useAvailableTemplates';
 import type { Template } from '@/components/template/templateTypes';
+import { useAvailableTemplates } from './useAvailableTemplates';
 
 export interface UseTemplateLoadingResult {
   isLoading: boolean;

@@ -22,7 +22,9 @@ export const useChat = (sessionId: string | null) => {
       errorType: error.name,
       operation,
       additionalInfo: {
-        timestamp: new Date().toISOString()
+        sessionId,
+        messageCount: messages.length,
+        isLoading
       }
     });
 
@@ -31,7 +33,7 @@ export const useChat = (sessionId: string | null) => {
       description: "An error occurred. Please try again.",
       variant: "destructive",
     });
-  }, [toast]);
+  }, [toast, sessionId, messages.length, isLoading]);
 
   const handleSendMessage = useCallback(async (message: string, type: 'text' | 'audio' = 'text') => {
     if (!sessionId) return;

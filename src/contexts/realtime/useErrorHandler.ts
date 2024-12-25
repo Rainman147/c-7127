@@ -24,7 +24,8 @@ export const useErrorHandler = (
       errorType: error.name,
       operation,
       additionalInfo: {
-        activeSubscriptions: Array.from(activeSubscriptions.current)
+        activeSubscriptions: Array.from(activeSubscriptions.current),
+        retryCount
       }
     });
 
