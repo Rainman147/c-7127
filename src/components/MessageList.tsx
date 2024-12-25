@@ -1,4 +1,4 @@
-import { memo, useRef, useEffect } from 'react';
+import { memo, useRef, useEffect, useMemo } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { ErrorTracker } from '@/utils/errorTracking';
 import type { ErrorMetadata } from '@/types/errorTracking';
@@ -12,15 +12,17 @@ import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
 
 const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) => {
-  const renderStartTime = performance.now();
+  const renderStartTime = useRef(performance.now());
   const lastRenderTime = useRef(performance.now());
   const renderCount = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const performanceMetricsInterval = useRef<NodeJS.Timeout>();
+  
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
   const { connectionState } = useRealTime();
   const { toast } = useToast();
   const lastMessageRef = useRef<string | null>(null);
-  
+
   const { metrics: scrollMetrics } = useScrollHandler({
     messages: propMessages,
     viewportHeight,
@@ -31,41 +33,57 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
 
   const messageGroups = useMessageGrouping(propMessages);
 
-  // Enhanced performance monitoring
+  // Memoized performance metrics calculation
+  const calculatePerformanceMetrics = useMemo(() => {
+    return {
+      renderTime: performance.now() - renderStartTime.current,
+      messageCount: propMessages?.length ?? 0,
+      groupCount: messageGroups?.length ?? 0,
+      averageRenderTime: renderCount.current > 0 
+        ? (performance.now() - renderStartTime.current) / renderCount.current 
+        : 0
+    };
+  }, [propMessages?.length, messageGroups?.length]);
+
+  // Enhanced performance monitoring with cleanup
   useEffect(() => {
     const currentTime = performance.now();
     const timeSinceLastRender = currentTime - lastRenderTime.current;
     renderCount.current += 1;
 
-    logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'Render performance metrics', {
-      renderCount: renderCount.current,
-      timeSinceLastRender: `${timeSinceLastRender.toFixed(2)}ms`,
-      messageCount: propMessages?.length ?? 0,
-      groupCount: messageGroups?.length ?? 0,
-      averageRenderTime: `${(currentTime - renderStartTime) / renderCount.current}ms`,
-      timestamp: new Date().toISOString()
-    });
-
-    // Log warning for potentially problematic render times
-    if (timeSinceLastRender > 16.67) { // More than 60fps threshold
-      logger.warn(LogCategory.PERFORMANCE, 'MessageList', 'Render time exceeded frame budget', {
-        renderTime: timeSinceLastRender,
-        messageCount: propMessages?.length,
-        groupCount: messageGroups?.length
-      });
-    }
-
-    lastRenderTime.current = currentTime;
-
-    // Memory usage monitoring
-    if (performance?.memory) {
-      logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'Memory usage', {
-        usedJSHeapSize: performance.memory.usedJSHeapSize,
-        totalJSHeapSize: performance.memory.totalJSHeapSize,
+    // Log performance metrics only when they exceed threshold or on significant changes
+    if (timeSinceLastRender > 16.67 || renderCount.current % 10 === 0) {
+      logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'Performance metrics', {
+        ...calculatePerformanceMetrics,
+        timeSinceLastRender: `${timeSinceLastRender.toFixed(2)}ms`,
         timestamp: new Date().toISOString()
       });
     }
-  });
+
+    // Set up periodic memory usage monitoring
+    performanceMetricsInterval.current = setInterval(() => {
+      if (performance?.memory) {
+        const memoryUsage = {
+          usedJSHeapSize: performance.memory.usedJSHeapSize,
+          totalJSHeapSize: performance.memory.totalJSHeapSize,
+          timestamp: new Date().toISOString()
+        };
+
+        if (memoryUsage.usedJSHeapSize > 0.8 * memoryUsage.totalJSHeapSize) {
+          logger.warn(LogCategory.PERFORMANCE, 'MessageList', 'High memory usage detected', memoryUsage);
+        }
+      }
+    }, 30000); // Check every 30 seconds
+
+    lastRenderTime.current = currentTime;
+
+    // Cleanup interval on unmount
+    return () => {
+      if (performanceMetricsInterval.current) {
+        clearInterval(performanceMetricsInterval.current);
+      }
+    };
+  }, [calculatePerformanceMetrics]);
 
   // Enhanced error tracking for duplicate messages
   useEffect(() => {
@@ -111,18 +129,12 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
       };
 
       ErrorTracker.trackError(connectionState.error, metadata);
-
       toast({
         title: "Connection Lost",
         description: "Attempting to reconnect...",
         variant: "destructive",
       });
     } else if (connectionState.status === 'connected' && connectionState.retryCount > 0) {
-      logger.info(LogCategory.COMMUNICATION, 'MessageList', 'Connection restored', {
-        retryCount: connectionState.retryCount,
-        timestamp: new Date().toISOString()
-      });
-
       toast({
         title: "Connection Restored",
         description: "You're back online!",
