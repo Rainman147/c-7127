@@ -16,12 +16,14 @@ interface TemplateSelectorProps {
 export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProps) => {
   const { sessionId, templateId } = useSessionParams();
   const { globalTemplate } = useTemplateContext();
+  const loadStartTime = useRef(Date.now());
   
   useEffect(() => {
     try {
       console.log('[TemplateSelector] Component mounted/updated:', {
         sessionId,
-        templateId
+        templateId,
+        loadStartTime: loadStartTime.current
       });
     } catch (error) {
       const metadata: ErrorMetadata = {
@@ -30,7 +32,11 @@ export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProp
         timestamp: new Date().toISOString(),
         errorType: 'lifecycle',
         operation: 'component-mount',
-        additionalInfo: { sessionId, templateId }
+        additionalInfo: { 
+          sessionId, 
+          templateId,
+          loadDuration: Date.now() - loadStartTime.current
+        }
       };
       ErrorTracker.trackError(error as Error, metadata);
     }
@@ -49,6 +55,7 @@ export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProp
 
   const handleTemplateSelect = useCallback((template: Template) => {
     try {
+      const startTime = Date.now();
       console.log('[TemplateSelector] Template selection requested:', {
         sessionId,
         currentTemplateId: selectedTemplate?.id,
@@ -63,6 +70,7 @@ export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProp
       
       handleTemplateChange(template);
     } catch (error) {
+      const loadDuration = Date.now() - loadStartTime.current;
       const metadata: ErrorMetadata = {
         component: 'TemplateSelector',
         severity: 'medium',
@@ -72,7 +80,10 @@ export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProp
         additionalInfo: {
           templateId: template.id,
           templateName: template.name,
-          sessionId
+          sessionId,
+          loadDuration,
+          timeoutThreshold: 5000,
+          isTimeout: loadDuration > 5000
         }
       };
       ErrorTracker.trackError(error as Error, metadata);
@@ -96,7 +107,8 @@ export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProp
         operation: 'update-display',
         additionalInfo: {
           templateId: selectedTemplate?.id,
-          sessionId
+          sessionId,
+          loadDuration: Date.now() - loadStartTime.current
         }
       };
       ErrorTracker.trackError(error as Error, metadata);

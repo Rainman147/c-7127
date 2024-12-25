@@ -23,6 +23,7 @@ const ChatInput = ({
   logger.debug(LogCategory.RENDER, 'ChatInput', 'Rendering with props:', { isLoading });
   
   const [message, setMessage] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
 
   const {
     handleSubmit,
@@ -35,7 +36,9 @@ const ChatInput = ({
     onSend: async (msg: string, type?: 'text' | 'audio') => {
       try {
         await onSend(msg, type);
+        setRetryCount(0); // Reset retry count on success
       } catch (error) {
+        setRetryCount(prev => prev + 1);
         const metadata: ErrorMetadata = {
           component: 'ChatInput',
           severity: 'high',
@@ -45,7 +48,9 @@ const ChatInput = ({
           additionalInfo: {
             messageLength: msg.length,
             messageType: type,
-            connectionState: connectionState.status
+            connectionState: connectionState.status,
+            retryCount,
+            lastRetryTimestamp: new Date().toISOString()
           }
         };
         ErrorTracker.trackError(error as Error, metadata);
@@ -69,7 +74,8 @@ const ChatInput = ({
           operation: 'message-update',
           additionalInfo: {
             messageLength: newMessage.length,
-            maxLength: 4000
+            maxLength: 4000,
+            retryCount
           }
         };
         ErrorTracker.trackError(error, metadata);
@@ -89,7 +95,8 @@ const ChatInput = ({
         errorType: 'state',
         operation: 'update-message',
         additionalInfo: {
-          messageLength: newMessage.length
+          messageLength: newMessage.length,
+          retryCount
         }
       };
       ErrorTracker.trackError(error as Error, metadata);
