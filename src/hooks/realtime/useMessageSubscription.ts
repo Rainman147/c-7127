@@ -1,34 +1,14 @@
-import { useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
+import { useSubscriptionManager } from './useSubscriptionManager';
 import { useRetryManager } from './useRetryManager';
-import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { Message } from '@/types/chat';
 
 export const useMessageSubscription = (
   messageId: string | undefined,
   onMessageUpdate: (content: string) => void
 ) => {
-  const channelRef = useRef<RealtimeChannel>();
-  const subscriptionTimeRef = useRef<number>(Date.now());
+  const { subscribe, cleanup } = useSubscriptionManager();
   const { handleRetry, resetRetryCount, retryCount } = useRetryManager();
-
-  const cleanup = useCallback(() => {
-    if (channelRef.current) {
-      const duration = Date.now() - subscriptionTimeRef.current;
-      
-      logger.info(LogCategory.WEBSOCKET, 'MessageSubscription', 'Cleaning up subscription', {
-        messageId,
-        subscriptionDuration: duration,
-        channelName: channelRef.current.topic,
-        timestamp: new Date().toISOString()
-      });
-      
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = undefined;
-      subscriptionTimeRef.current = Date.now();
-    }
-  }, [messageId]);
 
   const setupSubscription = useCallback(async () => {
     if (!messageId) {
@@ -36,58 +16,31 @@ export const useMessageSubscription = (
       return;
     }
 
-    // Clean up existing subscription before creating a new one
-    cleanup();
+    const channelName = `message-${messageId}`;
 
     try {
-      const channelName = `message-${messageId}`;
-      
-      logger.debug(LogCategory.WEBSOCKET, 'MessageSubscription', 'Creating new subscription', {
-        messageId,
+      const channel = subscribe({
         channelName,
-        timestamp: new Date().toISOString()
-      });
-
-      const channel = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'messages',
-            filter: `id=eq.${messageId}`
-          },
-          (payload) => {
-            const newMessage = payload.new as Message;
-            const latency = Date.now() - subscriptionTimeRef.current;
-            
-            logger.debug(LogCategory.WEBSOCKET, 'MessageSubscription', 'Received message update', {
-              messageId: newMessage.id,
-              eventType: payload.eventType,
-              latency,
-              timestamp: new Date().toISOString()
-            });
-            
-            onMessageUpdate(newMessage.content);
-          }
-        )
-        .subscribe((status) => {
-          logger.info(LogCategory.WEBSOCKET, 'MessageSubscription', 'Subscription status changed', {
-            status,
-            messageId,
-            channelName,
-            timestamp: new Date().toISOString()
-          });
-
+        filter: {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `id=eq.${messageId}`
+        },
+        onMessage: (payload) => {
+          const newMessage = payload.new;
+          onMessageUpdate(newMessage.content);
+        },
+        onSubscriptionChange: (status) => {
           if (status === 'SUBSCRIBED') {
-            subscriptionTimeRef.current = Date.now();
             resetRetryCount();
           }
-        });
+        }
+      });
 
-      channelRef.current = channel;
-      
+      if (!channel) {
+        throw new Error('Failed to create channel');
+      }
     } catch (error) {
       logger.error(LogCategory.WEBSOCKET, 'MessageSubscription', 'Subscription error', {
         error,
@@ -97,7 +50,7 @@ export const useMessageSubscription = (
       });
       await handleRetry(() => setupSubscription(), 'message-subscription');
     }
-  }, [messageId, onMessageUpdate, handleRetry, resetRetryCount, retryCount, cleanup]);
+  }, [messageId, subscribe, onMessageUpdate, handleRetry, resetRetryCount, retryCount]);
 
   return {
     setupSubscription,
