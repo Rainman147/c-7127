@@ -13,6 +13,12 @@ export const useMessageRealtime = (
   const { addToQueue, processQueue, clearQueue } = useMessageQueue();
   
   const handleMessageUpdate = useCallback((content: string) => {
+    logger.debug(LogCategory.WEBSOCKET, 'MessageRealtime', 'Received message update', {
+      messageId,
+      contentLength: content.length,
+      timestamp: new Date().toISOString()
+    });
+
     addToQueue(messageId!, content);
     processQueue(editedContent, setEditedContent);
   }, [messageId, editedContent, setEditedContent, addToQueue, processQueue]);
@@ -24,23 +30,36 @@ export const useMessageRealtime = (
   } = useMessageSubscription(messageId, handleMessageUpdate);
 
   useEffect(() => {
-    logger.info(LogCategory.LIFECYCLE, 'MessageRealtime', 'Initializing realtime connection:', {
+    if (!messageId) {
+      logger.debug(LogCategory.WEBSOCKET, 'MessageRealtime', 'No message ID provided');
+      return;
+    }
+
+    logger.info(LogCategory.WEBSOCKET, 'MessageRealtime', 'Setting up realtime subscription', {
       messageId,
       connectionState: connectionState.status,
+      retryCount,
       timestamp: new Date().toISOString()
     });
 
-    setupSubscription().catch(handleConnectionError);
+    setupSubscription().catch(error => {
+      logger.error(LogCategory.WEBSOCKET, 'MessageRealtime', 'Failed to setup subscription', {
+        messageId,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      });
+      handleConnectionError(error);
+    });
 
     return () => {
-      logger.info(LogCategory.LIFECYCLE, 'MessageRealtime', 'Cleaning up realtime connection:', {
+      logger.info(LogCategory.WEBSOCKET, 'MessageRealtime', 'Cleaning up realtime subscription', {
         messageId,
         timestamp: new Date().toISOString()
       });
       cleanup();
       clearQueue();
     };
-  }, [messageId, setupSubscription, cleanup, clearQueue, handleConnectionError]);
+  }, [messageId, setupSubscription, cleanup, clearQueue, handleConnectionError, connectionState.status, retryCount]);
 
   return {
     connectionState,

@@ -10,16 +10,42 @@ export const useMessageSubscription = (
   onMessageUpdate: (content: string) => void
 ) => {
   const channelRef = useRef<RealtimeChannel>();
+  const subscriptionTimeRef = useRef<number>(Date.now());
   const { handleRetry, resetRetryCount, retryCount } = useRetryManager();
+
+  const cleanup = useCallback(() => {
+    if (channelRef.current) {
+      const duration = Date.now() - subscriptionTimeRef.current;
+      
+      logger.info(LogCategory.WEBSOCKET, 'MessageSubscription', 'Cleaning up subscription', {
+        messageId,
+        subscriptionDuration: duration,
+        timestamp: new Date().toISOString()
+      });
+      
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = undefined;
+    }
+  }, [messageId]);
 
   const setupSubscription = useCallback(async () => {
     if (!messageId) {
-      logger.debug(LogCategory.COMMUNICATION, 'MessageSubscription', 'No message ID provided');
+      logger.debug(LogCategory.WEBSOCKET, 'MessageSubscription', 'No message ID provided');
       return;
     }
 
+    // Clean up existing subscription before creating a new one
+    cleanup();
+
     try {
       const channelName = `message-${messageId}`;
+      
+      logger.debug(LogCategory.WEBSOCKET, 'MessageSubscription', 'Creating new subscription', {
+        messageId,
+        channelName,
+        timestamp: new Date().toISOString()
+      });
+
       const channel = supabase
         .channel(channelName)
         .on(
@@ -32,21 +58,27 @@ export const useMessageSubscription = (
           },
           (payload) => {
             const newMessage = payload.new as Message;
-            logger.debug(LogCategory.COMMUNICATION, 'MessageSubscription', 'Received message update:', {
+            const latency = Date.now() - subscriptionTimeRef.current;
+            
+            logger.debug(LogCategory.WEBSOCKET, 'MessageSubscription', 'Received message update', {
               messageId: newMessage.id,
+              eventType: payload.eventType,
+              latency,
               timestamp: new Date().toISOString()
             });
+            
             onMessageUpdate(newMessage.content);
           }
         )
         .subscribe((status) => {
-          logger.info(LogCategory.COMMUNICATION, 'MessageSubscription', 'Subscription status:', {
+          logger.info(LogCategory.WEBSOCKET, 'MessageSubscription', 'Subscription status changed', {
             status,
             messageId,
             timestamp: new Date().toISOString()
           });
 
           if (status === 'SUBSCRIBED') {
+            subscriptionTimeRef.current = Date.now();
             resetRetryCount();
           }
         });
@@ -54,25 +86,15 @@ export const useMessageSubscription = (
       channelRef.current = channel;
       
     } catch (error) {
-      logger.error(LogCategory.ERROR, 'MessageSubscription', 'Subscription error:', {
+      logger.error(LogCategory.WEBSOCKET, 'MessageSubscription', 'Subscription error', {
         error,
         messageId,
-        retryCount
+        retryCount,
+        timestamp: new Date().toISOString()
       });
       await handleRetry(() => setupSubscription(), 'message-subscription');
     }
-  }, [messageId, onMessageUpdate, handleRetry, resetRetryCount, retryCount]);
-
-  const cleanup = useCallback(() => {
-    if (channelRef.current) {
-      logger.info(LogCategory.COMMUNICATION, 'MessageSubscription', 'Cleaning up subscription:', {
-        messageId,
-        timestamp: new Date().toISOString()
-      });
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = undefined;
-    }
-  }, [messageId]);
+  }, [messageId, onMessageUpdate, handleRetry, resetRetryCount, retryCount, cleanup]);
 
   return {
     setupSubscription,
