@@ -1,9 +1,10 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { debounce } from 'lodash';
+import type { Message } from '@/types/chat';
 
 interface ScrollHandlerProps {
-  messages: any[];
+  messages: Message[];
   viewportHeight: number;
   keyboardVisible: boolean;
   connectionState: any;
@@ -25,7 +26,6 @@ export const useScrollHandler = ({
   });
   const isScrolling = useRef(false);
 
-  // Debounced scroll metrics update
   const updateScrollMetrics = useCallback(
     debounce((currentPosition: number, scrollTime: number) => {
       const scrollDuration = scrollTime - scrollMetrics.current.lastScrollTime;
@@ -38,7 +38,7 @@ export const useScrollHandler = ({
           (scrollMetrics.current.scrollCount + 1)
       };
 
-      logger.debug(LogCategory.STATE, 'ScrollHandler', 'Scroll metrics updated', {
+      logger.debug(LogCategory.PERFORMANCE, 'ScrollHandler', 'Scroll metrics updated', {
         previousPosition: lastScrollPosition.current,
         currentPosition,
         delta: currentPosition - lastScrollPosition.current,
@@ -54,7 +54,6 @@ export const useScrollHandler = ({
     [messages.length, viewportHeight]
   );
 
-  // Optimized scroll event handler
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -72,7 +71,6 @@ export const useScrollHandler = ({
     return () => container.removeEventListener('scroll', handleScroll);
   }, [updateScrollMetrics]);
 
-  // Optimized scroll to bottom
   useEffect(() => {
     if (containerRef.current && messages.length > 0) {
       const scrollStartTime = performance.now();
@@ -84,7 +82,7 @@ export const useScrollHandler = ({
         requestAnimationFrame(() => {
           container.scrollTop = container.scrollHeight;
           
-          logger.debug(LogCategory.STATE, 'ScrollHandler', 'Scroll to bottom complete', {
+          logger.debug(LogCategory.PERFORMANCE, 'ScrollHandler', 'Scroll to bottom complete', {
             duration: performance.now() - scrollStartTime,
             messageCount: messages.length,
             scrollDistance: container.scrollHeight - previousScroll,
