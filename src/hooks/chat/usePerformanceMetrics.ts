@@ -17,8 +17,10 @@ interface ExtendedPerformance extends Performance {
   };
 }
 
-const MEMORY_WARNING_THRESHOLD = 0.85; // 85% of total heap size
-const RENDER_TIME_THRESHOLD = 16.67; // ms
+// Adjusted thresholds based on typical web application memory patterns
+const MEMORY_WARNING_THRESHOLD = 0.75; // 75% of total heap size
+const MEMORY_CRITICAL_THRESHOLD = 0.90; // 90% of total heap size
+const RENDER_TIME_THRESHOLD = 16.67; // ms (targeting 60fps)
 
 export const usePerformanceMetrics = (messageCount: number, groupCount: number) => {
   const renderStartTime = useRef(performance.now());
@@ -48,7 +50,9 @@ export const usePerformanceMetrics = (messageCount: number, groupCount: number) 
         renderTime: `${timeSinceLastRender.toFixed(2)}ms`,
         threshold: `${RENDER_TIME_THRESHOLD}ms`,
         messageCount,
-        groupCount
+        groupCount,
+        renderCount: renderCount.current,
+        totalRuntime: `${(currentTime - renderStartTime.current).toFixed(2)}ms`
       });
     }
 
@@ -66,21 +70,45 @@ export const usePerformanceMetrics = (messageCount: number, groupCount: number) 
       const memoryUsage = {
         usedJSHeapSize: extendedPerf.memory.usedJSHeapSize,
         totalJSHeapSize: extendedPerf.memory.totalJSHeapSize,
+        jsHeapSizeLimit: extendedPerf.memory.jsHeapSizeLimit,
         usageRatio: extendedPerf.memory.usedJSHeapSize / extendedPerf.memory.totalJSHeapSize,
+        heapLimitRatio: extendedPerf.memory.totalJSHeapSize / extendedPerf.memory.jsHeapSizeLimit,
         timestamp: new Date().toISOString()
       };
 
-      if (memoryUsage.usageRatio > MEMORY_WARNING_THRESHOLD) {
+      if (memoryUsage.usageRatio > MEMORY_CRITICAL_THRESHOLD) {
+        logger.warn(LogCategory.PERFORMANCE, 'MessageList', 'CRITICAL: Memory usage extremely high', {
+          ...memoryUsage,
+          thresholdExceeded: `${(memoryUsage.usageRatio * 100).toFixed(1)}%`,
+          heapLimitProximity: `${(memoryUsage.heapLimitRatio * 100).toFixed(1)}%`,
+          messageMetrics: {
+            totalMessages: messageCount,
+            messageGroups: groupCount,
+            averageRenderTime: calculateMetrics().averageRenderTime
+          },
+          recommendedActions: [
+            'Implement virtual scrolling',
+            'Add pagination',
+            'Clear message history',
+            'Reduce message group size'
+          ]
+        });
+      } else if (memoryUsage.usageRatio > MEMORY_WARNING_THRESHOLD) {
         logger.warn(LogCategory.PERFORMANCE, 'MessageList', 'High memory usage detected', {
           ...memoryUsage,
           thresholdExceeded: `${(memoryUsage.usageRatio * 100).toFixed(1)}%`,
+          heapLimitProximity: `${(memoryUsage.heapLimitRatio * 100).toFixed(1)}%`,
+          messageMetrics: {
+            totalMessages: messageCount,
+            messageGroups: groupCount
+          },
           recommendedAction: 'Consider implementing virtual scrolling or pagination'
         });
       } else {
         logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'Memory usage normal', memoryUsage);
       }
     }
-  }, []);
+  }, [messageCount, groupCount, calculateMetrics]);
 
   useEffect(() => {
     monitorPerformance();
