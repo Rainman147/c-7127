@@ -21,7 +21,7 @@ export const useErrorHandler = (
       component: 'RealTimeContext',
       severity: retryCount >= MAX_RETRIES ? 'high' : 'medium',
       timestamp: new Date().toISOString(),
-      errorType: error.name,
+      errorType: 'network',
       operation,
       additionalInfo: {
         activeSubscriptions: Array.from(activeSubscriptions.current),

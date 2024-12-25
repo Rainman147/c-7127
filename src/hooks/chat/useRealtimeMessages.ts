@@ -17,7 +17,7 @@ export const useRealtimeMessages = () => {
       component: 'useRealtimeMessages',
       severity: 'medium',
       timestamp: new Date().toISOString(),
-      errorType: error.name,
+      errorType: 'runtime',
       operation,
       additionalInfo: {
         timestamp: new Date().toISOString()

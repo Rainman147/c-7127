@@ -30,7 +30,7 @@ export const useTemplateLoading = (): UseTemplateLoadingResult => {
       component: 'useTemplateLoading',
       severity: 'medium',
       timestamp: new Date().toISOString(),
-      errorType: error.name,
+      errorType: 'data',
       operation,
       additionalInfo: {
         isLoading,
