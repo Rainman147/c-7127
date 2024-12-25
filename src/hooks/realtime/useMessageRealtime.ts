@@ -11,7 +11,7 @@ export const useMessageRealtime = (
   editedContent: string,
   setEditedContent: (content: string) => void
 ) => {
-  const { state: connectionState, subscribe, cleanup } = useSubscriptionManager();
+  const { state: connectionState, subscribe, cleanup } = subscriptionManager;
   const { addToQueue, processQueue, clearQueue } = useMessageQueue();
   const currentMessageId = useRef<string>();
 
