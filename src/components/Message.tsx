@@ -4,6 +4,7 @@ import { useMessageState } from './message/useMessageState';
 import { useMessageRealtime } from './message/useMessageRealtime';
 import { useTypingEffect } from './message/useTypingEffect';
 import { logger, LogCategory } from '@/utils/logging';
+import { useToast } from '@/hooks/use-toast';
 import type { MessageProps } from './message/types';
 
 const Message = memo(({ 
@@ -14,6 +15,8 @@ const Message = memo(({
   id,
   showAvatar = true 
 }: MessageProps) => {
+  const { toast } = useToast();
+  
   logger.debug(LogCategory.RENDER, 'Message', 'Rendering message:', {
     id,
     role,
@@ -33,10 +36,11 @@ const Message = memo(({
     handleEdit
   } = useMessageState(content, id);
 
-  const { connectionStatus, lastUpdateTime } = useMessageRealtime(id, editedContent, setEditedContent);
+  const { connectionStatus, lastUpdateTime, retryCount } = useMessageRealtime(id, editedContent, setEditedContent);
 
   const { isTyping } = useTypingEffect(role, isStreaming, content);
 
+  // Log connection state changes
   logger.debug(LogCategory.STATE, 'Message', 'Message state:', {
     id,
     isEditing,
@@ -44,8 +48,17 @@ const Message = memo(({
     isSaving,
     connectionStatus,
     lastUpdateTime,
+    retryCount,
     isTyping
   });
+
+  // Show toast for reconnection success
+  if (connectionStatus === 'SUBSCRIBED' && retryCount > 0) {
+    toast({
+      description: "Message sync restored",
+      className: "bg-green-500 text-white",
+    });
+  }
 
   return (
     <MessageContainer

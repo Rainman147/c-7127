@@ -7,6 +7,9 @@ import type { DatabaseMessage } from '@/types/database/messages';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { ErrorMetadata } from '@/types/errorTracking';
 
+const MAX_RETRIES = 5;
+const INITIAL_RETRY_DELAY = 1000;
+
 export const useMessageRealtime = (
   messageId: string | undefined,
   editedContent: string,
@@ -14,6 +17,7 @@ export const useMessageRealtime = (
 ) => {
   const [connectionStatus, setConnectionStatus] = useState<string>('connecting');
   const [lastUpdateTime, setLastUpdateTime] = useState<number | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -23,120 +27,154 @@ export const useMessageRealtime = (
     }
 
     const subscribeStartTime = performance.now();
+    let retryTimeout: NodeJS.Timeout;
     
-    logger.debug(LogCategory.COMMUNICATION, 'Message', 'Setting up real-time subscription', { 
+    logger.info(LogCategory.COMMUNICATION, 'Message', 'Setting up real-time subscription', { 
       messageId,
       subscribeStartTime,
-      connectionStatus
+      connectionStatus,
+      retryCount
     });
-    
-    const channel = supabase
-      .channel(`message-${messageId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `id=eq.${messageId}`
-        },
-        (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
-          try {
-            const updateReceiveTime = performance.now();
-            const latency = lastUpdateTime ? updateReceiveTime - lastUpdateTime : null;
-            
-            logger.debug(LogCategory.COMMUNICATION, 'Message', 'Received real-time update', {
-              messageId,
-              payload,
-              updateReceiveTime,
-              latency,
-              connectionStatus
-            });
-            
-            const newData = payload.new as DatabaseMessage;
-            if (newData && newData.content !== editedContent) {
-              setEditedContent(newData.content);
-              setLastUpdateTime(updateReceiveTime);
+
+    const setupSubscription = () => {
+      const channel = supabase
+        .channel(`message-${messageId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'messages',
+            filter: `id=eq.${messageId}`
+          },
+          (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
+            try {
+              const updateReceiveTime = performance.now();
+              const latency = lastUpdateTime ? updateReceiveTime - lastUpdateTime : null;
               
-              logger.info(LogCategory.STATE, 'Message', 'Updated message content', {
+              logger.debug(LogCategory.COMMUNICATION, 'Message', 'Received real-time update', {
                 messageId,
-                contentLength: newData.content.length,
-                updateTime: updateReceiveTime
+                payload,
+                updateReceiveTime,
+                latency,
+                connectionStatus
+              });
+              
+              const newData = payload.new as DatabaseMessage;
+              if (newData && newData.content !== editedContent) {
+                setEditedContent(newData.content);
+                setLastUpdateTime(updateReceiveTime);
+                
+                logger.info(LogCategory.STATE, 'Message', 'Updated message content', {
+                  messageId,
+                  contentLength: newData.content.length,
+                  updateTime: updateReceiveTime
+                });
+              }
+            } catch (error) {
+              const metadata: ErrorMetadata = {
+                component: 'useMessageRealtime',
+                severity: 'medium',
+                errorType: 'realtime',
+                operation: 'process-update',
+                timestamp: new Date().toISOString(),
+                additionalInfo: {
+                  messageId,
+                  connectionStatus,
+                  retryCount,
+                  error: error instanceof Error ? error.message : String(error)
+                }
+              };
+              
+              ErrorTracker.trackError(error as Error, metadata);
+              
+              toast({
+                title: "Update Error",
+                description: "Failed to process message update. Retrying...",
+                variant: "destructive"
               });
             }
-          } catch (error) {
+          }
+        )
+        .subscribe(status => {
+          setConnectionStatus(status);
+          logger.info(LogCategory.COMMUNICATION, 'Message', 'Subscription status changed', { 
+            status,
+            messageId,
+            setupDuration: performance.now() - subscribeStartTime,
+            retryCount
+          });
+
+          if (status === 'SUBSCRIBED') {
+            setRetryCount(0);
+            toast({
+              description: "Connected to chat service",
+              className: "bg-green-500 text-white",
+            });
+          } else if (status === 'CHANNEL_ERROR') {
+            const error = new Error(`Channel error for message ${messageId}`);
             const metadata: ErrorMetadata = {
               component: 'useMessageRealtime',
-              severity: 'medium',
-              errorType: 'realtime',
-              operation: 'process-update',
+              severity: 'high',
+              errorType: 'connection',
+              operation: 'subscribe',
               timestamp: new Date().toISOString(),
               additionalInfo: {
                 messageId,
-                connectionStatus,
-                error: error instanceof Error ? error.message : String(error)
+                status,
+                retryCount,
+                setupDuration: performance.now() - subscribeStartTime
               }
             };
             
-            ErrorTracker.trackError(error as Error, metadata);
+            ErrorTracker.trackError(error, metadata);
             
-            toast({
-              title: "Real-time Update Error",
-              description: "Failed to process message update. Please refresh the page.",
-              variant: "destructive"
-            });
+            if (retryCount < MAX_RETRIES) {
+              const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+              logger.info(LogCategory.COMMUNICATION, 'Message', 'Scheduling retry', {
+                retryCount,
+                delay,
+                messageId
+              });
+              
+              setRetryCount(prev => prev + 1);
+              retryTimeout = setTimeout(setupSubscription, delay);
+              
+              toast({
+                title: "Connection Error",
+                description: `Reconnecting... (Attempt ${retryCount + 1}/${MAX_RETRIES})`,
+                variant: "destructive"
+              });
+            } else {
+              toast({
+                title: "Connection Failed",
+                description: "Unable to establish connection after multiple attempts. Please refresh the page.",
+                variant: "destructive"
+              });
+            }
           }
-        }
-      )
-      .subscribe(status => {
-        setConnectionStatus(status);
-        logger.debug(LogCategory.COMMUNICATION, 'Message', 'Subscription status changed', { 
-          status,
-          messageId,
-          setupDuration: performance.now() - subscribeStartTime
         });
 
-        if (status === 'SUBSCRIBED') {
-          toast({
-            description: "Real-time connection established",
-            className: "bg-green-500 text-white",
-          });
-        } else if (status === 'CHANNEL_ERROR') {
-          const metadata: ErrorMetadata = {
-            component: 'useMessageRealtime',
-            severity: 'high',
-            errorType: 'connection',
-            operation: 'subscribe',
-            timestamp: new Date().toISOString(),
-            additionalInfo: {
-              messageId,
-              status,
-              setupDuration: performance.now() - subscribeStartTime
-            }
-          };
-          
-          ErrorTracker.trackError(new Error(`Channel error for message ${messageId}`), metadata);
-          
-          toast({
-            title: "Connection Error",
-            description: "Failed to establish real-time connection. Messages may be delayed.",
-            variant: "destructive"
-          });
-        }
-      });
+      return channel;
+    };
+
+    const channel = setupSubscription();
 
     return () => {
-      logger.debug(LogCategory.COMMUNICATION, 'Message', 'Cleaning up real-time subscription', {
+      logger.info(LogCategory.COMMUNICATION, 'Message', 'Cleaning up real-time subscription', {
         messageId,
         finalConnectionStatus: connectionStatus,
         totalDuration: performance.now() - subscribeStartTime
       });
+      
+      clearTimeout(retryTimeout);
       supabase.removeChannel(channel);
     };
-  }, [messageId, editedContent, setEditedContent, connectionStatus, lastUpdateTime, toast]);
+  }, [messageId, editedContent, setEditedContent, connectionStatus, lastUpdateTime, retryCount, toast]);
 
   return {
     connectionStatus,
-    lastUpdateTime
+    lastUpdateTime,
+    retryCount
   };
 };
