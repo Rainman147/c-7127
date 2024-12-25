@@ -3,6 +3,7 @@ import { logger, LogCategory } from '@/utils/logging';
 import { ErrorTracker } from '@/utils/errorTracking';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
+import type { ErrorSeverity } from '@/types/errorTracking';
 
 interface PerformanceMonitorProps {
   messages: Message[];
@@ -26,9 +27,10 @@ export const PerformanceMonitor = ({
   useEffect(() => {
     const renderTime = performance.now() - renderStartTime.current;
     if (renderTime > PERFORMANCE_WARNING_THRESHOLD) {
+      const severity: ErrorSeverity = 'medium';
       const metadata = {
         component: 'MessageList',
-        severity: 'medium',
+        severity,
         errorType: 'performance',
         operation: 'initial-render',
         timestamp: new Date().toISOString(),

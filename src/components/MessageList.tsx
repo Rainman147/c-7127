@@ -10,6 +10,7 @@ import { usePerformanceMetrics } from '@/hooks/chat/usePerformanceMetrics';
 import ListContainer from './message/ListContainer';
 import { PerformanceMonitor } from './message/PerformanceMonitor';
 import type { Message } from '@/types/chat';
+import type { ErrorSeverity } from '@/types/errorTracking';
 
 const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -35,7 +36,6 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
     messageGroups?.length ?? 0
   );
 
-  // Monitor resize observer performance
   useEffect(() => {
     if (containerRef.current) {
       const height = containerRef.current.clientHeight;
@@ -53,9 +53,10 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
   // Enhanced error tracking for duplicate messages
   const lastMessage = propMessages[propMessages.length - 1];
   if (lastMessage && lastMessage.id === lastMessageRef.current) {
+    const severity: ErrorSeverity = 'medium';
     const metadata = {
       component: 'MessageList',
-      severity: 'medium',
+      severity,
       errorType: 'data',
       operation: 'message-deduplication',
       timestamp: new Date().toISOString(),
