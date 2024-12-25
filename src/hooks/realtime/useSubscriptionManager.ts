@@ -1,19 +1,16 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { Message } from '@/types/chat';
 import type { ConnectionState, ConnectionStateUpdate } from '@/types/connection';
 
 interface SubscriptionConfig {
-  channelName: string;
-  filter: {
-    event: '*' | 'INSERT' | 'UPDATE' | 'DELETE';
-    schema: string;
-    table: string;
-    filter?: string;
-  };
-  onMessage: (payload: any) => void;
+  event: 'INSERT' | 'UPDATE' | 'DELETE' | '*';
+  schema: string;
+  table: string;
+  filter?: string;
+  onMessage: (payload: RealtimePostgresChangesPayload<any>) => void;
   onError?: (error: Error) => void;
   onSubscriptionChange?: (status: string) => void;
 }
@@ -31,29 +28,34 @@ export const useSubscriptionManager = () => {
 
   const subscribe = useCallback((config: SubscriptionConfig): RealtimeChannel => {
     logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Creating subscription', {
-      channelName: config.channelName,
+      table: config.table,
       filter: config.filter,
       timestamp: new Date().toISOString()
     });
 
-    const channel = supabase.channel(config.channelName);
+    const channel = supabase.channel('realtime-subscription');
 
     channel
       .on(
         'postgres_changes',
-        config.filter,
+        {
+          event: config.event,
+          schema: config.schema,
+          table: config.table,
+          filter: config.filter
+        },
         (payload) => {
           logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
-            channelName: config.channelName,
+            table: config.table,
             payload,
             timestamp: new Date().toISOString()
           });
           config.onMessage(payload);
         }
       )
-      .on('error', (error) => {
+      .on('error', (error: Error) => {
         logger.error(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription error', {
-          channelName: config.channelName,
+          table: config.table,
           error,
           timestamp: new Date().toISOString()
         });
@@ -61,7 +63,7 @@ export const useSubscriptionManager = () => {
       })
       .subscribe((status) => {
         logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription status changed', {
-          channelName: config.channelName,
+          table: config.table,
           status,
           timestamp: new Date().toISOString()
         });
