@@ -31,7 +31,6 @@ export const useMessageQuery = (chatId: string | null) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  // Debounced invalidation to prevent excessive refetches
   const debouncedInvalidate = debounce(
     () => queryClient.invalidateQueries({ 
       queryKey: ['messages', chatId] 
@@ -51,9 +50,17 @@ export const useMessageQuery = (chatId: string | null) => {
       .order('created_at', { ascending: true });
 
     if (error) {
-      logger.error(LogCategory.ERROR, 'useMessageQuery', 'Error fetching messages:', { error });
+      logger.error(LogCategory.ERROR, 'useMessageQuery', 'Error fetching messages:', { 
+        error,
+        chatId: id
+      });
       throw error;
     }
+
+    logger.debug(LogCategory.STATE, 'useMessageQuery', 'Messages fetched successfully:', {
+      chatId: id,
+      messageCount: data?.length || 0
+    });
 
     return (data as DatabaseMessage[]).map(mapDatabaseMessageToMessage);
   };
@@ -67,6 +74,10 @@ export const useMessageQuery = (chatId: string | null) => {
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
     meta: {
       errorHandler: (error: Error) => {
+        logger.error(LogCategory.ERROR, 'useMessageQuery', 'Query error:', {
+          error,
+          chatId
+        });
         ErrorTracker.trackError(error, {
           component: 'useMessageQuery',
           errorType: 'QueryError',
@@ -79,16 +90,33 @@ export const useMessageQuery = (chatId: string | null) => {
 
   const addMessage = useMutation({
     mutationFn: async (newMessage: Omit<DatabaseMessage, 'id' | 'created_at'>) => {
+      logger.debug(LogCategory.COMMUNICATION, 'useMessageQuery', 'Adding new message:', {
+        chatId: newMessage.chat_id,
+        type: newMessage.type
+      });
+
       const { data, error } = await supabase
         .from('messages')
         .insert([newMessage])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        logger.error(LogCategory.ERROR, 'useMessageQuery', 'Error adding message:', {
+          error,
+          chatId: newMessage.chat_id
+        });
+        throw error;
+      }
+
       return mapDatabaseMessageToMessage(data as DatabaseMessage);
     },
     onSuccess: (newMessage) => {
+      logger.debug(LogCategory.STATE, 'useMessageQuery', 'Message added successfully:', {
+        messageId: newMessage.id,
+        chatId
+      });
+
       queryClient.setQueryData<Message[]>(['messages', chatId], (old = []) => {
         if (old.some(msg => msg.id === newMessage.id)) {
           return old;
@@ -98,12 +126,18 @@ export const useMessageQuery = (chatId: string | null) => {
       debouncedInvalidate();
     },
     onError: (error: Error) => {
+      logger.error(LogCategory.ERROR, 'useMessageQuery', 'Mutation error:', {
+        error,
+        chatId
+      });
+
       ErrorTracker.trackError(error, {
         component: 'useMessageQuery',
         errorType: 'MutationError',
         severity: 'medium',
         timestamp: new Date().toISOString()
       });
+      
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",
@@ -114,6 +148,11 @@ export const useMessageQuery = (chatId: string | null) => {
 
   const updateMessage = useMutation({
     mutationFn: async ({ id, content }: { id: string; content: string }) => {
+      logger.debug(LogCategory.COMMUNICATION, 'useMessageQuery', 'Updating message:', {
+        messageId: id,
+        chatId
+      });
+
       const { data, error } = await supabase
         .from('messages')
         .update({ content })
@@ -121,10 +160,23 @@ export const useMessageQuery = (chatId: string | null) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        logger.error(LogCategory.ERROR, 'useMessageQuery', 'Error updating message:', {
+          error,
+          messageId: id,
+          chatId
+        });
+        throw error;
+      }
+
       return mapDatabaseMessageToMessage(data as DatabaseMessage);
     },
     onSuccess: (updatedMessage) => {
+      logger.debug(LogCategory.STATE, 'useMessageQuery', 'Message updated successfully:', {
+        messageId: updatedMessage.id,
+        chatId
+      });
+
       queryClient.setQueryData<Message[]>(['messages', chatId], (old = []) => {
         return old.map(msg => 
           msg.id === updatedMessage.id ? updatedMessage : msg
@@ -133,6 +185,11 @@ export const useMessageQuery = (chatId: string | null) => {
       debouncedInvalidate();
     },
     onError: (error: Error) => {
+      logger.error(LogCategory.ERROR, 'useMessageQuery', 'Update error:', {
+        error,
+        chatId
+      });
+
       toast({
         title: "Error",
         description: "Failed to update message. Please try again.",

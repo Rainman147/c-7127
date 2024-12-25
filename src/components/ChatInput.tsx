@@ -35,10 +35,23 @@ const ChatInput = ({
   } = useChatInput({
     onSend: async (msg: string, type?: 'text' | 'audio') => {
       try {
+        logger.debug(LogCategory.COMMUNICATION, 'ChatInput', 'Sending message:', {
+          length: msg.length,
+          type,
+          connectionState: connectionState.status
+        });
+
         await onSend(msg, type);
-        setRetryCount(0); // Reset retry count on success
+        setRetryCount(0);
+        
+        logger.debug(LogCategory.STATE, 'ChatInput', 'Message sent successfully');
       } catch (error) {
         setRetryCount(prev => prev + 1);
+        logger.error(LogCategory.ERROR, 'ChatInput', 'Error sending message:', {
+          error,
+          retryCount: retryCount + 1
+        });
+
         const metadata: ErrorMetadata = {
           component: 'ChatInput',
           severity: 'high',
@@ -65,6 +78,10 @@ const ChatInput = ({
   const handleMessageChange = (newMessage: string) => {
     try {
       if (newMessage.length > 4000) {
+        logger.warn(LogCategory.VALIDATION, 'ChatInput', 'Message exceeds maximum length:', {
+          length: newMessage.length
+        });
+
         const error = new Error('Message exceeds maximum length');
         const metadata: ErrorMetadata = {
           component: 'ChatInput',
@@ -88,6 +105,11 @@ const ChatInput = ({
       });
       setMessage(newMessage);
     } catch (error) {
+      logger.error(LogCategory.ERROR, 'ChatInput', 'Error updating message:', {
+        error,
+        messageLength: newMessage.length
+      });
+
       const metadata: ErrorMetadata = {
         component: 'ChatInput',
         severity: 'low',
