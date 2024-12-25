@@ -10,11 +10,11 @@ export const useMessageRealtime = (
   editedContent: string,
   setEditedContent: (content: string) => void
 ) => {
-  const { state: connectionState, subscribe, cleanupSubscription } = useSubscriptionManager();
+  const { state: connectionState, subscribe, cleanup } = useSubscriptionManager();
   const { addToQueue, processQueue, clearQueue } = useMessageQueue();
   const currentMessageId = useRef<string>();
-  const currentChannel = useRef<RealtimeChannel>();
-  
+  const channelRef = useRef<RealtimeChannel>();
+
   const handleMessageUpdate = useCallback((content: string) => {
     logger.debug(LogCategory.WEBSOCKET, 'MessageRealtime', 'Received message update', {
       messageId,
@@ -28,30 +28,24 @@ export const useMessageRealtime = (
 
   useEffect(() => {
     if (!messageId) {
-      logger.debug(LogCategory.WEBSOCKET, 'MessageRealtime', 'No message ID provided, cleaning up', {
-        previousMessageId: currentMessageId.current,
-        timestamp: new Date().toISOString()
-      });
-      
-      if (currentChannel.current) {
-        cleanupSubscription(currentChannel.current);
-        currentChannel.current = undefined;
-      }
+      logger.debug(LogCategory.WEBSOCKET, 'MessageRealtime', 'No message ID provided');
       return;
     }
 
     if (messageId === currentMessageId.current) {
       logger.debug(LogCategory.WEBSOCKET, 'MessageRealtime', 'Already subscribed to message', {
-        messageId,
-        timestamp: new Date().toISOString()
+        messageId
       });
       return;
     }
 
-    // Cleanup previous subscription
-    if (currentChannel.current) {
-      cleanupSubscription(currentChannel.current);
-      currentChannel.current = undefined;
+    // Cleanup previous subscription if exists
+    if (channelRef.current) {
+      logger.debug(LogCategory.WEBSOCKET, 'MessageRealtime', 'Cleaning up previous subscription', {
+        previousMessageId: currentMessageId.current
+      });
+      cleanup();
+      channelRef.current = undefined;
     }
 
     currentMessageId.current = messageId;
@@ -69,41 +63,37 @@ export const useMessageRealtime = (
         onError: (error) => {
           logger.error(LogCategory.WEBSOCKET, 'MessageRealtime', 'Subscription error', {
             messageId,
-            error: error.message,
-            timestamp: new Date().toISOString()
+            error: error.message
           });
         },
         onSubscriptionChange: (status) => {
           logger.info(LogCategory.WEBSOCKET, 'MessageRealtime', 'Subscription status changed', {
             messageId,
-            status,
-            timestamp: new Date().toISOString()
+            status
           });
         }
       });
 
-      currentChannel.current = channel;
+      channelRef.current = channel;
     } catch (error) {
       logger.error(LogCategory.WEBSOCKET, 'MessageRealtime', 'Failed to setup subscription', {
         messageId,
-        error: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString()
+        error: error instanceof Error ? error.message : String(error)
       });
     }
 
     return () => {
-      if (currentChannel.current) {
+      if (channelRef.current) {
         logger.info(LogCategory.WEBSOCKET, 'MessageRealtime', 'Cleaning up subscription', {
-          messageId: currentMessageId.current,
-          timestamp: new Date().toISOString()
+          messageId: currentMessageId.current
         });
-        cleanupSubscription(currentChannel.current);
-        currentChannel.current = undefined;
+        cleanup();
+        channelRef.current = undefined;
         currentMessageId.current = undefined;
         clearQueue();
       }
     };
-  }, [messageId, subscribe, cleanupSubscription, handleMessageUpdate, clearQueue]);
+  }, [messageId, subscribe, cleanup, handleMessageUpdate, clearQueue]);
 
   return {
     connectionState,

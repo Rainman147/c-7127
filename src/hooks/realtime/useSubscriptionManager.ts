@@ -1,8 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import type { Message } from '@/types/chat';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { ConnectionState, ConnectionStateUpdate } from '@/types/connection';
 
 interface SubscriptionConfig {
@@ -10,7 +9,7 @@ interface SubscriptionConfig {
   schema: string;
   table: string;
   filter?: string;
-  onMessage: (payload: RealtimePostgresChangesPayload<any>) => void;
+  onMessage: (payload: any) => void;
   onError?: (error: Error) => void;
   onSubscriptionChange?: (status: string) => void;
 }
@@ -21,19 +20,34 @@ export const useSubscriptionManager = () => {
     retryCount: 0,
     error: null
   });
+  const activeChannels = useRef<Map<string, RealtimeChannel>>(new Map());
 
   const updateState = useCallback((update: ConnectionStateUpdate) => {
     setState(prev => ({ ...prev, ...update }));
   }, []);
 
   const subscribe = useCallback((config: SubscriptionConfig): RealtimeChannel => {
-    logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Creating subscription', {
-      table: config.table,
-      filter: config.filter,
+    const channelKey = `${config.table}-${config.filter || 'all'}`;
+    
+    // Clean up existing subscription if it exists
+    if (activeChannels.current.has(channelKey)) {
+      const existingChannel = activeChannels.current.get(channelKey);
+      if (existingChannel) {
+        logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Removing existing channel', {
+          channelKey,
+          timestamp: new Date().toISOString()
+        });
+        supabase.removeChannel(existingChannel);
+        activeChannels.current.delete(channelKey);
+      }
+    }
+
+    logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Creating new channel', {
+      channelKey,
       timestamp: new Date().toISOString()
     });
 
-    const channel = supabase.channel('realtime-subscription');
+    const channel = supabase.channel(channelKey);
 
     channel
       .on(
@@ -59,26 +73,43 @@ export const useSubscriptionManager = () => {
           status,
           timestamp: new Date().toISOString()
         });
+        
+        if (status === 'SUBSCRIBED') {
+          activeChannels.current.set(channelKey, channel);
+          updateState({
+            status: 'connected',
+            retryCount: 0,
+            error: null
+          });
+        } else if (status === 'CHANNEL_ERROR') {
+          updateState({
+            status: 'error',
+            error: new Error(`Channel error for ${config.table}`)
+          });
+          config.onError?.(new Error(`Channel error for ${config.table}`));
+        }
+        
         config.onSubscriptionChange?.(status);
       });
 
     return channel;
-  }, []);
+  }, [updateState]);
 
-  const cleanupSubscription = useCallback((channel: RealtimeChannel) => {
-    logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up subscription', {
-      timestamp: new Date().toISOString()
-    });
-    
-    if (channel) {
+  const cleanup = useCallback(() => {
+    activeChannels.current.forEach((channel, key) => {
+      logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up channel', {
+        channelKey: key,
+        timestamp: new Date().toISOString()
+      });
       supabase.removeChannel(channel);
-    }
+    });
+    activeChannels.current.clear();
   }, []);
 
   return {
     state,
     updateState,
     subscribe,
-    cleanupSubscription
+    cleanup
   };
 };
