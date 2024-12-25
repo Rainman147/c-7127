@@ -53,14 +53,6 @@ export const useSubscriptionManager = () => {
           config.onMessage(payload);
         }
       )
-      .on('error', (error: Error) => {
-        logger.error(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription error', {
-          table: config.table,
-          error,
-          timestamp: new Date().toISOString()
-        });
-        config.onError?.(error);
-      })
       .subscribe((status) => {
         logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription status changed', {
           table: config.table,

@@ -58,13 +58,10 @@ export const useMessageRealtime = (
 
     try {
       const channel = subscribe({
-        channelName: `message-${messageId}`,
-        filter: {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `id=eq.${messageId}`
-        },
+        event: '*',
+        schema: 'public',
+        table: 'messages',
+        filter: `id=eq.${messageId}`,
         onMessage: (payload) => {
           const newMessage = payload.new as DatabaseMessage;
           handleMessageUpdate(newMessage.content);
