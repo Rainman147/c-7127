@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import type { RealtimeChannel, RealtimePostgresChangesPayload, RealtimePostgresChangesFilter } from '@supabase/supabase-js';
 import type { ConnectionState, ConnectionStateUpdate } from '@/types/connection';
 
 interface SubscriptionConfig {
@@ -49,15 +49,17 @@ export const useSubscriptionManager = () => {
 
     const channel = supabase.channel(channelKey);
 
+    const filter: RealtimePostgresChangesFilter<any> = {
+      event: config.event,
+      schema: config.schema,
+      table: config.table,
+      filter: config.filter
+    };
+
     channel
       .on(
         'postgres_changes',
-        {
-          event: config.event,
-          schema: config.schema,
-          table: config.table,
-          filter: config.filter
-        },
+        filter,
         (payload: RealtimePostgresChangesPayload<any>) => {
           logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
             table: config.table,
