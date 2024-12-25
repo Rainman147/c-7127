@@ -2,6 +2,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
+import type { DatabaseMessage } from '@/types/database/messages';
 
 const MESSAGES_PER_PAGE = 50;
 
@@ -10,6 +11,15 @@ interface FetchMessagesOptions {
   limit?: number;
   cursor?: number;
 }
+
+const mapDatabaseMessageToMessage = (dbMessage: DatabaseMessage): Message => ({
+  id: dbMessage.id,
+  role: dbMessage.sender as 'user' | 'assistant',
+  content: dbMessage.content,
+  type: dbMessage.type as 'text' | 'audio',
+  sequence: dbMessage.sequence,
+  created_at: dbMessage.created_at
+});
 
 async function fetchMessages({ chatId, limit = MESSAGES_PER_PAGE, cursor }: FetchMessagesOptions) {
   try {
@@ -36,7 +46,7 @@ async function fetchMessages({ chatId, limit = MESSAGES_PER_PAGE, cursor }: Fetc
       throw error;
     }
 
-    return data as Message[];
+    return (data || []).map(mapDatabaseMessageToMessage);
   } catch (error) {
     logger.error(LogCategory.DATABASE, 'MessageQuery', 'Failed to fetch messages:', {
       error,
@@ -55,6 +65,7 @@ export function useMessageQuery(chatId: string | undefined) {
       chatId: chatId!, 
       cursor: pageParam as number | undefined 
     }),
+    initialPageParam: null,
     getNextPageParam: (lastPage) => {
       if (!lastPage || lastPage.length < MESSAGES_PER_PAGE) return undefined;
       return lastPage[lastPage.length - 1]?.sequence;

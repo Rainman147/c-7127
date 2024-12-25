@@ -1,34 +1,37 @@
-export type Message = {
+export type MessageRole = 'user' | 'assistant';
+export type MessageType = 'text' | 'audio';
+
+export interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: MessageRole;
   content: string;
-  type?: 'text' | 'audio';
+  type?: MessageType;
   sequence?: number;
   created_at?: string;
   isOptimistic?: boolean;
-};
+}
 
-export type MessageGroup = {
+export interface MessageGroup {
   id: string;
   label: string;
   timestamp: string;
   messages: Message[];
-};
+}
 
-export type MessageUpdate = {
+export interface MessageUpdate {
   id: string;
   content: string;
-  type?: 'text' | 'audio';
-};
+  type?: MessageType;
+}
 
-export type MessageAction = {
+export interface MessageAction {
   type: 'edit' | 'delete' | 'regenerate';
   messageId: string;
-};
+}
 
-export type MessageFilter = {
-  role?: 'user' | 'assistant';
-  type?: 'text' | 'audio';
+export interface MessageFilter {
+  role?: MessageRole;
+  type?: MessageType;
   startDate?: Date;
   endDate?: Date;
-};
+}
