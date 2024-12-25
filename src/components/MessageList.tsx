@@ -1,5 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
+import { ErrorTracker } from '@/utils/errorTracking';
+import type { ErrorMetadata } from '@/types/errorTracking';
 import { useViewportMonitor } from '@/hooks/useViewportMonitor';
 import { useRealTime } from '@/contexts/RealTimeContext';
 import { ConnectionStatus } from './message/ConnectionStatus';
@@ -28,10 +30,25 @@ const MessageList = ({ messages: propMessages }: { messages: Message[] }) => {
 
   const messageGroups = useMessageGrouping(propMessages);
 
-  // Detect and handle duplicate messages
+  // Enhanced error tracking for duplicate messages
   useEffect(() => {
     const lastMessage = propMessages[propMessages.length - 1];
     if (lastMessage && lastMessage.id === lastMessageRef.current) {
+      const metadata: ErrorMetadata = {
+        component: 'MessageList',
+        severity: 'medium',
+        timestamp: new Date().toISOString(),
+        errorType: 'data',
+        operation: 'message-deduplication',
+        additionalInfo: {
+          messageId: lastMessage.id,
+          duplicateCount: propMessages.filter(m => m.id === lastMessage.id).length
+        }
+      };
+
+      const error = new Error('Duplicate message detected');
+      ErrorTracker.trackError(error, metadata);
+
       logger.warn(LogCategory.STATE, 'MessageList', 'Duplicate message detected:', {
         messageId: lastMessage.id,
         timestamp: new Date().toISOString()
@@ -44,15 +61,35 @@ const MessageList = ({ messages: propMessages }: { messages: Message[] }) => {
     }
   }, [propMessages]);
 
-  // Monitor connection state changes
+  // Enhanced connection state monitoring
   useEffect(() => {
     if (connectionState.status === 'disconnected' && connectionState.error) {
+      const metadata: ErrorMetadata = {
+        component: 'MessageList',
+        severity: 'high',
+        timestamp: new Date().toISOString(),
+        errorType: 'network',
+        operation: 'connection-monitoring',
+        additionalInfo: {
+          connectionStatus: connectionState.status,
+          retryCount: connectionState.retryCount,
+          error: connectionState.error.message
+        }
+      };
+
+      ErrorTracker.trackError(connectionState.error, metadata);
+
       toast({
         title: "Connection Lost",
         description: "Attempting to reconnect...",
         variant: "destructive",
       });
     } else if (connectionState.status === 'connected' && connectionState.retryCount > 0) {
+      logger.info(LogCategory.COMMUNICATION, 'MessageList', 'Connection restored', {
+        retryCount: connectionState.retryCount,
+        timestamp: new Date().toISOString()
+      });
+
       toast({
         title: "Connection Restored",
         description: "You're back online!",
@@ -61,7 +98,7 @@ const MessageList = ({ messages: propMessages }: { messages: Message[] }) => {
     }
   }, [connectionState.status, connectionState.error, connectionState.retryCount, toast]);
 
-  // Log comprehensive render metrics
+  // Enhanced render metrics logging
   logger.debug(LogCategory.RENDER, 'MessageList', 'Render metrics', {
     duration: performance.now() - renderStartTime,
     messageCount: propMessages?.length ?? 0,
