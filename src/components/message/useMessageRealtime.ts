@@ -17,6 +17,7 @@ export const useMessageRealtime = (
   const channelRef = useRef<ReturnType<typeof supabase.channel>>();
   const { connectionState, handleConnectionSuccess, handleConnectionError } = useConnectionState();
   const { addToQueue, processQueue, clearQueue } = useMessageQueue();
+  const lastUpdateTimeRef = useRef<number>(Date.now());
 
   const processMessage = (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
     try {
@@ -24,6 +25,7 @@ export const useMessageRealtime = (
       
       addToQueue(newData.id, newData.content);
       processQueue(editedContent, setEditedContent);
+      lastUpdateTimeRef.current = Date.now();
 
       logger.debug(LogCategory.STATE, 'MessageRealtime', 'Processed message update', {
         messageId: newData.id,
@@ -88,6 +90,8 @@ export const useMessageRealtime = (
   }, [messageId, editedContent, setEditedContent, handleConnectionSuccess, handleConnectionError, clearQueue]);
 
   return {
-    connectionState
+    connectionStatus: connectionState.status,
+    lastUpdateTime: lastUpdateTimeRef.current,
+    retryCount: connectionState.retryCount
   };
 };
