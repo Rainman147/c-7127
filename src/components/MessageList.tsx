@@ -13,11 +13,15 @@ import { usePerformanceMetrics } from '@/hooks/chat/usePerformanceMetrics';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
 
+const PERFORMANCE_WARNING_THRESHOLD = 100; // ms
+const SIZE_MEASURE_WARNING = 1; // ms
+
 const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<List>(null);
   const lastMessageRef = useRef<string | null>(null);
   const sizeMap = useRef<{ [key: string]: number }>({});
+  const renderStartTime = useRef(performance.now());
   
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
   const { connectionState } = useRealTime();
@@ -39,6 +43,36 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
     messageGroups?.length ?? 0
   );
 
+  // Performance monitoring for initial render
+  useEffect(() => {
+    const renderTime = performance.now() - renderStartTime.current;
+    if (renderTime > PERFORMANCE_WARNING_THRESHOLD) {
+      const metadata: ErrorMetadata = {
+        component: 'MessageList',
+        severity: 'warning',
+        errorType: 'performance',
+        operation: 'initial-render',
+        additionalInfo: {
+          renderTime,
+          messageCount: propMessages?.length,
+          groupCount: messageGroups?.length,
+          renderedNodes: performanceMetrics.renderedNodes
+        }
+      };
+      
+      ErrorTracker.trackError(
+        new Error(`Slow initial render detected: ${renderTime.toFixed(2)}ms`),
+        metadata
+      );
+      
+      toast({
+        title: 'Performance Warning',
+        description: 'Message list rendering is slower than expected. Consider reducing message count.',
+        variant: 'destructive'
+      });
+    }
+  }, [propMessages?.length, messageGroups?.length, performanceMetrics.renderedNodes, toast]);
+
   // Monitor resize observer performance
   useEffect(() => {
     if (containerRef.current) {
@@ -46,15 +80,24 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
       const height = containerRef.current.clientHeight;
       setListHeight(height);
       
+      const resizeTime = performance.now() - resizeStartTime;
       logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'List height updated', {
         height,
         viewportHeight,
         keyboardVisible,
-        resizeTime: performance.now() - resizeStartTime,
+        resizeTime,
         renderedNodes: performanceMetrics.renderedNodes
       });
+
+      if (resizeTime > PERFORMANCE_WARNING_THRESHOLD) {
+        logger.warn(LogCategory.PERFORMANCE, 'MessageList', 'Slow resize operation', {
+          resizeTime,
+          height,
+          messageCount: propMessages?.length
+        });
+      }
     }
-  }, [viewportHeight, keyboardVisible, performanceMetrics.renderedNodes]);
+  }, [viewportHeight, keyboardVisible, performanceMetrics.renderedNodes, propMessages?.length]);
 
   // Enhanced error tracking for duplicate messages
   const lastMessage = propMessages[propMessages.length - 1];
@@ -62,7 +105,6 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
     const metadata: ErrorMetadata = {
       component: 'MessageList',
       severity: 'medium',
-      timestamp: new Date().toISOString(),
       errorType: 'data',
       operation: 'message-deduplication',
       additionalInfo: {
@@ -86,12 +128,13 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
     const size = sizeMap.current[groupId] || 100;
     const measureTime = performance.now() - startTime;
     
-    if (measureTime > 1) { // Log slow measurements
+    if (measureTime > SIZE_MEASURE_WARNING) {
       logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'Slow size measurement', {
         groupId,
         size,
         measureTime,
-        index
+        index,
+        totalGroups: messageGroups.length
       });
     }
     
@@ -106,12 +149,23 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
       
       if (listRef.current) {
         listRef.current.resetAfterIndex(index);
+        const updateTime = performance.now() - updateStartTime;
+        
         logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'Size cache updated', {
           groupId,
           size,
           index,
-          updateTime: performance.now() - updateStartTime
+          updateTime,
+          cacheSize: Object.keys(sizeMap.current).length
         });
+
+        if (updateTime > PERFORMANCE_WARNING_THRESHOLD) {
+          logger.warn(LogCategory.PERFORMANCE, 'MessageList', 'Slow size cache update', {
+            updateTime,
+            cacheSize: Object.keys(sizeMap.current).length,
+            messageCount: propMessages?.length
+          });
+        }
       }
     }
   };
