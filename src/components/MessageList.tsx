@@ -1,4 +1,5 @@
-import { memo, useRef } from 'react';
+import { memo, useRef, useState, useEffect } from 'react';
+import { VariableSizeList as List } from 'react-window';
 import { logger, LogCategory } from '@/utils/logging';
 import { ErrorTracker } from '@/utils/errorTracking';
 import type { ErrorMetadata } from '@/types/errorTracking';
@@ -14,11 +15,14 @@ import type { Message } from '@/types/chat';
 
 const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<List>(null);
   const lastMessageRef = useRef<string | null>(null);
+  const sizeMap = useRef<{ [key: string]: number }>({});
   
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
   const { connectionState } = useRealTime();
   const { toast } = useToast();
+  const [listHeight, setListHeight] = useState(0);
 
   const messageGroups = useMessageGrouping(propMessages);
   
@@ -34,6 +38,18 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
     propMessages?.length ?? 0,
     messageGroups?.length ?? 0
   );
+
+  useEffect(() => {
+    if (containerRef.current) {
+      const height = containerRef.current.clientHeight;
+      setListHeight(height);
+      logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'List height updated', {
+        height,
+        viewportHeight,
+        keyboardVisible
+      });
+    }
+  }, [viewportHeight, keyboardVisible]);
 
   // Enhanced error tracking for duplicate messages
   const lastMessage = propMessages[propMessages.length - 1];
@@ -84,6 +100,22 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
     });
   }
 
+  const getItemSize = (index: number) => {
+    const groupId = messageGroups[index]?.id;
+    if (!groupId) return 100; // Default height
+    return sizeMap.current[groupId] || 100;
+  };
+
+  const setItemSize = (index: number, size: number) => {
+    const groupId = messageGroups[index]?.id;
+    if (groupId && sizeMap.current[groupId] !== size) {
+      sizeMap.current[groupId] = size;
+      if (listRef.current) {
+        listRef.current.resetAfterIndex(index);
+      }
+    }
+  };
+
   if (!Array.isArray(propMessages) || propMessages.length === 0) {
     return (
       <div className="text-center text-white/70 mt-8">
@@ -95,12 +127,28 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
   return (
     <div 
       ref={containerRef}
-      className="flex-1 overflow-y-auto chat-scrollbar space-y-6 pb-[180px] pt-4 px-4"
+      className="flex-1 overflow-hidden chat-scrollbar pb-[180px] pt-4 px-4"
     >
       <ConnectionStatus />
-      {messageGroups.map((group) => (
-        <MessageGroup key={group.id} group={group} />
-      ))}
+      <List
+        ref={listRef}
+        height={listHeight || viewportHeight}
+        itemCount={messageGroups.length}
+        itemSize={getItemSize}
+        width="100%"
+        className="chat-scrollbar"
+        overscanCount={2}
+      >
+        {({ index, style }) => (
+          <div style={style}>
+            <MessageGroup 
+              key={messageGroups[index].id} 
+              group={messageGroups[index]}
+              onHeightChange={(height) => setItemSize(index, height)}
+            />
+          </div>
+        )}
+      </List>
     </div>
   );
 });

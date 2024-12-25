@@ -1,4 +1,4 @@
-import { memo, useEffect } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { type MessageGroup as MessageGroupType } from '@/types/messageGrouping';
 import Message from '../Message';
 import { Tooltip } from '../ui/tooltip';
@@ -6,12 +6,30 @@ import { logger, LogCategory } from '@/utils/logging';
 
 interface MessageGroupProps {
   group: MessageGroupType;
+  onHeightChange?: (height: number) => void;
 }
 
-export const MessageGroup = memo(({ group }: MessageGroupProps) => {
+export const MessageGroup = memo(({ group, onHeightChange }: MessageGroupProps) => {
+  const groupRef = useRef<HTMLDivElement>(null);
+
   // Log render performance for each group
   useEffect(() => {
     const renderStart = performance.now();
+    
+    // Measure and report group height
+    if (groupRef.current && onHeightChange) {
+      const resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          onHeightChange(entry.contentRect.height);
+        }
+      });
+
+      resizeObserver.observe(groupRef.current);
+
+      return () => {
+        resizeObserver.disconnect();
+      };
+    }
     
     return () => {
       logger.debug(LogCategory.RENDER, 'MessageGroup', 'Group render complete', {
@@ -22,7 +40,7 @@ export const MessageGroup = memo(({ group }: MessageGroupProps) => {
         timestamp: new Date().toISOString()
       });
     };
-  }, [group?.id, group?.messages]);
+  }, [group?.id, group?.messages, onHeightChange]);
 
   if (!group || !Array.isArray(group.messages)) {
     logger.error(LogCategory.RENDER, 'MessageGroup', 'Invalid group data', { group });
@@ -30,7 +48,7 @@ export const MessageGroup = memo(({ group }: MessageGroupProps) => {
   }
 
   return (
-    <div key={group.id} className="space-y-4">
+    <div ref={groupRef} className="space-y-4">
       <div className="flex items-center justify-center">
         <Tooltip content={`Messages from ${group.label}`}>
           <div className="text-xs text-white/50 bg-chatgpt-secondary/30 px-2 py-1 rounded hover:bg-chatgpt-secondary/40 transition-colors cursor-help">
