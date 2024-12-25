@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { ConnectionState, ConnectionStateUpdate } from '@/types/connection';
 
 interface SubscriptionConfig {
@@ -9,7 +9,7 @@ interface SubscriptionConfig {
   schema: string;
   table: string;
   filter?: string;
-  onMessage: (payload: any) => void;
+  onMessage: (payload: RealtimePostgresChangesPayload<any>) => void;
   onError?: (error: Error) => void;
   onSubscriptionChange?: (status: string) => void;
 }
