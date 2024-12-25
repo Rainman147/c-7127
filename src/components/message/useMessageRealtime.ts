@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
 import { ErrorTracker } from '@/utils/errorTracking';
@@ -9,6 +9,7 @@ import type { ErrorMetadata } from '@/types/errorTracking';
 
 const MAX_RETRIES = 5;
 const INITIAL_RETRY_DELAY = 1000;
+const FALLBACK_RETRY_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 export const useMessageRealtime = (
   messageId: string | undefined,
@@ -18,6 +19,7 @@ export const useMessageRealtime = (
   const [connectionStatus, setConnectionStatus] = useState<string>('connecting');
   const [lastUpdateTime, setLastUpdateTime] = useState<number | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const fallbackRetryRef = useRef<NodeJS.Timeout>();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -37,8 +39,14 @@ export const useMessageRealtime = (
     });
 
     const setupSubscription = () => {
+      const channelName = `message-${messageId}`;
+      logger.debug(LogCategory.COMMUNICATION, 'Message', 'Creating channel', {
+        channelName,
+        retryCount
+      });
+
       const channel = supabase
-        .channel(`message-${messageId}`)
+        .channel(channelName)
         .on(
           'postgres_changes',
           {
@@ -107,6 +115,7 @@ export const useMessageRealtime = (
 
           if (status === 'SUBSCRIBED') {
             setRetryCount(0);
+            clearTimeout(fallbackRetryRef.current);
             toast({
               description: "Connected to chat service",
               className: "bg-green-500 text-white",
@@ -146,9 +155,18 @@ export const useMessageRealtime = (
                 variant: "destructive"
               });
             } else {
+              // Set up fallback retry
+              fallbackRetryRef.current = setInterval(() => {
+                logger.info(LogCategory.COMMUNICATION, 'Message', 'Attempting fallback retry', {
+                  messageId,
+                  lastRetryTime: new Date().toISOString()
+                });
+                setupSubscription();
+              }, FALLBACK_RETRY_INTERVAL);
+
               toast({
-                title: "Connection Failed",
-                description: "Unable to establish connection after multiple attempts. Please refresh the page.",
+                title: "Connection Issues",
+                description: "Attempting to reconnect in the background...",
                 variant: "destructive"
               });
             }
@@ -168,6 +186,7 @@ export const useMessageRealtime = (
       });
       
       clearTimeout(retryTimeout);
+      clearInterval(fallbackRetryRef.current);
       supabase.removeChannel(channel);
     };
   }, [messageId, editedContent, setEditedContent, connectionStatus, lastUpdateTime, retryCount, toast]);
