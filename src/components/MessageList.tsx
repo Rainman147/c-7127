@@ -11,6 +11,14 @@ import { useMessageGrouping } from '@/hooks/chat/useMessageGrouping';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
 
+interface PerformanceMetrics {
+  renderTime: number;
+  messageCount: number;
+  groupCount: number;
+  averageRenderTime: number;
+  timestamp: string;
+}
+
 const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) => {
   const renderStartTime = useRef(performance.now());
   const lastRenderTime = useRef(performance.now());
@@ -34,14 +42,15 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
   const messageGroups = useMessageGrouping(propMessages);
 
   // Memoized performance metrics calculation
-  const calculatePerformanceMetrics = useMemo(() => {
+  const calculatePerformanceMetrics = useMemo((): PerformanceMetrics => {
     return {
       renderTime: performance.now() - renderStartTime.current,
       messageCount: propMessages?.length ?? 0,
       groupCount: messageGroups?.length ?? 0,
       averageRenderTime: renderCount.current > 0 
         ? (performance.now() - renderStartTime.current) / renderCount.current 
-        : 0
+        : 0,
+      timestamp: new Date().toISOString()
     };
   }, [propMessages?.length, messageGroups?.length]);
 
@@ -53,24 +62,26 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
 
     // Log performance metrics only when they exceed threshold or on significant changes
     if (timeSinceLastRender > 16.67 || renderCount.current % 10 === 0) {
-      logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'Performance metrics', {
+      logger.debug(LogCategory.RENDER, 'MessageList', 'Performance metrics', {
         ...calculatePerformanceMetrics,
-        timeSinceLastRender: `${timeSinceLastRender.toFixed(2)}ms`,
-        timestamp: new Date().toISOString()
+        timeSinceLastRender: `${timeSinceLastRender.toFixed(2)}ms`
       });
     }
 
     // Set up periodic memory usage monitoring
     performanceMetricsInterval.current = setInterval(() => {
-      if (performance?.memory) {
+      const heapUsed = window.performance?.memory?.usedJSHeapSize;
+      const heapTotal = window.performance?.memory?.totalJSHeapSize;
+      
+      if (heapUsed && heapTotal) {
         const memoryUsage = {
-          usedJSHeapSize: performance.memory.usedJSHeapSize,
-          totalJSHeapSize: performance.memory.totalJSHeapSize,
+          usedJSHeapSize: heapUsed,
+          totalJSHeapSize: heapTotal,
           timestamp: new Date().toISOString()
         };
 
         if (memoryUsage.usedJSHeapSize > 0.8 * memoryUsage.totalJSHeapSize) {
-          logger.warn(LogCategory.PERFORMANCE, 'MessageList', 'High memory usage detected', memoryUsage);
+          logger.warn(LogCategory.RENDER, 'MessageList', 'High memory usage detected', memoryUsage);
         }
       }
     }, 30000); // Check every 30 seconds
