@@ -1,4 +1,6 @@
 import { memo, useCallback, useEffect, useMemo } from "react";
+import { ErrorTracker } from "@/utils/errorTracking";
+import type { ErrorMetadata } from "@/types/errorTracking";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { TemplateTrigger } from "./template/dropdown/TemplateTrigger";
 import { TemplateDropdownContent } from "./template/dropdown/TemplateDropdownContent";
@@ -16,10 +18,22 @@ export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProp
   const { globalTemplate } = useTemplateContext();
   
   useEffect(() => {
-    console.log('[TemplateSelector] Component mounted/updated:', {
-      sessionId,
-      templateId
-    });
+    try {
+      console.log('[TemplateSelector] Component mounted/updated:', {
+        sessionId,
+        templateId
+      });
+    } catch (error) {
+      const metadata: ErrorMetadata = {
+        component: 'TemplateSelector',
+        severity: 'low',
+        timestamp: new Date().toISOString(),
+        errorType: 'lifecycle',
+        operation: 'component-mount',
+        additionalInfo: { sessionId, templateId }
+      };
+      ErrorTracker.trackError(error as Error, metadata);
+    }
 
     return () => {
       console.log('[TemplateSelector] Component cleanup for chat:', sessionId);
@@ -34,28 +48,60 @@ export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProp
   } = useTemplateSelection(onTemplateChange, globalTemplate);
 
   const handleTemplateSelect = useCallback((template: Template) => {
-    console.log('[TemplateSelector] Template selection requested:', {
-      sessionId,
-      currentTemplateId: selectedTemplate?.id,
-      newTemplateId: template.id,
-      templateName: template.name
-    });
+    try {
+      console.log('[TemplateSelector] Template selection requested:', {
+        sessionId,
+        currentTemplateId: selectedTemplate?.id,
+        newTemplateId: template.id,
+        templateName: template.name
+      });
 
-    if (template.id === selectedTemplate?.id) {
-      console.log('[TemplateSelector] Skipping duplicate template selection');
-      return;
+      if (template.id === selectedTemplate?.id) {
+        console.log('[TemplateSelector] Skipping duplicate template selection');
+        return;
+      }
+      
+      handleTemplateChange(template);
+    } catch (error) {
+      const metadata: ErrorMetadata = {
+        component: 'TemplateSelector',
+        severity: 'medium',
+        timestamp: new Date().toISOString(),
+        errorType: 'selection',
+        operation: 'select-template',
+        additionalInfo: {
+          templateId: template.id,
+          templateName: template.name,
+          sessionId
+        }
+      };
+      ErrorTracker.trackError(error as Error, metadata);
     }
-    
-    handleTemplateChange(template);
   }, [handleTemplateChange, sessionId, selectedTemplate?.id]);
 
   const displayTemplate = useMemo(() => {
-    console.log('[TemplateSelector] Display template updated:', {
-      sessionId,
-      templateId: selectedTemplate?.id,
-      templateName: selectedTemplate?.name
-    });
-    return selectedTemplate;
+    try {
+      console.log('[TemplateSelector] Display template updated:', {
+        sessionId,
+        templateId: selectedTemplate?.id,
+        templateName: selectedTemplate?.name
+      });
+      return selectedTemplate;
+    } catch (error) {
+      const metadata: ErrorMetadata = {
+        component: 'TemplateSelector',
+        severity: 'low',
+        timestamp: new Date().toISOString(),
+        errorType: 'render',
+        operation: 'update-display',
+        additionalInfo: {
+          templateId: selectedTemplate?.id,
+          sessionId
+        }
+      };
+      ErrorTracker.trackError(error as Error, metadata);
+      return selectedTemplate;
+    }
   }, [selectedTemplate, sessionId]);
 
   return (

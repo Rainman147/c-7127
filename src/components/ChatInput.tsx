@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { logger, LogCategory } from "@/utils/logging";
+import { ErrorTracker } from "@/utils/errorTracking";
+import type { ErrorMetadata } from "@/types/errorTracking";
 import ChatInputField from "./chat/ChatInputField";
 import ChatInputActions from "./chat/ChatInputActions";
 import { ConnectionStatusBar } from "./chat/ConnectionStatusBar";
@@ -30,18 +32,68 @@ const ChatInput = ({
     isDisabled,
     connectionState
   } = useChatInput({
-    onSend,
+    onSend: async (msg: string, type?: 'text' | 'audio') => {
+      try {
+        await onSend(msg, type);
+      } catch (error) {
+        const metadata: ErrorMetadata = {
+          component: 'ChatInput',
+          severity: 'high',
+          timestamp: new Date().toISOString(),
+          errorType: 'submission',
+          operation: 'send-message',
+          additionalInfo: {
+            messageLength: msg.length,
+            messageType: type,
+            connectionState: connectionState.status
+          }
+        };
+        ErrorTracker.trackError(error as Error, metadata);
+        throw error;
+      }
+    },
     onTranscriptionComplete,
     message,
     setMessage
   });
 
   const handleMessageChange = (newMessage: string) => {
-    logger.debug(LogCategory.STATE, 'ChatInput', 'Message changed:', { 
-      length: newMessage.length,
-      connectionState: connectionState.status
-    });
-    setMessage(newMessage);
+    try {
+      if (newMessage.length > 4000) {
+        const error = new Error('Message exceeds maximum length');
+        const metadata: ErrorMetadata = {
+          component: 'ChatInput',
+          severity: 'medium',
+          timestamp: new Date().toISOString(),
+          errorType: 'validation',
+          operation: 'message-update',
+          additionalInfo: {
+            messageLength: newMessage.length,
+            maxLength: 4000
+          }
+        };
+        ErrorTracker.trackError(error, metadata);
+        return;
+      }
+      
+      logger.debug(LogCategory.STATE, 'ChatInput', 'Message changed:', { 
+        length: newMessage.length,
+        connectionState: connectionState.status
+      });
+      setMessage(newMessage);
+    } catch (error) {
+      const metadata: ErrorMetadata = {
+        component: 'ChatInput',
+        severity: 'low',
+        timestamp: new Date().toISOString(),
+        errorType: 'state',
+        operation: 'update-message',
+        additionalInfo: {
+          messageLength: newMessage.length
+        }
+      };
+      ErrorTracker.trackError(error as Error, metadata);
+    }
   };
 
   return (
