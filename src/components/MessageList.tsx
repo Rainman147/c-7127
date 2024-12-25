@@ -19,6 +19,15 @@ interface PerformanceMetrics {
   timestamp: string;
 }
 
+// Extend Performance interface to include memory property
+interface ExtendedPerformance extends Performance {
+  memory?: {
+    usedJSHeapSize: number;
+    totalJSHeapSize: number;
+    jsHeapSizeLimit: number;
+  };
+}
+
 const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) => {
   const renderStartTime = useRef(performance.now());
   const lastRenderTime = useRef(performance.now());
@@ -62,26 +71,24 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
 
     // Log performance metrics only when they exceed threshold or on significant changes
     if (timeSinceLastRender > 16.67 || renderCount.current % 10 === 0) {
-      logger.debug(LogCategory.RENDER, 'MessageList', 'Performance metrics', {
+      logger.debug(LogCategory.PERFORMANCE, 'MessageList', 'Performance metrics', {
         ...calculatePerformanceMetrics,
         timeSinceLastRender: `${timeSinceLastRender.toFixed(2)}ms`
       });
     }
 
-    // Set up periodic memory usage monitoring
+    // Set up periodic memory usage monitoring with safe type checking
     performanceMetricsInterval.current = setInterval(() => {
-      const heapUsed = window.performance?.memory?.usedJSHeapSize;
-      const heapTotal = window.performance?.memory?.totalJSHeapSize;
-      
-      if (heapUsed && heapTotal) {
+      const extendedPerf = performance as ExtendedPerformance;
+      if (extendedPerf.memory) {
         const memoryUsage = {
-          usedJSHeapSize: heapUsed,
-          totalJSHeapSize: heapTotal,
+          usedJSHeapSize: extendedPerf.memory.usedJSHeapSize,
+          totalJSHeapSize: extendedPerf.memory.totalJSHeapSize,
           timestamp: new Date().toISOString()
         };
 
         if (memoryUsage.usedJSHeapSize > 0.8 * memoryUsage.totalJSHeapSize) {
-          logger.warn(LogCategory.RENDER, 'MessageList', 'High memory usage detected', memoryUsage);
+          logger.warn(LogCategory.PERFORMANCE, 'MessageList', 'High memory usage detected', memoryUsage);
         }
       }
     }, 30000); // Check every 30 seconds

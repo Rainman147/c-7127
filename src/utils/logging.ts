@@ -4,7 +4,8 @@ export enum LogCategory {
   COMMUNICATION = 'communication',
   ERROR = 'error',
   ROUTING = 'routing',
-  DATABASE = 'database'  // Added this category
+  DATABASE = 'database',
+  PERFORMANCE = 'performance'
 }
 
 export const logger = {
