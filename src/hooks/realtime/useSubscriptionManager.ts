@@ -1,7 +1,7 @@
 import { useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { Message } from '@/types/chat';
 import type { ConnectionState } from './config';
 
@@ -16,7 +16,7 @@ export const useSubscriptionManager = (
   const channels = useRef(globalChannels);
   const activeSubscriptions = useRef(new Set<string>());
 
-  const processMessage = useCallback((payload: any, chatId: string) => {
+  const processMessage = useCallback((payload: RealtimePostgresChangesPayload<any>, chatId: string) => {
     try {
       logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Processing message', { 
         payload,
@@ -85,7 +85,7 @@ export const useSubscriptionManager = (
     onMessage: (payload: any) => void;
     onError?: (error: Error) => void;
     onSubscriptionChange?: (status: string) => void;
-  }) => {
+  }): RealtimeChannel => {
     // Check if channel already exists
     if (channels.current.has(channelName)) {
       logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Reusing existing channel', {
@@ -108,7 +108,7 @@ export const useSubscriptionManager = (
         .on(
           'postgres_changes',
           filter,
-          (payload) => {
+          (payload: RealtimePostgresChangesPayload<any>) => {
             logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received postgres change', {
               channelName,
               eventType: payload.eventType,
@@ -151,31 +151,11 @@ export const useSubscriptionManager = (
     }
   }, []);
 
-  const cleanupAllSubscriptions = useCallback(() => {
-    logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up all subscriptions', {
-      subscriptionCount: activeSubscriptions.current.size,
-      activeChannels: Array.from(channels.current.keys()),
-      timestamp: new Date().toISOString()
-    });
-    
-    channels.current.forEach((_, channelName) => {
-      cleanupSubscription(channelName);
-    });
-    
-    channels.current.clear();
-    activeSubscriptions.current.clear();
-    
-    logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'All subscriptions cleaned up', {
-      timestamp: new Date().toISOString()
-    });
-  }, [cleanupSubscription]);
-
   return {
     channels,
     activeSubscriptions,
     subscribe,
     cleanupSubscription,
-    cleanupAllSubscriptions,
     processMessage
   };
 };
