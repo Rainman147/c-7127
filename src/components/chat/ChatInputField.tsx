@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, memo } from "react";
 import { logger, LogCategory } from "@/utils/logging";
 import { useRealTime } from "@/contexts/RealTimeContext";
+import { Tooltip } from "../ui/tooltip";
 
 interface ChatInputFieldProps {
   message: string;
@@ -38,6 +39,9 @@ const ChatInputField = memo(({
   }, [message]);
 
   const getPlaceholder = () => {
+    if (connectionState.status === 'disconnected' && connectionState.retryCount >= 5) {
+      return 'Connection lost. Please refresh the page...';
+    }
     if (connectionState.status === 'disconnected') {
       return 'Connection lost. Messages will be sent when reconnected...';
     }
@@ -47,23 +51,40 @@ const ChatInputField = memo(({
     return 'Message DocTation';
   };
 
+  const getInputTooltip = () => {
+    if (connectionState.status === 'disconnected' && connectionState.retryCount >= 5) {
+      return 'Please refresh the page to reconnect';
+    }
+    if (connectionState.status === 'disconnected') {
+      return 'Messages will be queued and sent when connection is restored';
+    }
+    if (connectionState.status === 'connecting') {
+      return 'Attempting to reconnect to chat service';
+    }
+    return '';
+  };
+
+  const tooltipContent = getInputTooltip();
+
   return (
     <div className="w-full">
-      <textarea
-        ref={textareaRef}
-        rows={1}
-        value={message}
-        onChange={(e) => {
-          setMessage(e.target.value);
-          adjustTextareaHeight();
-        }}
-        onKeyDown={handleKeyDown}
-        placeholder={getPlaceholder()}
-        className={`w-full min-h-[40px] max-h-[200px] resize-none bg-transparent px-4 py-3 focus:outline-none overflow-y-auto transition-all duration-150 ease-in-out chat-input-scrollbar ${
-          connectionState.status !== 'connected' ? 'text-gray-500' : ''
-        }`}
-        disabled={isLoading}
-      />
+      <Tooltip content={tooltipContent} open={tooltipContent ? undefined : false}>
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          value={message}
+          onChange={(e) => {
+            setMessage(e.target.value);
+            adjustTextareaHeight();
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder={getPlaceholder()}
+          className={`w-full min-h-[40px] max-h-[200px] resize-none bg-transparent px-4 py-3 focus:outline-none overflow-y-auto transition-all duration-150 ease-in-out chat-input-scrollbar ${
+            isLoading ? 'cursor-not-allowed opacity-50' : ''
+          } ${connectionState.status !== 'connected' ? 'text-gray-500' : ''}`}
+          disabled={isLoading}
+        />
+      </Tooltip>
     </div>
   );
 });
