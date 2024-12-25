@@ -58,7 +58,7 @@ export const useSubscriptionManager = () => {
           table: config.table,
           filter: config.filter
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<any>) => {
           logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
             table: config.table,
             payload,
