@@ -10,11 +10,17 @@ export const useMessageCache = (chatId: string | null) => {
       chatId,
       timestamp: new Date().toISOString()
     });
-    return queryClient.invalidateQueries({ queryKey: ['messages', chatId] });
+    
+    // Invalidate all pages for this chat
+    return queryClient.invalidateQueries({ 
+      queryKey: ['messages', chatId],
+      refetchType: 'active' // Only refetch active queries
+    });
   };
 
   const updateMessageInCache = (updatedMessage: Message) => {
-    queryClient.setQueryData<Message[]>(['messages', chatId], (old = []) => {
+    // Update message in all cached pages
+    queryClient.setQueriesData<Message[]>({ queryKey: ['messages', chatId] }, (old = []) => {
       const updated = old.map(msg => 
         msg.id === updatedMessage.id ? updatedMessage : msg
       );
@@ -30,7 +36,8 @@ export const useMessageCache = (chatId: string | null) => {
   };
 
   const addMessageToCache = (newMessage: Message) => {
-    queryClient.setQueryData<Message[]>(['messages', chatId], (old = []) => {
+    // Add message to the latest page
+    queryClient.setQueriesData<Message[]>({ queryKey: ['messages', chatId] }, (old = []) => {
       if (old.some(msg => msg.id === newMessage.id)) {
         return old;
       }
@@ -45,9 +52,25 @@ export const useMessageCache = (chatId: string | null) => {
     });
   };
 
+  const prefetchNextPage = async (page: number) => {
+    if (!chatId) return;
+
+    logger.debug(LogCategory.CACHE, 'MessageCache', 'Prefetching next page:', {
+      chatId,
+      page: page + 1,
+      timestamp: new Date().toISOString()
+    });
+
+    await queryClient.prefetchQuery({
+      queryKey: ['messages', chatId, page + 1],
+      staleTime: 1000 * 30 // Match the staleTime from useMessageQuery
+    });
+  };
+
   return {
     invalidateMessages,
     updateMessageInCache,
-    addMessageToCache
+    addMessageToCache,
+    prefetchNextPage
   };
 };
