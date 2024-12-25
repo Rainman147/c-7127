@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { ErrorTracker } from "@/utils/errorTracking";
 import type { ErrorMetadata } from "@/types/errorTracking";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
