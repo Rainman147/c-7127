@@ -27,12 +27,12 @@ export const useMessageRealtime = (
   const setupSubscription = useCallback(() => {
     if (!messageId) {
       logger.debug(LogCategory.WEBSOCKET, 'MessageRealtime', 'No message ID provided');
-      return;
+      return () => {};
     }
 
     const channelName = `message-${messageId}`;
 
-    subscribe({
+    const channel = subscribe({
       channelName,
       filter: {
         event: '*',

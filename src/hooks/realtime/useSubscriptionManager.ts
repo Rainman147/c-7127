@@ -1,17 +1,17 @@
 import { useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 interface SubscriptionConfig {
   channelName: string;
-  filter?: {
-    event?: '*' | 'INSERT' | 'UPDATE' | 'DELETE';
-    schema?: string;
-    table?: string;
+  filter: {
+    event: 'INSERT' | 'UPDATE' | 'DELETE' | '*';
+    schema: string;
+    table: string;
     filter?: string;
   };
-  onMessage?: (payload: any) => void;
+  onMessage?: (payload: RealtimePostgresChangesPayload<any>) => void;
   onError?: (error: Error) => void;
   onSubscriptionChange?: (status: string) => void;
 }
@@ -68,17 +68,20 @@ export const useSubscriptionManager = () => {
       activeChannels.current.set(channelName, channel);
       subscriptionTimes.current.set(channelName, Date.now());
 
-      if (filter) {
-        channel.on('postgres_changes', filter, (payload) => {
+      channel.on(
+        'postgres_changes',
+        filter,
+        (payload) => {
+          const latency = Date.now() - (subscriptionTimes.current.get(channelName) || Date.now());
           logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
             channelName,
             payload,
-            latency: Date.now() - (subscriptionTimes.current.get(channelName) || Date.now()),
+            latency,
             timestamp: new Date().toISOString()
           });
           onMessage?.(payload);
-        });
-      }
+        }
+      );
 
       channel.subscribe((status) => {
         logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription status changed', {
