@@ -11,10 +11,11 @@ export const ConnectionStatus = () => {
   const { toast } = useToast();
   
   useEffect(() => {
-    logger.debug(LogCategory.STATE, 'ConnectionStatus', 'Connection state changed:', {
+    logger.info(LogCategory.STATE, 'ConnectionStatus', 'Connection state changed:', {
       status: connectionState.status,
       retryCount: connectionState.retryCount,
-      error: connectionState.error?.message
+      error: connectionState.error?.message,
+      timestamp: new Date().toISOString()
     });
 
     if (connectionState.status === 'connected') {
@@ -25,7 +26,9 @@ export const ConnectionStatus = () => {
     } else if (connectionState.status === 'disconnected') {
       toast({
         title: "Connection Lost",
-        description: `Attempting to reconnect (Attempt ${connectionState.retryCount})`,
+        description: connectionState.retryCount >= 5 
+          ? "Attempting to reconnect in the background..."
+          : `Reconnecting... (Attempt ${connectionState.retryCount}/5)`,
         variant: "destructive",
       });
     }
@@ -34,7 +37,7 @@ export const ConnectionStatus = () => {
   if (connectionState.status === 'connected') {
     return (
       <Tooltip content="Connected to chat service">
-        <div className="flex items-center justify-center gap-2 py-2 rounded-md mb-4 text-green-500 bg-green-500/10 opacity-0 animate-fade-out">
+        <div className="flex items-center justify-center gap-2 py-2 rounded-md mb-4 text-green-500 bg-green-500/10 transition-opacity duration-500">
           <Wifi className="h-4 w-4" />
           <span>Connected</span>
         </div>
@@ -45,19 +48,24 @@ export const ConnectionStatus = () => {
   logger.debug(LogCategory.RENDER, 'ConnectionStatus', 'Rendering connection status:', {
     status: connectionState.status,
     retryCount: connectionState.retryCount,
-    error: connectionState.error?.message
+    error: connectionState.error?.message,
+    timestamp: new Date().toISOString()
   });
 
   const statusConfig = {
     connecting: {
       className: 'text-yellow-500 bg-yellow-500/10',
-      message: `Reconnecting to chat... (Attempt ${connectionState.retryCount})`,
+      message: connectionState.retryCount >= 5 
+        ? "Attempting to reconnect in the background..."
+        : `Reconnecting... (Attempt ${connectionState.retryCount}/5)`,
       icon: Loader2,
       tooltipContent: 'Attempting to reconnect to the chat service'
     },
     disconnected: {
       className: 'text-red-500 bg-red-500/10',
-      message: `Connection lost. Retrying... (Attempt ${connectionState.retryCount})`,
+      message: connectionState.retryCount >= 5
+        ? "Connection lost. Attempting to reconnect in the background..."
+        : `Connection lost. Retrying... (Attempt ${connectionState.retryCount}/5)`,
       icon: WifiOff,
       tooltipContent: 'Connection to chat service lost'
     }
@@ -69,7 +77,7 @@ export const ConnectionStatus = () => {
   return (
     <div className="space-y-4">
       <Tooltip content={config.tooltipContent}>
-        <div className={`flex items-center justify-center gap-2 py-2 rounded-md mb-2 ${config.className} cursor-help transition-colors animate-fade-in`}>
+        <div className={`flex items-center justify-center gap-2 py-2 rounded-md mb-2 ${config.className} cursor-help transition-all duration-300`}>
           <Icon className={`h-4 w-4 ${connectionState.status === 'connecting' ? 'animate-spin' : ''}`} />
           <span>{config.message}</span>
         </div>
