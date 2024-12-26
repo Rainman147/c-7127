@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useMessageRealtime } from '@/hooks/realtime/useMessageRealtime';
 import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
+import { useId } from 'react';
 
 const TEST_MESSAGE_ID = '12345-test-id';
 
@@ -10,11 +11,13 @@ export const RealtimeTest = () => {
   const [content, setContent] = useState('Initial content');
   const { toast } = useToast();
   const [isVisible, setIsVisible] = useState(true);
+  const componentId = useId();
 
   const { connectionState, retryCount } = useMessageRealtime(
     TEST_MESSAGE_ID,
     content,
-    setContent
+    setContent,
+    componentId
   );
 
   // Log state changes
@@ -22,14 +25,15 @@ export const RealtimeTest = () => {
     logger.debug(LogCategory.STATE, 'RealtimeTest', 'Connection state changed:', {
       status: connectionState.status,
       retryCount,
+      componentId,
       timestamp: new Date().toISOString()
     });
-  }, [connectionState, retryCount]);
+  }, [connectionState, retryCount, componentId]);
 
   const handleSimulateError = () => {
     // Force a connection error by attempting to connect to an invalid channel
     const invalidMessageId = undefined;
-    useMessageRealtime(invalidMessageId, content, setContent);
+    useMessageRealtime(invalidMessageId, content, setContent, componentId);
     
     toast({
       title: "Error Simulated",

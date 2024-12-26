@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { useRealTime } from '@/contexts/RealTimeContext';
 import { useMessageQueue } from './useMessageQueue';
-import type { DatabaseMessage } from '@/types/database/messages';
 
 export const useMessageRealtime = (
   messageId: string | undefined,

@@ -1,3 +1,6 @@
+import type { Message } from '@/types/chat';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+
 export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected';
 
 export interface ConnectionState {

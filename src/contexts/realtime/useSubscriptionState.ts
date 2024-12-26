@@ -72,6 +72,10 @@ export const useSubscriptionState = () => {
           config.onError?.(error);
           cleanupChannel(channelKey);
           config.onSubscriptionStatus?.('CHANNEL_ERROR');
+        } else if (status === 'TIMED_OUT') {
+          config.onSubscriptionStatus?.('TIMED_OUT');
+        } else if (status === 'CLOSED') {
+          config.onSubscriptionStatus?.('CLOSED');
         }
       });
 
