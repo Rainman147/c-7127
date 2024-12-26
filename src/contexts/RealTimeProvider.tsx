@@ -7,6 +7,7 @@ import { useSubscriptionHandlers } from './realtime/useSubscriptionHandlers';
 import { ExponentialBackoff } from '@/utils/backoff';
 import { useRef, useState } from 'react';
 import type { Message } from '@/types/chat';
+import type { ConnectionStatus } from './realtime/types';
 
 const backoffConfig = {
   initialDelay: 1000,
@@ -19,6 +20,15 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   const { toast } = useToast();
   const [lastMessage, setLastMessage] = useState<Message>();
   const backoff = useRef(new ExponentialBackoff(backoffConfig));
+  const [connectionState, setConnectionState] = useState<{
+    status: ConnectionStatus;
+    retryCount: number;
+    lastAttempt: number;
+  }>({
+    status: 'connecting',
+    retryCount: 0,
+    lastAttempt: Date.now()
+  });
   
   const handleConnectionError = (error: Error) => {
     logger.error(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Connection error occurred', {
@@ -29,6 +39,12 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
     const delay = backoff.current.nextDelay();
     if (delay !== null) {
+      setConnectionState(prev => ({
+        status: 'disconnected',
+        retryCount: prev.retryCount + 1,
+        lastAttempt: Date.now()
+      }));
+
       toast({
         title: "Connection Lost",
         description: `Reconnecting... (Attempt ${backoff.current.attemptCount}/${backoffConfig.maxAttempts})`,
@@ -60,6 +76,15 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
           status,
           timestamp: new Date().toISOString()
         });
+
+        if (status === 'SUBSCRIBED') {
+          setConnectionState({
+            status: 'connected',
+            retryCount: 0,
+            lastAttempt: Date.now()
+          });
+          backoff.current.reset();
+        }
       }
     });
   };
@@ -109,11 +134,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   }, [cleanup]);
 
   const value = {
-    connectionState: {
-      status: activeSubscriptions.size > 0 ? 'connected' : 'disconnected',
-      retryCount: backoff.current.attemptCount,
-      lastAttempt: Date.now()
-    },
+    connectionState,
     lastMessage,
     subscribeToChat,
     unsubscribeFromChat,

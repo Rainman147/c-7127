@@ -1,32 +1,31 @@
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import { useConnectionState } from '@/contexts/realtime/connectionState';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { SubscriptionConfig } from '@/contexts/realtime/types';
 
 export const useSubscriptionManager = () => {
-  const { state, updateState } = useConnectionState();
-  const activeChannels = useRef<Map<string, RealtimeChannel>>(new Map());
+  const channels = useRef(new Map<string, RealtimeChannel>());
+  const activeSubscriptions = useRef(new Set<string>());
 
   const subscribe = useCallback((config: SubscriptionConfig): RealtimeChannel => {
     const channelKey = `${config.table}-${config.filter || 'all'}`;
     
-    if (activeChannels.current.has(channelKey)) {
-      const existingChannel = activeChannels.current.get(channelKey);
+    if (channels.current.has(channelKey)) {
+      const existingChannel = channels.current.get(channelKey);
       if (existingChannel) {
         logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Removing existing channel', {
           channelKey,
           timestamp: new Date().toISOString()
         });
         supabase.removeChannel(existingChannel);
-        activeChannels.current.delete(channelKey);
+        channels.current.delete(channelKey);
       }
     }
 
     const channel = supabase.channel(channelKey)
       .on('system', { event: '*' }, (payload) => {
-        logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'System event', {
+        logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'System event received', {
           event: payload.event,
           timestamp: new Date().toISOString()
         });
@@ -42,15 +41,15 @@ export const useSubscriptionManager = () => {
           filter: config.filter
         },
         (payload) => {
-          logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
+          logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Database change received', {
             table: config.table,
-            payload,
+            event: config.event,
             timestamp: new Date().toISOString()
           });
           config.onMessage(payload);
         }
       )
-      .subscribe((status) => {
+      .subscribe(async (status) => {
         logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription status changed', {
           channelKey,
           status,
@@ -58,48 +57,49 @@ export const useSubscriptionManager = () => {
         });
         
         if (status === 'SUBSCRIBED') {
-          activeChannels.current.set(channelKey, channel);
-          updateState({ 
-            status: 'connected',
-            retryCount: 0,
-            error: undefined
-          });
+          channels.current.set(channelKey, channel);
+          activeSubscriptions.current.add(channelKey);
         } else if (status === 'CHANNEL_ERROR') {
           const error = new Error(`Channel error for ${config.table}`);
-          updateState({
-            status: 'disconnected',
-            retryCount: state.retryCount + 1,
-            error
-          });
           config.onError?.(error);
+          channels.current.delete(channelKey);
+          activeSubscriptions.current.delete(channelKey);
         }
         
-        config.onSubscriptionChange?.(status);
+        config.onSubscriptionStatus?.(status);
       });
 
     return channel;
-  }, [state.retryCount, updateState]);
-
-  const cleanupSubscription = useCallback((channel: RealtimeChannel) => {
-    logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up channel');
-    supabase.removeChannel(channel);
   }, []);
 
-  const cleanup = useCallback(() => {
-    activeChannels.current.forEach((channel, key) => {
-      logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up channel', {
-        channelKey: key,
-        timestamp: new Date().toISOString()
+  const cleanup = useCallback((channelKey?: string) => {
+    if (channelKey) {
+      const channel = channels.current.get(channelKey);
+      if (channel) {
+        logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up channel', {
+          channelKey,
+          timestamp: new Date().toISOString()
+        });
+        supabase.removeChannel(channel);
+        channels.current.delete(channelKey);
+        activeSubscriptions.current.delete(channelKey);
+      }
+    } else {
+      channels.current.forEach((channel, key) => {
+        logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up channel', {
+          channelKey: key,
+          timestamp: new Date().toISOString()
+        });
+        supabase.removeChannel(channel);
       });
-      supabase.removeChannel(channel);
-    });
-    activeChannels.current.clear();
+      channels.current.clear();
+      activeSubscriptions.current.clear();
+    }
   }, []);
 
   return {
-    state,
     subscribe,
     cleanup,
-    cleanupSubscription
+    activeSubscriptions: activeSubscriptions.current
   };
 };
