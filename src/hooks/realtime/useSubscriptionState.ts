@@ -66,14 +66,16 @@ export const useSubscriptionState = () => {
         if (status === 'SUBSCRIBED') {
           channels.current.set(channelKey, channel);
           activeSubscriptions.current.add(channelKey);
-          config.onSubscriptionStatus?.(status);
+          config.onSubscriptionStatus?.('SUBSCRIBED');
         } else if (status === 'CHANNEL_ERROR') {
           const error = new Error(`Channel error for ${config.table}`);
           config.onError?.(error);
           cleanupChannel(channelKey);
-          config.onSubscriptionStatus?.(status);
-        } else {
-          config.onSubscriptionStatus?.(status);
+          config.onSubscriptionStatus?.('CHANNEL_ERROR');
+        } else if (status === 'TIMED_OUT') {
+          config.onSubscriptionStatus?.('TIMED_OUT');
+        } else if (status === 'CLOSED') {
+          config.onSubscriptionStatus?.('CLOSED');
         }
       });
 

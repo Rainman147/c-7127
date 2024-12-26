@@ -76,7 +76,7 @@ export const TemplateManager = () => {
       </div>
 
       <TemplateList
-        templates={templates}
+        templates={templates || []}
         onEdit={handleEditClick}
         onDelete={deleteTemplate}
         onSelect={handleTemplateSelect}
