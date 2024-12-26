@@ -4,6 +4,7 @@ import { useMessageListState } from './message/list/useMessageListState';
 import { MessageListContainer } from './message/list/MessageListContainer';
 import { PerformanceMonitor } from './message/PerformanceMonitor';
 import { useRealTime } from '@/contexts/RealTimeContext';
+import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 import type { ErrorSeverity } from '@/types/errorTracking';
 
@@ -21,40 +22,65 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
     performanceMetrics
   } = useMessageListState(propMessages);
 
-  // Subscribe to chat updates when messages change - now with cleanup
+  // Subscribe to chat updates when messages change - now with enhanced cleanup
   useEffect(() => {
+    let chatId: string | null = null;
+    
     if (propMessages.length > 0) {
-      const chatId = propMessages[0].id.split('-')[0];
-      console.log('MessageList: Subscribing to chat:', chatId);
+      chatId = propMessages[0].id.split('-')[0];
+      
+      logger.info(LogCategory.WEBSOCKET, 'MessageList', 'Initializing chat subscription', {
+        chatId,
+        messageCount: propMessages.length,
+        timestamp: new Date().toISOString()
+      });
       
       if (chatId) {
         subscribeToChat(chatId);
-        return () => {
-          console.log('MessageList: Unsubscribing from chat:', chatId);
-          unsubscribeFromChat(chatId);
-        };
+        
+        logger.debug(LogCategory.WEBSOCKET, 'MessageList', 'Chat subscription active', {
+          chatId,
+          timestamp: new Date().toISOString()
+        });
       }
     }
+
+    // Cleanup function
+    return () => {
+      if (chatId) {
+        logger.info(LogCategory.WEBSOCKET, 'MessageList', 'Cleaning up chat subscription', {
+          chatId,
+          timestamp: new Date().toISOString()
+        });
+        
+        unsubscribeFromChat(chatId);
+        
+        logger.debug(LogCategory.WEBSOCKET, 'MessageList', 'Chat subscription cleaned up', {
+          chatId,
+          timestamp: new Date().toISOString()
+        });
+      }
+    };
   }, [propMessages, subscribeToChat, unsubscribeFromChat]);
 
-  // Enhanced error tracking for duplicate messages
+  // Enhanced error tracking for duplicate messages with logging
   const lastMessage = propMessages[propMessages.length - 1];
   if (lastMessage && lastMessage.id === lastMessageRef.current) {
     const severity: ErrorSeverity = 'medium';
-    ErrorTracker.trackError(
-      new Error('Duplicate message detected'),
-      {
-        component: 'MessageList',
-        severity,
-        errorType: 'data',
-        timestamp: new Date().toISOString(),
-        additionalInfo: {
-          messageId: lastMessage.id,
-          duplicateCount: propMessages.filter(m => m.id === lastMessage.id).length,
-          renderedNodes: performanceMetrics.renderedNodes
-        }
+    const errorDetails = {
+      component: 'MessageList',
+      severity,
+      errorType: 'data',
+      timestamp: new Date().toISOString(),
+      additionalInfo: {
+        messageId: lastMessage.id,
+        duplicateCount: propMessages.filter(m => m.id === lastMessage.id).length,
+        renderedNodes: performanceMetrics.renderedNodes
       }
-    );
+    };
+
+    logger.error(LogCategory.STATE, 'MessageList', 'Duplicate message detected', errorDetails);
+    ErrorTracker.trackError(new Error('Duplicate message detected'), errorDetails);
   } else if (lastMessage) {
     lastMessageRef.current = lastMessage.id;
   }
