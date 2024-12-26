@@ -28,11 +28,11 @@ export const useSubscriptionManager = () => {
     channel
       .on(
         'postgres_changes',
-        {
+        { 
           event: config.event,
           schema: config.schema,
           table: config.table,
-          filter: config.filter
+          filter: config.filter 
         },
         (payload) => {
           logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Database change received', {
