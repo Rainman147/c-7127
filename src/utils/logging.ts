@@ -9,7 +9,9 @@ export enum LogCategory {
   VALIDATION = 'validation',
   WEBSOCKET = 'websocket',
   CACHE = 'cache',
-  LIFECYCLE = 'lifecycle'
+  LIFECYCLE = 'lifecycle',
+  COMPONENT = 'component',
+  USER_ACTION = 'user_action'
 }
 
 interface LogMetadata {

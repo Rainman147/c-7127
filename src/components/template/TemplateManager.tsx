@@ -5,6 +5,7 @@ import { TemplateList } from './list/TemplateList';
 import { useTemplateOperations } from './hooks/useTemplateOperations';
 import { useTemplateContext } from '@/contexts/TemplateContext';
 import { useTemplateRealtime } from '@/hooks/template/useTemplateRealtime';
+import { TemplateHeader } from './header/TemplateHeader';
 import type { Template } from './templateTypes';
 
 export const TemplateManager = () => {
@@ -29,14 +30,14 @@ export const TemplateManager = () => {
   });
 
   useEffect(() => {
-    logger.debug(LogCategory.COMPONENT, 'TemplateManager', 'Component mounted', {
+    logger.debug(LogCategory.LIFECYCLE, 'TemplateManager', 'Component mounted', {
       templatesCount: templates?.length,
       isLoading,
       hasError: !!error
     });
     
     return () => {
-      logger.debug(LogCategory.COMPONENT, 'TemplateManager', 'Component unmounting');
+      logger.debug(LogCategory.LIFECYCLE, 'TemplateManager', 'Component unmounting');
     };
   }, [templates?.length, isLoading, error]);
 
@@ -70,15 +71,7 @@ export const TemplateManager = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Templates</h2>
-        <button
-          onClick={() => setIsCreateDialogOpen(true)}
-          className="btn-primary"
-        >
-          Create Template
-        </button>
-      </div>
+      <TemplateHeader onCreateClick={() => setIsCreateDialogOpen(true)} />
 
       <TemplateList
         templates={templates || []}

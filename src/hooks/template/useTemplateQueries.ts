@@ -1,42 +1,37 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Template } from '@/components/template/templateTypes';
-import { convertDatabaseTemplate, type DatabaseTemplate } from '@/types/templates/database';
+import { convertDatabaseTemplate } from '@/types/templates/database';
+import { logger, LogCategory } from '@/utils/logging';
 
-export const useTemplateQueries = (templateId?: string) => {
-  console.log('[useTemplateQueries] Initializing template queries with ID:', templateId);
-  
-  const { 
-    data: templates = [], 
+export const useTemplateQueries = () => {
+  const {
+    data: templates = [],
     isLoading,
-    error
+    error,
+    refetch
   } = useQuery({
-    queryKey: ['templates', templateId],
+    queryKey: ['templates'],
     queryFn: async () => {
-      console.log('[useTemplateQueries] Fetching templates');
-      const query = supabase
+      logger.debug(LogCategory.DATABASE, 'useTemplateQueries', 'Fetching templates');
+      const { data, error } = await supabase
         .from('templates')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (templateId) {
-        query.eq('id', templateId);
-      }
-
-      const { data, error } = await query;
-
       if (error) {
-        console.error('[useTemplateQueries] Error fetching templates:', error);
+        logger.error(LogCategory.DATABASE, 'useTemplateQueries', 'Error fetching templates', { error });
         throw error;
       }
 
-      return data.map((template: DatabaseTemplate) => convertDatabaseTemplate(template));
+      return data.map(convertDatabaseTemplate);
     },
   });
 
   return {
     templates,
     isLoading,
-    error
+    error,
+    refetch
   };
 };
