@@ -4,30 +4,64 @@ import { logger, LogCategory } from '@/utils/logging';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { SubscriptionConfig } from './types';
 
+const SUBSCRIPTION_TIMEOUT = 30000; // 30 seconds timeout for subscriptions
+
 export const useSubscriptionManager = () => {
   const channels = useRef(new Map<string, RealtimeChannel>());
   const activeSubscriptions = useRef(new Set<string>());
+  const subscriptionTimers = useRef(new Map<string, NodeJS.Timeout>());
+
+  const cleanupChannel = useCallback((channelKey: string) => {
+    const channel = channels.current.get(channelKey);
+    if (channel) {
+      logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up channel', {
+        channelKey,
+        timestamp: new Date().toISOString()
+      });
+      
+      supabase.removeChannel(channel);
+      channels.current.delete(channelKey);
+      activeSubscriptions.current.delete(channelKey);
+      
+      const timer = subscriptionTimers.current.get(channelKey);
+      if (timer) {
+        clearTimeout(timer);
+        subscriptionTimers.current.delete(channelKey);
+      }
+    }
+  }, []);
 
   const subscribe = useCallback((config: SubscriptionConfig): RealtimeChannel => {
     const channelKey = `${config.table}-${config.filter || 'all'}`;
     
+    // Clean up existing subscription if present
     if (channels.current.has(channelKey)) {
-      const existingChannel = channels.current.get(channelKey);
-      if (existingChannel) {
-        logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Removing existing channel', {
-          channelKey,
-          timestamp: new Date().toISOString()
-        });
-        supabase.removeChannel(existingChannel);
-        channels.current.delete(channelKey);
-      }
+      cleanupChannel(channelKey);
     }
+
+    logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Creating new subscription', {
+      channelKey,
+      table: config.table,
+      filter: config.filter,
+      timestamp: new Date().toISOString()
+    });
 
     const channel = supabase.channel(channelKey);
 
+    // Set up subscription timeout
+    const timeoutId = setTimeout(() => {
+      logger.warn(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription timeout', {
+        channelKey,
+        timestamp: new Date().toISOString()
+      });
+      cleanupChannel(channelKey);
+    }, SUBSCRIPTION_TIMEOUT);
+
+    subscriptionTimers.current.set(channelKey, timeoutId);
+
     channel
       .on(
-        'postgres_changes' as any, // Type assertion to fix the type error
+        'postgres_changes' as any,
         { 
           event: config.event,
           schema: config.schema,
@@ -40,6 +74,14 @@ export const useSubscriptionManager = () => {
             event: config.event,
             timestamp: new Date().toISOString()
           });
+          
+          // Clear timeout on successful message
+          const timer = subscriptionTimers.current.get(channelKey);
+          if (timer) {
+            clearTimeout(timer);
+            subscriptionTimers.current.delete(channelKey);
+          }
+          
           config.onMessage(payload);
         }
       )
@@ -53,47 +95,40 @@ export const useSubscriptionManager = () => {
         if (status === 'SUBSCRIBED') {
           channels.current.set(channelKey, channel);
           activeSubscriptions.current.add(channelKey);
+          
+          // Clear timeout on successful subscription
+          const timer = subscriptionTimers.current.get(channelKey);
+          if (timer) {
+            clearTimeout(timer);
+            subscriptionTimers.current.delete(channelKey);
+          }
         } else if (status === 'CHANNEL_ERROR') {
           const error = new Error(`Channel error for ${config.table}`);
           config.onError?.(error);
-          channels.current.delete(channelKey);
-          activeSubscriptions.current.delete(channelKey);
+          cleanupChannel(channelKey);
         }
         
         config.onSubscriptionStatus?.(status);
       });
 
     return channel;
-  }, []);
+  }, [cleanupChannel]);
 
   const cleanup = useCallback((channelKey?: string) => {
     if (channelKey) {
-      const channel = channels.current.get(channelKey);
-      if (channel) {
-        logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up channel', {
-          channelKey,
-          timestamp: new Date().toISOString()
-        });
-        supabase.removeChannel(channel);
-        channels.current.delete(channelKey);
-        activeSubscriptions.current.delete(channelKey);
-      }
+      cleanupChannel(channelKey);
     } else {
-      channels.current.forEach((channel, key) => {
-        logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up channel', {
-          channelKey: key,
-          timestamp: new Date().toISOString()
-        });
-        supabase.removeChannel(channel);
+      // Clean up all channels
+      channels.current.forEach((_, key) => {
+        cleanupChannel(key);
       });
-      channels.current.clear();
-      activeSubscriptions.current.clear();
     }
-  }, []);
+  }, [cleanupChannel]);
 
   return {
     subscribe,
     cleanup,
-    activeSubscriptions: activeSubscriptions.current
+    activeSubscriptions: activeSubscriptions.current,
+    getActiveSubscriptionCount: () => activeSubscriptions.current.size
   };
 };

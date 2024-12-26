@@ -5,10 +5,9 @@ import { RealTimeContext } from './RealTimeContext';
 import { useSubscriptionManager } from './realtime/useSubscriptionManager';
 import { useSubscriptionHandlers } from './realtime/useSubscriptionHandlers';
 import { ExponentialBackoff } from '@/utils/backoff';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import type { Message } from '@/types/chat';
-import type { ConnectionStatus, SubscriptionConfig } from './realtime/types';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { ConnectionStatus } from './realtime/types';
 
 const backoffConfig = {
   initialDelay: 1000,
@@ -60,8 +59,20 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     }
   };
 
-  const { subscribe, cleanup, activeSubscriptions } = useSubscriptionManager();
+  const { subscribe, cleanup, activeSubscriptions, getActiveSubscriptionCount } = useSubscriptionManager();
   const { handleChatMessage, handleMessageUpdate } = useSubscriptionHandlers(setLastMessage, backoff);
+
+  // Monitor active subscriptions
+  useEffect(() => {
+    const interval = setInterval(() => {
+      logger.debug(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Active subscription count', {
+        count: getActiveSubscriptionCount(),
+        timestamp: new Date().toISOString()
+      });
+    }, 60000); // Log every minute
+
+    return () => clearInterval(interval);
+  }, [getActiveSubscriptionCount]);
 
   const subscribeToChat = (chatId: string) => {
     subscribe({
@@ -132,7 +143,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       });
       cleanup();
     };
-  }, [cleanup]);
+  }, [cleanup, activeSubscriptions]);
 
   const value = {
     connectionState,
