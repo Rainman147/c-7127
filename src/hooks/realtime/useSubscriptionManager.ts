@@ -27,7 +27,7 @@ export const useSubscriptionManager = () => {
 
     channel
       .on(
-        'postgres_changes',
+        'postgres_changes' as any, // Type assertion to fix the type error
         { 
           event: config.event,
           schema: config.schema,

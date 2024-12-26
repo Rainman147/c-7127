@@ -29,7 +29,6 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
         component: 'MessageList',
         severity,
         errorType: 'data',
-        operation: 'message-deduplication',
         timestamp: new Date().toISOString(),
         additionalInfo: {
           messageId: lastMessage.id,
