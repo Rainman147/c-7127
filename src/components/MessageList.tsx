@@ -1,12 +1,14 @@
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 import { ErrorTracker } from '@/utils/errorTracking';
 import { useMessageListState } from './message/list/useMessageListState';
 import { MessageListContainer } from './message/list/MessageListContainer';
 import { PerformanceMonitor } from './message/PerformanceMonitor';
+import { useRealTime } from '@/contexts/RealTimeContext';
 import type { Message } from '@/types/chat';
 import type { ErrorSeverity } from '@/types/errorTracking';
 
 const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) => {
+  const { subscribeToChat, unsubscribeFromChat } = useRealTime();
   const {
     containerRef,
     listRef,
@@ -18,6 +20,17 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
     messageGroups,
     performanceMetrics
   } = useMessageListState(propMessages);
+
+  // Subscribe to chat updates when messages change
+  useEffect(() => {
+    if (propMessages.length > 0) {
+      const chatId = propMessages[0].chat_id;
+      if (chatId) {
+        subscribeToChat(chatId);
+        return () => unsubscribeFromChat(chatId);
+      }
+    }
+  }, [propMessages, subscribeToChat, unsubscribeFromChat]);
 
   // Enhanced error tracking for duplicate messages
   const lastMessage = propMessages[propMessages.length - 1];
