@@ -6,6 +6,7 @@ import { useRealtimeConnection } from '@/hooks/realtime/useRealtimeConnection';
 import { useSubscriptionState } from '@/hooks/realtime/useSubscriptionState';
 import { useMessageHandlers } from '@/hooks/realtime/useMessageHandlers';
 import { subscriptionManager } from '@/utils/realtime/SubscriptionManager';
+import { useConnectionStateManager } from './realtime/useConnectionStateManager';
 
 const backoffConfig = {
   initialDelay: 1000,
