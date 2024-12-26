@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Loader2, ArrowUp } from "lucide-react";
+import { Loader2, ArrowUp, Mic, MicOff } from "lucide-react";
 import AudioRecorder from "../AudioRecorder";
 import FileUploadModal from "../FileUploadModal";
+import { useAudioTranscription } from "@/hooks/useAudioTranscription";
 
 interface ChatInputActionsProps {
   isLoading: boolean;
@@ -18,11 +19,19 @@ const ChatInputActions = ({
   onTranscriptionComplete,
   handleFileUpload
 }: ChatInputActionsProps) => {
-  const [isRecording, setIsRecording] = useState(false);
+  const {
+    isRecording,
+    isProcessing,
+    startRecording,
+    stopRecording
+  } = useAudioTranscription();
 
-  const handleRecordingStateChange = (recording: boolean) => {
-    console.log('Recording state changed:', recording);
-    setIsRecording(recording);
+  const handleRecordingClick = async () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      await startRecording();
+    }
   };
 
   return (
@@ -33,14 +42,27 @@ const ChatInputActions = ({
           onFileSelected={handleFileUpload}
           onTranscriptionComplete={onTranscriptionComplete}
         />
+        <button
+          onClick={handleRecordingClick}
+          disabled={isProcessing}
+          className={`p-2 rounded-full transition-colors duration-200 ${
+            isRecording 
+              ? 'bg-red-500 hover:bg-red-600' 
+              : 'bg-gray-700 hover:bg-gray-600'
+          }`}
+        >
+          {isProcessing ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : isRecording ? (
+            <MicOff className="h-5 w-5" />
+          ) : (
+            <Mic className="h-5 w-5" />
+          )}
+        </button>
       </div>
       
       {/* Right side icons */}
       <div className="flex items-center space-x-2">
-        <AudioRecorder 
-          onTranscriptionComplete={onTranscriptionComplete}
-          onRecordingStateChange={handleRecordingStateChange}
-        />
         <button 
           onClick={handleSubmit}
           disabled={isLoading || !message.trim()}
