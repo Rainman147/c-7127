@@ -1,90 +1,57 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
+import { useConnectionState } from '@/contexts/realtime/connectionState';
 import { useToast } from '@/hooks/use-toast';
-import { debounce } from 'lodash';
-import type { ConnectionState } from '@/contexts/realtime/config';
+import type { ConnectionState } from '@/contexts/realtime/types';
 
-const INITIAL_STATE: ConnectionState = {
-  status: 'connecting',
-  lastAttempt: Date.now(),
-  retryCount: 0,
-  error: undefined
-};
-
-export const useConnectionManager = (
-  retryTimeouts: React.MutableRefObject<Record<string, NodeJS.Timeout>>
-) => {
-  const [connectionState, setConnectionState] = useState<ConnectionState>(INITIAL_STATE);
+export const useConnectionManager = () => {
   const { toast } = useToast();
-
-  // Debounced state update to prevent rapid changes
-  const debouncedSetState = useCallback(
-    debounce((newState: ConnectionState) => {
-      logger.info(LogCategory.STATE, 'ConnectionState', 'State transition', {
-        from: connectionState.status,
-        to: newState.status,
-        retryCount: newState.retryCount,
-        timestamp: new Date().toISOString()
-      });
-
-      setConnectionState(newState);
-
-      // Show toast notification for state changes
-      if (newState.status === 'connected' && connectionState.status !== 'connected') {
-        toast({
-          description: "Connection restored",
-          className: "bg-green-500 text-white",
-        });
-      } else if (newState.status === 'disconnected' && connectionState.status !== 'disconnected') {
-        toast({
-          title: "Connection Lost",
-          description: `Reconnecting... (Attempt ${newState.retryCount}/5)`,
-          variant: "destructive",
-        });
-      }
-    }, 300),
-    [connectionState.status, toast]
-  );
+  const { state, updateState, resetState } = useConnectionState();
 
   const handleConnectionSuccess = useCallback(() => {
-    logger.info(LogCategory.COMMUNICATION, 'ConnectionState', 'Connection successful', {
-      previousState: connectionState.status,
+    logger.info(LogCategory.COMMUNICATION, 'ConnectionManager', 'Connection successful', {
+      previousState: state.status,
       timestamp: new Date().toISOString()
     });
 
-    debouncedSetState({
+    updateState({
       status: 'connected',
-      lastAttempt: Date.now(),
       retryCount: 0,
       error: undefined
     });
-  }, [debouncedSetState]);
 
-  const handleConnectionError = useCallback((chatId: string, error: Error) => {
-    logger.error(LogCategory.ERROR, 'ConnectionState', 'Connection error', {
+    if (state.retryCount > 0) {
+      toast({
+        description: "Connection restored",
+        className: "bg-green-500 text-white",
+      });
+    }
+  }, [state.status, state.retryCount, toast, updateState]);
+
+  const handleConnectionError = useCallback((error: Error) => {
+    logger.error(LogCategory.ERROR, 'ConnectionManager', 'Connection error', {
       error: error.message,
-      chatId,
-      retryCount: connectionState.retryCount,
+      retryCount: state.retryCount,
       timestamp: new Date().toISOString()
     });
 
-    debouncedSetState({
+    updateState({
       status: 'disconnected',
-      lastAttempt: Date.now(),
-      retryCount: connectionState.retryCount + 1,
+      retryCount: state.retryCount + 1,
       error
     });
 
-    // Clear any existing retry timeout
-    if (retryTimeouts.current[chatId]) {
-      clearTimeout(retryTimeouts.current[chatId]);
-    }
-  }, [connectionState.retryCount, debouncedSetState, retryTimeouts]);
+    toast({
+      title: "Connection Lost",
+      description: `Reconnecting... (Attempt ${state.retryCount + 1}/5)`,
+      variant: "destructive",
+    });
+  }, [state.retryCount, toast, updateState]);
 
   return {
-    connectionState,
-    setConnectionState: debouncedSetState,
+    connectionState: state,
     handleConnectionSuccess,
-    handleConnectionError
+    handleConnectionError,
+    resetState
   };
 };
