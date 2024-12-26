@@ -10,12 +10,6 @@ export interface ConnectionState {
   error?: Error;
 }
 
-export interface ConnectionStore {
-  state: ConnectionState;
-  updateState: (state: Partial<ConnectionState>) => void;
-  resetState: () => void;
-}
-
 export interface SubscriptionConfig {
   event: '*' | 'INSERT' | 'UPDATE' | 'DELETE';
   schema: string;
@@ -28,7 +22,9 @@ export interface SubscriptionConfig {
 
 export interface RealtimeContextValue {
   connectionState: ConnectionState;
-  subscribe: (config: SubscriptionConfig) => RealtimeChannel;
-  unsubscribe: (channelId: string) => void;
-  cleanup: () => void;
+  lastMessage?: Message;
+  subscribeToChat: (chatId: string) => void;
+  unsubscribeFromChat: (chatId: string) => void;
+  subscribeToMessage: (messageId: string, onUpdate: (content: string) => void) => void;
+  unsubscribeFromMessage: (messageId: string) => void;
 }
