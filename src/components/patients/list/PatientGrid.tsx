@@ -1,6 +1,9 @@
+import { useEffect } from 'react';
+import { useRealTime } from '@/contexts/RealTimeContext';
 import { PatientCard } from "../PatientCard";
 import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
+import { logger, LogCategory } from '@/utils/logging';
 import type { Patient } from "@/types/database/patients";
 
 interface PatientGridProps {
@@ -16,6 +19,30 @@ export const PatientGrid = ({
   onPatientClick,
   onPatientDelete,
 }: PatientGridProps) => {
+  const { subscribe, cleanup } = useRealTime();
+
+  useEffect(() => {
+    logger.debug(LogCategory.WEBSOCKET, 'PatientGrid', 'Setting up patient subscriptions');
+    
+    const channel = subscribe({
+      schema: 'public',
+      table: 'patients',
+      event: '*',
+      onMessage: (payload) => {
+        logger.debug(LogCategory.WEBSOCKET, 'PatientGrid', 'Received patient update:', payload);
+        // Handle patient updates through React Query invalidation
+        // The usePatientManagement hook will automatically refetch
+      },
+      onError: (error) => {
+        logger.error(LogCategory.WEBSOCKET, 'PatientGrid', 'Subscription error:', error);
+      }
+    });
+
+    return () => {
+      cleanup();
+    };
+  }, [subscribe, cleanup]);
+
   if (isLoading) {
     return (
       <div className="col-span-full text-center text-gray-400 py-8">

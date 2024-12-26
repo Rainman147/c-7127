@@ -49,8 +49,8 @@ export const useSubscriptionState = () => {
       .on(
         'postgres_changes',
         { 
-          event: config.event,
-          schema: config.schema,
+          event: config.event || '*',
+          schema: config.schema || 'public',
           table: config.table,
           filter: config.filter 
         },
