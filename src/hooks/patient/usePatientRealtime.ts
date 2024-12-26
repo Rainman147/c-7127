@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useId } from 'react';
 import { useRealTime } from '@/contexts/RealTimeContext';
 import { useToast } from '@/hooks/use-toast';
 import { logger, LogCategory } from '@/utils/logging';
@@ -6,6 +6,7 @@ import { logger, LogCategory } from '@/utils/logging';
 export const usePatientRealtime = () => {
   const { subscribe, cleanup } = useRealTime();
   const { toast } = useToast();
+  const componentId = useId();
 
   useEffect(() => {
     logger.debug(LogCategory.WEBSOCKET, 'PatientGrid', 'Setting up patient subscriptions');
@@ -49,5 +50,5 @@ export const usePatientRealtime = () => {
       logger.info(LogCategory.WEBSOCKET, 'PatientGrid', 'Cleaning up patient subscriptions');
       cleanup();
     };
-  }, [subscribe, cleanup, toast]);
+  }, [subscribe, cleanup, toast, componentId]);
 };

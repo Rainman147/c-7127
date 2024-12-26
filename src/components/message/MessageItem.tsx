@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useId } from 'react';
 import Message from '../Message';
 import type { Message as MessageType } from '@/types/chat';
 
@@ -9,7 +9,8 @@ interface MessageItemProps {
 }
 
 const MessageItem = memo(({ message, showAvatar, index }: MessageItemProps) => {
-  console.log('[MessageItem] Rendering message:', { id: message.id, index });
+  const componentId = useId();
+  console.log('[MessageItem] Rendering message:', { id: message.id, index, componentId });
   
   if (!message) {
     console.warn('[MessageItem] Received null message at index:', index);

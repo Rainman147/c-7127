@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useId } from 'react';
 import { useRealTime } from '@/contexts/RealTimeContext';
 import { useToast } from '@/hooks/use-toast';
 import { logger, LogCategory } from '@/utils/logging';
@@ -7,6 +7,7 @@ import type { Template } from '@/components/template/templateTypes';
 export const useTemplateRealtime = (onTemplateChange: (template: Template) => void) => {
   const { subscribe, cleanup } = useRealTime();
   const { toast } = useToast();
+  const componentId = useId();
 
   useEffect(() => {
     logger.debug(LogCategory.WEBSOCKET, 'useTemplateRealtime', 'Setting up template subscriptions');
@@ -59,5 +60,5 @@ export const useTemplateRealtime = (onTemplateChange: (template: Template) => vo
       logger.debug(LogCategory.WEBSOCKET, 'useTemplateRealtime', 'Cleaning up template subscriptions');
       cleanup();
     };
-  }, [subscribe, cleanup, toast, onTemplateChange]);
+  }, [subscribe, cleanup, toast, onTemplateChange, componentId]);
 };

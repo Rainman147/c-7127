@@ -3,11 +3,12 @@ import { RealTimeContext } from './RealTimeContext';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 import { useRealtimeConnection } from '@/hooks/realtime/useRealtimeConnection';
-import { useSubscriptionState } from '@/hooks/realtime/useSubscriptionState';
-import { useMessageHandlers } from '@/hooks/realtime/useMessageHandlers';
+import { useSubscriptionState } from './realtime/useSubscriptionState';
+import { useMessageHandlers } from './realtime/useSubscriptionHandlers';
 import { subscriptionManager } from '@/utils/realtime/SubscriptionManager';
 import { useConnectionStateManager } from './realtime/useConnectionStateManager';
 import { ExponentialBackoff } from '@/utils/backoff';
+import type { RealtimeContextValue } from './realtime/types';
 
 const backoffConfig = {
   initialDelay: 1000,
@@ -36,10 +37,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         }, {} as Record<string, number>)
       };
 
-      logger.debug(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Subscription metrics', {
-        ...subscriptionMetrics,
-        timestamp: new Date().toISOString()
-      });
+      logger.debug(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Subscription metrics', subscriptionMetrics);
     }, 60000);
 
     return () => clearInterval(interval);
@@ -53,17 +51,10 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Reusing existing chat subscription', {
         chatId,
         componentId,
-        existingComponentId: existingSubscription.componentId,
-        timestamp: new Date().toISOString()
+        existingComponentId: existingSubscription.componentId
       });
       return;
     }
-
-    logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Creating new chat subscription', {
-      chatId,
-      componentId,
-      timestamp: new Date().toISOString()
-    });
 
     const channel = subscribe({
       event: '*',
@@ -71,15 +62,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       table: 'messages',
       filter: `chat_id=eq.${chatId}`,
       onMessage: handleChatMessage,
-      onError: handleConnectionError,
-      onSubscriptionStatus: (status) => {
-        logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Chat subscription status changed', {
-          chatId,
-          componentId,
-          status,
-          timestamp: new Date().toISOString()
-        });
-      }
+      onError: handleConnectionError
     });
     
     activeSubscriptionsRef.current.set(subscriptionKey, {
@@ -97,8 +80,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       logger.warn(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Subscription ownership mismatch', {
         chatId,
         requestingComponent: componentId,
-        owningComponent: existingSubscription?.componentId,
-        timestamp: new Date().toISOString()
+        owningComponent: existingSubscription?.componentId
       });
       return;
     }
@@ -106,12 +88,6 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     cleanup(subscriptionKey);
     activeSubscriptionsRef.current.delete(subscriptionKey);
     subscriptionManager.removeChannel(subscriptionKey);
-    
-    logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Unsubscribed from chat', {
-      chatId,
-      componentId,
-      timestamp: new Date().toISOString()
-    });
   }, [cleanup]);
 
   const subscribeToMessage = useCallback((messageId: string, componentId: string, onUpdate: (content: string) => void) => {
@@ -122,8 +98,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Reusing existing message subscription', {
         messageId,
         componentId,
-        existingComponentId: existingSubscription.componentId,
-        timestamp: new Date().toISOString()
+        existingComponentId: existingSubscription.componentId
       });
       return;
     }
@@ -134,15 +109,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       table: 'messages',
       filter: `id=eq.${messageId}`,
       onMessage: handleMessageUpdate(messageId, onUpdate),
-      onError: handleConnectionError,
-      onSubscriptionStatus: (status) => {
-        logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Message subscription status changed', {
-          messageId,
-          componentId,
-          status,
-          timestamp: new Date().toISOString()
-        });
-      }
+      onError: handleConnectionError
     });
     
     activeSubscriptionsRef.current.set(subscriptionKey, {
@@ -160,8 +127,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       logger.warn(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Message subscription ownership mismatch', {
         messageId,
         requestingComponent: componentId,
-        owningComponent: existingSubscription?.componentId,
-        timestamp: new Date().toISOString()
+        owningComponent: existingSubscription?.componentId
       });
       return;
     }
@@ -169,31 +135,18 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     cleanup(subscriptionKey);
     activeSubscriptionsRef.current.delete(subscriptionKey);
     subscriptionManager.removeChannel(subscriptionKey);
-    
-    logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Unsubscribed from message', {
-      messageId,
-      componentId,
-      timestamp: new Date().toISOString()
-    });
   }, [cleanup]);
 
   React.useEffect(() => {
     return () => {
-      logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Cleaning up all subscriptions', {
-        activeSubscriptions: Array.from(activeSubscriptionsRef.current.entries()).map(([key, value]) => ({
-          key,
-          componentId: value.componentId,
-          age: Date.now() - value.timestamp
-        })),
-        timestamp: new Date().toISOString()
-      });
+      logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Cleaning up all subscriptions');
       cleanup();
       subscriptionManager.cleanup();
       activeSubscriptionsRef.current.clear();
     };
   }, [cleanup]);
 
-  const value = {
+  const value: RealtimeContextValue = {
     connectionState,
     lastMessage,
     subscribeToChat,
