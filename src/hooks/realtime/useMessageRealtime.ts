@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
-import { supabase } from '@/integrations/supabase/client';
+import { useRealTime } from '@/contexts/RealTimeContext';
 import { useMessageQueue } from './useMessageQueue';
-import { useSubscriptionManager } from './useSubscriptionManager';
 import type { DatabaseMessage } from '@/types/database/messages';
 
 export const useMessageRealtime = (
@@ -10,9 +9,8 @@ export const useMessageRealtime = (
   editedContent: string,
   setEditedContent: (content: string) => void
 ) => {
-  const { state: connectionState, subscribe, cleanupSubscription } = useSubscriptionManager();
+  const { connectionState, subscribeToMessage, unsubscribeFromMessage } = useRealTime();
   const { addToQueue, processQueue, clearQueue } = useMessageQueue();
-  const channelRef = useRef<ReturnType<typeof supabase.channel>>();
   const lastUpdateTimeRef = useRef<number>(Date.now());
 
   const handleMessageUpdate = useCallback((content: string) => {
@@ -33,38 +31,19 @@ export const useMessageRealtime = (
       return;
     }
 
-    const channel = subscribe({
-      event: '*',
-      schema: 'public',
-      table: 'messages',
-      filter: `id=eq.${messageId}`,
-      onMessage: (payload) => {
-        const newMessage = payload.new as DatabaseMessage;
-        handleMessageUpdate(newMessage.content);
-      },
-      onError: (error) => {
-        logger.error(LogCategory.WEBSOCKET, 'MessageRealtime', 'Subscription error', {
-          error,
+    subscribeToMessage(messageId, handleMessageUpdate);
+
+    return () => {
+      if (messageId) {
+        logger.info(LogCategory.WEBSOCKET, 'MessageRealtime', 'Cleaning up subscription', {
           messageId,
           timestamp: new Date().toISOString()
         });
-      }
-    });
-
-    channelRef.current = channel;
-
-    return () => {
-      if (channelRef.current) {
-        logger.info(LogCategory.WEBSOCKET, 'MessageRealtime', 'Cleaning up subscription', {
-          messageId: messageId,
-          timestamp: new Date().toISOString()
-        });
-        cleanupSubscription(channelRef.current);
-        channelRef.current = undefined;
+        unsubscribeFromMessage(messageId);
         clearQueue();
       }
     };
-  }, [messageId, subscribe, cleanupSubscription, handleMessageUpdate, clearQueue]);
+  }, [messageId, subscribeToMessage, unsubscribeFromMessage, handleMessageUpdate, clearQueue]);
 
   return {
     connectionState,

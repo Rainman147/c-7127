@@ -23,13 +23,7 @@ export const useSubscriptionManager = () => {
       }
     }
 
-    const channel = supabase.channel(channelKey)
-      .on('system', { event: '*' }, (payload) => {
-        logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'System event received', {
-          event: payload.event,
-          timestamp: new Date().toISOString()
-        });
-      });
+    const channel = supabase.channel(channelKey);
 
     channel
       .on(

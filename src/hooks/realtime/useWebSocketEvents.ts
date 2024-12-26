@@ -1,10 +1,10 @@
 import { useEffect, useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
-import { useSubscriptionManager } from './useSubscriptionManager';
+import { useRealTime } from '@/contexts/RealTimeContext';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export const useWebSocketEvents = (channel: RealtimeChannel | undefined) => {
-  const { state: connectionState } = useSubscriptionManager();
+  const { connectionState } = useRealTime();
 
   const handleWebSocketOpen = useCallback(() => {
     logger.info(LogCategory.COMMUNICATION, 'WebSocket', 'Connection opened', {

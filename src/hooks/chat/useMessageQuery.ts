@@ -1,6 +1,8 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
+import { useRealTime } from '@/contexts/RealTimeContext';
+import { useEffect } from 'react';
 import type { Message } from '@/types/chat';
 import type { DatabaseMessage } from '@/types/database/messages';
 
@@ -59,6 +61,8 @@ async function fetchMessages({ chatId, limit = MESSAGES_PER_PAGE, cursor }: Fetc
 }
 
 export function useMessageQuery(chatId: string | undefined) {
+  const { subscribeToChat, unsubscribeFromChat } = useRealTime();
+
   const query = useInfiniteQuery({
     queryKey: ['messages', chatId],
     queryFn: ({ pageParam = null }) => fetchMessages({ 
@@ -80,6 +84,15 @@ export function useMessageQuery(chatId: string | undefined) {
       errorMessage: 'Failed to load messages'
     }
   });
+
+  useEffect(() => {
+    if (chatId) {
+      subscribeToChat(chatId);
+      return () => {
+        unsubscribeFromChat(chatId);
+      };
+    }
+  }, [chatId, subscribeToChat, unsubscribeFromChat]);
 
   return {
     ...query,
