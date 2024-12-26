@@ -5,6 +5,7 @@ import type { Message } from '@/types/chat';
 import { useRealtimeConnection } from '@/hooks/realtime/useRealtimeConnection';
 import { useSubscriptionState } from '@/hooks/realtime/useSubscriptionState';
 import { useMessageHandlers } from '@/hooks/realtime/useMessageHandlers';
+import { subscriptionManager } from '@/utils/realtime/SubscriptionManager';
 
 const backoffConfig = {
   initialDelay: 1000,
@@ -33,7 +34,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   }, [getActiveSubscriptionCount]);
 
   const subscribeToChat = (chatId: string) => {
-    subscribe({
+    const channel = subscribe({
       event: '*',
       schema: 'public',
       table: 'messages',
@@ -48,10 +49,13 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         });
       }
     });
+    
+    subscriptionManager.addChannel(`messages-chat_id=eq.${chatId}`, channel);
   };
 
   const unsubscribeFromChat = (chatId: string) => {
     cleanup(`messages-chat_id=eq.${chatId}`);
+    subscriptionManager.removeChannel(`messages-chat_id=eq.${chatId}`);
     logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Unsubscribed from chat', {
       chatId,
       timestamp: new Date().toISOString()
@@ -59,7 +63,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   };
 
   const subscribeToMessage = (messageId: string, onUpdate: (content: string) => void) => {
-    subscribe({
+    const channel = subscribe({
       event: '*',
       schema: 'public',
       table: 'messages',
@@ -74,10 +78,13 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         });
       }
     });
+    
+    subscriptionManager.addChannel(`messages-id=eq.${messageId}`, channel);
   };
 
   const unsubscribeFromMessage = (messageId: string) => {
     cleanup(`messages-id=eq.${messageId}`);
+    subscriptionManager.removeChannel(`messages-id=eq.${messageId}`);
     logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Unsubscribed from message', {
       messageId,
       timestamp: new Date().toISOString()
@@ -91,6 +98,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         timestamp: new Date().toISOString()
       });
       cleanup();
+      subscriptionManager.cleanup();
     };
   }, [cleanup, activeSubscriptions]);
 

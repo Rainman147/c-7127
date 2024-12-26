@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
@@ -67,7 +67,8 @@ export const useSubscriptionState = () => {
           channels.current.set(channelKey, channel);
           activeSubscriptions.current.add(channelKey);
         } else if (status === 'CHANNEL_ERROR') {
-          config.onError?.(new Error(`Channel error for ${config.table}`));
+          const error = new Error(`Channel error for ${config.table}`);
+          config.onError?.(error);
           cleanupChannel(channelKey);
         }
         
