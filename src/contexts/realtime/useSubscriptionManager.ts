@@ -1,87 +1,91 @@
-import { useRef, useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { Message } from '@/types/chat';
-import type { ConnectionState } from './config';
+import type { SubscriptionConfig } from './types';
 
-export const useSubscriptionManager = (
-  setLastMessage: (message: Message) => void,
-  setConnectionState: (state: ConnectionState | ((prev: ConnectionState) => ConnectionState)) => void,
-  handleConnectionError: (chatId: string, error: Error) => void,
-  lastMessage?: Message
-) => {
+export const useSubscriptionManager = () => {
   const channels = useRef(new Map<string, RealtimeChannel>());
   const activeSubscriptions = useRef(new Set<string>());
 
-  const processMessage = useCallback((payload: any, chatId: string) => {
-    try {
-      logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Received message:', { 
-        payload,
-        chatId,
-        eventType: payload.eventType,
-        timestamp: new Date().toISOString()
-      });
-      
-      if (payload.eventType === 'INSERT') {
-        const newMessage = payload.new as Message;
-        
-        if (lastMessage?.id !== newMessage.id) {
-          logger.debug(LogCategory.STATE, 'RealTimeContext', 'Setting new last message:', {
-            messageId: newMessage.id,
-            previousMessageId: lastMessage?.id
-          });
-          setLastMessage(newMessage);
-        } else {
-          logger.debug(LogCategory.STATE, 'RealTimeContext', 'Skipping duplicate message:', {
-            messageId: newMessage.id
-          });
-        }
-      }
-    } catch (error) {
-      handleConnectionError(chatId, error as Error);
-    }
-  }, [lastMessage, setLastMessage, handleConnectionError]);
-
-  const cleanupSubscription = useCallback((chatId: string) => {
-    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Cleaning up subscription:', { 
-      chatId,
-      timestamp: new Date().toISOString()
-    });
+  const subscribe = useCallback((config: SubscriptionConfig): RealtimeChannel => {
+    const channelKey = `${config.table}-${config.filter || 'all'}`;
     
-    const channel = channels.current.get(chatId);
-    if (channel) {
-      supabase.removeChannel(channel);
-      channels.current.delete(chatId);
-      activeSubscriptions.current.delete(chatId);
-      
-      logger.debug(LogCategory.COMMUNICATION, 'RealTimeContext', 'Successfully cleaned up subscription:', {
-        chatId,
-        remainingSubscriptions: Array.from(activeSubscriptions.current),
-        timestamp: new Date().toISOString()
+    if (channels.current.has(channelKey)) {
+      const existingChannel = channels.current.get(channelKey);
+      if (existingChannel) {
+        logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Removing existing channel', {
+          channelKey,
+          timestamp: new Date().toISOString()
+        });
+        supabase.removeChannel(existingChannel);
+        channels.current.delete(channelKey);
+      }
+    }
+
+    const channel = supabase.channel(channelKey);
+
+    channel
+      .on(
+        'postgres_changes',
+        {
+          event: config.event,
+          schema: config.schema,
+          table: config.table,
+          filter: config.filter
+        },
+        (payload) => {
+          logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
+            table: config.table,
+            event: config.event,
+            timestamp: new Date().toISOString()
+          });
+          config.onMessage(payload);
+        }
+      )
+      .subscribe((status) => {
+        logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription status changed', {
+          channelKey,
+          status,
+          timestamp: new Date().toISOString()
+        });
       });
+
+    channels.current.set(channelKey, channel);
+    activeSubscriptions.current.add(channelKey);
+
+    return channel;
+  }, []);
+
+  const cleanup = useCallback((channelKey?: string) => {
+    if (channelKey) {
+      const channel = channels.current.get(channelKey);
+      if (channel) {
+        supabase.removeChannel(channel);
+        channels.current.delete(channelKey);
+        activeSubscriptions.current.delete(channelKey);
+        
+        logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaned up channel', {
+          channelKey,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } else {
+      channels.current.forEach((channel, key) => {
+        supabase.removeChannel(channel);
+        logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaned up channel', {
+          channelKey: key,
+          timestamp: new Date().toISOString()
+        });
+      });
+      channels.current.clear();
+      activeSubscriptions.current.clear();
     }
   }, []);
 
-  const cleanupAllSubscriptions = useCallback(() => {
-    logger.info(LogCategory.COMMUNICATION, 'RealTimeContext', 'Cleaning up all subscriptions', {
-      subscriptionCount: activeSubscriptions.current.size,
-      timestamp: new Date().toISOString()
-    });
-    
-    channels.current.forEach((_, chatId) => {
-      cleanupSubscription(chatId);
-    });
-    
-    channels.current.clear();
-    activeSubscriptions.current.clear();
-  }, [cleanupSubscription]);
-
   return {
-    channels,
-    activeSubscriptions,
-    cleanupSubscription,
-    cleanupAllSubscriptions,
-    processMessage
+    subscribe,
+    cleanup,
+    activeSubscriptions: activeSubscriptions.current
   };
 };
