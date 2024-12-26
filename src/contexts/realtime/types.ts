@@ -1,4 +1,3 @@
-import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { Message } from '@/types/chat';
 
 export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected';
@@ -8,12 +7,6 @@ export interface ConnectionState {
   retryCount: number;
   error?: Error;
   lastAttempt: number;
-}
-
-export interface ConnectionStore {
-  state: ConnectionState;
-  updateState: (newState: Partial<ConnectionState>) => void;
-  resetState: () => void;
 }
 
 export interface RealtimeContextValue {

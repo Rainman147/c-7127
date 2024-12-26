@@ -23,7 +23,9 @@ export const useSubscriptionManager = () => {
       }
     }
 
-    const channel = supabase.channel(channelKey)
+    const channel = supabase.channel(channelKey);
+
+    channel
       .on(
         'postgres_changes',
         {
@@ -51,6 +53,9 @@ export const useSubscriptionManager = () => {
         if (status === 'SUBSCRIBED') {
           channels.current.set(channelKey, channel);
           activeSubscriptions.current.add(channelKey);
+        } else if (status === 'CHANNEL_ERROR') {
+          const error = new Error(`Channel error for ${config.table}`);
+          config.onError?.(error);
         }
         
         config.onSubscriptionStatus?.(status);
@@ -63,22 +68,21 @@ export const useSubscriptionManager = () => {
     if (channelKey) {
       const channel = channels.current.get(channelKey);
       if (channel) {
-        supabase.removeChannel(channel);
-        channels.current.delete(channelKey);
-        activeSubscriptions.current.delete(channelKey);
-        
-        logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaned up channel', {
+        logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up channel', {
           channelKey,
           timestamp: new Date().toISOString()
         });
+        supabase.removeChannel(channel);
+        channels.current.delete(channelKey);
+        activeSubscriptions.current.delete(channelKey);
       }
     } else {
       channels.current.forEach((channel, key) => {
-        supabase.removeChannel(channel);
-        logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaned up channel', {
+        logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up channel', {
           channelKey: key,
           timestamp: new Date().toISOString()
         });
+        supabase.removeChannel(channel);
       });
       channels.current.clear();
       activeSubscriptions.current.clear();
