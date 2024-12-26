@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
 import type { ConnectionStatus } from './types';
+import type { ExponentialBackoff } from '@/utils/backoff';
 
 export const useConnectionStateManager = (backoff: React.MutableRefObject<ExponentialBackoff>) => {
   const { toast } = useToast();
@@ -42,7 +43,7 @@ export const useConnectionStateManager = (backoff: React.MutableRefObject<Expone
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [toast, backoff]);
 
   return {
     connectionState,

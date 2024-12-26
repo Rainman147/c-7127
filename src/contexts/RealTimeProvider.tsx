@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { RealTimeContext } from './RealTimeContext';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
@@ -7,6 +7,7 @@ import { useSubscriptionState } from '@/hooks/realtime/useSubscriptionState';
 import { useMessageHandlers } from '@/hooks/realtime/useMessageHandlers';
 import { subscriptionManager } from '@/utils/realtime/SubscriptionManager';
 import { useConnectionStateManager } from './realtime/useConnectionStateManager';
+import { ExponentialBackoff } from '@/utils/backoff';
 
 const backoffConfig = {
   initialDelay: 1000,
@@ -17,10 +18,11 @@ const backoffConfig = {
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
+  const backoff = useRef(new ExponentialBackoff(backoffConfig));
   
-  const { connectionState, handleConnectionError, backoff } = useRealtimeConnection(backoffConfig);
+  const { connectionState, handleConnectionError } = useConnectionStateManager(backoff);
   const { subscribe, cleanup, activeSubscriptions, getActiveSubscriptionCount } = useSubscriptionState();
-  const { handleChatMessage, handleMessageUpdate } = useMessageHandlers(setLastMessage, backoff);
+  const { handleChatMessage, handleMessageUpdate } = useMessageHandlers(setLastMessage, backoff.current);
 
   // Monitor active subscriptions
   React.useEffect(() => {
@@ -29,12 +31,12 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         count: getActiveSubscriptionCount(),
         timestamp: new Date().toISOString()
       });
-    }, 60000); // Log every minute
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [getActiveSubscriptionCount]);
 
-  const subscribeToChat = (chatId: string) => {
+  const subscribeToChat = React.useCallback((chatId: string) => {
     const channel = subscribe({
       event: '*',
       schema: 'public',
@@ -52,18 +54,18 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     });
     
     subscriptionManager.addChannel(`messages-chat_id=eq.${chatId}`, channel);
-  };
+  }, [subscribe, handleChatMessage, handleConnectionError]);
 
-  const unsubscribeFromChat = (chatId: string) => {
+  const unsubscribeFromChat = React.useCallback((chatId: string) => {
     cleanup(`messages-chat_id=eq.${chatId}`);
     subscriptionManager.removeChannel(`messages-chat_id=eq.${chatId}`);
     logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Unsubscribed from chat', {
       chatId,
       timestamp: new Date().toISOString()
     });
-  };
+  }, [cleanup]);
 
-  const subscribeToMessage = (messageId: string, onUpdate: (content: string) => void) => {
+  const subscribeToMessage = React.useCallback((messageId: string, onUpdate: (content: string) => void) => {
     const channel = subscribe({
       event: '*',
       schema: 'public',
@@ -81,16 +83,16 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     });
     
     subscriptionManager.addChannel(`messages-id=eq.${messageId}`, channel);
-  };
+  }, [subscribe, handleMessageUpdate, handleConnectionError]);
 
-  const unsubscribeFromMessage = (messageId: string) => {
+  const unsubscribeFromMessage = React.useCallback((messageId: string) => {
     cleanup(`messages-id=eq.${messageId}`);
     subscriptionManager.removeChannel(`messages-id=eq.${messageId}`);
     logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Unsubscribed from message', {
       messageId,
       timestamp: new Date().toISOString()
     });
-  };
+  }, [cleanup]);
 
   React.useEffect(() => {
     return () => {

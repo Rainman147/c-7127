@@ -56,7 +56,7 @@ export const useSubscriptionState = () => {
         },
         config.onMessage
       )
-      .subscribe(async (status: 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR') => {
+      .subscribe((status: 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR') => {
         logger.info(LogCategory.WEBSOCKET, 'SubscriptionState', 'Subscription status changed', {
           channelKey,
           status,
