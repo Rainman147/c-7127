@@ -1,11 +1,10 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { RealTimeContext } from './RealTimeContext';
-import { ExponentialBackoff } from '@/utils/backoff';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
-import { useConnectionStateManager } from './realtime/useConnectionStateManager';
-import { useSubscriptionHandlers } from './realtime/useSubscriptionHandlers';
-import { useSubscriptionManager } from './realtime/useSubscriptionManager';
+import { useRealtimeConnection } from '@/hooks/realtime/useRealtimeConnection';
+import { useSubscriptionState } from '@/hooks/realtime/useSubscriptionState';
+import { useMessageHandlers } from '@/hooks/realtime/useMessageHandlers';
 
 const backoffConfig = {
   initialDelay: 1000,
@@ -16,14 +15,13 @@ const backoffConfig = {
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
-  const backoff = useRef(new ExponentialBackoff(backoffConfig));
   
-  const { connectionState, handleConnectionError } = useConnectionStateManager(backoff);
-  const { subscribe, cleanup, activeSubscriptions, getActiveSubscriptionCount } = useSubscriptionManager();
-  const { handleChatMessage, handleMessageUpdate } = useSubscriptionHandlers(setLastMessage, backoff);
+  const { connectionState, handleConnectionError, backoff } = useRealtimeConnection(backoffConfig);
+  const { subscribe, cleanup, activeSubscriptions, getActiveSubscriptionCount } = useSubscriptionState();
+  const { handleChatMessage, handleMessageUpdate } = useMessageHandlers(setLastMessage, backoff);
 
   // Monitor active subscriptions
-  useEffect(() => {
+  React.useEffect(() => {
     const interval = setInterval(() => {
       logger.debug(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Active subscription count', {
         count: getActiveSubscriptionCount(),
