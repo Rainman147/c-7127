@@ -23,6 +23,7 @@ export const useConnectionState = create<ConnectionStore>((set) => ({
         from: current.state.status,
         to: updatedState.status,
         retryCount: updatedState.retryCount,
+        error: updatedState.error?.message,
         timestamp: new Date().toISOString()
       });
 

@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
+import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { SubscriptionConfig } from './types';
 
 export const useSubscriptionState = () => {
@@ -66,9 +66,13 @@ export const useSubscriptionState = () => {
         if (status === 'SUBSCRIBED') {
           channels.current.set(channelKey, channel);
           activeSubscriptions.current.add(channelKey);
+          config.onSubscriptionStatus?.('SUBSCRIBED');
+        } else if (status === 'CHANNEL_ERROR') {
+          const error = new Error(`Channel error for ${config.table}`);
+          config.onError?.(error);
+          cleanupChannel(channelKey);
+          config.onSubscriptionStatus?.('CHANNEL_ERROR');
         }
-        
-        config.onSubscriptionStatus?.(status);
       });
 
     return channel;

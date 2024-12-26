@@ -7,7 +7,8 @@ import type { DatabaseMessage } from '@/types/database/messages';
 export const useMessageRealtime = (
   messageId: string | undefined,
   editedContent: string,
-  setEditedContent: (content: string) => void
+  setEditedContent: (content: string) => void,
+  componentId: string
 ) => {
   const { connectionState, subscribeToMessage, unsubscribeFromMessage } = useRealTime();
   const { addToQueue, processQueue, clearQueue } = useMessageQueue();
@@ -17,13 +18,14 @@ export const useMessageRealtime = (
     logger.debug(LogCategory.WEBSOCKET, 'MessageRealtime', 'Received message update', {
       messageId,
       contentLength: content.length,
+      componentId,
       timestamp: new Date().toISOString()
     });
 
     addToQueue(messageId!, content);
     processQueue(editedContent, setEditedContent);
     lastUpdateTimeRef.current = Date.now();
-  }, [messageId, editedContent, setEditedContent, addToQueue, processQueue]);
+  }, [messageId, editedContent, setEditedContent, addToQueue, processQueue, componentId]);
 
   useEffect(() => {
     if (!messageId) {
@@ -31,19 +33,20 @@ export const useMessageRealtime = (
       return;
     }
 
-    subscribeToMessage(messageId, handleMessageUpdate);
+    subscribeToMessage(messageId, componentId, handleMessageUpdate);
 
     return () => {
       if (messageId) {
         logger.info(LogCategory.WEBSOCKET, 'MessageRealtime', 'Cleaning up subscription', {
           messageId,
+          componentId,
           timestamp: new Date().toISOString()
         });
-        unsubscribeFromMessage(messageId);
+        unsubscribeFromMessage(messageId, componentId);
         clearQueue();
       }
     };
-  }, [messageId, subscribeToMessage, unsubscribeFromMessage, handleMessageUpdate, clearQueue]);
+  }, [messageId, componentId, subscribeToMessage, unsubscribeFromMessage, handleMessageUpdate, clearQueue]);
 
   return {
     connectionState,
