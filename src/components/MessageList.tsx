@@ -21,13 +21,18 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
     performanceMetrics
   } = useMessageListState(propMessages);
 
-  // Subscribe to chat updates when messages change
+  // Subscribe to chat updates when messages change - now with cleanup
   useEffect(() => {
     if (propMessages.length > 0) {
-      const chatId = propMessages[0].id.split('-')[0]; // Get chat ID from message ID
+      const chatId = propMessages[0].id.split('-')[0];
+      console.log('MessageList: Subscribing to chat:', chatId);
+      
       if (chatId) {
         subscribeToChat(chatId);
-        return () => unsubscribeFromChat(chatId);
+        return () => {
+          console.log('MessageList: Unsubscribing from chat:', chatId);
+          unsubscribeFromChat(chatId);
+        };
       }
     }
   }, [propMessages, subscribeToChat, unsubscribeFromChat]);
@@ -54,16 +59,6 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
     lastMessageRef.current = lastMessage.id;
   }
 
-  const setItemSize = (index: number, size: number) => {
-    const groupId = messageGroups[index]?.id;
-    if (groupId && sizeMap.current[groupId] !== size) {
-      sizeMap.current[groupId] = size;
-      if (listRef.current) {
-        listRef.current.resetAfterIndex(index);
-      }
-    }
-  };
-
   return (
     <>
       <PerformanceMonitor
@@ -79,7 +74,15 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
         listRef={listRef}
         messageGroups={messageGroups}
         sizeMap={sizeMap}
-        setItemSize={setItemSize}
+        setItemSize={(index: number, size: number) => {
+          const groupId = messageGroups[index]?.id;
+          if (groupId && sizeMap.current[groupId] !== size) {
+            sizeMap.current[groupId] = size;
+            if (listRef.current) {
+              listRef.current.resetAfterIndex(index);
+            }
+          }
+        }}
       />
     </>
   );
