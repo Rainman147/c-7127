@@ -7,7 +7,8 @@ import { useSubscriptionHandlers } from './realtime/useSubscriptionHandlers';
 import { ExponentialBackoff } from '@/utils/backoff';
 import { useRef, useState } from 'react';
 import type { Message } from '@/types/chat';
-import type { ConnectionStatus } from './realtime/types';
+import type { ConnectionStatus, SubscriptionConfig } from './realtime/types';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const backoffConfig = {
   initialDelay: 1000,
@@ -139,7 +140,9 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     subscribeToChat,
     unsubscribeFromChat,
     subscribeToMessage,
-    unsubscribeFromMessage
+    unsubscribeFromMessage,
+    subscribe,
+    cleanup
   };
 
   return (

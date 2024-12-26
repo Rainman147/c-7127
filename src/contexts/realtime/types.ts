@@ -10,6 +10,12 @@ export interface ConnectionState {
   lastAttempt: number;
 }
 
+export interface ConnectionStore {
+  state: ConnectionState;
+  updateState: (state: Partial<ConnectionState>) => void;
+  resetState: () => void;
+}
+
 export interface SubscriptionConfig {
   event: '*' | 'INSERT' | 'UPDATE' | 'DELETE';
   schema: string;
