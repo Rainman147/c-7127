@@ -1,15 +1,14 @@
 import { useEffect } from 'react';
-import { useRealTime } from '@/contexts/RealTimeContext';
 import { logger, LogCategory } from '@/utils/logging';
 import { useTemplates } from '@/hooks/useTemplates';
 import { TemplateList } from './list/TemplateList';
 import { useTemplateOperations } from './hooks/useTemplateOperations';
 import { useTemplateContext } from '@/contexts/TemplateContext';
+import { useTemplateRealtime } from '@/hooks/template/useTemplateRealtime';
 import type { Template } from './templateTypes';
 
 export const TemplateManager = () => {
-  const { subscribe, cleanup } = useRealTime();
-  const { templates, isLoading, error } = useTemplates();
+  const { templates, isLoading, error, refetch } = useTemplates();
   const { setGlobalTemplate } = useTemplateContext();
   const {
     editingTemplate,
@@ -23,31 +22,37 @@ export const TemplateManager = () => {
     deleteTemplate,
   } = useTemplateOperations();
 
-  useEffect(() => {
-    logger.debug(LogCategory.WEBSOCKET, 'TemplateManager', 'Setting up template subscriptions');
-    
-    const channel = subscribe({
-      schema: 'public',
-      table: 'templates',
-      event: '*',
-      onMessage: (payload) => {
-        logger.debug(LogCategory.WEBSOCKET, 'TemplateManager', 'Received template update:', payload);
-      },
-      onError: (error) => {
-        logger.error(LogCategory.WEBSOCKET, 'TemplateManager', 'Subscription error:', error);
-      }
-    });
+  // Set up real-time updates
+  useTemplateRealtime((template) => {
+    logger.debug(LogCategory.WEBSOCKET, 'TemplateManager', 'Refreshing templates after real-time update');
+    refetch();
+  });
 
+  useEffect(() => {
+    logger.debug(LogCategory.COMPONENT, 'TemplateManager', 'Component mounted', {
+      templatesCount: templates?.length,
+      isLoading,
+      hasError: !!error
+    });
+    
     return () => {
-      cleanup();
+      logger.debug(LogCategory.COMPONENT, 'TemplateManager', 'Component unmounting');
     };
-  }, [subscribe, cleanup]);
+  }, [templates?.length, isLoading, error]);
 
   const handleTemplateSelect = (template: Template) => {
+    logger.debug(LogCategory.USER_ACTION, 'TemplateManager', 'Template selected', {
+      templateId: template.id,
+      templateName: template.name
+    });
     setGlobalTemplate(template);
   };
 
   const handleEditClick = (template: Template) => {
+    logger.debug(LogCategory.USER_ACTION, 'TemplateManager', 'Edit template clicked', {
+      templateId: template.id,
+      templateName: template.name
+    });
     setEditingTemplate({
       id: template.id,
       content: template.content || '',
