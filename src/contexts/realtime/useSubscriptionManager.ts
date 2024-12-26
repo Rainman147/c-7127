@@ -28,14 +28,14 @@ export const useSubscriptionManager = () => {
     channel
       .on(
         'postgres_changes',
-        {
+        { 
           event: config.event,
           schema: config.schema,
           table: config.table,
-          filter: config.filter
+          filter: config.filter 
         },
         (payload) => {
-          logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
+          logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Database change received', {
             table: config.table,
             event: config.event,
             timestamp: new Date().toISOString()
@@ -43,7 +43,7 @@ export const useSubscriptionManager = () => {
           config.onMessage(payload);
         }
       )
-      .subscribe((status) => {
+      .subscribe(async (status) => {
         logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription status changed', {
           channelKey,
           status,
@@ -56,6 +56,8 @@ export const useSubscriptionManager = () => {
         } else if (status === 'CHANNEL_ERROR') {
           const error = new Error(`Channel error for ${config.table}`);
           config.onError?.(error);
+          channels.current.delete(channelKey);
+          activeSubscriptions.current.delete(channelKey);
         }
         
         config.onSubscriptionStatus?.(status);

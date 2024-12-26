@@ -3,7 +3,7 @@ export interface ErrorMetadata {
   severity: 'low' | 'medium' | 'high' | 'critical';
   timestamp: string;
   errorType: string;
-  operation: string;
+  operation?: string;
   additionalInfo?: Record<string, unknown>;
 }
 
@@ -11,7 +11,7 @@ export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 
 // Utility function to validate error metadata
 export function validateErrorMetadata(metadata: ErrorMetadata): void {
-  const requiredFields = ['component', 'severity', 'timestamp', 'errorType', 'operation'];
+  const requiredFields = ['component', 'severity', 'timestamp', 'errorType'];
   const missingFields = requiredFields.filter(field => !(field in metadata));
   
   if (missingFields.length > 0) {
