@@ -1,20 +1,19 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { supabase } from '@/integrations/supabase/client';
-import { subscriptionManager } from '@/utils/realtime/SubscriptionManager';
 import { useMessageQueue } from './useMessageQueue';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useSubscriptionManager } from './useSubscriptionManager';
 import type { DatabaseMessage } from '@/types/database/messages';
-import { useConnectionState } from '@/hooks/realtime/useConnectionState';
 
 export const useMessageRealtime = (
   messageId: string | undefined,
   editedContent: string,
   setEditedContent: (content: string) => void
 ) => {
-  const { connectionState } = useConnectionState();
+  const { state: connectionState, subscribe, cleanupSubscription } = useSubscriptionManager();
   const { addToQueue, processQueue, clearQueue } = useMessageQueue();
-  const currentMessageId = useRef<string>();
+  const channelRef = useRef<ReturnType<typeof supabase.channel>>();
+  const lastUpdateTimeRef = useRef<number>(Date.now());
 
   const handleMessageUpdate = useCallback((content: string) => {
     logger.debug(LogCategory.WEBSOCKET, 'MessageRealtime', 'Received message update', {
@@ -25,6 +24,7 @@ export const useMessageRealtime = (
 
     addToQueue(messageId!, content);
     processQueue(editedContent, setEditedContent);
+    lastUpdateTimeRef.current = Date.now();
   }, [messageId, editedContent, setEditedContent, addToQueue, processQueue]);
 
   useEffect(() => {
@@ -33,73 +33,42 @@ export const useMessageRealtime = (
       return;
     }
 
-    if (messageId === currentMessageId.current) {
-      logger.debug(LogCategory.WEBSOCKET, 'MessageRealtime', 'Already subscribed to message', {
-        messageId
-      });
-      return;
-    }
-
-    // Cleanup previous subscription if exists
-    if (currentMessageId.current) {
-      subscriptionManager.removeChannel(currentMessageId.current);
-    }
-
-    currentMessageId.current = messageId;
-
-    try {
-      // Check if channel already exists
-      let channel = subscriptionManager.getChannel(messageId);
-
-      if (!channel) {
-        // Create new channel if none exists
-        channel = supabase.channel(`message-${messageId}`);
-        
-        channel.on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'messages',
-            filter: `id=eq.${messageId}`
-          },
-          (payload) => {
-            const newMessage = payload.new as DatabaseMessage;
-            handleMessageUpdate(newMessage.content);
-          }
-        ).subscribe(status => {
-          logger.info(LogCategory.WEBSOCKET, 'MessageRealtime', 'Subscription status changed', {
-            messageId,
-            status,
-            timestamp: new Date().toISOString()
-          });
-        });
-
-        subscriptionManager.addChannel(messageId, channel);
-      }
-    } catch (error) {
-      logger.error(LogCategory.WEBSOCKET, 'MessageRealtime', 'Failed to setup subscription', {
-        messageId,
-        error: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    return () => {
-      if (currentMessageId.current) {
-        logger.info(LogCategory.WEBSOCKET, 'MessageRealtime', 'Cleaning up subscription', {
-          messageId: currentMessageId.current,
+    const channel = subscribe({
+      event: '*',
+      schema: 'public',
+      table: 'messages',
+      filter: `id=eq.${messageId}`,
+      onMessage: (payload) => {
+        const newMessage = payload.new as DatabaseMessage;
+        handleMessageUpdate(newMessage.content);
+      },
+      onError: (error) => {
+        logger.error(LogCategory.WEBSOCKET, 'MessageRealtime', 'Subscription error', {
+          error,
+          messageId,
           timestamp: new Date().toISOString()
         });
-        subscriptionManager.removeChannel(currentMessageId.current);
-        currentMessageId.current = undefined;
+      }
+    });
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        logger.info(LogCategory.WEBSOCKET, 'MessageRealtime', 'Cleaning up subscription', {
+          messageId: messageId,
+          timestamp: new Date().toISOString()
+        });
+        cleanupSubscription(channelRef.current);
+        channelRef.current = undefined;
         clearQueue();
       }
     };
-  }, [messageId, handleMessageUpdate, clearQueue]);
+  }, [messageId, subscribe, cleanupSubscription, handleMessageUpdate, clearQueue]);
 
   return {
     connectionState,
+    lastUpdateTime: lastUpdateTimeRef.current,
     retryCount: connectionState.retryCount
   };
 };

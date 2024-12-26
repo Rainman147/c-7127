@@ -60,8 +60,9 @@ export const useSubscriptionManager = () => {
           activeChannels.current.set(channelKey, channel);
           handleConnectionSuccess();
         } else if (status === 'CHANNEL_ERROR') {
-          handleConnectionError(new Error(`Channel error for ${config.table}`));
-          config.onError?.(new Error(`Channel error for ${config.table}`));
+          const error = new Error(`Channel error for ${config.table}`);
+          handleConnectionError(error);
+          config.onError?.(error);
         }
         
         config.onSubscriptionChange?.(status);
