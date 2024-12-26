@@ -32,4 +32,5 @@ export interface SubscriptionConfig {
   filter?: string;
   onMessage: (payload: any) => void;
   onError?: (error: Error) => void;
+  onSubscriptionStatus?: (status: 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR') => void;
 }

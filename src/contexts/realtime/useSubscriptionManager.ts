@@ -23,9 +23,7 @@ export const useSubscriptionManager = () => {
       }
     }
 
-    const channel = supabase.channel(channelKey);
-
-    channel
+    const channel = supabase.channel(channelKey)
       .on(
         'postgres_changes',
         {
@@ -49,10 +47,14 @@ export const useSubscriptionManager = () => {
           status,
           timestamp: new Date().toISOString()
         });
+        
+        if (status === 'SUBSCRIBED') {
+          channels.current.set(channelKey, channel);
+          activeSubscriptions.current.add(channelKey);
+        }
+        
+        config.onSubscriptionStatus?.(status);
       });
-
-    channels.current.set(channelKey, channel);
-    activeSubscriptions.current.add(channelKey);
 
     return channel;
   }, []);

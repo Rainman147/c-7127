@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
-import { useSubscriptionManager } from './useSubscriptionManager';
+import { useSubscriptionManager } from '@/contexts/realtime/useSubscriptionManager';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export const useMessageSubscription = (
   messageId: string | undefined,
   onMessageUpdate: (content: string) => void
 ) => {
-  const { subscribe, cleanupSubscription, state } = useSubscriptionManager();
+  const { subscribe, cleanup } = useSubscriptionManager();
   const currentMessageId = useRef<string>();
   const channelRef = useRef<RealtimeChannel>();
 
@@ -20,9 +20,8 @@ export const useMessageSubscription = (
       return;
     }
 
-    // Cleanup previous subscription if exists
     if (channelRef.current) {
-      cleanupSubscription(channelRef.current);
+      cleanup(`messages-id=eq.${currentMessageId.current}`);
       channelRef.current = undefined;
     }
 
@@ -49,7 +48,7 @@ export const useMessageSubscription = (
             timestamp: new Date().toISOString()
           });
         },
-        onSubscriptionChange: (status) => {
+        onSubscriptionStatus: (status) => {
           logger.info(LogCategory.WEBSOCKET, 'MessageSubscription', 'Subscription status changed', {
             messageId,
             status,
@@ -66,24 +65,20 @@ export const useMessageSubscription = (
         timestamp: new Date().toISOString()
       });
     }
-  }, [messageId, subscribe, cleanupSubscription, onMessageUpdate]);
+  }, [messageId, subscribe, cleanup, onMessageUpdate]);
 
   useEffect(() => {
     setupSubscription();
     return () => {
-      if (channelRef.current) {
+      if (currentMessageId.current) {
         logger.info(LogCategory.WEBSOCKET, 'MessageSubscription', 'Cleaning up subscription', {
           messageId: currentMessageId.current,
           timestamp: new Date().toISOString()
         });
-        cleanupSubscription(channelRef.current);
+        cleanup(`messages-id=eq.${currentMessageId.current}`);
         channelRef.current = undefined;
         currentMessageId.current = undefined;
       }
     };
-  }, [messageId, setupSubscription, cleanupSubscription]);
-
-  return {
-    retryCount: state.retryCount
-  };
+  }, [messageId, setupSubscription, cleanup]);
 };
