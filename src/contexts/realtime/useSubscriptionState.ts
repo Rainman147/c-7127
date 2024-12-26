@@ -47,7 +47,7 @@ export const useSubscriptionState = () => {
 
     channel
       .on(
-        'postgres_changes',
+        'postgres_changes' as any, // Type assertion needed for Supabase types
         { 
           event: config.event,
           schema: config.schema,

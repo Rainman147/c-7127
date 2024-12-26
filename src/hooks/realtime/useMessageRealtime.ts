@@ -13,39 +13,45 @@ export const useMessageRealtime = (
   const { addToQueue, processQueue, clearQueue } = useMessageQueue();
   const lastUpdateTimeRef = useRef<number>(Date.now());
 
-  const handleMessageUpdate = useCallback((content: string) => {
-    logger.debug(LogCategory.WEBSOCKET, 'MessageRealtime', 'Received message update', {
-      messageId,
-      contentLength: content.length,
-      componentId,
-      timestamp: new Date().toISOString()
-    });
+  const processMessage = useCallback((content: string) => {
+    try {
+      addToQueue(messageId!, content);
+      processQueue(editedContent, setEditedContent);
+      lastUpdateTimeRef.current = Date.now();
 
-    addToQueue(messageId!, content);
-    processQueue(editedContent, setEditedContent);
-    lastUpdateTimeRef.current = Date.now();
+      logger.debug(LogCategory.STATE, 'MessageRealtime', 'Processed message update', {
+        messageId,
+        componentId,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error(LogCategory.STATE, 'MessageRealtime', 'Failed to process message', {
+        messageId,
+        componentId,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      });
+    }
   }, [messageId, editedContent, setEditedContent, addToQueue, processQueue, componentId]);
 
   useEffect(() => {
     if (!messageId) {
-      logger.debug(LogCategory.WEBSOCKET, 'MessageRealtime', 'No message ID provided');
+      logger.debug(LogCategory.COMMUNICATION, 'MessageRealtime', 'No message ID provided', {
+        componentId,
+        timestamp: new Date().toISOString()
+      });
       return;
     }
 
-    subscribeToMessage(messageId, componentId, handleMessageUpdate);
+    subscribeToMessage(messageId, componentId, processMessage);
 
     return () => {
       if (messageId) {
-        logger.info(LogCategory.WEBSOCKET, 'MessageRealtime', 'Cleaning up subscription', {
-          messageId,
-          componentId,
-          timestamp: new Date().toISOString()
-        });
         unsubscribeFromMessage(messageId, componentId);
         clearQueue();
       }
     };
-  }, [messageId, componentId, subscribeToMessage, unsubscribeFromMessage, handleMessageUpdate, clearQueue]);
+  }, [messageId, componentId, subscribeToMessage, unsubscribeFromMessage, clearQueue, processMessage]);
 
   return {
     connectionState,
