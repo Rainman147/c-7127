@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from 'use-debounce';
+import { logger, LogCategory } from '@/utils/logging';
 
 export type ChatSession = {
   id: string;
@@ -18,6 +19,22 @@ export const useChatSessions = () => {
 
   const fetchSessions = async () => {
     try {
+      // Get current session to ensure we're authenticated
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        logger.error(LogCategory.DATABASE, 'ChatSessions', 'No active session:', {
+          error: sessionError,
+          timestamp: new Date().toISOString()
+        });
+        toast({
+          title: 'Authentication Error',
+          description: 'Please sign in to view your chat sessions',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       console.log('[useChatSessions] Fetching chat sessions');
       const { data: sessions, error } = await supabase
         .from('chats')

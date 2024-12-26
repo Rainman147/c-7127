@@ -25,6 +25,17 @@ const mapDatabaseMessageToMessage = (dbMessage: DatabaseMessage): Message => ({
 
 async function fetchMessages({ chatId, limit = MESSAGES_PER_PAGE, cursor }: FetchMessagesOptions) {
   try {
+    // Get current session to ensure we're authenticated
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      logger.error(LogCategory.DATABASE, 'MessageQuery', 'No active session:', {
+        error: sessionError,
+        timestamp: new Date().toISOString()
+      });
+      throw new Error('Authentication required');
+    }
+
     let query = supabase
       .from('messages')
       .select('*')
@@ -87,6 +98,10 @@ export function useMessageQuery(chatId: string | undefined) {
 
   useEffect(() => {
     if (chatId) {
+      logger.debug(LogCategory.WEBSOCKET, 'MessageQuery', 'Setting up chat subscription', {
+        chatId,
+        timestamp: new Date().toISOString()
+      });
       subscribeToChat(chatId);
       return () => {
         unsubscribeFromChat(chatId);
