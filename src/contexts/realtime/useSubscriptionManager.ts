@@ -4,8 +4,6 @@ import { logger, LogCategory } from '@/utils/logging';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { SubscriptionConfig } from './types';
 
-const SUBSCRIPTION_TIMEOUT = 30000; // 30 seconds timeout for subscriptions
-
 export const useSubscriptionManager = () => {
   const channels = useRef(new Map<string, RealtimeChannel>());
   const activeSubscriptions = useRef(new Set<string>());
@@ -34,7 +32,6 @@ export const useSubscriptionManager = () => {
   const subscribe = useCallback((config: SubscriptionConfig): RealtimeChannel => {
     const channelKey = `${config.table}-${config.filter || 'all'}`;
     
-    // Clean up existing subscription if present
     if (channels.current.has(channelKey)) {
       cleanupChannel(channelKey);
     }
@@ -48,17 +45,6 @@ export const useSubscriptionManager = () => {
 
     const channel = supabase.channel(channelKey);
 
-    // Set up subscription timeout
-    const timeoutId = setTimeout(() => {
-      logger.warn(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription timeout', {
-        channelKey,
-        timestamp: new Date().toISOString()
-      });
-      cleanupChannel(channelKey);
-    }, SUBSCRIPTION_TIMEOUT);
-
-    subscriptionTimers.current.set(channelKey, timeoutId);
-
     channel
       .on(
         'postgres_changes' as any,
@@ -68,22 +54,7 @@ export const useSubscriptionManager = () => {
           table: config.table,
           filter: config.filter 
         },
-        (payload) => {
-          logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Database change received', {
-            table: config.table,
-            event: config.event,
-            timestamp: new Date().toISOString()
-          });
-          
-          // Clear timeout on successful message
-          const timer = subscriptionTimers.current.get(channelKey);
-          if (timer) {
-            clearTimeout(timer);
-            subscriptionTimers.current.delete(channelKey);
-          }
-          
-          config.onMessage(payload);
-        }
+        config.onMessage
       )
       .subscribe(async (status) => {
         logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription status changed', {
@@ -95,13 +66,6 @@ export const useSubscriptionManager = () => {
         if (status === 'SUBSCRIBED') {
           channels.current.set(channelKey, channel);
           activeSubscriptions.current.add(channelKey);
-          
-          // Clear timeout on successful subscription
-          const timer = subscriptionTimers.current.get(channelKey);
-          if (timer) {
-            clearTimeout(timer);
-            subscriptionTimers.current.delete(channelKey);
-          }
         } else if (status === 'CHANNEL_ERROR') {
           const error = new Error(`Channel error for ${config.table}`);
           config.onError?.(error);
@@ -118,7 +82,6 @@ export const useSubscriptionManager = () => {
     if (channelKey) {
       cleanupChannel(channelKey);
     } else {
-      // Clean up all channels
       channels.current.forEach((_, key) => {
         cleanupChannel(key);
       });

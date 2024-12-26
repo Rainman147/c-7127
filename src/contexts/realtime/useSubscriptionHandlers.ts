@@ -1,15 +1,7 @@
 import { useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 import { ExponentialBackoff } from '@/utils/backoff';
-
-const backoffConfig = {
-  initialDelay: 1000,
-  maxDelay: 30000,
-  maxAttempts: 5,
-  jitter: true
-};
 
 export const useSubscriptionHandlers = (
   setLastMessage: (message: Message) => void,

@@ -1,13 +1,11 @@
-import React from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { logger, LogCategory } from '@/utils/logging';
+import React, { useRef, useState, useEffect } from 'react';
 import { RealTimeContext } from './RealTimeContext';
-import { useSubscriptionManager } from './realtime/useSubscriptionManager';
-import { useSubscriptionHandlers } from './realtime/useSubscriptionHandlers';
 import { ExponentialBackoff } from '@/utils/backoff';
-import { useRef, useState, useEffect } from 'react';
+import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
-import type { ConnectionStatus } from './realtime/types';
+import { useConnectionStateManager } from './realtime/useConnectionStateManager';
+import { useSubscriptionHandlers } from './realtime/useSubscriptionHandlers';
+import { useSubscriptionManager } from './realtime/useSubscriptionManager';
 
 const backoffConfig = {
   initialDelay: 1000,
@@ -17,48 +15,10 @@ const backoffConfig = {
 };
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
-  const { toast } = useToast();
   const [lastMessage, setLastMessage] = useState<Message>();
   const backoff = useRef(new ExponentialBackoff(backoffConfig));
-  const [connectionState, setConnectionState] = useState<{
-    status: ConnectionStatus;
-    retryCount: number;
-    lastAttempt: number;
-  }>({
-    status: 'connecting',
-    retryCount: 0,
-    lastAttempt: Date.now()
-  });
   
-  const handleConnectionError = (error: Error) => {
-    logger.error(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Connection error occurred', {
-      error: error.message,
-      retryCount: backoff.current.attemptCount,
-      timestamp: new Date().toISOString()
-    });
-
-    const delay = backoff.current.nextDelay();
-    if (delay !== null) {
-      setConnectionState(prev => ({
-        status: 'disconnected',
-        retryCount: prev.retryCount + 1,
-        lastAttempt: Date.now()
-      }));
-
-      toast({
-        title: "Connection Lost",
-        description: `Reconnecting... (Attempt ${backoff.current.attemptCount}/${backoffConfig.maxAttempts})`,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Connection Failed",
-        description: "Maximum retry attempts reached. Please refresh the page.",
-        variant: "destructive",
-      });
-    }
-  };
-
+  const { connectionState, handleConnectionError } = useConnectionStateManager(backoff);
   const { subscribe, cleanup, activeSubscriptions, getActiveSubscriptionCount } = useSubscriptionManager();
   const { handleChatMessage, handleMessageUpdate } = useSubscriptionHandlers(setLastMessage, backoff);
 
@@ -88,15 +48,6 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
           status,
           timestamp: new Date().toISOString()
         });
-
-        if (status === 'SUBSCRIBED') {
-          setConnectionState({
-            status: 'connected',
-            retryCount: 0,
-            lastAttempt: Date.now()
-          });
-          backoff.current.reset();
-        }
       }
     });
   };
