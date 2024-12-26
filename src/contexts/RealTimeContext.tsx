@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import { createContext, useContext, useCallback, useRef, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
+import { useConnectionState, type ConnectionState } from './realtime/connectionState';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { Message } from '@/types/chat';
 
@@ -10,8 +11,7 @@ interface RealTimeContextValue {
   unsubscribeFromChat: (chatId: string) => void;
   subscribeToMessage: (messageId: string, onUpdate: (content: string) => void) => void;
   unsubscribeFromMessage: (messageId: string) => void;
-  connectionStatus: 'connected' | 'connecting' | 'disconnected';
-  retryCount: number;
+  connectionState: ConnectionState;
   lastMessage?: Message;
 }
 
@@ -22,8 +22,7 @@ const MAX_RETRIES = 5;
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const { toast } = useToast();
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('connecting');
-  const [retryCount, setRetryCount] = useState(0);
+  const { state: connectionState, updateState, resetState } = useConnectionState();
   const [lastMessage, setLastMessage] = useState<Message>();
   
   const chatChannels = useRef(new Map<string, RealtimeChannel>());
@@ -33,47 +32,33 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
   const handleConnectionError = useCallback(() => {
     logger.error(LogCategory.WEBSOCKET, 'RealTimeContext', 'Connection error occurred', {
-      retryCount,
+      retryCount: connectionState.retryCount,
       timestamp: new Date().toISOString()
     });
 
-    setConnectionStatus('disconnected');
-    
-    if (retryCount < MAX_RETRIES) {
-      const delay = RETRY_DELAY * Math.pow(2, retryCount);
-      setRetryCount(prev => prev + 1);
+    if (connectionState.retryCount < MAX_RETRIES) {
+      const delay = RETRY_DELAY * Math.pow(2, connectionState.retryCount);
+      
+      updateState({
+        status: 'disconnected',
+        retryCount: connectionState.retryCount + 1
+      });
       
       toast({
         title: "Connection Lost",
-        description: `Reconnecting... (Attempt ${retryCount + 1}/${MAX_RETRIES})`,
+        description: `Reconnecting... (Attempt ${connectionState.retryCount + 1}/${MAX_RETRIES})`,
         variant: "destructive",
       });
 
       retryTimeoutRef.current = setTimeout(() => {
         logger.info(LogCategory.WEBSOCKET, 'RealTimeContext', 'Attempting reconnection', {
-          attempt: retryCount + 1,
+          attempt: connectionState.retryCount + 1,
           timestamp: new Date().toISOString()
         });
-        setConnectionStatus('connecting');
+        updateState({ status: 'connecting' });
       }, delay);
     }
-  }, [retryCount, toast]);
-
-  const handleConnectionSuccess = useCallback(() => {
-    logger.info(LogCategory.WEBSOCKET, 'RealTimeContext', 'Connection established', {
-      timestamp: new Date().toISOString()
-    });
-    
-    setConnectionStatus('connected');
-    setRetryCount(0);
-    
-    if (retryCount > 0) {
-      toast({
-        description: "Connection restored",
-        className: "bg-green-500 text-white",
-      });
-    }
-  }, [retryCount, toast]);
+  }, [connectionState.retryCount, toast, updateState]);
 
   const subscribeToChat = useCallback((chatId: string) => {
     if (chatChannels.current.has(chatId)) {
@@ -113,13 +98,26 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         });
 
         if (status === 'SUBSCRIBED') {
-          handleConnectionSuccess();
+          updateState({ status: 'connected', retryCount: 0 });
           chatChannels.current.set(chatId, channel);
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
           handleConnectionError();
         }
       });
-  }, [handleConnectionSuccess, handleConnectionError]);
+  }, [handleConnectionError, updateState]);
+
+  const unsubscribeFromChat = useCallback((chatId: string) => {
+    const channel = chatChannels.current.get(chatId);
+    if (channel) {
+      logger.info(LogCategory.WEBSOCKET, 'RealTimeContext', 'Unsubscribing from chat', { 
+        chatId,
+        timestamp: new Date().toISOString()
+      });
+      
+      supabase.removeChannel(channel);
+      chatChannels.current.delete(chatId);
+    }
+  }, []);
 
   const subscribeToMessage = useCallback((messageId: string, onUpdate: (content: string) => void) => {
     if (messageChannels.current.has(messageId)) {
@@ -162,26 +160,13 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         });
 
         if (status === 'SUBSCRIBED') {
-          handleConnectionSuccess();
+          updateState({ status: 'connected', retryCount: 0 });
           messageChannels.current.set(messageId, channel);
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
           handleConnectionError();
         }
       });
-  }, [handleConnectionSuccess, handleConnectionError]);
-
-  const unsubscribeFromChat = useCallback((chatId: string) => {
-    const channel = chatChannels.current.get(chatId);
-    if (channel) {
-      logger.info(LogCategory.WEBSOCKET, 'RealTimeContext', 'Unsubscribing from chat', { 
-        chatId,
-        timestamp: new Date().toISOString()
-      });
-      
-      supabase.removeChannel(channel);
-      chatChannels.current.delete(chatId);
-    }
-  }, []);
+  }, [handleConnectionError, updateState]);
 
   const unsubscribeFromMessage = useCallback((messageId: string) => {
     const channel = messageChannels.current.get(messageId);
@@ -197,35 +182,30 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      logger.info(LogCategory.WEBSOCKET, 'RealTimeContext', 'Cleaning up all subscriptions');
-      
+      resetState();
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
       chatChannels.current.forEach((channel) => {
         supabase.removeChannel(channel);
       });
       messageChannels.current.forEach((channel) => {
         supabase.removeChannel(channel);
       });
-      
       chatChannels.current.clear();
       messageChannels.current.clear();
       messageCallbacks.current.clear();
-      
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-      }
     };
-  }, []);
+  }, [resetState]);
 
   const value: RealTimeContextValue = {
     subscribeToChat,
     unsubscribeFromChat,
     subscribeToMessage,
     unsubscribeFromMessage,
-    connectionStatus,
-    retryCount,
+    connectionState: connectionState,
     lastMessage
   };
 
