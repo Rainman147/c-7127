@@ -1,4 +1,4 @@
-import { memo, useEffect } from 'react';
+import { memo, useEffect, useId } from 'react';
 import { ErrorTracker } from '@/utils/errorTracking';
 import { useMessageListState } from './message/list/useMessageListState';
 import { MessageListContainer } from './message/list/MessageListContainer';
@@ -9,6 +9,7 @@ import type { Message } from '@/types/chat';
 import type { ErrorSeverity } from '@/types/errorTracking';
 
 const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) => {
+  const componentId = useId();
   const { subscribeToChat, unsubscribeFromChat } = useRealTime();
   const {
     containerRef,
@@ -22,7 +23,6 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
     performanceMetrics
   } = useMessageListState(propMessages);
 
-  // Subscribe to chat updates when messages change - now with enhanced cleanup
   useEffect(() => {
     let chatId: string | null = null;
     
@@ -31,37 +31,28 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
       
       logger.info(LogCategory.WEBSOCKET, 'MessageList', 'Initializing chat subscription', {
         chatId,
+        componentId,
         messageCount: propMessages.length,
         timestamp: new Date().toISOString()
       });
       
       if (chatId) {
-        subscribeToChat(chatId);
-        
-        logger.debug(LogCategory.WEBSOCKET, 'MessageList', 'Chat subscription active', {
-          chatId,
-          timestamp: new Date().toISOString()
-        });
+        subscribeToChat(chatId, componentId);
       }
     }
 
-    // Cleanup function
     return () => {
       if (chatId) {
         logger.info(LogCategory.WEBSOCKET, 'MessageList', 'Cleaning up chat subscription', {
           chatId,
+          componentId,
           timestamp: new Date().toISOString()
         });
         
-        unsubscribeFromChat(chatId);
-        
-        logger.debug(LogCategory.WEBSOCKET, 'MessageList', 'Chat subscription cleaned up', {
-          chatId,
-          timestamp: new Date().toISOString()
-        });
+        unsubscribeFromChat(chatId, componentId);
       }
     };
-  }, [propMessages, subscribeToChat, unsubscribeFromChat]);
+  }, [propMessages, subscribeToChat, unsubscribeFromChat, componentId]);
 
   // Enhanced error tracking for duplicate messages with logging
   const lastMessage = propMessages[propMessages.length - 1];
@@ -75,7 +66,8 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
       additionalInfo: {
         messageId: lastMessage.id,
         duplicateCount: propMessages.filter(m => m.id === lastMessage.id).length,
-        renderedNodes: performanceMetrics.renderedNodes
+        renderedNodes: performanceMetrics.renderedNodes,
+        componentId
       }
     };
 
