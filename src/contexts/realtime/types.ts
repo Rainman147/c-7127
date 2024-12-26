@@ -1,6 +1,20 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { Message } from '@/types/chat';
-import type { ConnectionState } from './config';
+
+export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected';
+
+export interface ConnectionState {
+  status: ConnectionStatus;
+  lastAttempt: number;
+  retryCount: number;
+  error?: Error;
+}
+
+export interface ConnectionStore {
+  state: ConnectionState;
+  updateState: (state: Partial<ConnectionState>) => void;
+  resetState: () => void;
+}
 
 export interface SubscriptionConfig {
   event: '*' | 'INSERT' | 'UPDATE' | 'DELETE';
@@ -13,10 +27,8 @@ export interface SubscriptionConfig {
 }
 
 export interface RealtimeContextValue {
-  subscribeToChat: (chatId: string) => void;
-  unsubscribeFromChat: (chatId: string) => void;
-  subscribeToMessage: (messageId: string, onUpdate: (content: string) => void) => void;
-  unsubscribeFromMessage: (messageId: string) => void;
   connectionState: ConnectionState;
-  lastMessage?: Message;
+  subscribe: (config: SubscriptionConfig) => RealtimeChannel;
+  unsubscribe: (channelId: string) => void;
+  cleanup: () => void;
 }

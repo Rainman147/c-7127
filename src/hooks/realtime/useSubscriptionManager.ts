@@ -1,12 +1,12 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import { useConnectionManager } from './useConnectionManager';
+import { useConnectionState } from '@/contexts/realtime/connectionState';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { SubscriptionConfig } from '@/contexts/realtime/types';
 
 export const useSubscriptionManager = () => {
-  const { connectionState, handleConnectionSuccess, handleConnectionError } = useConnectionManager();
+  const { state, updateState } = useConnectionState();
   const activeChannels = useRef<Map<string, RealtimeChannel>>(new Map());
 
   const subscribe = useCallback((config: SubscriptionConfig): RealtimeChannel => {
@@ -24,12 +24,13 @@ export const useSubscriptionManager = () => {
       }
     }
 
-    logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Creating new channel', {
-      channelKey,
-      timestamp: new Date().toISOString()
-    });
-
-    const channel = supabase.channel(channelKey);
+    const channel = supabase.channel(channelKey)
+      .on('system', { event: '*' }, (payload) => {
+        logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'System event', {
+          event: payload.event,
+          timestamp: new Date().toISOString()
+        });
+      });
 
     channel
       .on(
@@ -40,7 +41,7 @@ export const useSubscriptionManager = () => {
           table: config.table,
           filter: config.filter
         },
-        (payload: any) => {
+        (payload) => {
           logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
             table: config.table,
             payload,
@@ -51,17 +52,25 @@ export const useSubscriptionManager = () => {
       )
       .subscribe((status) => {
         logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription status changed', {
-          table: config.table,
+          channelKey,
           status,
           timestamp: new Date().toISOString()
         });
         
         if (status === 'SUBSCRIBED') {
           activeChannels.current.set(channelKey, channel);
-          handleConnectionSuccess();
+          updateState({ 
+            status: 'connected',
+            retryCount: 0,
+            error: undefined
+          });
         } else if (status === 'CHANNEL_ERROR') {
           const error = new Error(`Channel error for ${config.table}`);
-          handleConnectionError(error);
+          updateState({
+            status: 'disconnected',
+            retryCount: state.retryCount + 1,
+            error
+          });
           config.onError?.(error);
         }
         
@@ -69,7 +78,7 @@ export const useSubscriptionManager = () => {
       });
 
     return channel;
-  }, [handleConnectionSuccess, handleConnectionError]);
+  }, [state.retryCount, updateState]);
 
   const cleanupSubscription = useCallback((channel: RealtimeChannel) => {
     logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up channel');
@@ -88,7 +97,7 @@ export const useSubscriptionManager = () => {
   }, []);
 
   return {
-    state: connectionState,
+    state,
     subscribe,
     cleanup,
     cleanupSubscription

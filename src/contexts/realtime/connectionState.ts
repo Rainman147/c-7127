@@ -5,7 +5,7 @@ import type { ConnectionState, ConnectionStore } from './types';
 const INITIAL_STATE: ConnectionState = {
   status: 'connecting',
   retryCount: 0,
-  error: null,
+  error: undefined,
   lastAttempt: Date.now()
 };
 

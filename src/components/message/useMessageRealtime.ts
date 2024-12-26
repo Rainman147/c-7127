@@ -1,25 +1,22 @@
 import { useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
 import { ErrorTracker } from '@/utils/errorTracking';
 import type { DatabaseMessage } from '@/types/database/messages';
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { ErrorMetadata } from '@/types/errorTracking';
-import { useConnectionState } from '@/hooks/realtime/useConnectionState';
 import { useMessageQueue } from '@/hooks/realtime/useMessageQueue';
-import { useWebSocketEvents } from '@/hooks/realtime/useWebSocketEvents';
+import { useSubscriptionManager } from '@/hooks/realtime/useSubscriptionManager';
 
 export const useMessageRealtime = (
   messageId: string | undefined,
   editedContent: string,
   setEditedContent: (content: string) => void
 ) => {
-  const channelRef = useRef<ReturnType<typeof supabase.channel>>();
-  const { connectionState, handleConnectionSuccess, handleConnectionError } = useConnectionState();
+  const { state: connectionState, subscribe, cleanupSubscription } = useSubscriptionManager();
   const { addToQueue, processQueue, clearQueue } = useMessageQueue();
   const lastUpdateTimeRef = useRef<number>(Date.now());
+  const channelRef = useRef<ReturnType<typeof subscribe>>();
 
-  const processMessage = (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
+  const processMessage = (payload: any) => {
     try {
       const newData = payload.new as DatabaseMessage;
       
@@ -46,7 +43,6 @@ export const useMessageRealtime = (
       };
       
       ErrorTracker.trackError(error as Error, metadata);
-      handleConnectionError(error as Error);
     }
   };
 
@@ -56,42 +52,34 @@ export const useMessageRealtime = (
       return;
     }
 
-    const channelName = `message-${messageId}`;
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `id=eq.${messageId}`
-        },
-        processMessage
-      )
-      .subscribe();
+    const channel = subscribe({
+      event: '*',
+      schema: 'public',
+      table: 'messages',
+      filter: `id=eq.${messageId}`,
+      onMessage: processMessage,
+      onError: (error) => {
+        logger.error(LogCategory.COMMUNICATION, 'MessageRealtime', 'Subscription error:', {
+          error,
+          messageId,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
 
     channelRef.current = channel;
-    useWebSocketEvents(channel, handleConnectionSuccess, handleConnectionError);
 
     return () => {
-      logger.info(LogCategory.COMMUNICATION, 'MessageRealtime', 'Cleaning up subscription', {
-        messageId,
-        timestamp: new Date().toISOString()
-      });
-      
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
+        cleanupSubscription(channelRef.current);
         channelRef.current = undefined;
       }
-      
       clearQueue();
     };
-  }, [messageId, editedContent, setEditedContent, handleConnectionSuccess, handleConnectionError, clearQueue]);
+  }, [messageId, subscribe, cleanupSubscription, clearQueue]);
 
   return {
     connectionState,
-    lastUpdateTime: lastUpdateTimeRef.current,
-    retryCount: connectionState.retryCount
+    lastUpdateTime: lastUpdateTimeRef.current
   };
 };
