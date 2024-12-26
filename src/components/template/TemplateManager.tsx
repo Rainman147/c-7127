@@ -3,7 +3,6 @@ import { useRealTime } from '@/contexts/RealTimeContext';
 import { logger, LogCategory } from '@/utils/logging';
 import { useTemplates } from '@/hooks/useTemplates';
 import { TemplateList } from './list/TemplateList';
-import { TemplateHeader } from './TemplateHeader';
 import { useTemplateOperations } from './hooks/useTemplateOperations';
 import { useTemplateContext } from '@/contexts/TemplateContext';
 import type { Template } from './templateTypes';
@@ -51,14 +50,14 @@ export const TemplateManager = () => {
   const handleEditClick = (template: Template) => {
     setEditingTemplate({
       id: template.id,
-      content: template.content || template.systemInstructions,
+      content: template.content || '',
     });
     setIsEditDialogOpen(true);
   };
 
   if (error) {
     return (
-      <div className="text-red-500 text-center py-4">
+      <div className="text-center text-white/70 mt-8">
         Error loading templates: {error.message}
       </div>
     );
@@ -66,16 +65,18 @@ export const TemplateManager = () => {
 
   return (
     <div className="space-y-6">
-      <TemplateHeader
-        onCreateClick={() => setIsCreateDialogOpen(true)}
-        isCreateDialogOpen={isCreateDialogOpen}
-        onCreateDialogClose={() => setIsCreateDialogOpen(false)}
-        onTemplateCreate={handleCreateTemplate}
-      />
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Templates</h2>
+        <button
+          onClick={() => setIsCreateDialogOpen(true)}
+          className="btn-primary"
+        >
+          Create Template
+        </button>
+      </div>
 
       <TemplateList
         templates={templates}
-        isLoading={isLoading}
         onEdit={handleEditClick}
         onDelete={deleteTemplate}
         onSelect={handleTemplateSelect}

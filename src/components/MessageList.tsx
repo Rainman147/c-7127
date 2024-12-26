@@ -24,7 +24,7 @@ const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) =
   // Subscribe to chat updates when messages change
   useEffect(() => {
     if (propMessages.length > 0) {
-      const chatId = propMessages[0].chat_id;
+      const chatId = propMessages[0].id.split('-')[0]; // Get chat ID from message ID
       if (chatId) {
         subscribeToChat(chatId);
         return () => unsubscribeFromChat(chatId);
