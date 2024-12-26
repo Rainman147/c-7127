@@ -2,27 +2,19 @@ import { createContext, useContext, useCallback, useRef, useEffect, useState } f
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
-import { useConnectionState, type ConnectionState } from './realtime/connectionState';
+import { useSubscriptionManager } from '@/hooks/realtime/useSubscriptionManager';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { Message } from '@/types/chat';
+import type { RealtimeContextValue } from './realtime/types';
 
-interface RealTimeContextValue {
-  subscribeToChat: (chatId: string) => void;
-  unsubscribeFromChat: (chatId: string) => void;
-  subscribeToMessage: (messageId: string, onUpdate: (content: string) => void) => void;
-  unsubscribeFromMessage: (messageId: string) => void;
-  connectionState: ConnectionState;
-  lastMessage?: Message;
-}
-
-const RealTimeContext = createContext<RealTimeContextValue | undefined>(undefined);
+const RealTimeContext = createContext<RealtimeContextValue | undefined>(undefined);
 
 const RETRY_DELAY = 1000;
 const MAX_RETRIES = 5;
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const { toast } = useToast();
-  const { state: connectionState, updateState, resetState } = useConnectionState();
+  const { state: connectionState, updateState, subscribe, cleanup } = useSubscriptionManager();
   const [lastMessage, setLastMessage] = useState<Message>();
   
   const chatChannels = useRef(new Map<string, RealtimeChannel>());
@@ -66,116 +58,55 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       return;
     }
 
-    logger.info(LogCategory.WEBSOCKET, 'RealTimeContext', 'Subscribing to chat', { chatId });
-    
-    const channel = supabase
-      .channel(`chat-${chatId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `chat_id=eq.${chatId}`,
-        },
-        (payload) => {
-          logger.debug(LogCategory.WEBSOCKET, 'RealTimeContext', 'Chat message received', {
-            chatId,
-            eventType: payload.eventType,
-            timestamp: new Date().toISOString()
-          });
-
-          if (payload.eventType === 'INSERT') {
-            setLastMessage(payload.new as Message);
-          }
+    const channel = subscribe({
+      event: '*',
+      schema: 'public',
+      table: 'messages',
+      filter: `chat_id=eq.${chatId}`,
+      onMessage: (payload: any) => {
+        if (payload.new && payload.eventType === 'INSERT') {
+          setLastMessage(payload.new as Message);
         }
-      )
-      .subscribe(status => {
-        logger.info(LogCategory.WEBSOCKET, 'RealTimeContext', 'Chat subscription status', {
-          chatId,
-          status,
-          timestamp: new Date().toISOString()
-        });
+      },
+      onError: handleConnectionError
+    });
 
-        if (status === 'SUBSCRIBED') {
-          updateState({ status: 'connected', retryCount: 0 });
-          chatChannels.current.set(chatId, channel);
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          handleConnectionError();
-        }
-      });
-  }, [handleConnectionError, updateState]);
+    chatChannels.current.set(chatId, channel);
+  }, [subscribe, handleConnectionError]);
 
   const unsubscribeFromChat = useCallback((chatId: string) => {
     const channel = chatChannels.current.get(chatId);
     if (channel) {
-      logger.info(LogCategory.WEBSOCKET, 'RealTimeContext', 'Unsubscribing from chat', { 
-        chatId,
-        timestamp: new Date().toISOString()
-      });
-      
       supabase.removeChannel(channel);
       chatChannels.current.delete(chatId);
     }
   }, []);
 
   const subscribeToMessage = useCallback((messageId: string, onUpdate: (content: string) => void) => {
-    if (messageChannels.current.has(messageId)) {
-      logger.debug(LogCategory.WEBSOCKET, 'RealTimeContext', 'Already subscribed to message', { messageId });
-      return;
-    }
+    if (messageChannels.current.has(messageId)) return;
 
-    logger.info(LogCategory.WEBSOCKET, 'RealTimeContext', 'Subscribing to message', { messageId });
-    
     messageCallbacks.current.set(messageId, onUpdate);
     
-    const channel = supabase
-      .channel(`message-${messageId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `id=eq.${messageId}`
-        },
-        (payload) => {
-          logger.debug(LogCategory.WEBSOCKET, 'RealTimeContext', 'Message update received', {
-            messageId,
-            eventType: payload.eventType,
-            timestamp: new Date().toISOString()
-          });
-
-          const callback = messageCallbacks.current.get(messageId);
-          if (callback && payload.new) {
-            callback(payload.new.content);
-          }
+    const channel = subscribe({
+      event: '*',
+      schema: 'public',
+      table: 'messages',
+      filter: `id=eq.${messageId}`,
+      onMessage: (payload: any) => {
+        const callback = messageCallbacks.current.get(messageId);
+        if (callback && payload.new?.content) {
+          callback(payload.new.content);
         }
-      )
-      .subscribe(status => {
-        logger.info(LogCategory.WEBSOCKET, 'RealTimeContext', 'Message subscription status', {
-          messageId,
-          status,
-          timestamp: new Date().toISOString()
-        });
+      },
+      onError: handleConnectionError
+    });
 
-        if (status === 'SUBSCRIBED') {
-          updateState({ status: 'connected', retryCount: 0 });
-          messageChannels.current.set(messageId, channel);
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          handleConnectionError();
-        }
-      });
-  }, [handleConnectionError, updateState]);
+    messageChannels.current.set(messageId, channel);
+  }, [subscribe, handleConnectionError]);
 
   const unsubscribeFromMessage = useCallback((messageId: string) => {
     const channel = messageChannels.current.get(messageId);
     if (channel) {
-      logger.info(LogCategory.WEBSOCKET, 'RealTimeContext', 'Unsubscribing from message', {
-        messageId,
-        timestamp: new Date().toISOString()
-      });
-      
       supabase.removeChannel(channel);
       messageChannels.current.delete(messageId);
       messageCallbacks.current.delete(messageId);
@@ -184,28 +115,19 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
   useEffect(() => {
     return () => {
-      resetState();
+      cleanup();
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
       }
-      chatChannels.current.forEach((channel) => {
-        supabase.removeChannel(channel);
-      });
-      messageChannels.current.forEach((channel) => {
-        supabase.removeChannel(channel);
-      });
-      chatChannels.current.clear();
-      messageChannels.current.clear();
-      messageCallbacks.current.clear();
     };
-  }, [resetState]);
+  }, [cleanup]);
 
-  const value: RealTimeContextValue = {
+  const value: RealtimeContextValue = {
     subscribeToChat,
     unsubscribeFromChat,
     subscribeToMessage,
     unsubscribeFromMessage,
-    connectionState: connectionState,
+    connectionState,
     lastMessage
   };
 

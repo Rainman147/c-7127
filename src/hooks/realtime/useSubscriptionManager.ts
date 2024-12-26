@@ -2,17 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { ConnectionState, ConnectionStatus } from '@/contexts/realtime/types';
-
-interface SubscriptionConfig {
-  event: 'INSERT' | 'UPDATE' | 'DELETE' | '*';
-  schema: string;
-  table: string;
-  filter?: string;
-  onMessage: (payload: any) => void;
-  onError?: (error: Error) => void;
-  onSubscriptionChange?: (status: string) => void;
-}
+import type { ConnectionState, ConnectionStatus, SubscriptionConfig } from '@/contexts/realtime/types';
 
 export const useSubscriptionManager = () => {
   const [state, setState] = useState<ConnectionState>({
@@ -34,7 +24,6 @@ export const useSubscriptionManager = () => {
   const subscribe = useCallback((config: SubscriptionConfig): RealtimeChannel => {
     const channelKey = `${config.table}-${config.filter || 'all'}`;
     
-    // Clean up existing subscription if it exists
     if (activeChannels.current.has(channelKey)) {
       const existingChannel = activeChannels.current.get(channelKey);
       if (existingChannel) {
@@ -63,7 +52,7 @@ export const useSubscriptionManager = () => {
           table: config.table,
           filter: config.filter
         },
-        (payload) => {
+        (payload: any) => {
           logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
             table: config.table,
             payload,

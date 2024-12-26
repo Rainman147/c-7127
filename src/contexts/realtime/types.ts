@@ -12,3 +12,9 @@ export interface ConnectionStore {
   updateState: (newState: Partial<ConnectionState>) => void;
   resetState: () => void;
 }
+
+export interface RealtimeMessage<T = any> {
+  content: string;
+  type: string;
+  payload: T;
+}
