@@ -1,15 +1,15 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import type { RealtimeChannel, RealtimePostgresChangesPayload, RealtimePostgresChangesFilter } from '@supabase/supabase-js';
-import type { ConnectionState, ConnectionStateUpdate } from '@/types/connection';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { ConnectionState, ConnectionStatus } from '@/contexts/realtime/types';
 
 interface SubscriptionConfig {
   event: 'INSERT' | 'UPDATE' | 'DELETE' | '*';
   schema: string;
   table: string;
   filter?: string;
-  onMessage: (payload: RealtimePostgresChangesPayload<any>) => void;
+  onMessage: (payload: any) => void;
   onError?: (error: Error) => void;
   onSubscriptionChange?: (status: string) => void;
 }
@@ -18,12 +18,17 @@ export const useSubscriptionManager = () => {
   const [state, setState] = useState<ConnectionState>({
     status: 'disconnected',
     retryCount: 0,
-    error: null
+    error: null,
+    lastAttempt: Date.now()
   });
   const activeChannels = useRef<Map<string, RealtimeChannel>>(new Map());
 
-  const updateState = useCallback((update: ConnectionStateUpdate) => {
-    setState(prev => ({ ...prev, ...update }));
+  const updateState = useCallback((newState: Partial<ConnectionState>) => {
+    setState(prev => ({
+      ...prev,
+      ...newState,
+      lastAttempt: Date.now()
+    }));
   }, []);
 
   const subscribe = useCallback((config: SubscriptionConfig): RealtimeChannel => {
@@ -49,18 +54,16 @@ export const useSubscriptionManager = () => {
 
     const channel = supabase.channel(channelKey);
 
-    const filter: RealtimePostgresChangesFilter<any> = {
-      event: config.event,
-      schema: config.schema,
-      table: config.table,
-      filter: config.filter
-    };
-
     channel
       .on(
         'postgres_changes',
-        filter,
-        (payload: RealtimePostgresChangesPayload<any>) => {
+        {
+          event: config.event,
+          schema: config.schema,
+          table: config.table,
+          filter: config.filter
+        },
+        (payload) => {
           logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
             table: config.table,
             payload,
@@ -79,13 +82,13 @@ export const useSubscriptionManager = () => {
         if (status === 'SUBSCRIBED') {
           activeChannels.current.set(channelKey, channel);
           updateState({
-            status: 'connected',
+            status: 'connected' as ConnectionStatus,
             retryCount: 0,
             error: null
           });
         } else if (status === 'CHANNEL_ERROR') {
           updateState({
-            status: 'error',
+            status: 'disconnected' as ConnectionStatus,
             error: new Error(`Channel error for ${config.table}`)
           });
           config.onError?.(new Error(`Channel error for ${config.table}`));

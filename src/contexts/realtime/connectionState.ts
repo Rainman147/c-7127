@@ -1,29 +1,15 @@
 import { create } from 'zustand';
 import { logger, LogCategory } from '@/utils/logging';
-
-export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected';
-
-export interface ConnectionState {
-  status: ConnectionStatus;
-  retryCount: number;
-  error?: Error;
-  lastAttempt: number;
-}
-
-interface ConnectionStateStore {
-  state: ConnectionState;
-  updateState: (newState: Partial<ConnectionState>) => void;
-  resetState: () => void;
-}
+import type { ConnectionState, ConnectionStore } from './types';
 
 const INITIAL_STATE: ConnectionState = {
   status: 'connecting',
   retryCount: 0,
-  error: undefined,
+  error: null,
   lastAttempt: Date.now()
 };
 
-export const useConnectionState = create<ConnectionStateStore>((set) => ({
+export const useConnectionState = create<ConnectionStore>((set) => ({
   state: INITIAL_STATE,
   updateState: (newState) => {
     set((current) => {
