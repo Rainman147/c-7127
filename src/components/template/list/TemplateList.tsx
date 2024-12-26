@@ -31,9 +31,9 @@ export const TemplateList = ({
             template={template}
             onEdit={(id) => onEdit({
               id,
-              content: template.content || template.systemInstructions,
+              content: template.content || '',
             })}
-            onDelete={() => {}}
+            onDelete={onDelete}
             onSelect={onSelect ? () => onSelect(template) : undefined}
           />
           <AlertDialogContent className="menu-dialog">
