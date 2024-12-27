@@ -27,7 +27,7 @@ export const useRetryManager = (config: RetryConfig = DEFAULT_CONFIG) => {
     );
 
     if (config.jitter) {
-      return delay + (Math.random() * delay * 0.1); // Add up to 10% jitter
+      return delay + (Math.random() * delay * 0.1);
     }
 
     return delay;
@@ -47,40 +47,43 @@ export const useRetryManager = (config: RetryConfig = DEFAULT_CONFIG) => {
     };
   }, [calculateDelay, config.maxAttempts]);
 
-  const retry = useCallback(function <T>(
+  const retry = useCallback(async function <T>(
     operation: () => Promise<T>,
     context: string
   ): Promise<T> {
-    return new Promise<T>(async (resolve, reject) => {
-      try {
-        retryCount.current++;
-        lastRetryTime.current = Date.now();
-        
-        logger.info(LogCategory.WEBSOCKET, 'RetryManager', 'Attempting retry', {
-          attempt: retryCount.current,
-          context,
-          timestamp: new Date().toISOString()
-        });
+    try {
+      retryCount.current++;
+      lastRetryTime.current = Date.now();
+      
+      logger.info(LogCategory.WEBSOCKET, 'RetryManager', 'Attempting retry', {
+        attempt: retryCount.current,
+        context,
+        timestamp: new Date().toISOString()
+      });
 
-        const result = await operation();
-        retryCount.current = 0; // Reset on success
-        resolve(result);
-      } catch (error) {
-        const metadata = getRetryMetadata();
-        logger.error(LogCategory.WEBSOCKET, 'RetryManager', 'Retry failed', {
-          error,
-          metadata,
-          timestamp: new Date().toISOString()
-        });
-        reject(error);
-      }
-    });
+      const result = await operation();
+      retryCount.current = 0;
+      return result;
+    } catch (error) {
+      const metadata = getRetryMetadata();
+      logger.error(LogCategory.WEBSOCKET, 'RetryManager', 'Retry failed', {
+        error,
+        metadata,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
   }, [getRetryMetadata]);
+
+  const getAttemptCount = useCallback(() => retryCount.current, []);
+  const getNextDelay = useCallback(() => calculateDelay(), [calculateDelay]);
 
   return {
     retry,
     shouldRetry,
     getRetryMetadata,
+    getAttemptCount,
+    getNextDelay,
     reset: () => {
       retryCount.current = 0;
       lastRetryTime.current = Date.now();

@@ -4,13 +4,15 @@ export interface WebSocketError {
   timestamp: string;
   connectionState: string;
   retryCount: number;
+  name?: string;
+  message?: string;
 }
 
 export interface SubscriptionError extends WebSocketError {
   channelId: string;
   event: string;
-  lastAttempt?: number;
-  backoffDelay?: number;
+  lastAttempt: number;
+  backoffDelay: number;
 }
 
 export interface ConnectionError extends WebSocketError {

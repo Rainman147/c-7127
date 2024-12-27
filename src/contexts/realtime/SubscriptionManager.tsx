@@ -48,7 +48,8 @@ export const useSubscriptionManager = () => {
             timestamp: new Date().toISOString(),
             connectionState: 'error',
             retryCount: 0,
-            code: 0,
+            lastAttempt: Date.now(),
+            backoffDelay: 1000,
             reason: `Channel error for ${config.table}`
           };
           config.onError?.(subscriptionError);
@@ -61,7 +62,7 @@ export const useSubscriptionManager = () => {
   const addSubscription = useCallback(({ channelKey, channel, onError }: { 
     channelKey: string;
     channel: RealtimeChannel;
-    onError: (error: Error) => void;
+    onError: (error: SubscriptionError) => void;
   }) => {
     if (subscriptions.current.has(channelKey)) {
       logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription already exists', {
@@ -79,8 +80,17 @@ export const useSubscriptionManager = () => {
       });
 
       if (status === 'CHANNEL_ERROR') {
-        const error = new Error(`Channel error for ${channelKey}`);
-        onError(error);
+        const subscriptionError: SubscriptionError = {
+          channelId: channelKey,
+          event: 'error',
+          timestamp: new Date().toISOString(),
+          connectionState: 'error',
+          retryCount: 0,
+          lastAttempt: Date.now(),
+          backoffDelay: 1000,
+          reason: `Channel error for ${channelKey}`
+        };
+        onError(subscriptionError);
       }
     });
 
