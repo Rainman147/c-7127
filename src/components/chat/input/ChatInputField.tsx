@@ -49,7 +49,9 @@ const ChatInputField = memo(({
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newMessage = e.target.value;
-    if (newMessage.length > maxLength) {
+    const isInvalid = newMessage.length > maxLength;
+    
+    if (isInvalid) {
       logger.warn(LogCategory.VALIDATION, 'ChatInputField', 'Message exceeds length limit:', {
         length: newMessage.length,
         limit: maxLength,
@@ -93,6 +95,7 @@ const ChatInputField = memo(({
   };
 
   const tooltipContent = getInputTooltip();
+  const isInvalid = message.length > maxLength;
 
   return (
     <div className="w-full">
@@ -106,11 +109,13 @@ const ChatInputField = memo(({
           placeholder={getPlaceholder()}
           maxLength={maxLength}
           aria-label="Chat message input"
-          aria-invalid={message.length > maxLength}
+          aria-invalid={isInvalid}
           aria-describedby={tooltipContent ? "connection-status" : undefined}
           className={`w-full min-h-[40px] max-h-[200px] resize-none bg-transparent px-4 py-3 focus:outline-none overflow-y-auto transition-all duration-150 ease-in-out chat-input-scrollbar ${
             isLoading ? 'cursor-not-allowed opacity-50' : ''
-          } ${connectionState.status !== 'connected' ? 'text-gray-500' : ''}`}
+          } ${connectionState.status !== 'connected' ? 'text-gray-500' : ''} ${
+            isInvalid ? 'border-red-500' : ''
+          }`}
           disabled={isLoading}
         />
       </Tooltip>
