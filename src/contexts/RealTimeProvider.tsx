@@ -28,7 +28,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
   const { handleChatMessage, handleMessageUpdate } = useMessageHandlers(
     setLastMessage,
-    retryManager.backoff
+    retryManager.getNextDelay // Changed from backoff to getNextDelay
   );
 
   const handleWebSocketError = useCallback((error: CustomError) => {

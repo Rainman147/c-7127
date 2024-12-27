@@ -88,8 +88,8 @@ export class ConnectionManager {
   }
 
   private async processSubscription(subscription: QueuedSubscription): Promise<void> {
-    const delay = this.backoff.getDelay(subscription.retryCount);
-    if (delay > 0) {
+    const delay = this.backoff.nextDelay(); // Changed from getDelay to nextDelay
+    if (delay !== null) {
       await new Promise(resolve => setTimeout(resolve, delay));
     }
 
