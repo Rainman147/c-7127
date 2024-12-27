@@ -22,16 +22,16 @@ export const useChatSessions = () => {
       // Get current session to ensure we're authenticated
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (sessionError || !session) {
-        logger.error(LogCategory.DATABASE, 'ChatSessions', 'No active session:', {
+      if (sessionError) {
+        logger.error(LogCategory.DATABASE, 'ChatSessions', 'Auth session error:', {
           error: sessionError,
           timestamp: new Date().toISOString()
         });
-        toast({
-          title: 'Authentication Error',
-          description: 'Please sign in to view your chat sessions',
-          variant: 'destructive',
-        });
+        throw sessionError;
+      }
+
+      if (!session) {
+        logger.warn(LogCategory.DATABASE, 'ChatSessions', 'No active session');
         return;
       }
 
@@ -41,7 +41,14 @@ export const useChatSessions = () => {
         .select('*')
         .order('updated_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        logger.error(LogCategory.DATABASE, 'ChatSessions', 'Error fetching sessions:', {
+          error: error.message,
+          code: error.code,
+          details: error.details
+        });
+        throw error;
+      }
       
       // Filter out sessions with no messages
       const { data: sessionsWithMessages, error: messagesError } = await supabase
@@ -49,7 +56,13 @@ export const useChatSessions = () => {
         .select('chat_id')
         .in('chat_id', sessions?.map(s => s.id) || []);
         
-      if (messagesError) throw messagesError;
+      if (messagesError) {
+        logger.error(LogCategory.DATABASE, 'ChatSessions', 'Error fetching messages:', {
+          error: messagesError.message,
+          code: messagesError.code
+        });
+        throw messagesError;
+      }
       
       const validSessionIds = new Set(sessionsWithMessages?.map(m => m.chat_id));
       const validSessions = sessions?.filter(s => validSessionIds.has(s.id)) || [];
@@ -59,8 +72,8 @@ export const useChatSessions = () => {
     } catch (error: any) {
       console.error('[useChatSessions] Error fetching sessions:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load chat sessions',
+        title: 'Connection Error',
+        description: 'Failed to load chat sessions. Please check your internet connection and try again.',
         variant: 'destructive',
       });
     } finally {
@@ -173,7 +186,7 @@ export const useChatSessions = () => {
         { event: '*', schema: 'public', table: 'chats' },
         (payload) => {
           console.log('[useChatSessions] Chat change received:', payload);
-          debouncedFetchSessions();
+          fetchSessions();
         }
       )
       .on(
@@ -181,10 +194,21 @@ export const useChatSessions = () => {
         { event: '*', schema: 'public', table: 'messages' },
         (payload) => {
           console.log('[useChatSessions] Message change received:', payload);
-          debouncedFetchSessions();
+          fetchSessions();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[useChatSessions] Subscription status:', status);
+        
+        if (status === 'SUBSCRIPTION_ERROR') {
+          logger.error(LogCategory.WEBSOCKET, 'ChatSessions', 'Subscription error');
+          toast({
+            title: 'Connection Error',
+            description: 'Failed to establish real-time connection. Some features may be limited.',
+            variant: 'destructive',
+          });
+        }
+      });
 
     // Initial fetch
     fetchSessions();
