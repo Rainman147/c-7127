@@ -1,26 +1,21 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { RealTimeContext } from './RealTimeContext';
 import { logger, LogCategory } from '@/utils/logging';
 import { useWebSocketManager } from './realtime/WebSocketManager';
 import { useSubscriptionManager } from './realtime/SubscriptionManager';
-import { useConnectionStateManager } from './realtime/ConnectionStateManager';
 import { useRetryManager } from './realtime/RetryManager';
 import { useMessageHandlers } from '@/hooks/realtime/useMessageHandlers';
-import { ExponentialBackoff } from '@/utils/backoff';
+import { ConnectionManager } from './realtime/ConnectionManager';
+import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
 import type { RealtimeContextValue, SubscriptionConfig } from './realtime/types';
-import type { CustomError, ConnectionError, SubscriptionError } from './realtime/types/errors';
+import type { CustomError, ConnectionError } from './realtime/types/errors';
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
-  const backoff = new ExponentialBackoff();
+  const { toast } = useToast();
+  const connectionManager = useRef(new ConnectionManager());
   
-  const {
-    connectionState,
-    setConnectionState,
-    handleConnectionError
-  } = useConnectionStateManager();
-
   const {
     subscribe: subscriptionManagerSubscribe,
     addSubscription,
@@ -33,7 +28,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
   const { handleChatMessage, handleMessageUpdate } = useMessageHandlers(
     setLastMessage,
-    backoff
+    retryManager.backoff
   );
 
   const handleWebSocketError = useCallback((error: CustomError) => {
@@ -54,16 +49,18 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       message: error.message
     };
 
-    handleConnectionError(connectionError);
-    
-    if (retryManager.shouldRetry()) {
-      const metadata = retryManager.getRetryMetadata();
-      logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Initiating retry', {
-        metadata,
-        timestamp: new Date().toISOString()
-      });
-    }
-  }, [handleConnectionError, retryManager]);
+    connectionManager.current.updateConnectionState({
+      status: 'disconnected',
+      error: connectionError,
+      retryCount: connectionManager.current.getConnectionState().retryCount + 1
+    });
+
+    toast({
+      title: "Connection Lost",
+      description: `Attempting to reconnect... (Attempt ${retryManager.getAttemptCount()}/5)`,
+      variant: "destructive",
+    });
+  }, [retryManager, toast]);
 
   const { lastPingTime } = useWebSocketManager(
     undefined,
@@ -72,45 +69,30 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
   const subscribeToChat = useCallback((chatId: string, componentId: string) => {
     const subscriptionKey = `messages-chat_id=eq.${chatId}`;
-    const channel = subscriptionManagerSubscribe({
+    const config: SubscriptionConfig = {
       event: '*',
       schema: 'public',
       table: 'messages',
       filter: `chat_id=eq.${chatId}`,
       onMessage: handleChatMessage,
-      onError: (error: CustomError) => {
-        const subscriptionError: SubscriptionError = {
-          name: 'ChannelError',
-          channelId: subscriptionKey,
-          event: 'error',
-          timestamp: new Date().toISOString(),
-          connectionState: 'error',
-          retryCount: retryManager.getAttemptCount(),
-          lastAttempt: Date.now(),
-          backoffDelay: retryManager.getNextDelay() || 0,
-          reason: error.reason || 'Unknown error',
-          message: error.message
-        };
-        handleConnectionError({
-          ...subscriptionError,
-          name: 'ConnectionError',
-          code: 0
-        } as ConnectionError);
+      onError: handleWebSocketError,
+      onSubscriptionStatus: (status) => {
+        logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Chat subscription status changed', {
+          chatId,
+          status,
+          timestamp: new Date().toISOString()
+        });
       }
-    });
+    };
+
+    connectionManager.current.queueSubscription(config);
     
-    addSubscription({ 
-      channelKey: subscriptionKey, 
-      channel, 
-      onError: handleWebSocketError 
-    });
-    
-    logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Chat subscription created', {
+    logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Chat subscription queued', {
       chatId,
       componentId,
       timestamp: new Date().toISOString()
     });
-  }, [addSubscription, handleChatMessage, handleConnectionError, handleWebSocketError, subscriptionManagerSubscribe, retryManager]);
+  }, [handleChatMessage, handleWebSocketError]);
 
   const unsubscribeFromChat = useCallback((chatId: string, componentId: string) => {
     const subscriptionKey = `messages-chat_id=eq.${chatId}`;
@@ -119,52 +101,37 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
   const subscribeToMessage = useCallback((messageId: string, componentId: string, onUpdate: (content: string) => void) => {
     const subscriptionKey = `messages-id=eq.${messageId}`;
-    const channel = subscriptionManagerSubscribe({
+    const config: SubscriptionConfig = {
       event: '*',
       schema: 'public',
       table: 'messages',
       filter: `id=eq.${messageId}`,
       onMessage: handleMessageUpdate(messageId, onUpdate),
-      onError: (error: CustomError) => {
-        const subscriptionError: SubscriptionError = {
-          name: 'ChannelError',
-          channelId: subscriptionKey,
-          event: 'error',
-          timestamp: new Date().toISOString(),
-          connectionState: 'error',
-          retryCount: retryManager.getAttemptCount(),
-          lastAttempt: Date.now(),
-          backoffDelay: retryManager.getNextDelay() || 0,
-          reason: error.reason || 'Unknown error',
-          message: error.message
-        };
-        handleConnectionError({
-          ...subscriptionError,
-          name: 'ConnectionError',
-          code: 0
-        } as ConnectionError);
+      onError: handleWebSocketError,
+      onSubscriptionStatus: (status) => {
+        logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Message subscription status changed', {
+          messageId,
+          status,
+          timestamp: new Date().toISOString()
+        });
       }
-    });
+    };
+
+    connectionManager.current.queueSubscription(config);
     
-    addSubscription({ 
-      channelKey: subscriptionKey, 
-      channel, 
-      onError: handleWebSocketError 
-    });
-    
-    logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Message subscription created', {
+    logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Message subscription queued', {
       messageId,
       componentId,
       timestamp: new Date().toISOString()
     });
-  }, [addSubscription, handleMessageUpdate, handleConnectionError, handleWebSocketError, subscriptionManagerSubscribe, retryManager]);
+  }, [handleMessageUpdate, handleWebSocketError]);
 
   const unsubscribeFromMessage = useCallback((messageId: string, componentId: string) => {
     const subscriptionKey = `messages-id=eq.${messageId}`;
     removeSubscription(subscriptionKey);
   }, [removeSubscription]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Cleaning up all subscriptions', {
         activeSubscriptions: getActiveSubscriptions().length,
@@ -172,11 +139,12 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       });
       cleanupSubscriptions();
       retryManager.reset();
+      connectionManager.current.clearQueue();
     };
   }, [cleanupSubscriptions, retryManager, getActiveSubscriptions]);
 
   const value: RealtimeContextValue = {
-    connectionState,
+    connectionState: connectionManager.current.getConnectionState(),
     lastMessage,
     subscribeToChat,
     unsubscribeFromChat,
