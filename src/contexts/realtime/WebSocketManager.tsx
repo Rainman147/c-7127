@@ -43,7 +43,9 @@ export const useWebSocketManager = (
         timestamp: new Date().toISOString(),
         connectionState: socket.readyState.toString(),
         retryCount: 0,
-        reason: error instanceof Error ? error.message : 'Unknown error'
+        reason: error instanceof Error ? error.message : 'Unknown error',
+        name: 'WebSocketError',
+        message: error instanceof Error ? error.message : 'WebSocket connection error'
       };
       
       logger.error(LogCategory.WEBSOCKET, 'WebSocketManager', 'Connection error', errorData);

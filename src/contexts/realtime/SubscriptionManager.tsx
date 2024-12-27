@@ -50,7 +50,9 @@ export const useSubscriptionManager = () => {
             retryCount: 0,
             lastAttempt: Date.now(),
             backoffDelay: 1000,
-            reason: `Channel error for ${config.table}`
+            reason: `Channel error for ${config.table}`,
+            name: 'ChannelError',
+            message: `Subscription error for channel ${channelKey}`
           };
           config.onError?.(subscriptionError);
         }
@@ -88,7 +90,9 @@ export const useSubscriptionManager = () => {
           retryCount: 0,
           lastAttempt: Date.now(),
           backoffDelay: 1000,
-          reason: `Channel error for ${channelKey}`
+          reason: `Channel error for ${channelKey}`,
+          name: 'ChannelError',
+          message: `Subscription error for channel ${channelKey}`
         };
         onError(subscriptionError);
       }
