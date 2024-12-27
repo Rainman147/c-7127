@@ -9,7 +9,7 @@ import { useMessageHandlers } from '@/hooks/realtime/useMessageHandlers';
 import { ExponentialBackoff } from '@/utils/backoff';
 import type { Message } from '@/types/chat';
 import type { RealtimeContextValue, SubscriptionConfig } from './realtime/types';
-import type { ConnectionError, SubscriptionError } from './realtime/types/errors';
+import type { ConnectionError, SubscriptionError, WebSocketError } from './realtime/types/errors';
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
@@ -36,15 +36,17 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     backoff
   );
 
-  const handleWebSocketError = useCallback((error: Error) => {
+  const handleWebSocketError = useCallback((error: WebSocketError) => {
     const connectionError: ConnectionError = {
       code: 0,
-      reason: error.message,
+      reason: error.reason || 'Unknown error',
       timestamp: new Date().toISOString(),
       connectionState: 'error',
       retryCount: retryManager.getAttemptCount(),
       lastAttempt: Date.now(),
-      backoffDelay: retryManager.getNextDelay() || 0
+      backoffDelay: retryManager.getNextDelay() || 0,
+      name: error.name,
+      message: error.message
     };
     handleConnectionError(connectionError);
     if (retryManager.shouldRetry()) {
@@ -57,7 +59,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   }, [handleConnectionError, retryManager]);
 
   const { lastPingTime } = useWebSocketManager(
-    undefined, // Initial channel - will be set when subscriptions are added
+    undefined,
     handleWebSocketError
   );
 
@@ -69,15 +71,18 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       table: 'messages',
       filter: `chat_id=eq.${chatId}`,
       onMessage: handleChatMessage,
-      onError: (error: Error) => {
+      onError: (error: SubscriptionError) => {
         const subscriptionError: SubscriptionError = {
           channelId: subscriptionKey,
           event: 'error',
           timestamp: new Date().toISOString(),
           connectionState: 'error',
           retryCount: 0,
-          code: 0,
-          reason: error.message
+          lastAttempt: Date.now(),
+          backoffDelay: 1000,
+          reason: error.reason || 'Unknown error',
+          name: error.name,
+          message: error.message
         };
         handleConnectionError(subscriptionError);
       }
@@ -109,15 +114,18 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       table: 'messages',
       filter: `id=eq.${messageId}`,
       onMessage: handleMessageUpdate(messageId, onUpdate),
-      onError: (error: Error) => {
+      onError: (error: SubscriptionError) => {
         const subscriptionError: SubscriptionError = {
           channelId: subscriptionKey,
           event: 'error',
           timestamp: new Date().toISOString(),
           connectionState: 'error',
           retryCount: 0,
-          code: 0,
-          reason: error.message
+          lastAttempt: Date.now(),
+          backoffDelay: 1000,
+          reason: error.reason || 'Unknown error',
+          name: error.name,
+          message: error.message
         };
         handleConnectionError(subscriptionError);
       }

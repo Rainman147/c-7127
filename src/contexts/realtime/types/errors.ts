@@ -4,8 +4,8 @@ export interface WebSocketError {
   timestamp: string;
   connectionState: string;
   retryCount: number;
-  name?: string;
-  message?: string;
+  name: string;
+  message: string;
 }
 
 export interface SubscriptionError extends WebSocketError {
