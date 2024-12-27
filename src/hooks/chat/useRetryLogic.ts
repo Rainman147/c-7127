@@ -16,7 +16,9 @@ export const useRetryLogic = () => {
     if (retryCount >= MAX_RETRIES) {
       logger.error(LogCategory.ERROR, 'RetryLogic', 'Max retries exceeded', {
         retryCount,
-        connectionStatus
+        connectionStatus,
+        timestamp: new Date().toISOString(),
+        lastAttempt: new Date().toISOString()
       });
       
       toast({
@@ -35,7 +37,10 @@ export const useRetryLogic = () => {
     
     logger.info(LogCategory.STATE, 'RetryLogic', 'Scheduling retry:', {
       attempt: retryCount + 1,
-      delay
+      delay,
+      connectionStatus,
+      timestamp: new Date().toISOString(),
+      nextAttemptIn: `${delay}ms`
     });
 
     await new Promise(resolve => setTimeout(resolve, delay));
@@ -43,6 +48,10 @@ export const useRetryLogic = () => {
   };
 
   const resetRetryCount = () => {
+    logger.debug(LogCategory.STATE, 'RetryLogic', 'Resetting retry count', {
+      previousCount: retryCount,
+      timestamp: new Date().toISOString()
+    });
     setRetryCount(0);
   };
 
