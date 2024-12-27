@@ -9,6 +9,7 @@ import { useMessageHandlers } from '@/hooks/realtime/useMessageHandlers';
 import { ExponentialBackoff } from '@/utils/backoff';
 import type { Message } from '@/types/chat';
 import type { RealtimeContextValue } from './realtime/types';
+import type { SubscriptionConfig } from './realtime/types';
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
@@ -21,6 +22,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   } = useConnectionStateManager();
 
   const {
+    subscribe: subscriptionManagerSubscribe,
     addSubscription,
     removeSubscription,
     cleanup: cleanupSubscriptions,
@@ -52,7 +54,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
   const subscribeToChat = useCallback((chatId: string, componentId: string) => {
     const subscriptionKey = `messages-chat_id=eq.${chatId}`;
-    const channel = subscribe({
+    const channel = subscriptionManagerSubscribe({
       event: '*',
       schema: 'public',
       table: 'messages',
@@ -68,7 +70,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       componentId,
       timestamp: new Date().toISOString()
     });
-  }, [addSubscription, handleChatMessage, handleConnectionError, handleWebSocketError]);
+  }, [addSubscription, handleChatMessage, handleConnectionError, handleWebSocketError, subscriptionManagerSubscribe]);
 
   const unsubscribeFromChat = useCallback((chatId: string, componentId: string) => {
     const subscriptionKey = `messages-chat_id=eq.${chatId}`;
@@ -77,7 +79,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
   const subscribeToMessage = useCallback((messageId: string, componentId: string, onUpdate: (content: string) => void) => {
     const subscriptionKey = `messages-id=eq.${messageId}`;
-    const channel = subscribe({
+    const channel = subscriptionManagerSubscribe({
       event: '*',
       schema: 'public',
       table: 'messages',
@@ -93,7 +95,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       componentId,
       timestamp: new Date().toISOString()
     });
-  }, [addSubscription, handleMessageUpdate, handleConnectionError, handleWebSocketError]);
+  }, [addSubscription, handleMessageUpdate, handleConnectionError, handleWebSocketError, subscriptionManagerSubscribe]);
 
   const unsubscribeFromMessage = useCallback((messageId: string, componentId: string) => {
     const subscriptionKey = `messages-id=eq.${messageId}`;
@@ -118,7 +120,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     unsubscribeFromChat,
     subscribeToMessage,
     unsubscribeFromMessage,
-    subscribe,
+    subscribe: subscriptionManagerSubscribe,
     cleanup: cleanupSubscriptions
   };
 
