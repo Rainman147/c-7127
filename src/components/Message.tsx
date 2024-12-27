@@ -36,7 +36,12 @@ const Message = memo(({
     handleEdit
   } = useMessageState(content, id);
 
-  const { connectionState, lastUpdateTime } = useMessageRealtime(id, editedContent, setEditedContent);
+  const { connectionState, lastUpdateTime } = useMessageRealtime(
+    id, 
+    editedContent, 
+    setEditedContent,
+    `message-${id}` // Add unique componentId for this message instance
+  );
 
   const { isTyping } = useTypingEffect(role, isStreaming, content);
 
