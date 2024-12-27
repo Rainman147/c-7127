@@ -41,13 +41,17 @@ const ChatInput = ({
   } = useChatInput({
     onSend: async (msg: string, type?: 'text' | 'audio') => {
       try {
-        // Validate message content
+        // Enhanced validation logging
         if (!msg.trim()) {
           logger.warn(LogCategory.VALIDATION, 'ChatInput', 'Empty message rejected');
           return;
         }
 
         if (msg.length > MAX_MESSAGE_LENGTH) {
+          logger.warn(LogCategory.VALIDATION, 'ChatInput', 'Message exceeds length limit:', {
+            length: msg.length,
+            limit: MAX_MESSAGE_LENGTH
+          });
           toast({
             title: "Message too long",
             description: `Message cannot exceed ${MAX_MESSAGE_LENGTH} characters`,
@@ -56,35 +60,55 @@ const ChatInput = ({
           return;
         }
 
-        logger.debug(LogCategory.COMMUNICATION, 'ChatInput', 'Sending message:', {
+        // Enhanced connection state logging
+        logger.debug(LogCategory.COMMUNICATION, 'ChatInput', 'Attempting to send message:', {
           length: msg.length,
           type,
-          connectionState: connectionState.status
+          connectionState: connectionState.status,
+          retryCount
         });
 
         await onSend(msg, type);
-        setRetryCount(0);
+        
+        // Reset retry count on success
+        if (retryCount > 0) {
+          logger.info(LogCategory.STATE, 'ChatInput', 'Successfully sent message after retries:', {
+            attempts: retryCount + 1
+          });
+          setRetryCount(0);
+        }
         
         logger.debug(LogCategory.STATE, 'ChatInput', 'Message sent successfully');
       } catch (error) {
         logger.error(LogCategory.ERROR, 'ChatInput', 'Error sending message:', {
           error,
-          retryCount: retryCount + 1
+          retryCount: retryCount + 1,
+          connectionState: connectionState.status
         });
 
-        // Implement retry strategy
+        // Enhanced retry strategy with better feedback
         if (retryCount < MAX_RETRIES) {
           setRetryCount(prev => prev + 1);
+          
+          const currentRetry = retryCount + 1;
           toast({
-            title: "Message failed to send",
-            description: `Retrying... (${retryCount + 1}/${MAX_RETRIES})`,
+            title: connectionState.status === 'disconnected' 
+              ? "Connection lost"
+              : "Message failed to send",
+            description: `Retrying... (${currentRetry}/${MAX_RETRIES})`,
             variant: "destructive",
           });
 
-          // Retry after delay
+          // Exponential backoff for retries
+          const delay = RETRY_DELAY * Math.pow(2, retryCount);
+          logger.info(LogCategory.STATE, 'ChatInput', 'Scheduling retry:', {
+            attempt: currentRetry,
+            delay
+          });
+
           setTimeout(() => {
             handleSubmit();
-          }, RETRY_DELAY);
+          }, delay);
         } else {
           const metadata: ErrorMetadata = {
             component: 'ChatInput',
@@ -104,7 +128,9 @@ const ChatInput = ({
           
           toast({
             title: "Failed to send message",
-            description: "Please try again later",
+            description: connectionState.status === 'disconnected'
+              ? "Connection lost. Please check your internet connection and try again."
+              : "An error occurred. Please try again later.",
             variant: "destructive",
           });
         }
@@ -120,7 +146,8 @@ const ChatInput = ({
     try {
       if (newMessage.length > MAX_MESSAGE_LENGTH) {
         logger.warn(LogCategory.VALIDATION, 'ChatInput', 'Message exceeds maximum length:', {
-          length: newMessage.length
+          length: newMessage.length,
+          limit: MAX_MESSAGE_LENGTH
         });
 
         toast({
@@ -139,7 +166,8 @@ const ChatInput = ({
     } catch (error) {
       logger.error(LogCategory.ERROR, 'ChatInput', 'Error updating message:', {
         error,
-        messageLength: newMessage.length
+        messageLength: newMessage.length,
+        connectionState: connectionState.status
       });
 
       const metadata: ErrorMetadata = {
@@ -150,16 +178,18 @@ const ChatInput = ({
         operation: 'update-message',
         additionalInfo: {
           messageLength: newMessage.length,
-          retryCount
+          retryCount,
+          connectionState: connectionState.status
         }
       };
       ErrorTracker.trackError(error as Error, metadata);
     }
   };
 
-  // Only disable input when explicitly loading or disconnected with max retries
+  // Enhanced disabled state logic
   const inputDisabled = isDisabled || 
-    (connectionState.status === 'disconnected' && connectionState.retryCount >= 5);
+    (connectionState.status === 'disconnected' && connectionState.retryCount >= 5) ||
+    isLoading;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-[#1E1E1E]/80 backdrop-blur-sm py-4 px-4">

@@ -22,7 +22,8 @@ const Message = memo(({
     role,
     contentLength: content?.length,
     isStreaming,
-    type
+    type,
+    timestamp: new Date().toISOString()
   });
 
   const {
@@ -45,7 +46,7 @@ const Message = memo(({
 
   const { isTyping } = useTypingEffect(role, isStreaming, content);
 
-  // Log connection state changes
+  // Enhanced connection state logging and handling
   logger.debug(LogCategory.STATE, 'Message', 'Message state:', {
     id,
     isEditing,
@@ -53,14 +54,35 @@ const Message = memo(({
     isSaving,
     connectionStatus: connectionState.status,
     lastUpdateTime,
-    isTyping
+    isTyping,
+    timestamp: new Date().toISOString()
   });
 
-  // Show toast for reconnection success
+  // Show reconnection success toast with more context
   if (connectionState.status === 'connected' && connectionState.retryCount > 0) {
+    logger.info(LogCategory.STATE, 'Message', 'Reconnected after retries:', {
+      messageId: id,
+      retryCount: connectionState.retryCount
+    });
+    
     toast({
-      description: "Message sync restored",
+      title: "Connection Restored",
+      description: "Message synchronization resumed",
       className: "bg-green-500 text-white",
+    });
+  }
+
+  // Show warning for disconnected state
+  if (connectionState.status === 'disconnected' && connectionState.retryCount >= 5) {
+    logger.warn(LogCategory.STATE, 'Message', 'Connection lost:', {
+      messageId: id,
+      retryCount: connectionState.retryCount
+    });
+    
+    toast({
+      title: "Connection Lost",
+      description: "Unable to sync message changes. Please check your connection.",
+      variant: "destructive",
     });
   }
 
