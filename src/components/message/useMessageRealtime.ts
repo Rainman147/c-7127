@@ -1,65 +1,57 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
-import { ErrorTracker } from '@/utils/errorTracking';
-import type { DatabaseMessage } from '@/types/database/messages';
-import type { ErrorMetadata } from '@/types/errorTracking';
 import { useMessageQueue } from '@/hooks/realtime/useMessageQueue';
 import { useRealTime } from '@/contexts/RealTimeContext';
 
 export const useMessageRealtime = (
   messageId: string | undefined,
   editedContent: string,
-  setEditedContent: (content: string) => void
+  setEditedContent: (content: string) => void,
+  componentId: string
 ) => {
   const { connectionState, subscribeToMessage, unsubscribeFromMessage } = useRealTime();
   const { addToQueue, processQueue, clearQueue } = useMessageQueue();
   const lastUpdateTimeRef = useRef<number>(Date.now());
 
-  const processMessage = (payload: any) => {
+  const processMessage = useCallback((content: string) => {
     try {
-      const newData = payload.new as DatabaseMessage;
-      
-      addToQueue(newData.id, newData.content);
+      addToQueue(messageId!, content);
       processQueue(editedContent, setEditedContent);
       lastUpdateTimeRef.current = Date.now();
 
       logger.debug(LogCategory.STATE, 'MessageRealtime', 'Processed message update', {
-        messageId: newData.id,
+        messageId,
+        componentId,
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      const metadata: ErrorMetadata = {
-        component: 'useMessageRealtime',
-        severity: 'medium',
-        errorType: 'realtime',
-        operation: 'process-message',
-        timestamp: new Date().toISOString(),
-        additionalInfo: {
-          messageId,
-          connectionState: connectionState.status,
-          error: error instanceof Error ? error.message : String(error)
-        }
-      };
-      
-      ErrorTracker.trackError(error as Error, metadata);
+      logger.error(LogCategory.STATE, 'MessageRealtime', 'Failed to process message', {
+        messageId,
+        componentId,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      });
     }
-  };
+  }, [messageId, editedContent, setEditedContent, addToQueue, processQueue, componentId]);
 
   useEffect(() => {
     if (!messageId) {
-      logger.debug(LogCategory.COMMUNICATION, 'MessageRealtime', 'No message ID provided');
+      logger.debug(LogCategory.COMMUNICATION, 'MessageRealtime', 'No message ID provided', {
+        componentId,
+        timestamp: new Date().toISOString()
+      });
       return;
     }
 
-    subscribeToMessage(messageId, processMessage);
+    subscribeToMessage(messageId, componentId, processMessage);
 
     return () => {
       if (messageId) {
-        unsubscribeFromMessage(messageId);
+        unsubscribeFromMessage(messageId, componentId);
         clearQueue();
       }
     };
-  }, [messageId, subscribeToMessage, unsubscribeFromMessage, clearQueue]);
+  }, [messageId, componentId, subscribeToMessage, unsubscribeFromMessage, clearQueue, processMessage]);
 
   return {
     connectionState,
