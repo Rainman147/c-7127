@@ -23,7 +23,7 @@ export const useSubscriptionManager = () => {
 
     channel
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         { 
           event: config.event,
           schema: config.schema,
@@ -42,13 +42,7 @@ export const useSubscriptionManager = () => {
         if (status === 'SUBSCRIBED') {
           subscriptions.current.set(channelKey, channel);
         } else if (status === 'CHANNEL_ERROR') {
-          const error: SubscriptionError = {
-            channelId: channelKey,
-            event: status,
-            timestamp: new Date().toISOString(),
-            connectionState: 'error',
-            retryCount: 0
-          };
+          const error = new Error(`Channel error for ${config.table}`);
           config.onError?.(error);
         }
       });
@@ -59,7 +53,7 @@ export const useSubscriptionManager = () => {
   const addSubscription = useCallback(({ channelKey, channel, onError }: { 
     channelKey: string;
     channel: RealtimeChannel;
-    onError: (error: SubscriptionError) => void;
+    onError: (error: Error) => void;
   }) => {
     if (subscriptions.current.has(channelKey)) {
       logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription already exists', {
@@ -77,13 +71,7 @@ export const useSubscriptionManager = () => {
       });
 
       if (status === 'CHANNEL_ERROR') {
-        const error: SubscriptionError = {
-          channelId: channelKey,
-          event: status,
-          timestamp: new Date().toISOString(),
-          connectionState: 'error',
-          retryCount: 0
-        };
+        const error = new Error(`Channel error for ${channelKey}`);
         onError(error);
       }
     });
@@ -121,4 +109,3 @@ export const useSubscriptionManager = () => {
     cleanup,
     getActiveSubscriptions: () => Array.from(subscriptions.current.keys())
   };
-};

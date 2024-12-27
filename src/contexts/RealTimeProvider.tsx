@@ -8,8 +8,8 @@ import { useRetryManager } from './realtime/RetryManager';
 import { useMessageHandlers } from '@/hooks/realtime/useMessageHandlers';
 import { ExponentialBackoff } from '@/utils/backoff';
 import type { Message } from '@/types/chat';
-import type { RealtimeContextValue } from './realtime/types';
-import type { SubscriptionConfig } from './realtime/types';
+import type { RealtimeContextValue, SubscriptionConfig } from './realtime/types';
+import type { ConnectionError, SubscriptionError } from './realtime/types/errors';
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
@@ -36,8 +36,17 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     backoff
   );
 
-  const handleWebSocketError = useCallback((error: any) => {
-    handleConnectionError(error);
+  const handleWebSocketError = useCallback((error: Error) => {
+    const connectionError: ConnectionError = {
+      code: 0,
+      reason: error.message,
+      timestamp: new Date().toISOString(),
+      connectionState: 'error',
+      retryCount: retryManager.getAttemptCount(),
+      lastAttempt: Date.now(),
+      backoffDelay: retryManager.getNextDelay() || 0
+    };
+    handleConnectionError(connectionError);
     if (retryManager.shouldRetry()) {
       const metadata = retryManager.getRetryMetadata();
       logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Initiating retry', {
@@ -60,10 +69,25 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       table: 'messages',
       filter: `chat_id=eq.${chatId}`,
       onMessage: handleChatMessage,
-      onError: handleConnectionError
+      onError: (error: Error) => {
+        const subscriptionError: SubscriptionError = {
+          channelId: subscriptionKey,
+          event: 'error',
+          timestamp: new Date().toISOString(),
+          connectionState: 'error',
+          retryCount: 0,
+          code: 0,
+          reason: error.message
+        };
+        handleConnectionError(subscriptionError);
+      }
     });
     
-    addSubscription({ channelKey: subscriptionKey, channel, onError: handleWebSocketError });
+    addSubscription({ 
+      channelKey: subscriptionKey, 
+      channel, 
+      onError: handleWebSocketError 
+    });
     
     logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Chat subscription created', {
       chatId,
@@ -85,10 +109,25 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       table: 'messages',
       filter: `id=eq.${messageId}`,
       onMessage: handleMessageUpdate(messageId, onUpdate),
-      onError: handleConnectionError
+      onError: (error: Error) => {
+        const subscriptionError: SubscriptionError = {
+          channelId: subscriptionKey,
+          event: 'error',
+          timestamp: new Date().toISOString(),
+          connectionState: 'error',
+          retryCount: 0,
+          code: 0,
+          reason: error.message
+        };
+        handleConnectionError(subscriptionError);
+      }
     });
     
-    addSubscription({ channelKey: subscriptionKey, channel, onError: handleWebSocketError });
+    addSubscription({ 
+      channelKey: subscriptionKey, 
+      channel, 
+      onError: handleWebSocketError 
+    });
     
     logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Message subscription created', {
       messageId,
