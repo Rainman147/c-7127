@@ -1,8 +1,8 @@
 import React from "react";
 import { Button } from "../ui/button";
 import { Send } from "lucide-react";
-import { AudioRecorder } from "../AudioRecorder";
-import { FileUploader } from "../audio/FileUploader";
+import AudioRecorder from "../AudioRecorder";
+import FileUploader from "../audio/FileUploader";
 
 interface ChatInputActionsProps {
   isLoading: boolean;
