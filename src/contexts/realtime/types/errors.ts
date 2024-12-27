@@ -1,3 +1,10 @@
+export interface RetryMetadata {
+  attemptCount: number;
+  lastAttemptTime: number;
+  nextDelayMs: number;
+  maxAttemptsReached: boolean;
+}
+
 // Base error interface for all custom errors
 export interface CustomError {
   name: ErrorType;
@@ -8,6 +15,7 @@ export interface CustomError {
   lastAttempt: number;
   backoffDelay: number;
   reason: string;
+  code?: number;
 }
 
 export type ErrorType = 'WebSocketError' | 'ChannelError' | 'ConnectionError';

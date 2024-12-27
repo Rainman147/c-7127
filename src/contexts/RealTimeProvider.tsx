@@ -9,7 +9,7 @@ import { useMessageHandlers } from '@/hooks/realtime/useMessageHandlers';
 import { ExponentialBackoff } from '@/utils/backoff';
 import type { Message } from '@/types/chat';
 import type { RealtimeContextValue, SubscriptionConfig } from './realtime/types';
-import type { CustomError, ConnectionError, SubscriptionError, WebSocketError } from './realtime/types/errors';
+import type { CustomError, ConnectionError, SubscriptionError } from './realtime/types/errors';
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
@@ -44,7 +44,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
     const connectionError: ConnectionError = {
       name: 'ConnectionError',
-      code: 0,
+      code: error.code || 0,
       reason: error.reason || 'Unknown error',
       timestamp: new Date().toISOString(),
       connectionState: 'error',
@@ -125,20 +125,24 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       table: 'messages',
       filter: `id=eq.${messageId}`,
       onMessage: handleMessageUpdate(messageId, onUpdate),
-      onError: (error: SubscriptionError) => {
+      onError: (error: CustomError) => {
         const subscriptionError: SubscriptionError = {
+          name: 'ChannelError',
           channelId: subscriptionKey,
           event: 'error',
           timestamp: new Date().toISOString(),
           connectionState: 'error',
-          retryCount: 0,
+          retryCount: retryManager.getAttemptCount(),
           lastAttempt: Date.now(),
-          backoffDelay: 1000,
+          backoffDelay: retryManager.getNextDelay() || 0,
           reason: error.reason || 'Unknown error',
-          name: error.name,
           message: error.message
         };
-        handleConnectionError(subscriptionError);
+        handleConnectionError({
+          ...subscriptionError,
+          name: 'ConnectionError',
+          code: 0
+        } as ConnectionError);
       }
     });
     
@@ -153,7 +157,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       componentId,
       timestamp: new Date().toISOString()
     });
-  }, [addSubscription, handleMessageUpdate, handleConnectionError, handleWebSocketError, subscriptionManagerSubscribe]);
+  }, [addSubscription, handleMessageUpdate, handleConnectionError, handleWebSocketError, subscriptionManagerSubscribe, retryManager]);
 
   const unsubscribeFromMessage = useCallback((messageId: string, componentId: string) => {
     const subscriptionKey = `messages-id=eq.${messageId}`;
