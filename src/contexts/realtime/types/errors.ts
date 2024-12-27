@@ -9,6 +9,8 @@ export interface WebSocketError {
 export interface SubscriptionError extends WebSocketError {
   channelId: string;
   event: string;
+  lastAttempt?: number;
+  backoffDelay?: number;
 }
 
 export interface ConnectionError extends WebSocketError {

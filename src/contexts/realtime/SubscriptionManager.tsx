@@ -5,12 +5,6 @@ import type { SubscriptionError } from './types/errors';
 import type { SubscriptionConfig } from './types';
 import { supabase } from '@/integrations/supabase/client';
 
-interface SubscriptionConfig {
-  channelKey: string;
-  channel: RealtimeChannel;
-  onError: (error: SubscriptionError) => void;
-}
-
 export const useSubscriptionManager = () => {
   const subscriptions = useRef(new Map<string, RealtimeChannel>());
   const subscriptionTimers = useRef(new Map<string, NodeJS.Timeout>());
@@ -48,14 +42,25 @@ export const useSubscriptionManager = () => {
         if (status === 'SUBSCRIBED') {
           subscriptions.current.set(channelKey, channel);
         } else if (status === 'CHANNEL_ERROR') {
-          config.onError?.(new Error(`Channel error for ${config.table}`));
+          const error: SubscriptionError = {
+            channelId: channelKey,
+            event: status,
+            timestamp: new Date().toISOString(),
+            connectionState: 'error',
+            retryCount: 0
+          };
+          config.onError?.(error);
         }
       });
 
     return channel;
   }, []);
 
-  const addSubscription = useCallback(({ channelKey, channel, onError }: SubscriptionConfig) => {
+  const addSubscription = useCallback(({ channelKey, channel, onError }: { 
+    channelKey: string;
+    channel: RealtimeChannel;
+    onError: (error: SubscriptionError) => void;
+  }) => {
     if (subscriptions.current.has(channelKey)) {
       logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription already exists', {
         channelKey,
