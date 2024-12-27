@@ -5,11 +5,14 @@ import { useWebSocketManager } from './realtime/WebSocketManager';
 import { useSubscriptionManager } from './realtime/SubscriptionManager';
 import { useConnectionStateManager } from './realtime/ConnectionStateManager';
 import { useRetryManager } from './realtime/RetryManager';
+import { useMessageHandlers } from '@/hooks/realtime/useMessageHandlers';
+import { ExponentialBackoff } from '@/utils/backoff';
 import type { Message } from '@/types/chat';
 import type { RealtimeContextValue } from './realtime/types';
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
+  const backoff = new ExponentialBackoff();
   
   const {
     connectionState,
@@ -25,6 +28,11 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   } = useSubscriptionManager();
 
   const retryManager = useRetryManager();
+
+  const { handleChatMessage, handleMessageUpdate } = useMessageHandlers(
+    setLastMessage,
+    backoff
+  );
 
   const handleWebSocketError = useCallback((error: any) => {
     handleConnectionError(error);
@@ -60,7 +68,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       componentId,
       timestamp: new Date().toISOString()
     });
-  }, [addSubscription, handleChatMessage, handleConnectionError]);
+  }, [addSubscription, handleChatMessage, handleConnectionError, handleWebSocketError]);
 
   const unsubscribeFromChat = useCallback((chatId: string, componentId: string) => {
     const subscriptionKey = `messages-chat_id=eq.${chatId}`;
@@ -85,7 +93,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       componentId,
       timestamp: new Date().toISOString()
     });
-  }, [addSubscription, handleMessageUpdate, handleConnectionError]);
+  }, [addSubscription, handleMessageUpdate, handleConnectionError, handleWebSocketError]);
 
   const unsubscribeFromMessage = useCallback((messageId: string, componentId: string) => {
     const subscriptionKey = `messages-id=eq.${messageId}`;
