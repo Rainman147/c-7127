@@ -3,6 +3,9 @@ import { logger, LogCategory } from '@/utils/logging';
 import type { WebSocketError } from './types/errors';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
+const HEALTH_CHECK_INTERVAL = 30000; // 30 seconds
+const HEALTH_CHECK_TIMEOUT = 5000; // 5 seconds
+
 export const useWebSocketManager = (
   channel: RealtimeChannel | undefined,
   onError: (error: WebSocketError) => void
@@ -47,12 +50,12 @@ export const useWebSocketManager = (
 
     const handleError = (error: Event) => {
       const errorData: WebSocketError = {
+        name: 'WebSocketError',
+        message: error instanceof Error ? error.message : 'WebSocket connection error',
         timestamp: new Date().toISOString(),
         connectionState: socket.readyState.toString(),
         retryCount: reconnectAttempts.current,
         reason: error instanceof Error ? error.message : 'Unknown error',
-        name: 'WebSocketError',
-        message: error instanceof Error ? error.message : 'WebSocket connection error',
         lastAttempt: Date.now(),
         backoffDelay: Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000)
       };
@@ -79,7 +82,7 @@ export const useWebSocketManager = (
         reconnectAttempts: reconnectAttempts.current
       });
 
-      if (timeSinceLastPing > 30000) {
+      if (timeSinceLastPing > HEALTH_CHECK_TIMEOUT) {
         logger.warn(LogCategory.WEBSOCKET, 'WebSocketManager', 'Connection health check failed', {
           timeSinceLastPing,
           timestamp: new Date().toISOString(),
@@ -93,7 +96,7 @@ export const useWebSocketManager = (
           socket.close();
         }
       }
-    }, 10000);
+    }, HEALTH_CHECK_INTERVAL);
 
     socket.onopen = handleOpen;
     socket.onclose = handleClose;

@@ -17,9 +17,17 @@ export interface SubscriptionError extends BaseError {
   name: 'ChannelError';
   channelId: string;
   event: string;
+  code?: number;
 }
 
 export interface ConnectionError extends BaseError {
   name: 'ConnectionError';
   code: number;
+}
+
+export interface RetryMetadata {
+  attemptCount: number;
+  lastAttemptTime: number;
+  nextDelayMs: number;
+  maxAttemptsReached: boolean;
 }

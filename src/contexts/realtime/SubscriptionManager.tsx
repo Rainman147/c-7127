@@ -5,15 +5,17 @@ import { logger, LogCategory } from '@/utils/logging';
 import type { SubscriptionConfig } from './types';
 import type { SubscriptionError } from './types/errors';
 
+interface SubscriptionMetrics {
+  createdAt: number;
+  lastEventAt: number;
+  errorCount: number;
+  reconnectCount: number;
+}
+
 export const useSubscriptionManager = () => {
   const subscriptions = useRef(new Map<string, RealtimeChannel>());
   const subscriptionTimers = useRef(new Map<string, NodeJS.Timeout>());
-  const subscriptionMetrics = useRef(new Map<string, {
-    createdAt: number;
-    lastEventAt: number;
-    errorCount: number;
-    reconnectCount: number;
-  }>());
+  const subscriptionMetrics = useRef(new Map<string, SubscriptionMetrics>());
 
   const cleanupChannel = useCallback((channelKey: string) => {
     const channel = subscriptions.current.get(channelKey);
@@ -73,10 +75,10 @@ export const useSubscriptionManager = () => {
           table: config.table,
           filter: config.filter 
         },
-        (payload) => {
+        (payload: any) => {
           logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
             channelKey,
-            eventType: payload.eventType,
+            event: payload.type,
             timestamp: new Date().toISOString()
           });
           metrics.lastEventAt = Date.now();
@@ -98,14 +100,14 @@ export const useSubscriptionManager = () => {
           const subscriptionError: SubscriptionError = {
             channelId: channelKey,
             event: 'error',
+            name: 'ChannelError',
+            message: `Channel error for ${config.table}`,
             timestamp: new Date().toISOString(),
             connectionState: 'error',
             retryCount: metrics.errorCount,
             lastAttempt: Date.now(),
             backoffDelay: Math.min(1000 * Math.pow(2, metrics.errorCount), 30000),
-            reason: `Channel error for ${config.table}`,
-            name: 'ChannelError',
-            message: `Subscription error for channel ${channelKey}`
+            reason: `Channel error for ${config.table}`
           };
           config.onError?.(subscriptionError);
         } else if (status === 'CLOSED') {
@@ -117,6 +119,22 @@ export const useSubscriptionManager = () => {
 
     return channel;
   }, [cleanupChannel]);
+
+  const addSubscription = useCallback(({ channelKey, channel, onError }: {
+    channelKey: string;
+    channel: RealtimeChannel;
+    onError: (error: SubscriptionError) => void;
+  }) => {
+    subscriptions.current.set(channelKey, channel);
+  }, []);
+
+  const removeSubscription = useCallback((channelKey: string) => {
+    cleanupChannel(channelKey);
+  }, [cleanupChannel]);
+
+  const getActiveSubscriptions = useCallback(() => {
+    return Array.from(subscriptions.current.keys());
+  }, []);
 
   const cleanup = useCallback(() => {
     logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up all subscriptions', {
@@ -133,6 +151,9 @@ export const useSubscriptionManager = () => {
   return {
     subscribe,
     cleanup,
+    addSubscription,
+    removeSubscription,
+    getActiveSubscriptions,
     getMetrics: () => Array.from(subscriptionMetrics.current.entries()),
     getActiveSubscriptionCount: () => subscriptions.current.size
   };

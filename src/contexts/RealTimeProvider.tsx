@@ -38,6 +38,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
   const handleWebSocketError = useCallback((error: WebSocketError) => {
     const connectionError: ConnectionError = {
+      name: 'ConnectionError',
       code: 0,
       reason: error.reason || 'Unknown error',
       timestamp: new Date().toISOString(),
@@ -45,7 +46,6 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       retryCount: retryManager.getAttemptCount(),
       lastAttempt: Date.now(),
       backoffDelay: retryManager.getNextDelay() || 0,
-      name: error.name,
       message: error.message
     };
     handleConnectionError(connectionError);
@@ -72,19 +72,12 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       filter: `chat_id=eq.${chatId}`,
       onMessage: handleChatMessage,
       onError: (error: SubscriptionError) => {
-        const subscriptionError: SubscriptionError = {
-          channelId: subscriptionKey,
-          event: 'error',
-          timestamp: new Date().toISOString(),
-          connectionState: 'error',
-          retryCount: 0,
-          lastAttempt: Date.now(),
-          backoffDelay: 1000,
-          reason: error.reason || 'Unknown error',
-          name: error.name,
-          message: error.message
-        };
-        handleConnectionError(subscriptionError);
+        handleConnectionError({
+          ...error,
+          name: 'ConnectionError',
+          code: 0,
+          message: error.message || 'Unknown error'
+        });
       }
     });
     
@@ -158,7 +151,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       cleanupSubscriptions();
       retryManager.reset();
     };
-  }, [cleanupSubscriptions, retryManager]);
+  }, [cleanupSubscriptions, retryManager, getActiveSubscriptions]);
 
   const value: RealtimeContextValue = {
     connectionState,
