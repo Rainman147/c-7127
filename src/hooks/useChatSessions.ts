@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from 'use-debounce';
 import { logger, LogCategory } from '@/utils/logging';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 export type ChatSession = {
   id: string;
@@ -200,7 +201,7 @@ export const useChatSessions = () => {
       .subscribe((status) => {
         console.log('[useChatSessions] Subscription status:', status);
         
-        if (status === 'SUBSCRIPTION_ERROR') {
+        if (status === 'CHANNEL_ERROR') {
           logger.error(LogCategory.WEBSOCKET, 'ChatSessions', 'Subscription error');
           toast({
             title: 'Connection Error',

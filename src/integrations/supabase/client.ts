@@ -26,14 +26,18 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   }
 });
 
-// Add error logging for failed requests
-supabase.handleFailedRequest = (error: any, requestDetails: any) => {
-  logger.error(LogCategory.DATABASE, 'SupabaseClient', 'Request failed:', {
-    error,
-    request: {
-      method: requestDetails?.method,
-      path: requestDetails?.path,
-      statusCode: error?.statusCode
+// Add error logging middleware
+supabase.realtime.setAuth = ((originalSetAuth) => {
+  return async function (...args) {
+    try {
+      const result = await originalSetAuth.apply(this, args);
+      logger.info(LogCategory.DATABASE, 'SupabaseClient', 'Auth token set successfully');
+      return result;
+    } catch (error) {
+      logger.error(LogCategory.DATABASE, 'SupabaseClient', 'Failed to set auth token:', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw error;
     }
-  });
-};
+  };
+})(supabase.realtime.setAuth);
