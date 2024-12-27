@@ -23,7 +23,7 @@ const ChatInputActions = ({
     <div className="flex items-center justify-between px-4 py-2">
       <div className="flex items-center gap-2">
         <AudioRecorder onTranscriptionComplete={onTranscriptionComplete} />
-        <FileUploader onFileSelect={handleFileUpload} />
+        <FileUploader onFileSelected={handleFileUpload} />
       </div>
       <Button
         onClick={handleSubmit}
