@@ -15,6 +15,7 @@ export const ConnectionStatus = () => {
       status: connectionState.status,
       retryCount: connectionState.retryCount,
       error: connectionState.error?.message,
+      lastAttempt: new Date(connectionState.lastAttempt).toISOString(),
       timestamp: new Date().toISOString()
     });
 
@@ -24,11 +25,12 @@ export const ConnectionStatus = () => {
         className: "bg-green-500 text-white",
       });
     } else if (connectionState.status === 'disconnected') {
+      const delay = Math.min(1000 * Math.pow(2, connectionState.retryCount), 30000);
       toast({
         title: "Connection Lost",
         description: connectionState.retryCount >= 5 
-          ? "Attempting to reconnect in the background..."
-          : `Reconnecting... (Attempt ${connectionState.retryCount}/5)`,
+          ? "Maximum retry attempts reached. Please refresh the page."
+          : `Reconnecting in ${Math.round(delay / 1000)}s... (Attempt ${connectionState.retryCount}/5)`,
         variant: "destructive",
       });
     }
@@ -56,7 +58,7 @@ export const ConnectionStatus = () => {
     connecting: {
       className: 'text-yellow-500 bg-yellow-500/10',
       message: connectionState.retryCount >= 5 
-        ? "Attempting to reconnect in the background..."
+        ? "Maximum retry attempts reached..."
         : `Reconnecting... (Attempt ${connectionState.retryCount}/5)`,
       icon: Loader2,
       tooltipContent: 'Attempting to reconnect to the chat service'
@@ -64,7 +66,7 @@ export const ConnectionStatus = () => {
     disconnected: {
       className: 'text-red-500 bg-red-500/10',
       message: connectionState.retryCount >= 5
-        ? "Connection lost. Attempting to reconnect in the background..."
+        ? "Connection lost. Please refresh the page..."
         : `Connection lost. Retrying... (Attempt ${connectionState.retryCount}/5)`,
       icon: WifiOff,
       tooltipContent: 'Connection to chat service lost'

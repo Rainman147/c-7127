@@ -6,7 +6,8 @@ import { useMessageHandlers } from '@/hooks/realtime/useMessageHandlers';
 import { useRealtimeConnection } from '@/hooks/realtime/useRealtimeConnection';
 import { useChatSubscription } from '@/hooks/realtime/useChatSubscription';
 import { useMessageSubscription } from '@/hooks/realtime/useMessageSubscription';
-import { ConnectionManager } from './realtime/ConnectionManager';
+import { ConnectionManager } from '@/utils/realtime/ConnectionManager';
+import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 import type { RealtimeContextValue } from './realtime/types';
 
@@ -36,8 +37,32 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     handleConnectionError
   );
 
+  // Update connection manager state when connection state changes
+  useEffect(() => {
+    logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Updating connection manager state', {
+      status: connectionState.status,
+      retryCount: connectionState.retryCount,
+      timestamp: new Date().toISOString()
+    });
+    
+    connectionManager.current.updateConnectionState(connectionState);
+  }, [connectionState]);
+
   const { subscribeToChat, unsubscribeFromChat } = useChatSubscription(
-    subscriptionManagerSubscribe,
+    (chatId: string, componentId: string) => {
+      const subscribeFunc = () => subscriptionManagerSubscribe({
+        table: 'chats',
+        schema: 'public',
+        filter: `id=eq.${chatId}`,
+        event: '*',
+        onMessage: handleChatMessage
+      });
+
+      connectionManager.current.queueSubscription(
+        `chat-${chatId}-${componentId}`,
+        subscribeFunc
+      );
+    },
     cleanupSubscriptions,
     handleConnectionError
   );
@@ -55,7 +80,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       retryManager.reset();
       connectionManager.current.clearQueue();
     };
-  }, [cleanupSubscriptions, retryManager, getActiveSubscriptions]);
+  }, [cleanupSubscriptions, retryManager]);
 
   const value: RealtimeContextValue = {
     connectionState,
