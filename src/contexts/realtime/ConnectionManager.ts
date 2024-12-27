@@ -88,7 +88,7 @@ export class ConnectionManager {
   }
 
   private async processSubscription(subscription: QueuedSubscription): Promise<void> {
-    const delay = this.backoff.nextDelay(); // Changed from getDelay to nextDelay
+    const delay = this.backoff.nextDelay();
     if (delay !== null) {
       await new Promise(resolve => setTimeout(resolve, delay));
     }
