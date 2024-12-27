@@ -2,6 +2,9 @@ import React, { useEffect, useRef, memo } from "react";
 import { logger, LogCategory } from "@/utils/logging";
 import { useRealTime } from "@/contexts/RealTimeContext";
 import { Tooltip } from "../ui/tooltip";
+import { toast } from "@/hooks/use-toast";
+
+const MAX_MESSAGE_LENGTH = 4000;
 
 interface ChatInputFieldProps {
   message: string;
@@ -38,6 +41,24 @@ const ChatInputField = memo(({
     adjustTextareaHeight();
   }, [message]);
 
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newMessage = e.target.value;
+    if (newMessage.length > MAX_MESSAGE_LENGTH) {
+      logger.warn(LogCategory.VALIDATION, 'ChatInputField', 'Message exceeds length limit:', {
+        length: newMessage.length,
+        limit: MAX_MESSAGE_LENGTH
+      });
+      toast({
+        title: "Message too long",
+        description: `Messages cannot exceed ${MAX_MESSAGE_LENGTH} characters`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setMessage(newMessage);
+    adjustTextareaHeight();
+  };
+
   const getPlaceholder = () => {
     if (connectionState.status === 'disconnected' && connectionState.retryCount >= 5) {
       return 'Connection lost. Please refresh the page...';
@@ -73,10 +94,7 @@ const ChatInputField = memo(({
           ref={textareaRef}
           rows={1}
           value={message}
-          onChange={(e) => {
-            setMessage(e.target.value);
-            adjustTextareaHeight();
-          }}
+          onChange={handleMessageChange}
           onKeyDown={handleKeyDown}
           placeholder={getPlaceholder()}
           className={`w-full min-h-[40px] max-h-[200px] resize-none bg-transparent px-4 py-3 focus:outline-none overflow-y-auto transition-all duration-150 ease-in-out chat-input-scrollbar ${
