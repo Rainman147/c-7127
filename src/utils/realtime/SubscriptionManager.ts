@@ -1,70 +1,151 @@
 import { RealtimeChannel } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
+import { CircuitBreaker } from './CircuitBreaker';
+import type { SubscriptionMetrics, ChannelMetrics } from '@/types/realtime/metrics';
 
-class SubscriptionManager {
-  private static instance: SubscriptionManager;
-  private channels: Map<string, RealtimeChannel>;
+export class SubscriptionManager {
+  private subscriptions = new Map<string, RealtimeChannel>();
+  private metrics = new Map<string, SubscriptionMetrics>();
+  private channelMetrics = new Map<string, ChannelMetrics>();
+  private circuitBreakers = new Map<string, CircuitBreaker>();
+  private subscriptionCache = new Map<string, { timestamp: number, hash: string }>();
+  
+  private static readonly CACHE_DURATION = 5000; // 5 seconds
+  private static readonly MAX_CHANNEL_SUBSCRIPTIONS = 10;
 
-  private constructor() {
-    this.channels = new Map();
+  constructor() {
+    this.startMetricsCleanup();
   }
 
-  static getInstance(): SubscriptionManager {
-    if (!SubscriptionManager.instance) {
-      SubscriptionManager.instance = new SubscriptionManager();
-    }
-    return SubscriptionManager.instance;
-  }
-
-  addChannel(key: string, channel: RealtimeChannel): void {
-    if (this.channels.has(key)) {
-      logger.warn(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Channel already exists', {
-        key,
-        timestamp: new Date().toISOString()
+  public async subscribe(
+    channelKey: string,
+    subscriptionConfig: any
+  ): Promise<RealtimeChannel | null> {
+    // Deduplication check
+    const configHash = JSON.stringify(subscriptionConfig);
+    const cached = this.subscriptionCache.get(channelKey);
+    
+    if (cached && 
+        cached.hash === configHash && 
+        Date.now() - cached.timestamp < SubscriptionManager.CACHE_DURATION) {
+      logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Duplicate subscription prevented', {
+        channelKey,
+        timeSinceLastAttempt: Date.now() - cached.timestamp
       });
-      return;
+      return this.subscriptions.get(channelKey) || null;
     }
 
-    this.channels.set(key, channel);
-    logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Added new channel', {
-      key,
-      timestamp: new Date().toISOString()
-    });
+    // Circuit breaker check
+    let breaker = this.circuitBreakers.get(channelKey);
+    if (!breaker) {
+      breaker = new CircuitBreaker();
+      this.circuitBreakers.set(channelKey, breaker);
+    }
+
+    if (!breaker.canAttempt()) {
+      logger.warn(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Circuit breaker preventing subscription', {
+        channelKey,
+        breakerState: breaker.getState()
+      });
+      return null;
+    }
+
+    // Channel capacity check
+    const channelMetrics = this.getChannelMetrics(channelKey);
+    if (channelMetrics.activeSubscriptions >= SubscriptionManager.MAX_CHANNEL_SUBSCRIPTIONS) {
+      logger.warn(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Channel capacity exceeded', {
+        channelKey,
+        activeSubscriptions: channelMetrics.activeSubscriptions
+      });
+      return null;
+    }
+
+    try {
+      // Create subscription and track metrics
+      const startTime = Date.now();
+      const channel = await this.createSubscription(channelKey, subscriptionConfig);
+      
+      this.updateMetrics(channelKey, {
+        subscriptionId: channelKey,
+        channelId: channelKey,
+        startTime,
+        lastEventTime: startTime,
+        eventCount: 0,
+        errorCount: 0,
+        reconnectCount: 0,
+        latency: []
+      });
+
+      // Cache successful subscription
+      this.subscriptionCache.set(channelKey, {
+        timestamp: Date.now(),
+        hash: configHash
+      });
+
+      breaker.recordSuccess();
+      return channel;
+    } catch (error) {
+      breaker.recordFailure();
+      logger.error(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription failed', {
+        channelKey,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return null;
+    }
   }
 
-  getChannel(key: string): RealtimeChannel | undefined {
-    return this.channels.get(key);
+  private async createSubscription(
+    channelKey: string,
+    config: any
+  ): Promise<RealtimeChannel> {
+    // Implementation of actual subscription creation
+    // This would integrate with your existing Supabase setup
+    return {} as RealtimeChannel; // Placeholder
   }
 
-  removeChannel(key: string): void {
-    const channel = this.channels.get(key);
-    if (channel) {
-      try {
-        supabase.removeChannel(channel);
-        this.channels.delete(key);
-        logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Removed channel', {
-          key,
-          timestamp: new Date().toISOString()
-        });
-      } catch (error) {
-        logger.error(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Error removing channel', {
-          key,
-          error: error instanceof Error ? error.message : String(error),
-          timestamp: new Date().toISOString()
-        });
+  private updateMetrics(channelKey: string, metrics: SubscriptionMetrics): void {
+    this.metrics.set(channelKey, metrics);
+    
+    const channelMetrics = this.getChannelMetrics(channelKey);
+    channelMetrics.activeSubscriptions++;
+    channelMetrics.lastActive = Date.now();
+    this.channelMetrics.set(channelKey, channelMetrics);
+  }
+
+  private getChannelMetrics(channelKey: string): ChannelMetrics {
+    return this.channelMetrics.get(channelKey) || {
+      channelId: channelKey,
+      activeSubscriptions: 0,
+      totalEvents: 0,
+      lastActive: Date.now(),
+      status: 'active'
+    };
+  }
+
+  private startMetricsCleanup(): void {
+    setInterval(() => {
+      const now = Date.now();
+      
+      // Clean up old cache entries
+      for (const [key, value] of this.subscriptionCache.entries()) {
+        if (now - value.timestamp > SubscriptionManager.CACHE_DURATION) {
+          this.subscriptionCache.delete(key);
+        }
       }
-    }
+      
+      // Log metrics
+      logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Metrics update', {
+        activeSubscriptions: this.subscriptions.size,
+        channelMetrics: Array.from(this.channelMetrics.values()),
+        timestamp: new Date(now).toISOString()
+      });
+    }, 30000); // Run every 30 seconds
   }
 
-  cleanup(): void {
-    this.channels.forEach((channel, key) => {
-      this.removeChannel(key);
-    });
-    logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaned up all channels', {
-      timestamp: new Date().toISOString()
-    });
+  public getMetrics(): { subscriptions: SubscriptionMetrics[], channels: ChannelMetrics[] } {
+    return {
+      subscriptions: Array.from(this.metrics.values()),
+      channels: Array.from(this.channelMetrics.values())
+    };
   }
 }
-
-export const subscriptionManager = SubscriptionManager.getInstance();
