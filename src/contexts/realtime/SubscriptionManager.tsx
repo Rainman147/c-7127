@@ -42,8 +42,16 @@ export const useSubscriptionManager = () => {
         if (status === 'SUBSCRIBED') {
           subscriptions.current.set(channelKey, channel);
         } else if (status === 'CHANNEL_ERROR') {
-          const error = new Error(`Channel error for ${config.table}`);
-          config.onError?.(error);
+          const subscriptionError: SubscriptionError = {
+            channelId: channelKey,
+            event: 'error',
+            timestamp: new Date().toISOString(),
+            connectionState: 'error',
+            retryCount: 0,
+            code: 0,
+            reason: `Channel error for ${config.table}`
+          };
+          config.onError?.(subscriptionError);
         }
       });
 
@@ -109,3 +117,4 @@ export const useSubscriptionManager = () => {
     cleanup,
     getActiveSubscriptions: () => Array.from(subscriptions.current.keys())
   };
+};
