@@ -1,28 +1,25 @@
-export interface WebSocketError {
-  code?: number;
-  reason?: string;
+export interface BaseError {
+  name: string;
+  message: string;
   timestamp: string;
   connectionState: string;
   retryCount: number;
-  name: string;
-  message: string;
+  lastAttempt: number;
+  backoffDelay: number;
+  reason: string;
 }
 
-export interface SubscriptionError extends WebSocketError {
+export interface WebSocketError extends BaseError {
+  name: 'WebSocketError';
+}
+
+export interface SubscriptionError extends BaseError {
+  name: 'ChannelError';
   channelId: string;
   event: string;
-  lastAttempt: number;
-  backoffDelay: number;
 }
 
-export interface ConnectionError extends WebSocketError {
-  lastAttempt: number;
-  backoffDelay: number;
-}
-
-export interface RetryMetadata {
-  attemptCount: number;
-  lastAttemptTime: number;
-  nextDelayMs: number;
-  maxAttemptsReached: boolean;
+export interface ConnectionError extends BaseError {
+  name: 'ConnectionError';
+  code: number;
 }

@@ -9,6 +9,7 @@ export const useWebSocketManager = (
 ) => {
   const lastPingTime = useRef<number>(Date.now());
   const healthCheckInterval = useRef<NodeJS.Timeout>();
+  const reconnectAttempts = useRef<number>(0);
 
   useEffect(() => {
     if (!channel) {
@@ -24,9 +25,12 @@ export const useWebSocketManager = (
 
     const handleOpen = () => {
       logger.info(LogCategory.WEBSOCKET, 'WebSocketManager', 'Connection opened', {
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        channelId: channel.subscribe.name,
+        reconnectAttempts: reconnectAttempts.current
       });
       lastPingTime.current = Date.now();
+      reconnectAttempts.current = 0;
     };
 
     const handleClose = (event: CloseEvent) => {
@@ -34,32 +38,60 @@ export const useWebSocketManager = (
         code: event.code,
         reason: event.reason,
         wasClean: event.wasClean,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        channelId: channel.subscribe.name,
+        reconnectAttempts: reconnectAttempts.current
       });
+      reconnectAttempts.current++;
     };
 
     const handleError = (error: Event) => {
       const errorData: WebSocketError = {
         timestamp: new Date().toISOString(),
         connectionState: socket.readyState.toString(),
-        retryCount: 0,
+        retryCount: reconnectAttempts.current,
         reason: error instanceof Error ? error.message : 'Unknown error',
         name: 'WebSocketError',
-        message: error instanceof Error ? error.message : 'WebSocket connection error'
+        message: error instanceof Error ? error.message : 'WebSocket connection error',
+        lastAttempt: Date.now(),
+        backoffDelay: Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000)
       };
       
-      logger.error(LogCategory.WEBSOCKET, 'WebSocketManager', 'Connection error', errorData);
+      logger.error(LogCategory.WEBSOCKET, 'WebSocketManager', 'Connection error', {
+        ...errorData,
+        channelId: channel.subscribe.name,
+        socketState: socket.readyState
+      });
+      
       onError(errorData);
     };
 
-    // Set up health check
+    // Set up health check with more detailed logging
     healthCheckInterval.current = setInterval(() => {
       const now = Date.now();
-      if (now - lastPingTime.current > 30000) { // 30 seconds
+      const timeSinceLastPing = now - lastPingTime.current;
+      
+      logger.debug(LogCategory.WEBSOCKET, 'WebSocketManager', 'Health check', {
+        timeSinceLastPing,
+        timestamp: new Date().toISOString(),
+        channelId: channel.subscribe.name,
+        socketState: socket.readyState,
+        reconnectAttempts: reconnectAttempts.current
+      });
+
+      if (timeSinceLastPing > 30000) {
         logger.warn(LogCategory.WEBSOCKET, 'WebSocketManager', 'Connection health check failed', {
-          timeSinceLastPing: now - lastPingTime.current,
-          timestamp: new Date().toISOString()
+          timeSinceLastPing,
+          timestamp: new Date().toISOString(),
+          channelId: channel.subscribe.name,
+          socketState: socket.readyState,
+          reconnectAttempts: reconnectAttempts.current
         });
+
+        // Trigger reconnection if needed
+        if (socket.readyState !== WebSocket.CONNECTING) {
+          socket.close();
+        }
       }
     }, 10000);
 
@@ -68,6 +100,12 @@ export const useWebSocketManager = (
     socket.onerror = handleError;
 
     return () => {
+      logger.info(LogCategory.WEBSOCKET, 'WebSocketManager', 'Cleaning up WebSocket manager', {
+        timestamp: new Date().toISOString(),
+        channelId: channel.subscribe.name,
+        reconnectAttempts: reconnectAttempts.current
+      });
+
       if (healthCheckInterval.current) {
         clearInterval(healthCheckInterval.current);
       }
@@ -78,6 +116,7 @@ export const useWebSocketManager = (
   }, [channel, onError]);
 
   return {
-    lastPingTime: lastPingTime.current
+    lastPingTime: lastPingTime.current,
+    reconnectAttempts: reconnectAttempts.current
   };
 };
