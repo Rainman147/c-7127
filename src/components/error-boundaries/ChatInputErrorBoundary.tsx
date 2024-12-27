@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
+import { ErrorTracker } from '@/utils/errorTracking';
 import { toast } from '@/hooks/use-toast';
 
 interface Props {
@@ -26,9 +27,21 @@ export class ChatInputErrorBoundary extends Component<Props, State> {
       timestamp: new Date().toISOString()
     });
 
+    ErrorTracker.trackError(error, {
+      component: 'ChatInput',
+      severity: 'high',
+      timestamp: new Date().toISOString(),
+      errorType: 'component-crash',
+      operation: 'chat-input',
+      additionalInfo: {
+        componentStack: errorInfo.componentStack,
+        lastRetryTimestamp: new Date().toISOString()
+      }
+    });
+
     toast({
-      title: "Error",
-      description: "Something went wrong with the chat input. Please refresh the page.",
+      title: "Something went wrong",
+      description: "The chat input encountered an error. Please try refreshing the page.",
       variant: "destructive",
     });
   }
@@ -36,11 +49,17 @@ export class ChatInputErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="p-4 text-center" role="alert">
-          <p className="text-red-500">Something went wrong with the chat input.</p>
+        <div 
+          className="p-4 text-center bg-destructive/10 rounded-md" 
+          role="alert"
+          aria-live="assertive"
+        >
+          <p className="text-destructive mb-2">
+            Something went wrong with the chat input.
+          </p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-2 text-blue-500 hover:underline"
+            className="text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary"
           >
             Refresh Page
           </button>

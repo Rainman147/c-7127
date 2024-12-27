@@ -3,6 +3,7 @@ import { logger, LogCategory } from "@/utils/logging";
 import { useRealTime } from "@/contexts/RealTimeContext";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { ErrorTracker } from "@/utils/errorTracking";
 
 interface ChatInputFieldProps {
   message: string;
@@ -30,14 +31,28 @@ const ChatInputField = memo(({
   });
 
   const adjustTextareaHeight = () => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      const newHeight = Math.min(textarea.scrollHeight, 200);
-      textarea.style.height = `${newHeight}px`;
-      logger.debug(LogCategory.STATE, 'ChatInputField', 'Adjusted height:', { 
-        newHeight,
+    try {
+      const textarea = textareaRef.current;
+      if (textarea) {
+        textarea.style.height = 'auto';
+        const newHeight = Math.min(textarea.scrollHeight, 200);
+        textarea.style.height = `${newHeight}px`;
+        logger.debug(LogCategory.STATE, 'ChatInputField', 'Adjusted height:', { 
+          newHeight,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      logger.error(LogCategory.ERROR, 'ChatInputField', 'Error adjusting textarea height:', {
+        error,
         timestamp: new Date().toISOString()
+      });
+      ErrorTracker.trackError(error as Error, {
+        component: 'ChatInputField',
+        severity: 'low',
+        timestamp: new Date().toISOString(),
+        errorType: 'ui-adjustment',
+        operation: 'adjust-height'
       });
     }
   };
@@ -48,24 +63,43 @@ const ChatInputField = memo(({
   }, [message]);
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newMessage = e.target.value;
-    const isInvalid = newMessage.length > maxLength;
-    
-    if (isInvalid) {
-      logger.warn(LogCategory.VALIDATION, 'ChatInputField', 'Message exceeds length limit:', {
-        length: newMessage.length,
-        limit: maxLength,
+    try {
+      const newMessage = e.target.value;
+      const isInvalid = newMessage.length > maxLength;
+      
+      if (isInvalid) {
+        logger.warn(LogCategory.VALIDATION, 'ChatInputField', 'Message exceeds length limit:', {
+          length: newMessage.length,
+          limit: maxLength,
+          timestamp: new Date().toISOString()
+        });
+        toast({
+          title: "Message too long",
+          description: `Messages cannot exceed ${maxLength} characters`,
+          variant: "destructive",
+        });
+        return;
+      }
+      setMessage(newMessage);
+      adjustTextareaHeight();
+    } catch (error) {
+      logger.error(LogCategory.ERROR, 'ChatInputField', 'Error handling message change:', {
+        error,
         timestamp: new Date().toISOString()
       });
+      ErrorTracker.trackError(error as Error, {
+        component: 'ChatInputField',
+        severity: 'medium',
+        timestamp: new Date().toISOString(),
+        errorType: 'input-handling',
+        operation: 'message-change'
+      });
       toast({
-        title: "Message too long",
-        description: `Messages cannot exceed ${maxLength} characters`,
+        title: "Error",
+        description: "Failed to update message. Please try again.",
         variant: "destructive",
       });
-      return;
     }
-    setMessage(newMessage);
-    adjustTextareaHeight();
   };
 
   const getPlaceholder = () => {
