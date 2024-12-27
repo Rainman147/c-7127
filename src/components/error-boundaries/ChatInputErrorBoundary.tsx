@@ -32,7 +32,6 @@ export class ChatInputErrorBoundary extends Component<Props, State> {
       severity: 'high',
       timestamp: new Date().toISOString(),
       errorType: 'component-crash',
-      operation: 'chat-input',
       additionalInfo: {
         componentStack: errorInfo.componentStack,
         lastRetryTimestamp: new Date().toISOString()

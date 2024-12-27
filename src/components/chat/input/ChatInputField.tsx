@@ -52,7 +52,10 @@ const ChatInputField = memo(({
         severity: 'low',
         timestamp: new Date().toISOString(),
         errorType: 'ui-adjustment',
-        operation: 'adjust-height'
+        additionalInfo: {
+          action: 'adjust-height',
+          messageLength: message.length
+        }
       });
     }
   };
@@ -92,7 +95,10 @@ const ChatInputField = memo(({
         severity: 'medium',
         timestamp: new Date().toISOString(),
         errorType: 'input-handling',
-        operation: 'message-change'
+        additionalInfo: {
+          action: 'message-change',
+          messageLength: message.length
+        }
       });
       toast({
         title: "Error",
