@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Loader2, ArrowUp } from "lucide-react";
-import AudioRecorder from "../AudioRecorder";
-import FileUploadModal from "../FileUploadModal";
+import React from "react";
+import { Button } from "../ui/button";
+import { Send } from "lucide-react";
+import { AudioRecorder } from "../AudioRecorder";
+import { FileUploader } from "../audio/FileUploader";
 
 interface ChatInputActionsProps {
   isLoading: boolean;
@@ -18,41 +19,23 @@ const ChatInputActions = ({
   onTranscriptionComplete,
   handleFileUpload
 }: ChatInputActionsProps) => {
-  const [isRecording, setIsRecording] = useState(false);
-
-  const handleRecordingStateChange = (recording: boolean) => {
-    console.log('Recording state changed:', recording);
-    setIsRecording(recording);
-  };
-
   return (
-    <div className="relative flex items-center justify-between px-4 py-2 bg-transparent">
-      {/* Left side icons */}
-      <div className="flex items-center space-x-2">
-        <FileUploadModal 
-          onFileSelected={handleFileUpload}
-          onTranscriptionComplete={onTranscriptionComplete}
-        />
+    <div className="flex items-center justify-between px-4 py-2">
+      <div className="flex items-center gap-2">
+        <AudioRecorder onTranscriptionComplete={onTranscriptionComplete} />
+        <FileUploader onFileSelect={handleFileUpload} />
       </div>
-      
-      {/* Right side icons */}
-      <div className="flex items-center space-x-2">
-        <AudioRecorder 
-          onTranscriptionComplete={onTranscriptionComplete}
-          onRecordingStateChange={handleRecordingStateChange}
-        />
-        <button 
-          onClick={handleSubmit}
-          disabled={isLoading || !message.trim()}
-          className="p-2 bg-white rounded-full hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-        >
-          {isLoading ? (
-            <Loader2 className="h-5 w-5 text-black animate-spin" />
-          ) : (
-            <ArrowUp className="h-5 w-5 text-black" />
-          )}
-        </button>
-      </div>
+      <Button
+        onClick={handleSubmit}
+        disabled={isLoading || !message.trim()}
+        className={`transition-opacity duration-200 ${
+          !message.trim() ? 'opacity-50' : ''
+        }`}
+        size="icon"
+        variant="ghost"
+      >
+        <Send className="h-5 w-5" />
+      </Button>
     </div>
   );
 };
