@@ -26,7 +26,7 @@ const ChatInputContainer = ({
   const [message, setMessage] = useState("");
   const { toast } = useToast();
   const { retryCount, handleRetry, resetRetryCount } = useRetryLogic();
-  const { validateMessage } = useMessageValidation();
+  const { validateMessage, MAX_MESSAGE_LENGTH } = useMessageValidation();
 
   const {
     handleSubmit: originalHandleSubmit,
