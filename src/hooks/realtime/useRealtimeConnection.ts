@@ -1,63 +1,55 @@
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
-import { ExponentialBackoff } from '@/utils/backoff';
-import type { ConnectionStatus } from '@/contexts/realtime/types';
+import type { CustomError, ConnectionError } from '@/contexts/realtime/types/errors';
+import type { ConnectionState } from '@/contexts/realtime/types';
+import { useRetryManager } from './useRetryManager';
 
-interface ConnectionState {
-  status: ConnectionStatus;
-  retryCount: number;
-  lastAttempt: number;
-}
-
-export const useRealtimeConnection = (backoffConfig: {
-  initialDelay: number;
-  maxDelay: number;
-  maxAttempts: number;
-  jitter: boolean;
-}) => {
+export const useRealtimeConnection = () => {
   const { toast } = useToast();
-  const backoff = useRef(new ExponentialBackoff(backoffConfig));
-  
-  const [connectionState, setConnectionState] = useState<ConnectionState>({
+  const retryManager = useRetryManager();
+  const connectionStateRef = useRef<ConnectionState>({
     status: 'connecting',
     retryCount: 0,
-    lastAttempt: Date.now()
+    lastAttempt: Date.now(),
+    error: undefined
   });
 
-  const handleConnectionError = useCallback((error: Error) => {
-    logger.error(LogCategory.WEBSOCKET, 'RealtimeConnection', 'Connection error occurred', {
-      error: error.message,
-      retryCount: backoff.current.attemptCount,
+  const handleConnectionError = useCallback((error: CustomError) => {
+    logger.error(LogCategory.WEBSOCKET, 'RealTimeProvider', 'WebSocket error occurred', {
+      error,
       timestamp: new Date().toISOString()
     });
 
-    const delay = backoff.current.nextDelay();
-    if (delay !== null) {
-      setConnectionState(prev => ({
-        status: 'disconnected',
-        retryCount: prev.retryCount + 1,
-        lastAttempt: Date.now()
-      }));
+    const connectionError: ConnectionError = {
+      name: 'ConnectionError',
+      code: error.code || 0,
+      reason: error.reason || 'Unknown error',
+      timestamp: new Date().toISOString(),
+      connectionState: 'error',
+      retryCount: retryManager.getAttemptCount(),
+      lastAttempt: Date.now(),
+      backoffDelay: retryManager.getNextDelay() || 0,
+      message: error.message
+    };
 
-      toast({
-        title: "Connection Lost",
-        description: `Reconnecting... (Attempt ${backoff.current.attemptCount}/5)`,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Connection Failed",
-        description: "Maximum retry attempts reached. Please refresh the page.",
-        variant: "destructive",
-      });
-    }
-  }, [toast]);
+    connectionStateRef.current = {
+      status: 'disconnected',
+      error: connectionError,
+      retryCount: connectionStateRef.current.retryCount + 1,
+      lastAttempt: Date.now()
+    };
+
+    toast({
+      title: "Connection Lost",
+      description: `Attempting to reconnect... (Attempt ${retryManager.getAttemptCount()}/5)`,
+      variant: "destructive",
+    });
+  }, [retryManager, toast]);
 
   return {
-    connectionState,
-    setConnectionState,
+    connectionState: connectionStateRef.current,
     handleConnectionError,
-    backoff: backoff.current
+    retryManager
   };
 };

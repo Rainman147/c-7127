@@ -1,84 +1,47 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
-import { useSubscriptionManager } from '@/contexts/realtime/useSubscriptionManager';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { CustomError } from '@/contexts/realtime/types/errors';
 
 export const useMessageSubscription = (
-  messageId: string | undefined,
-  onMessageUpdate: (content: string) => void
+  subscribeToChannel: (config: any) => void,
+  unsubscribeFromChannel: (channelKey: string) => void,
+  handleError: (error: CustomError) => void,
+  handleMessageUpdate: (messageId: string, onUpdate: (content: string) => void) => (payload: any) => void
 ) => {
-  const { subscribe, cleanup } = useSubscriptionManager();
-  const currentMessageId = useRef<string>();
-  const channelRef = useRef<RealtimeChannel>();
-
-  const setupSubscription = useCallback(async () => {
-    if (!messageId || messageId === currentMessageId.current) {
-      logger.debug(LogCategory.WEBSOCKET, 'MessageSubscription', 'Skipping subscription setup', {
-        messageId,
-        currentMessageId: currentMessageId.current
-      });
-      return;
-    }
-
-    if (channelRef.current) {
-      cleanup(`messages-id=eq.${currentMessageId.current}`);
-      channelRef.current = undefined;
-    }
-
-    currentMessageId.current = messageId;
-
-    try {
-      const channel = subscribe({
-        event: '*',
-        schema: 'public',
-        table: 'messages',
-        filter: `id=eq.${messageId}`,
-        onMessage: (payload) => {
-          const newMessage = payload.new;
-          logger.debug(LogCategory.WEBSOCKET, 'MessageSubscription', 'Message update received', {
-            messageId,
-            timestamp: new Date().toISOString()
-          });
-          onMessageUpdate(newMessage.content);
-        },
-        onError: (error) => {
-          logger.error(LogCategory.WEBSOCKET, 'MessageSubscription', 'Subscription error', {
-            error,
-            messageId,
-            timestamp: new Date().toISOString()
-          });
-        },
-        onSubscriptionStatus: (status) => {
-          logger.info(LogCategory.WEBSOCKET, 'MessageSubscription', 'Subscription status changed', {
-            messageId,
-            status,
-            timestamp: new Date().toISOString()
-          });
-        }
-      });
-
-      channelRef.current = channel;
-    } catch (error) {
-      logger.error(LogCategory.WEBSOCKET, 'MessageSubscription', 'Failed to setup subscription', {
-        messageId,
-        error: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString()
-      });
-    }
-  }, [messageId, subscribe, cleanup, onMessageUpdate]);
-
-  useEffect(() => {
-    setupSubscription();
-    return () => {
-      if (currentMessageId.current) {
-        logger.info(LogCategory.WEBSOCKET, 'MessageSubscription', 'Cleaning up subscription', {
-          messageId: currentMessageId.current,
+  const subscribeToMessage = useCallback((messageId: string, componentId: string, onUpdate: (content: string) => void) => {
+    const subscriptionKey = `messages-id=eq.${messageId}`;
+    const config = {
+      event: '*',
+      schema: 'public',
+      table: 'messages',
+      filter: `id=eq.${messageId}`,
+      onMessage: handleMessageUpdate(messageId, onUpdate),
+      onError: handleError,
+      onSubscriptionStatus: (status: string) => {
+        logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Message subscription status changed', {
+          messageId,
+          status,
           timestamp: new Date().toISOString()
         });
-        cleanup(`messages-id=eq.${currentMessageId.current}`);
-        channelRef.current = undefined;
-        currentMessageId.current = undefined;
       }
     };
-  }, [messageId, setupSubscription, cleanup]);
+
+    subscribeToChannel(config);
+    
+    logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Message subscription queued', {
+      messageId,
+      componentId,
+      timestamp: new Date().toISOString()
+    });
+  }, [subscribeToChannel, handleError, handleMessageUpdate]);
+
+  const unsubscribeFromMessage = useCallback((messageId: string, componentId: string) => {
+    const subscriptionKey = `messages-id=eq.${messageId}`;
+    unsubscribeFromChannel(subscriptionKey);
+  }, [unsubscribeFromChannel]);
+
+  return {
+    subscribeToMessage,
+    unsubscribeFromMessage
+  };
 };
