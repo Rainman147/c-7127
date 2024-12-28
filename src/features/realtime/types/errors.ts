@@ -6,13 +6,10 @@ export interface RetryMetadata {
 }
 
 export interface WebSocketError {
-  name: 'WebSocketError';
+  code: number;
   message: string;
-  timestamp: string;
-  connectionState: string;
-  retryCount: number;
-  lastAttempt: number;
-  backoffDelay: number;
+  status: number;
+  reason?: string;
 }
 
 export interface SubscriptionError {
