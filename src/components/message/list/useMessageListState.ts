@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { useViewportMonitor } from '@/hooks/useViewportMonitor';
-import { useRealTime } from '@/contexts/RealTimeContext';
 import { useMessageGrouping } from '@/hooks/chat/useMessageGrouping';
 import { usePerformanceMetrics } from '@/hooks/chat/usePerformanceMetrics';
 import type { Message } from '@/types/chat';
@@ -15,7 +14,6 @@ export const useMessageListState = (messages: Message[]) => {
   const renderStartTime = useRef(performance.now());
   
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
-  const { connectionState } = useRealTime();
   const [listHeight, setListHeight] = useState(0);
 
   const messageGroups = useMessageGrouping(messages);
@@ -45,7 +43,6 @@ export const useMessageListState = (messages: Message[]) => {
     sizeMap,
     renderStartTime,
     viewportHeight,
-    connectionState,
     listHeight,
     messageGroups,
     performanceMetrics

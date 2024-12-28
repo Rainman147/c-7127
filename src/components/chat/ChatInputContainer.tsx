@@ -4,8 +4,6 @@ import { ErrorTracker } from "@/utils/errorTracking";
 import type { ErrorMetadata } from "@/types/errorTracking";
 import ChatInputField from "./ChatInputField";
 import ChatInputActions from "./ChatInputActions";
-import { ConnectionStatusBar } from "./ConnectionStatusBar";
-import { useChatInput } from "@/hooks/chat/useChatInput";
 import { useToast } from "@/hooks/use-toast";
 import { useRetryLogic } from "@/hooks/chat/useRetryLogic";
 import { useMessageValidation } from "@/hooks/chat/useMessageValidation";
@@ -32,71 +30,55 @@ const ChatInputContainer = ({
   const { addMessage, processMessages } = useMessageQueue();
   const queueStatus = useQueueMonitor();
 
-  const {
-    handleSubmit: originalHandleSubmit,
-    handleKeyDown,
-    handleTranscriptionComplete,
-    handleFileUpload,
-    isDisabled,
-    connectionState
-  } = useChatInput({
-    onSend: async (msg: string, type?: 'text' | 'audio') => {
-      try {
-        if (!validateMessage(msg)) {
-          return;
-        }
+  const handleSubmit = async () => {
+    if (!message.trim() || isLoading) {
+      return;
+    }
 
-        logger.debug(LogCategory.COMMUNICATION, 'ChatInput', 'Attempting to send message:', {
-          length: msg.length,
-          type,
-          connectionState: connectionState.status,
-          retryCount
+    try {
+      logger.debug(LogCategory.COMMUNICATION, 'ChatInput', 'Attempting to send message:', {
+        length: message.length,
+        retryCount
+      });
+
+      await onSend(message, 'text');
+      setMessage("");
+      
+      if (retryCount > 0) {
+        logger.info(LogCategory.STATE, 'ChatInput', 'Successfully sent message after retries:', {
+          attempts: retryCount + 1
         });
-
-        await onSend(msg, type);
-        
-        if (retryCount > 0) {
-          logger.info(LogCategory.STATE, 'ChatInput', 'Successfully sent message after retries:', {
-            attempts: retryCount + 1
-          });
-          resetRetryCount();
-        }
-        
-        logger.debug(LogCategory.STATE, 'ChatInput', 'Message sent successfully');
-      } catch (error) {
-        logger.error(LogCategory.ERROR, 'ChatInput', 'Error sending message:', {
-          error,
-          retryCount: retryCount + 1,
-          connectionState: connectionState.status
-        });
-
-        await handleRetry(
-          () => originalHandleSubmit(),
-          connectionState.status
-        );
-
-        const metadata: ErrorMetadata = {
-          component: 'ChatInput',
-          severity: 'high',
-          timestamp: new Date().toISOString(),
-          errorType: 'submission',
-          operation: 'send-message',
-          additionalInfo: {
-            messageLength: msg.length,
-            messageType: type,
-            connectionState: connectionState.status,
-            retryCount,
-            lastRetryTimestamp: new Date().toISOString()
-          }
-        };
-        ErrorTracker.trackError(error as Error, metadata);
-        throw error;
+        resetRetryCount();
       }
-    },
-    onTranscriptionComplete,
-    message,
-    setMessage
-  });
+    } catch (error) {
+      logger.error(LogCategory.ERROR, 'ChatInput', 'Error sending message:', {
+        error,
+        retryCount: retryCount + 1
+      });
+
+      const metadata: ErrorMetadata = {
+        component: 'ChatInput',
+        severity: 'high',
+        timestamp: new Date().toISOString(),
+        errorType: 'submission',
+        operation: 'send-message',
+        additionalInfo: {
+          messageLength: message.length,
+          retryCount
+        }
+      };
+      
+      ErrorTracker.trackError(error as Error, metadata);
+      throw error;
+    }
+  };
+
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
+      e.preventDefault();
+      await handleSubmit();
+    }
+  };
 
   const handleMessageChange = async (newMessage: string) => {
     try {
@@ -115,16 +97,10 @@ const ChatInputContainer = ({
       }
       
       setMessage(newMessage);
-
-      // Queue message for offline support
-      if (connectionState.status !== 'connected') {
-        await addMessage(newMessage, 'medium');
-      }
     } catch (error) {
       logger.error(LogCategory.ERROR, 'ChatInput', 'Error updating message:', {
         error,
-        messageLength: newMessage.length,
-        connectionState: connectionState.status
+        messageLength: newMessage.length
       });
 
       const metadata: ErrorMetadata = {
@@ -135,45 +111,39 @@ const ChatInputContainer = ({
         operation: 'update-message',
         additionalInfo: {
           messageLength: newMessage.length,
-          retryCount,
-          connectionState: connectionState.status
+          retryCount
         }
       };
       ErrorTracker.trackError(error as Error, metadata);
     }
   };
 
-  // Process queued messages when connection is available
+  // Process queued messages when connection is restored
   useEffect(() => {
-    if (connectionState.status === 'connected' && queueStatus.pending > 0) {
+    if (queueStatus.pending > 0) {
       processMessages(async (queuedMessage) => {
         await onSend(queuedMessage.content, 'text');
       });
     }
-  }, [connectionState.status, queueStatus.pending, onSend, processMessages]);
-
-  const inputDisabled = isDisabled || 
-    (connectionState.status === 'disconnected' && connectionState.retryCount >= 5) ||
-    isLoading;
+  }, [queueStatus.pending, onSend, processMessages]);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-[#1E1E1E]/80 backdrop-blur-sm py-4 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="relative flex w-full flex-col items-center">
-          <ConnectionStatusBar connectionState={connectionState} />
           <div className="w-full rounded-xl overflow-hidden bg-[#2F2F2F] border border-white/[0.05] shadow-lg">
             <ChatInputField
               message={message}
               setMessage={handleMessageChange}
               handleKeyDown={handleKeyDown}
-              isLoading={inputDisabled}
+              isLoading={isLoading}
+              maxLength={MAX_MESSAGE_LENGTH}
             />
             <ChatInputActions
-              isLoading={inputDisabled}
+              isLoading={isLoading}
               message={message}
-              handleSubmit={originalHandleSubmit}
-              onTranscriptionComplete={handleTranscriptionComplete}
-              handleFileUpload={handleFileUpload}
+              handleSubmit={handleSubmit}
+              onTranscriptionComplete={onTranscriptionComplete}
             />
           </div>
         </div>
