@@ -1,8 +1,9 @@
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 import { VariableSizeList as List } from 'react-window';
 import { ConnectionStatus } from './ConnectionStatus';
 import { MessageGroup } from './MessageGroup';
 import { logger, LogCategory } from '@/utils/logging';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Message } from '@/types/chat';
 
 interface ListContainerProps {
@@ -24,6 +25,21 @@ const ListContainer = memo(({
   sizeMap,
   setItemSize
 }: ListContainerProps) => {
+  const queryClient = useQueryClient();
+  
+  useEffect(() => {
+    logger.debug(LogCategory.RENDER, 'ListContainer', 'Messages updated:', {
+      messageCount: messages.length,
+      groupCount: messageGroups.length,
+      timestamp: new Date().toISOString()
+    });
+
+    // Reset list measurements when messages change
+    if (listRef.current) {
+      listRef.current.resetAfterIndex(0);
+    }
+  }, [messages.length, messageGroups.length, listRef]);
+
   const getItemSize = (index: number) => {
     const groupId = messageGroups[index]?.id;
     return groupId ? sizeMap.current[groupId] || 100 : 100;
@@ -40,7 +56,8 @@ const ListContainer = memo(({
   logger.debug(LogCategory.RENDER, 'ListContainer', 'Rendering message list:', {
     messageCount: messages.length,
     groupCount: messageGroups.length,
-    viewportHeight
+    viewportHeight,
+    timestamp: new Date().toISOString()
   });
 
   return (

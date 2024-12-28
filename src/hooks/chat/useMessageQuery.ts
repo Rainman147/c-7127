@@ -3,9 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message, MessageType } from '@/types/chat';
 
-export const useMessageQuery = (chatId: string) => {
+export const useMessageQuery = (chatId: string | null) => {
   const fetchMessages = async (): Promise<Message[]> => {
-    logger.debug(LogCategory.STATE, 'useMessageQuery', 'Fetching messages for chat:', chatId);
+    if (!chatId) {
+      logger.debug(LogCategory.STATE, 'useMessageQuery', 'No chat ID provided');
+      return [];
+    }
+
+    logger.debug(LogCategory.STATE, 'useMessageQuery', 'Fetching messages', {
+      chatId,
+      timestamp: new Date().toISOString()
+    });
     
     const { data, error } = await supabase
       .from('messages')
@@ -14,11 +22,20 @@ export const useMessageQuery = (chatId: string) => {
       .order('created_at', { ascending: true });
 
     if (error) {
-      logger.error(LogCategory.STATE, 'useMessageQuery', 'Error fetching messages:', error.message);
-      throw new Error(error.message);
+      logger.error(LogCategory.STATE, 'useMessageQuery', 'Error fetching messages:', {
+        error: error.message,
+        chatId,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
     }
 
-    // Convert database messages to Message type
+    logger.debug(LogCategory.STATE, 'useMessageQuery', 'Messages fetched successfully', {
+      chatId,
+      messageCount: data.length,
+      timestamp: new Date().toISOString()
+    });
+
     return data.map(msg => ({
       id: msg.id,
       role: msg.sender === 'user' ? 'user' : 'assistant',
@@ -32,5 +49,16 @@ export const useMessageQuery = (chatId: string) => {
   return useQuery({
     queryKey: ['messages', chatId],
     queryFn: fetchMessages,
+    staleTime: 0, // Always fetch fresh data for real-time chat
+    enabled: !!chatId,
+    refetchOnWindowFocus: true,
+    retry: 3,
+    onError: (error) => {
+      logger.error(LogCategory.STATE, 'useMessageQuery', 'Query error:', {
+        error: error instanceof Error ? error.message : String(error),
+        chatId,
+        timestamp: new Date().toISOString()
+      });
+    }
   });
 };
