@@ -30,7 +30,14 @@ export const chatService = {
         messageId: message.id
       });
 
-      return message;
+      return {
+        id: message.id,
+        content: message.content,
+        role: message.sender as 'user' | 'assistant',
+        type: message.type as 'text' | 'audio',
+        sequence: message.sequence,
+        created_at: message.created_at
+      } as Message;
     } catch (error) {
       logger.error(LogCategory.ERROR, 'ChatService', 'Error sending message:', error);
       throw error;
@@ -58,7 +65,8 @@ export const chatService = {
         content: msg.content,
         role: msg.sender as 'user' | 'assistant',
         type: msg.type as 'text' | 'audio',
-        sequence: msg.sequence
+        sequence: msg.sequence,
+        created_at: msg.created_at
       }));
     } catch (error) {
       logger.error(LogCategory.ERROR, 'ChatService', 'Error fetching messages:', error);
