@@ -53,12 +53,14 @@ export const useMessageQuery = (chatId: string | null) => {
     enabled: !!chatId,
     refetchOnWindowFocus: true,
     retry: 3,
-    onError: (error) => {
-      logger.error(LogCategory.STATE, 'useMessageQuery', 'Query error:', {
-        error: error instanceof Error ? error.message : String(error),
-        chatId,
-        timestamp: new Date().toISOString()
-      });
+    meta: {
+      onError: (error: Error) => {
+        logger.error(LogCategory.STATE, 'useMessageQuery', 'Query error:', {
+          error: error instanceof Error ? error.message : String(error),
+          chatId,
+          timestamp: new Date().toISOString()
+        });
+      }
     }
   });
 };
