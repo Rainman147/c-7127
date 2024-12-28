@@ -11,7 +11,6 @@ import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 import type { RealtimeContextValue } from './realtime/types';
 import { supabase } from '@/integrations/supabase/client';
-import { measurePerformance } from '@/utils/logging';
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
@@ -32,27 +31,29 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     getActiveSubscriptions
   } = useSubscriptionManager();
 
-  // Log session state changes
   useEffect(() => {
-    const { data: { session } } = supabase.auth.getSession();
-    const newSessionId = session?.user?.id || null;
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const newSessionId = session?.user?.id || null;
+      
+      logger.info(LogCategory.STATE, 'RealTimeProvider', 'Session state updated', {
+        previousSessionId: sessionRef.current,
+        newSessionId,
+        hasSession: !!session,
+        connectionState: connectionState.status,
+        timestamp: new Date().toISOString()
+      });
+      
+      sessionRef.current = newSessionId;
+    };
     
-    logger.info(LogCategory.STATE, 'RealTimeProvider', 'Session state updated', {
-      previousSessionId: sessionRef.current,
-      newSessionId,
-      hasSession: !!session,
-      connectionState: connectionState.status,
-      timestamp: new Date().toISOString()
-    });
-    
-    sessionRef.current = newSessionId;
+    getSession();
   }, [connectionState.status]);
 
   const { handleChatMessage, handleMessageUpdate } = useMessageHandlers(
     (message: Message) => {
-      logger.debug(LogCategory.MESSAGING, 'RealTimeProvider', 'Handling new message', {
+      logger.debug(LogCategory.STATE, 'RealTimeProvider', 'Handling new message', {
         messageId: message.id,
-        chatId: message.chat_id,
         type: message.type,
         sessionId: sessionRef.current,
         connectionState: connectionState.status,
@@ -63,7 +64,6 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     () => Math.min(1000 * Math.pow(2, connectionState.retryCount), 30000)
   );
 
-  // Initialize chat and message subscriptions
   const {
     subscribeToChat,
     unsubscribeFromChat
@@ -72,7 +72,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     cleanupSubscriptions, 
     handleConnectionError,
     (error) => {
-      logger.error(LogCategory.SUBSCRIPTION, 'RealTimeProvider', 'Chat subscription error', {
+      logger.error(LogCategory.STATE, 'RealTimeProvider', 'Chat subscription error', {
         error: error.message,
         sessionId: sessionRef.current,
         connectionState: connectionState.status,
@@ -89,18 +89,9 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     subscriptionManagerSubscribe, 
     cleanupSubscriptions, 
     handleConnectionError,
-    (error) => {
-      logger.error(LogCategory.SUBSCRIPTION, 'RealTimeProvider', 'Message subscription error', {
-        error: error.message,
-        sessionId: sessionRef.current,
-        connectionState: connectionState.status,
-        retryCount: connectionState.retryCount,
-        timestamp: new Date().toISOString()
-      });
-    }
+    handleMessageUpdate // Now correctly passing the message update handler
   );
 
-  // Initialize the channel
   useEffect(() => {
     logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Setting up realtime channel', {
       timestamp: new Date().toISOString(),
