@@ -7,43 +7,25 @@ import type { SubscriptionConfig } from '@/contexts/realtime/types';
 export const useChatSubscription = (
   subscribeToChannel: (config: SubscriptionConfig) => void,
   unsubscribeFromChannel: (channelKey: string) => void,
-  handleError: (error: CustomError) => void,
-  onSubscriptionError: (error: Error) => void
+  handleError: (error: CustomError) => void
 ) => {
   const subscribeToChat = useCallback((chatId: string, componentId: string) => {
     const subscriptionKey = `messages-chat_id=eq.${chatId}`;
-    
-    logger.info(LogCategory.SUBSCRIPTION, 'ChatSubscription', 'Initializing chat subscription', {
-      chatId,
-      componentId,
-      subscriptionKey,
-      timestamp: new Date().toISOString()
-    });
-
     const config: SubscriptionConfig = {
       event: '*',
       schema: 'public',
       table: 'messages',
       filter: `chat_id=eq.${chatId}`,
       onMessage: (payload: any) => {
-        logger.debug(LogCategory.SUBSCRIPTION, 'ChatSubscription', 'Received message', {
+        logger.debug(LogCategory.WEBSOCKET, 'ChatSubscription', 'Received message', {
           chatId,
-          messageId: payload.new?.id,
-          type: payload.type,
+          payload,
           timestamp: new Date().toISOString()
         });
       },
-      onError: (error: CustomError) => {
-        logger.error(LogCategory.SUBSCRIPTION, 'ChatSubscription', 'Subscription error', {
-          chatId,
-          error: error.message,
-          timestamp: new Date().toISOString()
-        });
-        handleError(error);
-        onSubscriptionError(new Error(error.message));
-      },
+      onError: handleError,
       onSubscriptionStatus: (status: string) => {
-        logger.info(LogCategory.SUBSCRIPTION, 'ChatSubscription', 'Chat subscription status changed', {
+        logger.info(LogCategory.WEBSOCKET, 'ChatSubscription', 'Chat subscription status changed', {
           chatId,
           status,
           timestamp: new Date().toISOString()
@@ -52,17 +34,16 @@ export const useChatSubscription = (
     };
 
     subscribeToChannel(config);
-  }, [subscribeToChannel, handleError, onSubscriptionError]);
-
-  const unsubscribeFromChat = useCallback((chatId: string, componentId: string) => {
-    const subscriptionKey = `messages-chat_id=eq.${chatId}`;
     
-    logger.info(LogCategory.SUBSCRIPTION, 'ChatSubscription', 'Unsubscribing from chat', {
+    logger.info(LogCategory.WEBSOCKET, 'ChatSubscription', 'Chat subscription queued', {
       chatId,
       componentId,
       timestamp: new Date().toISOString()
     });
-    
+  }, [subscribeToChannel, handleError]);
+
+  const unsubscribeFromChat = useCallback((chatId: string, componentId: string) => {
+    const subscriptionKey = `messages-chat_id=eq.${chatId}`;
     unsubscribeFromChannel(subscriptionKey);
   }, [unsubscribeFromChannel]);
 

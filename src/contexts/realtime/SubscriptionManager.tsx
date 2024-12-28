@@ -1,92 +1,160 @@
+import { useCallback, useRef } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
-import { logger, LogCategory } from '@/utils/logging';
 import { supabase } from '@/integrations/supabase/client';
+import { logger, LogCategory } from '@/utils/logging';
 import type { SubscriptionConfig } from './types';
+import type { SubscriptionError } from './types/errors';
 
-export class SubscriptionManager {
-  private subscriptions: Map<string, RealtimeChannel>;
-  private cleanupTimeouts: Map<string, NodeJS.Timeout>;
+interface SubscriptionMetrics {
+  createdAt: number;
+  lastEventAt: number;
+  errorCount: number;
+  reconnectCount: number;
+}
 
-  constructor() {
-    this.subscriptions = new Map();
-    this.cleanupTimeouts = new Map();
-  }
+export const useSubscriptionManager = () => {
+  const subscriptions = useRef(new Map<string, RealtimeChannel>());
+  const subscriptionTimers = useRef(new Map<string, NodeJS.Timeout>());
+  const subscriptionMetrics = useRef(new Map<string, SubscriptionMetrics>());
 
-  public subscribe(config: SubscriptionConfig): RealtimeChannel {
+  const cleanupChannel = useCallback((channelKey: string) => {
+    const channel = subscriptions.current.get(channelKey);
+    if (channel) {
+      logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up channel', {
+        channelKey,
+        metrics: subscriptionMetrics.current.get(channelKey),
+        timestamp: new Date().toISOString()
+      });
+      
+      supabase.removeChannel(channel);
+      subscriptions.current.delete(channelKey);
+      subscriptionMetrics.current.delete(channelKey);
+      
+      const timer = subscriptionTimers.current.get(channelKey);
+      if (timer) {
+        clearTimeout(timer);
+        subscriptionTimers.current.delete(channelKey);
+      }
+    }
+  }, []);
+
+  const subscribe = useCallback((config: SubscriptionConfig): RealtimeChannel => {
     const channelKey = `${config.table}-${config.filter || 'all'}`;
     
-    if (this.subscriptions.has(channelKey)) {
-      this.cleanup(channelKey);
+    if (subscriptions.current.has(channelKey)) {
+      logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up existing subscription', {
+        channelKey,
+        metrics: subscriptionMetrics.current.get(channelKey),
+        timestamp: new Date().toISOString()
+      });
+      cleanupChannel(channelKey);
     }
 
-    logger.debug(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Creating subscription', {
+    logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Creating new subscription', {
       channelKey,
       table: config.table,
       filter: config.filter,
       timestamp: new Date().toISOString()
     });
 
-    const channel = supabase.channel(channelKey)
+    const channel = supabase.channel(channelKey);
+    const metrics = {
+      createdAt: Date.now(),
+      lastEventAt: Date.now(),
+      errorCount: 0,
+      reconnectCount: 0
+    };
+    subscriptionMetrics.current.set(channelKey, metrics);
+
+    channel
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         { 
           event: config.event,
           schema: config.schema,
           table: config.table,
           filter: config.filter 
         },
-        (payload) => {
-          logger.debug(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Received message', {
+        (payload: any) => {
+          logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
             channelKey,
             event: payload.type,
             timestamp: new Date().toISOString()
           });
+          metrics.lastEventAt = Date.now();
           config.onMessage(payload);
         }
       )
       .subscribe((status) => {
-        logger.info(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Subscription status changed', {
+        logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription status changed', {
           channelKey,
           status,
+          metrics: subscriptionMetrics.current.get(channelKey),
           timestamp: new Date().toISOString()
         });
         
         if (status === 'SUBSCRIBED') {
-          this.subscriptions.set(channelKey, channel);
-          config.onSubscriptionStatus?.('SUBSCRIBED');
+          subscriptions.current.set(channelKey, channel);
         } else if (status === 'CHANNEL_ERROR') {
-          const error = new Error(`Channel error for ${config.table}`);
-          config.onError?.(error);
-          this.cleanup(channelKey);
-          config.onSubscriptionStatus?.('CHANNEL_ERROR');
+          metrics.errorCount++;
+          const subscriptionError: SubscriptionError = {
+            channelId: channelKey,
+            event: 'error',
+            name: 'ChannelError',
+            message: `Channel error for ${config.table}`,
+            timestamp: new Date().toISOString(),
+            connectionState: 'error',
+            retryCount: metrics.errorCount,
+            lastAttempt: Date.now(),
+            backoffDelay: Math.min(1000 * Math.pow(2, metrics.errorCount), 30000),
+            reason: `Channel error for ${config.table}`
+          };
+          config.onError?.(subscriptionError);
+        } else if (status === 'CLOSED') {
+          metrics.reconnectCount++;
         }
+        
+        config.onSubscriptionStatus?.(status);
       });
 
     return channel;
-  }
+  }, [cleanupChannel]);
 
-  public cleanup(channelKey?: string): void {
-    if (channelKey) {
-      const channel = this.subscriptions.get(channelKey);
-      if (channel) {
-        logger.info(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Cleaning up subscription', {
-          channelKey,
-          timestamp: new Date().toISOString()
-        });
-        channel.unsubscribe();
-        this.subscriptions.delete(channelKey);
-      }
-    } else {
-      logger.info(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Cleaning up all subscriptions', {
-        count: this.subscriptions.size,
-        subscriptionKeys: Array.from(this.subscriptions.keys()),
-        timestamp: new Date().toISOString()
-      });
-      this.subscriptions.forEach((channel, key) => this.cleanup(key));
-    }
-  }
+  const addSubscription = useCallback(({ channelKey, channel, onError }: {
+    channelKey: string;
+    channel: RealtimeChannel;
+    onError: (error: SubscriptionError) => void;
+  }) => {
+    subscriptions.current.set(channelKey, channel);
+  }, []);
 
-  public getActiveSubscriptions(): string[] {
-    return Array.from(this.subscriptions.keys());
-  }
-}
+  const removeSubscription = useCallback((channelKey: string) => {
+    cleanupChannel(channelKey);
+  }, [cleanupChannel]);
+
+  const getActiveSubscriptions = useCallback(() => {
+    return Array.from(subscriptions.current.keys());
+  }, []);
+
+  const cleanup = useCallback(() => {
+    logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up all subscriptions', {
+      activeSubscriptions: Array.from(subscriptionMetrics.current.entries()).map(([key, metrics]) => ({
+        channelKey: key,
+        metrics
+      })),
+      timestamp: new Date().toISOString()
+    });
+    
+    subscriptions.current.forEach((_, key) => cleanupChannel(key));
+  }, [cleanupChannel]);
+
+  return {
+    subscribe,
+    cleanup,
+    addSubscription,
+    removeSubscription,
+    getActiveSubscriptions,
+    getMetrics: () => Array.from(subscriptionMetrics.current.entries()),
+    getActiveSubscriptionCount: () => subscriptions.current.size
+  };
+};

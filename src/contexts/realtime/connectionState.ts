@@ -5,29 +5,30 @@ import type { ConnectionState, ConnectionStore } from './types';
 const INITIAL_STATE: ConnectionState = {
   status: 'connecting',
   retryCount: 0,
-  lastAttempt: Date.now(),
-  error: undefined
+  error: undefined,
+  lastAttempt: Date.now()
 };
 
 export const useConnectionState = create<ConnectionStore>((set) => ({
-  connectionState: INITIAL_STATE,
-  setConnectionState: (newState) => 
+  state: INITIAL_STATE,
+  updateState: (newState) => {
     set((current) => {
       const updatedState = {
-        ...current.connectionState,
+        ...current.state,
         ...newState,
         lastAttempt: Date.now()
       };
 
       logger.info(LogCategory.STATE, 'ConnectionState', 'State transition', {
-        from: current.connectionState.status,
+        from: current.state.status,
         to: updatedState.status,
         retryCount: updatedState.retryCount,
         error: updatedState.error?.message,
         timestamp: new Date().toISOString()
       });
 
-      return { connectionState: updatedState };
-    }),
-  resetState: () => set({ connectionState: INITIAL_STATE })
+      return { state: updatedState };
+    });
+  },
+  resetState: () => set({ state: INITIAL_STATE })
 }));

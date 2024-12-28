@@ -1,9 +1,8 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
-import { useMessageQueue } from '@/hooks/realtime/useMessageQueue';
 import { useRealTime } from '@/contexts/RealTimeContext';
+import { useMessageQueue } from './useMessageQueue';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Message } from '@/types/chat';
 
 export const useMessageRealtime = (
   messageId: string | undefined,
@@ -17,12 +16,6 @@ export const useMessageRealtime = (
   const lastUpdateTimeRef = useRef<number>(Date.now());
   const subscriptionStatusRef = useRef<'active' | 'inactive'>('inactive');
   const messageProcessingTimeRef = useRef<number>(0);
-  const metrics = useRef({
-    updates: 0,
-    errors: 0,
-    totalProcessingTime: 0,
-    averageProcessingTime: 0
-  });
 
   const processMessage = useCallback((content: string) => {
     const startTime = performance.now();
@@ -32,44 +25,31 @@ export const useMessageRealtime = (
         componentId,
         contentLength: content.length,
         timestamp: new Date().toISOString(),
-        timeSinceLastUpdate: Date.now() - lastUpdateTimeRef.current,
-        metrics: metrics.current
+        timeSinceLastUpdate: Date.now() - lastUpdateTimeRef.current
       });
 
       addToQueue(messageId!, content);
       processQueue(editedContent, setEditedContent);
-      
       lastUpdateTimeRef.current = Date.now();
-      const processingTime = performance.now() - startTime;
-      messageProcessingTimeRef.current = processingTime;
-      
-      // Update metrics
-      metrics.current.updates++;
-      metrics.current.totalProcessingTime += processingTime;
-      metrics.current.averageProcessingTime = 
-        metrics.current.totalProcessingTime / metrics.current.updates;
+      messageProcessingTimeRef.current = performance.now() - startTime;
 
-      const messages = queryClient.getQueryData<Message[]>(['messages']) || [];
-      
       logger.info(LogCategory.PERFORMANCE, 'MessageRealtime', 'Message processing completed', {
         messageId,
-        processingTime,
-        queueSize: messages.length,
-        metrics: metrics.current,
+        processingTime: messageProcessingTimeRef.current,
+        queueSize: queryClient.getQueryData(['messageQueue'])?.length || 0,
         timestamp: new Date().toISOString()
       });
 
+      // Invalidate query cache to trigger refetch
       queryClient.invalidateQueries({ queryKey: ['messages'] });
 
     } catch (error) {
-      metrics.current.errors++;
       logger.error(LogCategory.STATE, 'MessageRealtime', 'Failed to process message', {
         messageId,
         componentId,
         error: error instanceof Error ? error.message : String(error),
         stackTrace: error instanceof Error ? error.stack : undefined,
         processingTime: performance.now() - startTime,
-        metrics: metrics.current,
         timestamp: new Date().toISOString()
       });
     }
@@ -100,7 +80,7 @@ export const useMessageRealtime = (
           messageId,
           componentId,
           lastUpdateAge: Date.now() - lastUpdateTimeRef.current,
-          metrics: metrics.current,
+          averageProcessingTime: messageProcessingTimeRef.current,
           timestamp: new Date().toISOString()
         });
         
@@ -124,6 +104,6 @@ export const useMessageRealtime = (
     lastUpdateTime: lastUpdateTimeRef.current,
     subscriptionStatus: subscriptionStatusRef.current,
     retryCount: connectionState.retryCount,
-    metrics: metrics.current
+    averageProcessingTime: messageProcessingTimeRef.current
   };
 };

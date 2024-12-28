@@ -1,34 +1,38 @@
-export type SubscriptionEvent = '*' | 'INSERT' | 'UPDATE' | 'DELETE';
+import type { Message } from '@/types/chat';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+
+export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected';
+
+export interface ConnectionState {
+  status: ConnectionStatus;
+  retryCount: number;
+  error?: Error;
+  lastAttempt: number;
+}
+
+export interface ConnectionStore {
+  state: ConnectionState;
+  updateState: (newState: Partial<ConnectionState>) => void;
+  resetState: () => void;
+}
 
 export interface SubscriptionConfig {
-  event: SubscriptionEvent;
+  event: '*' | 'INSERT' | 'UPDATE' | 'DELETE';
   schema: string;
   table: string;
   filter?: string;
   onMessage: (payload: any) => void;
-  onError: (error: Error) => void;
-  onSubscriptionStatus: (status: string) => void;
-}
-
-export interface ConnectionState {
-  status: 'connected' | 'connecting' | 'disconnected';
-  retryCount: number;
-  lastAttempt: number;
-  error?: Error;
-}
-
-export interface ConnectionStore {
-  connectionState: ConnectionState;
-  setConnectionState: (state: Partial<ConnectionState>) => void;
-  resetState: () => void;
+  onError?: (error: Error) => void;
+  onSubscriptionStatus?: (status: string) => void;
 }
 
 export interface RealtimeContextValue {
   connectionState: ConnectionState;
+  lastMessage?: Message;
   subscribeToChat: (chatId: string, componentId: string) => void;
   unsubscribeFromChat: (chatId: string, componentId: string) => void;
-  subscribeToMessage: (messageId: string, componentId: string) => void;
+  subscribeToMessage: (messageId: string, componentId: string, onUpdate: (content: string) => void) => void;
   unsubscribeFromMessage: (messageId: string, componentId: string) => void;
-  subscribe: (config: SubscriptionConfig) => void;
-  cleanup: () => void;
+  subscribe: (config: SubscriptionConfig) => RealtimeChannel;
+  cleanup: (channelKey?: string) => void;
 }

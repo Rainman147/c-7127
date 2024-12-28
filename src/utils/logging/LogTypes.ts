@@ -1,30 +1,24 @@
 export enum LogCategory {
-  RENDER = 'render',
   STATE = 'state',
-  WEBSOCKET = 'websocket',
-  ERROR = 'error',
-  METRICS = 'metrics',
+  RENDER = 'render',
   COMMUNICATION = 'communication',
-  AUTH = 'auth',
-  SUBSCRIPTION = 'subscription',
-  PERFORMANCE = 'performance',
-  CACHE = 'cache',
-  DATABASE = 'database',
-  VALIDATION = 'validation',
-  USER_ACTION = 'user_action',
+  ERROR = 'error',
   ROUTING = 'routing',
-  LIFECYCLE = 'lifecycle'
+  DATABASE = 'database',
+  PERFORMANCE = 'performance',
+  VALIDATION = 'validation',
+  WEBSOCKET = 'websocket',
+  CACHE = 'cache',
+  LIFECYCLE = 'lifecycle',
+  COMPONENT = 'component',
+  USER_ACTION = 'user_action',
+  METRICS = 'metrics'
 }
 
 export interface LogMetadata {
   timestamp: string;
+  retryCount?: number;
+  connectionState?: string;
+  duration?: number;
   [key: string]: any;
-}
-
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-
-export interface WebSocketLogPayload {
-  from: string;
-  to: string;
-  metadata?: Record<string, any>;
 }
