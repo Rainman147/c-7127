@@ -10,6 +10,12 @@ export interface ConnectionState {
   lastAttempt: number;
 }
 
+export interface ConnectionStore {
+  state: ConnectionState;
+  updateState: (newState: Partial<ConnectionState>) => void;
+  resetState: () => void;
+}
+
 export interface SubscriptionConfig {
   event: '*' | 'INSERT' | 'UPDATE' | 'DELETE';
   schema: string;
@@ -29,4 +35,26 @@ export interface RealtimeContextValue {
   unsubscribeFromMessage: (messageId: string, componentId: string) => void;
   subscribe: (config: SubscriptionConfig) => RealtimeChannel;
   cleanup: (channelKey?: string) => void;
+}
+
+// Error types
+export interface ConnectionError {
+  name: string;
+  code?: number;
+  reason?: string;
+  timestamp: string;
+  connectionState: string;
+  retryCount: number;
+  lastAttempt: number;
+  backoffDelay: number;
+  message: string;
+}
+
+export interface SubscriptionError extends ConnectionError {
+  channelId: string;
+  event: string;
+}
+
+export interface WebSocketError extends ConnectionError {
+  socketId?: string;
 }
