@@ -1,37 +1,17 @@
-import { logger, LogCategory } from '@/utils/logging';
+import { QueuedMessage, QueueStatus } from './QueueTypes';
+import { QueueStorage } from './QueueStorage';
+import { QueueProcessor } from './QueueProcessor';
+import { logger, LogCategory } from '../logging/LoggerCore';
 
-export interface QueuedMessage {
-  id: string;
-  content: string;
-  timestamp: number;
-  retryCount: number;
-  priority: 'high' | 'medium' | 'low';
-  status: 'pending' | 'processing' | 'failed' | 'completed';
-  metadata?: {
-    connectionState?: string;
-    lastError?: string;
-    processingAttempts?: number[];
-  };
-}
-
-class QueueManager {
-  private readonly storageKey = 'message_queue';
+export class QueueManager {
   private processingQueue: boolean = false;
-  private maxRetries: number = 3;
-  private retryDelays: number[] = [1000, 5000, 15000]; // Progressive delays
-  
-  constructor() {
-    this.initializeStorage();
-    this.setupOfflineListener();
-  }
+  private queueStorage: QueueStorage;
+  private queueProcessor: QueueProcessor;
 
-  private initializeStorage(): void {
-    if (typeof localStorage !== 'undefined') {
-      const queue = localStorage.getItem(this.storageKey);
-      if (!queue) {
-        localStorage.setItem(this.storageKey, JSON.stringify([]));
-      }
-    }
+  constructor() {
+    this.queueStorage = new QueueStorage();
+    this.queueProcessor = new QueueProcessor();
+    this.setupOfflineListener();
   }
 
   private setupOfflineListener(): void {
@@ -43,11 +23,7 @@ class QueueManager {
 
   private handleOnline(): void {
     logger.info(LogCategory.STATE, 'QueueManager', 'Connection restored, processing queue');
-    this.processQueue((message) => {
-      // Default processor - should be overridden by actual implementation
-      console.log('Processing message:', message);
-      return Promise.resolve();
-    });
+    this.processingQueue = false;
   }
 
   private handleOffline(): void {
@@ -57,7 +33,7 @@ class QueueManager {
 
   async addToQueue(message: Omit<QueuedMessage, 'timestamp' | 'retryCount' | 'status' | 'metadata'>): Promise<void> {
     try {
-      const queue = await this.getQueue();
+      const queue = await this.queueStorage.getQueue();
       const newMessage: QueuedMessage = {
         ...message,
         timestamp: Date.now(),
@@ -70,12 +46,11 @@ class QueueManager {
       };
 
       queue.push(newMessage);
-      await this.saveQueue(queue);
+      await this.queueStorage.saveQueue(queue);
 
       logger.debug(LogCategory.STATE, 'QueueManager', 'Message added to queue', {
         messageId: message.id,
-        priority: message.priority,
-        timestamp: new Date().toISOString()
+        priority: message.priority
       });
     } catch (error) {
       logger.error(LogCategory.ERROR, 'QueueManager', 'Failed to add message to queue', {
@@ -86,108 +61,56 @@ class QueueManager {
     }
   }
 
-  private async getQueue(): Promise<QueuedMessage[]> {
-    const queueStr = localStorage.getItem(this.storageKey);
-    return queueStr ? JSON.parse(queueStr) : [];
-  }
-
-  private async saveQueue(queue: QueuedMessage[]): Promise<void> {
-    localStorage.setItem(this.storageKey, JSON.stringify(queue));
-  }
-
   async processQueue(processor: (message: QueuedMessage) => Promise<void>): Promise<void> {
     if (this.processingQueue || !navigator.onLine) {
-      logger.debug(LogCategory.STATE, 'QueueManager', 'Queue processing skipped', {
-        reason: this.processingQueue ? 'Already processing' : 'Offline'
-      });
       return;
     }
 
     this.processingQueue = true;
     try {
-      const queue = await this.getQueue();
-      const sortedQueue = this.prioritizeQueue(queue);
+      const queue = await this.queueStorage.getQueue();
+      const sortedQueue = this.queueProcessor.prioritizeQueue(queue);
 
       for (const message of sortedQueue) {
         if (message.status === 'pending' || 
-            (message.status === 'failed' && message.retryCount < this.maxRetries)) {
-          try {
-            message.status = 'processing';
-            message.metadata = {
-              ...message.metadata,
-              processingAttempts: [...(message.metadata?.processingAttempts || []), Date.now()]
-            };
-            await this.saveQueue(sortedQueue);
-            
-            await processor(message);
-            
+            (message.status === 'failed' && this.queueProcessor.shouldRetry(message))) {
+          message.status = 'processing';
+          await this.queueStorage.saveQueue(sortedQueue);
+
+          const result = await this.queueProcessor.processMessage(message, processor);
+          
+          if (result.success) {
             message.status = 'completed';
-            logger.info(LogCategory.STATE, 'QueueManager', 'Message processed successfully', {
-              messageId: message.id,
-              retryCount: message.retryCount,
-              attempts: message.metadata?.processingAttempts?.length
-            });
-          } catch (error) {
+          } else {
             message.status = 'failed';
             message.retryCount++;
             message.metadata = {
               ...message.metadata,
-              lastError: error.message
+              lastError: result.error?.message
             };
             
-            const delay = this.retryDelays[Math.min(message.retryCount - 1, this.retryDelays.length - 1)];
-            logger.error(LogCategory.ERROR, 'QueueManager', 'Failed to process message', {
-              error,
-              messageId: message.id,
-              retryCount: message.retryCount,
-              nextRetryDelay: delay
-            });
-            
-            if (message.retryCount < this.maxRetries) {
-              await new Promise(resolve => setTimeout(resolve, delay));
+            if (this.queueProcessor.shouldRetry(message)) {
+              await new Promise(resolve => setTimeout(resolve, 
+                this.queueProcessor.getRetryDelay(message.retryCount)));
             }
           }
-          await this.saveQueue(sortedQueue);
+          await this.queueStorage.saveQueue(sortedQueue);
         }
       }
 
       // Cleanup completed and failed messages
       const cleanedQueue = sortedQueue.filter(
         msg => msg.status !== 'completed' && 
-              !(msg.status === 'failed' && msg.retryCount >= this.maxRetries)
+              !(msg.status === 'failed' && !this.queueProcessor.shouldRetry(msg))
       );
-      await this.saveQueue(cleanedQueue);
+      await this.queueStorage.saveQueue(cleanedQueue);
     } finally {
       this.processingQueue = false;
     }
   }
 
-  private prioritizeQueue(queue: QueuedMessage[]): QueuedMessage[] {
-    const priorityMap = { high: 0, medium: 1, low: 2 };
-    return [...queue].sort((a, b) => {
-      // First sort by priority
-      const priorityDiff = priorityMap[a.priority] - priorityMap[b.priority];
-      if (priorityDiff !== 0) return priorityDiff;
-      
-      // Then by retry count (fewer retries first)
-      const retryDiff = a.retryCount - b.retryCount;
-      if (retryDiff !== 0) return retryDiff;
-      
-      // Finally by timestamp
-      return a.timestamp - b.timestamp;
-    });
-  }
-
-  async getQueueStatus(): Promise<{
-    pending: number;
-    processing: number;
-    failed: number;
-    completed: number;
-    totalMessages: number;
-    oldestMessage: number | null;
-    averageProcessingTime: number | null;
-  }> {
-    const queue = await this.getQueue();
+  async getQueueStatus(): Promise<QueueStatus> {
+    const queue = await this.queueStorage.getQueue();
     const status = queue.reduce((acc, msg) => {
       acc[msg.status]++;
       return acc;
@@ -214,7 +137,7 @@ class QueueManager {
   }
 
   async clearQueue(): Promise<void> {
-    await this.saveQueue([]);
+    await this.queueStorage.saveQueue([]);
     logger.info(LogCategory.STATE, 'QueueManager', 'Queue cleared');
   }
 }

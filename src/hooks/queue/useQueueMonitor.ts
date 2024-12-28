@@ -1,15 +1,9 @@
 import { useState, useEffect } from 'react';
 import { queueManager } from '@/utils/queue/QueueManager';
 import { logger, LogCategory } from '@/utils/logging';
+import type { QueueStatus } from '@/utils/queue/QueueTypes';
 
-export interface QueueMetrics {
-  pending: number;
-  processing: number;
-  failed: number;
-  completed: number;
-  totalMessages: number;
-  oldestMessage: number | null;
-  averageProcessingTime: number | null;
+export interface QueueMetrics extends QueueStatus {
   lastUpdated: number;
 }
 
