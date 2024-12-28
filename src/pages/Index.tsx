@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useChat } from '@/hooks/useChat';
+import { useEffect } from 'react';
+import { useChat } from '@/features/chat/hooks/useChat';
 import { ChatHeader } from '@/components/ChatHeader';
 import MessageList from '@/components/MessageList';
 import ChatInput from '@/components/ChatInput';
@@ -10,7 +10,6 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { PostMessageErrorBoundary } from '@/components/error-boundaries/PostMessageErrorBoundary';
 import { logger, LogCategory } from '@/utils/logging';
-import { RealTimeProvider } from '@/contexts/RealTimeProvider';
 
 const ChatContent = () => {
   const { isOpen } = useSidebar();
@@ -18,12 +17,18 @@ const ChatContent = () => {
   const { toast } = useToast();
   const { 
     sessionId, 
-    templateId,
     isNewSession,
     isValidSessionId
   } = useSessionParams();
   
-  const { messages, isLoading, handleSendMessage } = useChat(isValidSessionId ? sessionId : null);
+  const { messages, isLoading, sendMessage, loadMessages } = useChat(isValidSessionId ? sessionId : null);
+
+  // Load initial messages
+  useEffect(() => {
+    if (isValidSessionId && sessionId) {
+      loadMessages();
+    }
+  }, [isValidSessionId, sessionId, loadMessages]);
 
   // Handle invalid routes
   useEffect(() => {
@@ -55,8 +60,8 @@ const ChatContent = () => {
         <div className="max-w-3xl mx-auto px-4">
           <PostMessageErrorBoundary>
             <ChatInput 
-              onSend={handleSendMessage}
-              onTranscriptionComplete={(text) => handleSendMessage(text, 'audio')}
+              onSend={sendMessage}
+              onTranscriptionComplete={(text) => sendMessage(text, 'audio')}
               isLoading={isLoading}
             />
           </PostMessageErrorBoundary>
@@ -68,9 +73,7 @@ const ChatContent = () => {
 
 const Index = () => {
   return (
-    <RealTimeProvider>
-      <ChatContent />
-    </RealTimeProvider>
+    <ChatContent />
   );
 };
 
