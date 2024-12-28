@@ -1,29 +1,22 @@
-import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { ThemeProvider } from '@/contexts/ThemeContext';
-import { TemplateProvider } from '@/contexts/TemplateContext';
-import { RealTimeProvider } from '@/contexts/RealTimeContext';
-import AppRoutes from '@/routes';
-import { Toaster } from '@/components/ui/toaster';
-import './App.css';
+import React from 'react';
+import { RealTimeProvider } from '@/features/realtime/context/RealTimeContext';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import Home from './pages/Home';
+import Chat from './pages/Chat';
+import NotFound from './pages/NotFound';
 
-function App() {
-  console.log('[App] Initializing app with providers');
-  
+const App = () => {
   return (
-    <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <RealTimeProvider>
-            <TemplateProvider>
-              <AppRoutes />
-              <Toaster />
-            </TemplateProvider>
-          </RealTimeProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+    <RealTimeProvider>
+      <Router>
+        <Switch>
+          <Route path="/" exact component={Home} />
+          <Route path="/chat/:id" component={Chat} />
+          <Route component={NotFound} />
+        </Switch>
+      </Router>
+    </RealTimeProvider>
   );
-}
+};
 
 export default App;
