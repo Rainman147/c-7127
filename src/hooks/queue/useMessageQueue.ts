@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { queueManager, type QueuedMessage } from '@/utils/queue/QueueManager';
+import { queueManager } from '@/utils/queue/QueueManager';
+import type { QueuedMessage } from '@/utils/queue/QueueTypes';
 import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
 import { useConnectionState } from '@/hooks/realtime/useConnectionState';
