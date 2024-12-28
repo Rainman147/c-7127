@@ -1,50 +1,51 @@
-import { useState } from 'react';
+import { useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 
 export const useMessageHandlers = (
-  setLastMessage: (message: Message | undefined) => void,
+  setLastMessage: (message: Message) => void,
   getBackoffDelay: () => number
 ) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const handleChatMessage = async (message: Message) => {
+  const handleChatMessage = useCallback((payload: any) => {
     try {
-      setIsProcessing(true);
-      setLastMessage(message);
-      
-      logger.info(LogCategory.COMMUNICATION, 'MessageHandlers', 'Chat message processed', {
-        messageId: message.id,
+      logger.debug(LogCategory.WEBSOCKET, 'MessageHandlers', 'Received chat message:', {
+        payload,
         timestamp: new Date().toISOString()
       });
-    } catch (error) {
-      logger.error(LogCategory.ERROR, 'MessageHandlers', 'Error handling chat message:', {
-        error,
-        messageId: message.id,
-        timestamp: new Date().toISOString()
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
-  const handleMessageUpdate = async (content: string) => {
-    try {
-      logger.debug(LogCategory.COMMUNICATION, 'MessageHandlers', 'Message update received', {
-        contentLength: content.length,
-        timestamp: new Date().toISOString()
-      });
+      if (payload.new) {
+        setLastMessage(payload.new as Message);
+      }
     } catch (error) {
-      logger.error(LogCategory.ERROR, 'MessageHandlers', 'Error handling message update:', {
+      logger.error(LogCategory.WEBSOCKET, 'MessageHandlers', 'Error handling chat message:', {
         error,
+        payload,
         timestamp: new Date().toISOString()
       });
     }
-  };
+  }, [setLastMessage]);
+
+  const handleMessageUpdate = useCallback((payload: any) => {
+    try {
+      logger.debug(LogCategory.WEBSOCKET, 'MessageHandlers', 'Received message update:', {
+        payload,
+        timestamp: new Date().toISOString()
+      });
+
+      if (payload.new?.content) {
+        setLastMessage(payload.new as Message);
+      }
+    } catch (error) {
+      logger.error(LogCategory.WEBSOCKET, 'MessageHandlers', 'Error handling message update:', {
+        error,
+        payload,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [setLastMessage]);
 
   return {
     handleChatMessage,
-    handleMessageUpdate,
-    isProcessing
+    handleMessageUpdate
   };
 };

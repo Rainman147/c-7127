@@ -1,20 +1,18 @@
 import React, { useState, useRef } from 'react';
 import { RealTimeContext } from './RealTimeContext';
-import { useWebSocketManager } from './realtime/WebSocketManager';
-import { useSubscriptionManager } from './realtime/SubscriptionManager';
-import { useMessageHandlers } from '@/hooks/realtime/useMessageHandlers';
-import { useConnectionState } from '@/hooks/realtime/useConnectionState';
-import { useChatSubscription } from '@/hooks/realtime/useChatSubscription';
-import { useMessageSubscription } from '@/hooks/realtime/useMessageSubscription';
-import { ConnectionManager } from '@/utils/realtime/ConnectionManager';
+import { useWebSocketManager } from '@/features/realtime/hooks/useWebSocketManager';
+import { useSubscriptionManager } from '@/features/realtime/hooks/useSubscriptionManager';
+import { useMessageHandlers } from '@/features/realtime/hooks/useMessageHandlers';
+import { useConnectionState } from '@/features/realtime/hooks/useConnectionState';
+import { useChatSubscription } from '@/features/realtime/hooks/useChatSubscription';
+import { useMessageSubscription } from '@/features/realtime/hooks/useMessageSubscription';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
-import type { RealtimeContextValue } from './realtime/types';
+import type { RealtimeContextValue } from '@/features/realtime/types';
 import { supabase } from '@/integrations/supabase/client';
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
-  const connectionManager = useRef(new ConnectionManager());
   
   const {
     connectionState,
@@ -38,7 +36,8 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
   const { lastPingTime } = useWebSocketManager(
     channel,
-    handleConnectionError
+    handleConnectionError,
+    'RealTimeProvider'
   );
 
   const { subscribeToChat, unsubscribeFromChat } = useChatSubscription(

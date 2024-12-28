@@ -1,21 +1,26 @@
-import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+
+export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected';
+
+export interface ConnectionState {
+  status: ConnectionStatus;
+  retryCount: number;
+  error?: Error;
+  lastAttempt: number;
+}
 
 export interface SubscriptionConfig {
   table: string;
-  schema?: string;
   filter?: string;
-  event: 'INSERT' | 'UPDATE' | 'DELETE' | '*';
-  onMessage: (payload: RealtimePostgresChangesPayload<any>) => void;
+  event?: 'INSERT' | 'UPDATE' | 'DELETE' | '*';
+  schema?: string;
+  onMessage: (payload: any) => void;
   onSubscriptionStatus?: (status: string) => void;
+  onError?: (error: Error) => void;
 }
 
 export interface RealtimeContextValue {
-  connectionState: {
-    status: 'connecting' | 'connected' | 'disconnected';
-    retryCount: number;
-    lastAttempt: number;
-    error?: Error;
-  };
+  connectionState: ConnectionState;
   lastMessage?: any;
   subscribeToChat: (chatId: string, componentId: string) => void;
   unsubscribeFromChat: (chatId: string, componentId: string) => void;

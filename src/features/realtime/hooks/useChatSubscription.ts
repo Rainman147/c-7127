@@ -1,12 +1,12 @@
 import { useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import type { SubscriptionConfig } from '../types';
-import type { ConnectionError } from '../types/errors';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export const useChatSubscription = (
-  subscribe: (config: SubscriptionConfig) => void,
+  subscribe: (config: SubscriptionConfig) => RealtimeChannel,
   cleanup: (channelKey?: string) => void,
-  onError: (error: ConnectionError) => void
+  onError: (error: Error) => void
 ) => {
   const subscribeToChat = useCallback((chatId: string, componentId: string) => {
     logger.info(LogCategory.WEBSOCKET, 'ChatSubscription', 'Subscribing to chat:', {
@@ -19,27 +19,28 @@ export const useChatSubscription = (
       table: 'messages',
       schema: 'public',
       filter: `chat_id=eq.${chatId}`,
-      event: '*',
+      event: 'INSERT',
       onMessage: (payload) => {
-        logger.debug(LogCategory.WEBSOCKET, 'ChatSubscription', 'Message received:', {
+        logger.debug(LogCategory.WEBSOCKET, 'ChatSubscription', 'Received message:', {
+          chatId,
+          componentId,
+          payload,
+          timestamp: new Date().toISOString()
+        });
+      },
+      onError: (error) => {
+        logger.error(LogCategory.WEBSOCKET, 'ChatSubscription', 'Subscription error:', {
+          error,
           chatId,
           componentId,
           timestamp: new Date().toISOString()
         });
-      },
-      onSubscriptionStatus: (status) => {
-        if (status === 'SUBSCRIBED') {
-          logger.info(LogCategory.WEBSOCKET, 'ChatSubscription', 'Successfully subscribed to chat:', {
-            chatId,
-            componentId,
-            timestamp: new Date().toISOString()
-          });
-        }
+        onError(error);
       }
     };
 
     subscribe(config);
-  }, [subscribe]);
+  }, [subscribe, onError]);
 
   const unsubscribeFromChat = useCallback((chatId: string, componentId: string) => {
     logger.info(LogCategory.WEBSOCKET, 'ChatSubscription', 'Unsubscribing from chat:', {
@@ -47,7 +48,7 @@ export const useChatSubscription = (
       componentId,
       timestamp: new Date().toISOString()
     });
-    cleanup(`messages-chat_id=eq.${chatId}`);
+    cleanup(`messages:${chatId}`);
   }, [cleanup]);
 
   return {
