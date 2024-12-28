@@ -50,14 +50,18 @@ export const useMessageQueue = () => {
 
   // Auto-process queue when connection is restored
   useEffect(() => {
-    if (connectionState.status === 'connected') {
-      const status = queueManager.getQueueStatus();
-      if (status.pending > 0 || status.failed > 0) {
-        logger.info(LogCategory.STATE, 'MessageQueue', 'Connection restored, processing queue', {
-          queueStatus: status
-        });
+    const checkAndProcessQueue = async () => {
+      if (connectionState.status === 'connected') {
+        const status = await queueManager.getQueueStatus();
+        if (status.pending > 0 || status.failed > 0) {
+          logger.info(LogCategory.STATE, 'MessageQueue', 'Connection restored, processing queue', {
+            queueStatus: status
+          });
+        }
       }
-    }
+    };
+
+    checkAndProcessQueue();
   }, [connectionState.status]);
 
   return {
