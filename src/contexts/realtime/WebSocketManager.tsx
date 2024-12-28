@@ -20,7 +20,8 @@ export const useWebSocketManager = (
       return;
     }
 
-    const socket = (channel as any).socket;
+    // Get the underlying WebSocket instance
+    const socket = (channel as any)?.subscription?.socket;
     if (!socket) {
       logger.warn(LogCategory.WEBSOCKET, 'WebSocketManager', 'No socket found in channel');
       return;
@@ -92,15 +93,16 @@ export const useWebSocketManager = (
         });
 
         // Trigger reconnection if needed
-        if (socket.readyState !== WebSocket.CONNECTING) {
+        if (socket.readyState === WebSocket.OPEN) {
           socket.close();
+          channel.unsubscribe();
         }
       }
     }, HEALTH_CHECK_INTERVAL);
 
-    socket.onopen = handleOpen;
-    socket.onclose = handleClose;
-    socket.onerror = handleError;
+    socket.addEventListener('open', handleOpen);
+    socket.addEventListener('close', handleClose);
+    socket.addEventListener('error', handleError);
 
     return () => {
       logger.info(LogCategory.WEBSOCKET, 'WebSocketManager', 'Cleaning up WebSocket manager', {
@@ -112,9 +114,10 @@ export const useWebSocketManager = (
       if (healthCheckInterval.current) {
         clearInterval(healthCheckInterval.current);
       }
-      socket.onopen = null;
-      socket.onclose = null;
-      socket.onerror = null;
+      
+      socket.removeEventListener('open', handleOpen);
+      socket.removeEventListener('close', handleClose);
+      socket.removeEventListener('error', handleError);
     };
   }, [channel, onError]);
 
