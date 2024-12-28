@@ -36,6 +36,17 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     () => Math.min(1000 * Math.pow(2, connectionState.retryCount), 30000)
   );
 
+  // Initialize chat and message subscriptions
+  const {
+    subscribeToChat,
+    unsubscribeFromChat
+  } = useChatSubscription(subscriptionManagerSubscribe, cleanupSubscriptions, handleConnectionError);
+
+  const {
+    subscribeToMessage,
+    unsubscribeFromMessage
+  } = useMessageSubscription(subscriptionManagerSubscribe, cleanupSubscriptions, handleConnectionError);
+
   // Initialize the channel
   useEffect(() => {
     logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Setting up realtime channel', {
