@@ -18,6 +18,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   const connectionManager = useRef(new ConnectionManager());
   const startTime = useRef(Date.now());
   const channelRef = useRef<any>(null);
+  const sessionRef = useRef<string | null>(null);
   
   const {
     connectionState,
@@ -31,8 +32,34 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     getActiveSubscriptions
   } = useSubscriptionManager();
 
+  // Log session state changes
+  useEffect(() => {
+    const { data: { session } } = supabase.auth.getSession();
+    const newSessionId = session?.user?.id || null;
+    
+    logger.info(LogCategory.STATE, 'RealTimeProvider', 'Session state updated', {
+      previousSessionId: sessionRef.current,
+      newSessionId,
+      hasSession: !!session,
+      connectionState: connectionState.status,
+      timestamp: new Date().toISOString()
+    });
+    
+    sessionRef.current = newSessionId;
+  }, [connectionState.status]);
+
   const { handleChatMessage, handleMessageUpdate } = useMessageHandlers(
-    setLastMessage,
+    (message: Message) => {
+      logger.debug(LogCategory.MESSAGING, 'RealTimeProvider', 'Handling new message', {
+        messageId: message.id,
+        chatId: message.chat_id,
+        type: message.type,
+        sessionId: sessionRef.current,
+        connectionState: connectionState.status,
+        timestamp: new Date().toISOString()
+      });
+      setLastMessage(message);
+    },
     () => Math.min(1000 * Math.pow(2, connectionState.retryCount), 30000)
   );
 
@@ -40,19 +67,47 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   const {
     subscribeToChat,
     unsubscribeFromChat
-  } = useChatSubscription(subscriptionManagerSubscribe, cleanupSubscriptions, handleConnectionError);
+  } = useChatSubscription(
+    subscriptionManagerSubscribe, 
+    cleanupSubscriptions, 
+    handleConnectionError,
+    (error) => {
+      logger.error(LogCategory.SUBSCRIPTION, 'RealTimeProvider', 'Chat subscription error', {
+        error: error.message,
+        sessionId: sessionRef.current,
+        connectionState: connectionState.status,
+        retryCount: connectionState.retryCount,
+        timestamp: new Date().toISOString()
+      });
+    }
+  );
 
   const {
     subscribeToMessage,
     unsubscribeFromMessage
-  } = useMessageSubscription(subscriptionManagerSubscribe, cleanupSubscriptions, handleConnectionError);
+  } = useMessageSubscription(
+    subscriptionManagerSubscribe, 
+    cleanupSubscriptions, 
+    handleConnectionError,
+    (error) => {
+      logger.error(LogCategory.SUBSCRIPTION, 'RealTimeProvider', 'Message subscription error', {
+        error: error.message,
+        sessionId: sessionRef.current,
+        connectionState: connectionState.status,
+        retryCount: connectionState.retryCount,
+        timestamp: new Date().toISOString()
+      });
+    }
+  );
 
   // Initialize the channel
   useEffect(() => {
     logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Setting up realtime channel', {
       timestamp: new Date().toISOString(),
       connectionState: connectionState.status,
-      retryCount: connectionState.retryCount
+      retryCount: connectionState.retryCount,
+      sessionId: sessionRef.current,
+      activeSubscriptions: getActiveSubscriptions()
     });
     
     const channel = supabase.channel('chat-updates', {
@@ -63,7 +118,8 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
     logger.debug(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Channel created', {
       channelConfig: channel.subscribe,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      sessionId: sessionRef.current
     });
 
     channelRef.current = channel;
@@ -72,6 +128,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       .on('presence', { event: 'sync' }, () => {
         logger.debug(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Presence sync', {
           state: channel.presenceState(),
+          sessionId: sessionRef.current,
           timestamp: new Date().toISOString()
         });
       })
@@ -79,6 +136,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         logger.debug(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Presence join', {
           key,
           newPresences,
+          sessionId: sessionRef.current,
           timestamp: new Date().toISOString()
         });
       })
@@ -86,6 +144,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         logger.debug(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Presence leave', {
           key,
           leftPresences,
+          sessionId: sessionRef.current,
           timestamp: new Date().toISOString()
         });
       })
@@ -94,7 +153,9 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
           status,
           previousState: connectionState.status,
           retryCount: connectionState.retryCount,
-          timestamp: new Date().toISOString()
+          sessionId: sessionRef.current,
+          timestamp: new Date().toISOString(),
+          connectionDuration: Date.now() - startTime.current
         });
 
         if (status === 'SUBSCRIBED') {
@@ -108,13 +169,15 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Cleaning up channel', {
         channelName: channel.subscribe.name,
         connectionState: connectionState.status,
-        timestamp: new Date().toISOString()
+        sessionId: sessionRef.current,
+        timestamp: new Date().toISOString(),
+        totalDuration: Date.now() - startTime.current
       });
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }
     };
-  }, [handleConnectionSuccess, handleConnectionError, connectionState.status, connectionState.retryCount]);
+  }, [handleConnectionSuccess, handleConnectionError, connectionState.status, connectionState.retryCount, getActiveSubscriptions]);
 
   const value: RealtimeContextValue = {
     connectionState,

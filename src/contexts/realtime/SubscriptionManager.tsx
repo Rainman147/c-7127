@@ -23,6 +23,7 @@ export const useSubscriptionManager = () => {
       logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up channel', {
         channelKey,
         metrics: subscriptionMetrics.current.get(channelKey),
+        activeSubscriptions: subscriptions.current.size,
         timestamp: new Date().toISOString()
       });
       
@@ -40,9 +41,18 @@ export const useSubscriptionManager = () => {
 
   const subscribe = useCallback((config: SubscriptionConfig): RealtimeChannel => {
     const channelKey = `${config.table}-${config.filter || 'all'}`;
+    const startTime = Date.now();
+    
+    logger.info(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Creating subscription', {
+      channelKey,
+      table: config.table,
+      filter: config.filter,
+      existingSubscription: subscriptions.current.has(channelKey),
+      timestamp: new Date().toISOString()
+    });
     
     if (subscriptions.current.has(channelKey)) {
-      logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up existing subscription', {
+      logger.debug(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Cleaning up existing subscription', {
         channelKey,
         metrics: subscriptionMetrics.current.get(channelKey),
         timestamp: new Date().toISOString()
@@ -50,25 +60,19 @@ export const useSubscriptionManager = () => {
       cleanupChannel(channelKey);
     }
 
-    logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Creating new subscription', {
-      channelKey,
-      table: config.table,
-      filter: config.filter,
-      timestamp: new Date().toISOString()
-    });
-
     const channel = supabase.channel(channelKey);
     const metrics = {
-      createdAt: Date.now(),
-      lastEventAt: Date.now(),
+      createdAt: startTime,
+      lastEventAt: startTime,
       errorCount: 0,
       reconnectCount: 0
     };
+    
     subscriptionMetrics.current.set(channelKey, metrics);
 
     channel
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         { 
           event: config.event,
           schema: config.schema,
@@ -76,21 +80,23 @@ export const useSubscriptionManager = () => {
           filter: config.filter 
         },
         (payload: any) => {
-          logger.debug(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Received message', {
+          logger.debug(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Received message', {
             channelKey,
             event: payload.type,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            timeSinceLastEvent: Date.now() - metrics.lastEventAt
           });
           metrics.lastEventAt = Date.now();
           config.onMessage(payload);
         }
       )
       .subscribe((status) => {
-        logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Subscription status changed', {
+        logger.info(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Subscription status changed', {
           channelKey,
           status,
           metrics: subscriptionMetrics.current.get(channelKey),
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          setupDuration: Date.now() - startTime
         });
         
         if (status === 'SUBSCRIBED') {
@@ -109,9 +115,20 @@ export const useSubscriptionManager = () => {
             backoffDelay: Math.min(1000 * Math.pow(2, metrics.errorCount), 30000),
             reason: `Channel error for ${config.table}`
           };
+          logger.error(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Subscription error', {
+            error: subscriptionError,
+            channelKey,
+            metrics,
+            timestamp: new Date().toISOString()
+          });
           config.onError?.(subscriptionError);
         } else if (status === 'CLOSED') {
           metrics.reconnectCount++;
+          logger.warn(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Subscription closed', {
+            channelKey,
+            metrics,
+            timestamp: new Date().toISOString()
+          });
         }
         
         config.onSubscriptionStatus?.(status);
@@ -120,41 +137,10 @@ export const useSubscriptionManager = () => {
     return channel;
   }, [cleanupChannel]);
 
-  const addSubscription = useCallback(({ channelKey, channel, onError }: {
-    channelKey: string;
-    channel: RealtimeChannel;
-    onError: (error: SubscriptionError) => void;
-  }) => {
-    subscriptions.current.set(channelKey, channel);
-  }, []);
-
-  const removeSubscription = useCallback((channelKey: string) => {
-    cleanupChannel(channelKey);
-  }, [cleanupChannel]);
-
-  const getActiveSubscriptions = useCallback(() => {
-    return Array.from(subscriptions.current.keys());
-  }, []);
-
-  const cleanup = useCallback(() => {
-    logger.info(LogCategory.WEBSOCKET, 'SubscriptionManager', 'Cleaning up all subscriptions', {
-      activeSubscriptions: Array.from(subscriptionMetrics.current.entries()).map(([key, metrics]) => ({
-        channelKey: key,
-        metrics
-      })),
-      timestamp: new Date().toISOString()
-    });
-    
-    subscriptions.current.forEach((_, key) => cleanupChannel(key));
-  }, [cleanupChannel]);
-
   return {
     subscribe,
-    cleanup,
-    addSubscription,
-    removeSubscription,
-    getActiveSubscriptions,
-    getMetrics: () => Array.from(subscriptionMetrics.current.entries()),
-    getActiveSubscriptionCount: () => subscriptions.current.size
+    cleanup: cleanupChannel,
+    getActiveSubscriptions: () => Array.from(subscriptions.current.keys()),
+    getMetrics: () => Array.from(subscriptionMetrics.current.entries())
   };
 };
