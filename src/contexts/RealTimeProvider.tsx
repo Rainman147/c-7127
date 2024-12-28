@@ -10,6 +10,7 @@ import { ConnectionManager } from '@/utils/realtime/ConnectionManager';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 import type { RealtimeContextValue } from './realtime/types';
+import { supabase } from '@/integrations/supabase/client';
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
@@ -28,19 +29,22 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   } = useSubscriptionManager();
 
   const { handleChatMessage, handleMessageUpdate } = useMessageHandlers(
-    setLastMessage
+    setLastMessage,
+    () => Math.min(1000 * Math.pow(2, connectionState.retryCount), 30000)
   );
 
+  // Create a channel for WebSocket management
+  const channel = supabase.channel('connection-monitor');
+
   const { lastPingTime } = useWebSocketManager(
-    handleConnectionSuccess,
+    channel,
     handleConnectionError
   );
 
   const { subscribeToChat, unsubscribeFromChat } = useChatSubscription(
     subscriptionManagerSubscribe,
     cleanupSubscriptions,
-    handleConnectionError,
-    handleChatMessage
+    handleConnectionError
   );
 
   const { subscribeToMessage, unsubscribeFromMessage } = useMessageSubscription(
