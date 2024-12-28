@@ -6,12 +6,14 @@ interface WebSocketEventProps {
   lastPingTime: React.MutableRefObject<number>;
   reconnectAttempts: React.MutableRefObject<number>;
   channelName?: string;
+  onMetricsUpdate: (type: 'message' | 'error' | 'reconnect') => void;
 }
 
 export const useWebSocketEvents = ({
   lastPingTime,
   reconnectAttempts,
-  channelName
+  channelName,
+  onMetricsUpdate
 }: WebSocketEventProps) => {
   const handleOpen = useCallback(() => {
     logger.info(LogCategory.WEBSOCKET, 'WebSocketManager', 'Connection opened', {
@@ -21,7 +23,8 @@ export const useWebSocketEvents = ({
     });
     lastPingTime.current = Date.now();
     reconnectAttempts.current = 0;
-  }, [lastPingTime, reconnectAttempts, channelName]);
+    onMetricsUpdate('message');
+  }, [lastPingTime, reconnectAttempts, channelName, onMetricsUpdate]);
 
   const handleClose = useCallback((event: CloseEvent) => {
     logger.warn(LogCategory.WEBSOCKET, 'WebSocketManager', 'Connection closed', {
@@ -33,7 +36,8 @@ export const useWebSocketEvents = ({
       reconnectAttempts: reconnectAttempts.current
     });
     reconnectAttempts.current++;
-  }, [reconnectAttempts, channelName]);
+    onMetricsUpdate('reconnect');
+  }, [reconnectAttempts, channelName, onMetricsUpdate]);
 
   const handleError = useCallback((error: Event, onError: (error: WebSocketError) => void) => {
     const errorData: WebSocketError = {
@@ -53,7 +57,8 @@ export const useWebSocketEvents = ({
     });
     
     onError(errorData);
-  }, [reconnectAttempts, channelName]);
+    onMetricsUpdate('error');
+  }, [reconnectAttempts, channelName, onMetricsUpdate]);
 
   return {
     handleOpen,
