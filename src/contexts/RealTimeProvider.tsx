@@ -38,7 +38,11 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
   // Initialize the channel
   useEffect(() => {
-    logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Setting up realtime channel');
+    logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Setting up realtime channel', {
+      timestamp: new Date().toISOString(),
+      connectionState: connectionState.status,
+      retryCount: connectionState.retryCount
+    });
     
     const channel = supabase.channel('chat-updates', {
       config: {
@@ -46,29 +50,39 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       }
     });
 
+    logger.debug(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Channel created', {
+      channelConfig: channel.subscribe,
+      timestamp: new Date().toISOString()
+    });
+
     channelRef.current = channel;
 
     channel
       .on('presence', { event: 'sync' }, () => {
         logger.debug(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Presence sync', {
-          state: channel.presenceState()
+          state: channel.presenceState(),
+          timestamp: new Date().toISOString()
         });
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
         logger.debug(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Presence join', {
           key,
-          newPresences
+          newPresences,
+          timestamp: new Date().toISOString()
         });
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
         logger.debug(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Presence leave', {
           key,
-          leftPresences
+          leftPresences,
+          timestamp: new Date().toISOString()
         });
       })
       .subscribe(async (status) => {
         logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Channel status changed', {
           status,
+          previousState: connectionState.status,
+          retryCount: connectionState.retryCount,
           timestamp: new Date().toISOString()
         });
 
@@ -80,45 +94,16 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       });
 
     return () => {
-      logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Cleaning up channel');
+      logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Cleaning up channel', {
+        channelName: channel.subscribe.name,
+        connectionState: connectionState.status,
+        timestamp: new Date().toISOString()
+      });
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }
     };
-  }, [handleConnectionSuccess, handleConnectionError]);
-
-  // Create a channel for WebSocket management
-  const { lastPingTime } = useWebSocketManager(
-    channelRef.current,
-    handleConnectionError
-  );
-
-  const { subscribeToChat, unsubscribeFromChat } = useChatSubscription(
-    subscriptionManagerSubscribe,
-    cleanupSubscriptions,
-    handleConnectionError
-  );
-
-  const { subscribeToMessage, unsubscribeFromMessage } = useMessageSubscription(
-    subscriptionManagerSubscribe,
-    cleanupSubscriptions,
-    handleConnectionError,
-    handleMessageUpdate
-  );
-
-  // Enhanced logging for state changes
-  useEffect(() => {
-    logger.info(LogCategory.STATE, 'RealTimeProvider', 'Connection state changed', {
-      status: connectionState.status,
-      retryCount: connectionState.retryCount,
-      lastAttempt: new Date(connectionState.lastAttempt).toISOString(),
-      error: connectionState.error?.message,
-      activeSubscriptions: getActiveSubscriptions().length,
-      lastPingTime: lastPingTime ? new Date(lastPingTime).toISOString() : undefined,
-      uptime: Date.now() - startTime.current,
-      timestamp: new Date().toISOString()
-    });
-  }, [connectionState, lastPingTime, getActiveSubscriptions]);
+  }, [handleConnectionSuccess, handleConnectionError, connectionState.status, connectionState.retryCount]);
 
   const value: RealtimeContextValue = {
     connectionState,

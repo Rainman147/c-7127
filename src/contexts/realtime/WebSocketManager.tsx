@@ -49,24 +49,65 @@ export const useWebSocketManager = (
 
   useEffect(() => {
     if (!channel) {
-      logger.warn(LogCategory.WEBSOCKET, 'WebSocketManager', 'No channel provided');
+      logger.warn(LogCategory.WEBSOCKET, 'WebSocketManager', 'No channel provided', {
+        timestamp: new Date().toISOString()
+      });
       return;
     }
 
     const socket = (channel as any)?.subscription?.socket;
+    
+    logger.debug(LogCategory.WEBSOCKET, 'WebSocketManager', 'Socket initialization check', {
+      hasSocket: !!socket,
+      socketState: socket?.readyState,
+      channelName: channel?.subscribe?.name,
+      timestamp: new Date().toISOString()
+    });
+
     if (!socket) {
-      logger.warn(LogCategory.WEBSOCKET, 'WebSocketManager', 'No socket found in channel');
+      logger.warn(LogCategory.WEBSOCKET, 'WebSocketManager', 'No socket found in channel', {
+        channelConfig: channel?.subscribe,
+        timestamp: new Date().toISOString()
+      });
       return;
     }
 
     logger.info(LogCategory.WEBSOCKET, 'WebSocketManager', 'Setting up WebSocket', {
       channelName: channel.subscribe.name,
+      socketState: socket.readyState,
       timestamp: new Date().toISOString()
     });
 
-    socket.addEventListener('open', handleOpen);
-    socket.addEventListener('close', handleClose);
-    socket.addEventListener('error', (event) => handleError(event, onError));
+    socket.addEventListener('open', () => {
+      logger.info(LogCategory.WEBSOCKET, 'WebSocketManager', 'Socket opened', {
+        channelName: channel.subscribe.name,
+        socketState: socket.readyState,
+        timestamp: new Date().toISOString()
+      });
+      handleOpen();
+    });
+
+    socket.addEventListener('close', (event: CloseEvent) => {
+      logger.info(LogCategory.WEBSOCKET, 'WebSocketManager', 'Socket closed', {
+        code: event.code,
+        reason: event.reason,
+        wasClean: event.wasClean,
+        channelName: channel.subscribe.name,
+        socketState: socket.readyState,
+        timestamp: new Date().toISOString()
+      });
+      handleClose(event);
+    });
+
+    socket.addEventListener('error', (event) => {
+      logger.error(LogCategory.WEBSOCKET, 'WebSocketManager', 'Socket error occurred', {
+        error: event,
+        channelName: channel.subscribe.name,
+        socketState: socket.readyState,
+        timestamp: new Date().toISOString()
+      });
+      handleError(event, onError);
+    });
 
     const cleanupHealth = startHealthCheck(socket);
     const metricsInterval = setInterval(logWebSocketMetrics, 30000);
