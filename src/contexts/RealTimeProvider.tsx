@@ -50,10 +50,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   const { subscribeToChat, unsubscribeFromChat } = useChatSubscription(
     (config: SubscriptionConfig) => {
       const subscribeFunc = () => subscriptionManagerSubscribe(config);
-      connectionManager.current.queueSubscription(
-        `chat-${config.filter}`,
-        subscribeFunc
-      );
+      connectionManager.current.queueSubscription(config);
     },
     cleanupSubscriptions,
     handleConnectionError
