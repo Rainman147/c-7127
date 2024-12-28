@@ -10,7 +10,6 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { PostMessageErrorBoundary } from '@/components/error-boundaries/PostMessageErrorBoundary';
 import { logger, LogCategory } from '@/utils/logging';
-import { RealTimeProvider } from '@/contexts/RealTimeProvider';
 
 const ChatContent = () => {
   const { isOpen } = useSidebar();
@@ -67,11 +66,7 @@ const ChatContent = () => {
 };
 
 const Index = () => {
-  return (
-    <RealTimeProvider>
-      <ChatContent />
-    </RealTimeProvider>
-  );
+  return <ChatContent />;
 };
 
 export default Index;
