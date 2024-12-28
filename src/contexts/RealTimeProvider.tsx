@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { RealTimeContext } from './RealTimeContext';
 import { useWebSocketManager } from './realtime/WebSocketManager';
 import { useSubscriptionManager } from './realtime/SubscriptionManager';
@@ -11,10 +11,12 @@ import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 import type { RealtimeContextValue } from './realtime/types';
 import { supabase } from '@/integrations/supabase/client';
+import { measurePerformance } from '@/utils/logging';
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
   const connectionManager = useRef(new ConnectionManager());
+  const startTime = useRef(Date.now());
   
   const {
     connectionState,
@@ -36,6 +38,21 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   // Create a channel for WebSocket management
   const channel = supabase.channel('connection-monitor');
 
+  useEffect(() => {
+    logger.info(LogCategory.LIFECYCLE, 'RealTimeProvider', 'Initializing provider', {
+      timestamp: new Date().toISOString(),
+      initializationTime: Date.now() - startTime.current
+    });
+
+    return () => {
+      logger.info(LogCategory.LIFECYCLE, 'RealTimeProvider', 'Cleaning up provider', {
+        timestamp: new Date().toISOString(),
+        uptime: Date.now() - startTime.current,
+        activeSubscriptions: getActiveSubscriptions().length
+      });
+    };
+  }, []);
+
   const { lastPingTime } = useWebSocketManager(
     channel,
     handleConnectionError
@@ -54,12 +71,19 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     handleMessageUpdate
   );
 
-  logger.debug(LogCategory.STATE, 'RealTimeProvider', 'Provider state', {
-    connectionStatus: connectionState.status,
-    activeSubscriptions: getActiveSubscriptions().length,
-    lastPingTime,
-    timestamp: new Date().toISOString()
-  });
+  // Enhanced logging for state changes
+  useEffect(() => {
+    logger.info(LogCategory.STATE, 'RealTimeProvider', 'Connection state changed', {
+      status: connectionState.status,
+      retryCount: connectionState.retryCount,
+      lastAttempt: new Date(connectionState.lastAttempt).toISOString(),
+      error: connectionState.error?.message,
+      activeSubscriptions: getActiveSubscriptions().length,
+      lastPingTime: lastPingTime ? new Date(lastPingTime).toISOString() : undefined,
+      uptime: Date.now() - startTime.current,
+      timestamp: new Date().toISOString()
+    });
+  }, [connectionState, lastPingTime]);
 
   const value: RealtimeContextValue = {
     connectionState,

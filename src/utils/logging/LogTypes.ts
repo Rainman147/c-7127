@@ -12,7 +12,9 @@ export enum LogCategory {
   LIFECYCLE = 'lifecycle',
   COMPONENT = 'component',
   USER_ACTION = 'user_action',
-  METRICS = 'metrics'
+  METRICS = 'metrics',
+  AUTH = 'auth',
+  QUEUE = 'queue'
 }
 
 export interface LogMetadata {
@@ -20,5 +22,22 @@ export interface LogMetadata {
   retryCount?: number;
   connectionState?: string;
   duration?: number;
+  componentId?: string;
+  sessionId?: string;
+  messageId?: string;
+  error?: Error;
   [key: string]: any;
+}
+
+export interface WebSocketLogMetadata extends LogMetadata {
+  channelId?: string;
+  eventType?: string;
+  subscriptionStatus?: string;
+  payloadSize?: number;
+}
+
+export interface QueueLogMetadata extends LogMetadata {
+  queueSize: number;
+  messageContent?: string;
+  processingTime?: number;
 }
