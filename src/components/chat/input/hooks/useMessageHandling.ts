@@ -22,13 +22,21 @@ export const useMessageHandling = ({
   const { toast } = useToast();
   const { retryCount, handleRetry, resetRetryCount } = useRetryLogic();
   const { validateMessage, MAX_MESSAGE_LENGTH } = useMessageValidation();
+  const [lastAttemptTime, setLastAttemptTime] = useState<number>(0);
 
   const handleMessageChange = async (newMessage: string) => {
     try {
+      logger.debug(LogCategory.USER_ACTION, 'ChatInput', 'Message content changed:', {
+        oldLength: message.length,
+        newLength: newMessage.length,
+        timestamp: new Date().toISOString()
+      });
+
       if (newMessage.length > MAX_MESSAGE_LENGTH) {
         logger.warn(LogCategory.VALIDATION, 'ChatInput', 'Message exceeds maximum length:', {
           length: newMessage.length,
-          limit: MAX_MESSAGE_LENGTH
+          limit: MAX_MESSAGE_LENGTH,
+          timestamp: new Date().toISOString()
         });
 
         toast({
@@ -44,7 +52,9 @@ export const useMessageHandling = ({
       logger.error(LogCategory.ERROR, 'ChatInput', 'Error updating message:', {
         error,
         messageLength: newMessage.length,
-        connectionState: connectionState.status
+        connectionState: connectionState.status,
+        timestamp: new Date().toISOString(),
+        stackTrace: error instanceof Error ? error.stack : undefined
       });
 
       const metadata: ErrorMetadata = {
@@ -64,8 +74,15 @@ export const useMessageHandling = ({
   };
 
   const handleSubmit = async (msg: string, type?: 'text' | 'audio') => {
+    const currentTime = Date.now();
+    setLastAttemptTime(currentTime);
+
     try {
       if (!validateMessage(msg)) {
+        logger.warn(LogCategory.VALIDATION, 'ChatInput', 'Message validation failed', {
+          messageLength: msg.length,
+          timestamp: new Date().toISOString()
+        });
         return;
       }
 
@@ -73,24 +90,32 @@ export const useMessageHandling = ({
         length: msg.length,
         type,
         connectionState: connectionState.status,
-        retryCount
+        retryCount,
+        timestamp: new Date().toISOString()
       });
 
       await onSend(msg, type);
       
       if (retryCount > 0) {
         logger.info(LogCategory.STATE, 'ChatInput', 'Successfully sent message after retries:', {
-          attempts: retryCount + 1
+          attempts: retryCount + 1,
+          timestamp: new Date().toISOString()
         });
         resetRetryCount();
       }
       
-      logger.debug(LogCategory.STATE, 'ChatInput', 'Message sent successfully');
+      logger.debug(LogCategory.STATE, 'ChatInput', 'Message sent successfully', {
+        timestamp: new Date().toISOString(),
+        duration: Date.now() - currentTime
+      });
     } catch (error) {
       logger.error(LogCategory.ERROR, 'ChatInput', 'Error sending message:', {
         error,
         retryCount: retryCount + 1,
-        connectionState: connectionState.status
+        connectionState: connectionState.status,
+        timestamp: new Date().toISOString(),
+        duration: Date.now() - currentTime,
+        stackTrace: error instanceof Error ? error.stack : undefined
       });
 
       await handleRetry(
@@ -109,7 +134,8 @@ export const useMessageHandling = ({
           messageType: type,
           connectionState: connectionState.status,
           retryCount,
-          lastRetryTimestamp: new Date().toISOString()
+          lastRetryTimestamp: new Date().toISOString(),
+          timeSinceLastAttempt: Date.now() - lastAttemptTime
         }
       };
       ErrorTracker.trackError(error as Error, metadata);

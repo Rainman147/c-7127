@@ -15,18 +15,30 @@ export const useMessageRealtime = (
   const { addToQueue, processQueue, clearQueue } = useMessageQueue();
   const lastUpdateTimeRef = useRef<number>(Date.now());
   const subscriptionStatusRef = useRef<'active' | 'inactive'>('inactive');
+  const messageProcessingTimeRef = useRef<number>(0);
 
   const processMessage = useCallback((content: string) => {
+    const startTime = performance.now();
     try {
       logger.debug(LogCategory.STATE, 'MessageRealtime', 'Processing message update', {
         messageId,
         componentId,
-        timestamp: new Date().toISOString()
+        contentLength: content.length,
+        timestamp: new Date().toISOString(),
+        timeSinceLastUpdate: Date.now() - lastUpdateTimeRef.current
       });
 
       addToQueue(messageId!, content);
       processQueue(editedContent, setEditedContent);
       lastUpdateTimeRef.current = Date.now();
+      messageProcessingTimeRef.current = performance.now() - startTime;
+
+      logger.info(LogCategory.PERFORMANCE, 'MessageRealtime', 'Message processing completed', {
+        messageId,
+        processingTime: messageProcessingTimeRef.current,
+        queueSize: queryClient.getQueryData(['messageQueue'])?.length || 0,
+        timestamp: new Date().toISOString()
+      });
 
       // Invalidate query cache to trigger refetch
       queryClient.invalidateQueries({ queryKey: ['messages'] });
@@ -36,6 +48,8 @@ export const useMessageRealtime = (
         messageId,
         componentId,
         error: error instanceof Error ? error.message : String(error),
+        stackTrace: error instanceof Error ? error.stack : undefined,
+        processingTime: performance.now() - startTime,
         timestamp: new Date().toISOString()
       });
     }
@@ -65,6 +79,8 @@ export const useMessageRealtime = (
         logger.info(LogCategory.WEBSOCKET, 'MessageRealtime', 'Cleaning up message subscription', {
           messageId,
           componentId,
+          lastUpdateAge: Date.now() - lastUpdateTimeRef.current,
+          averageProcessingTime: messageProcessingTimeRef.current,
           timestamp: new Date().toISOString()
         });
         
@@ -87,6 +103,7 @@ export const useMessageRealtime = (
     connectionState,
     lastUpdateTime: lastUpdateTimeRef.current,
     subscriptionStatus: subscriptionStatusRef.current,
-    retryCount: connectionState.retryCount
+    retryCount: connectionState.retryCount,
+    averageProcessingTime: messageProcessingTimeRef.current
   };
 };
