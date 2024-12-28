@@ -1,4 +1,4 @@
-import { memo, useEffect, useId } from 'react';
+import { memo, useId } from 'react';
 import { ErrorTracker } from '@/utils/errorTracking';
 import { useMessageListState } from './message/list/useMessageListState';
 import { MessageListContainer } from './message/list/MessageListContainer';
