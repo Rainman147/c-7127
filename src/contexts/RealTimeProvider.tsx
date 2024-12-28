@@ -9,7 +9,7 @@ import { useMessageSubscription } from '@/hooks/realtime/useMessageSubscription'
 import { ConnectionManager } from '@/utils/realtime/ConnectionManager';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
-import type { RealtimeContextValue } from './realtime/types';
+import type { RealtimeContextValue, SubscriptionConfig } from './realtime/types';
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
@@ -48,17 +48,10 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   }, [connectionState]);
 
   const { subscribeToChat, unsubscribeFromChat } = useChatSubscription(
-    (chatId: string, componentId: string) => {
-      const subscribeFunc = () => subscriptionManagerSubscribe({
-        table: 'chats',
-        schema: 'public',
-        filter: `id=eq.${chatId}`,
-        event: '*',
-        onMessage: handleChatMessage
-      });
-
+    (config: SubscriptionConfig) => {
+      const subscribeFunc = () => subscriptionManagerSubscribe(config);
       connectionManager.current.queueSubscription(
-        `chat-${chatId}-${componentId}`,
+        `chat-${config.filter}`,
         subscribeFunc
       );
     },
