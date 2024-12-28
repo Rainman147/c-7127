@@ -1,153 +1,85 @@
-import { useState, useEffect } from "react";
-import { logger, LogCategory } from "@/utils/logging";
-import { ErrorTracker } from "@/utils/errorTracking";
-import type { ErrorMetadata } from "@/types/errorTracking";
-import ChatInputField from "./ChatInputField";
-import ChatInputActions from "./ChatInputActions";
-import { useToast } from "@/hooks/use-toast";
-import { useRetryLogic } from "@/hooks/chat/useRetryLogic";
-import { useMessageValidation } from "@/hooks/chat/useMessageValidation";
-import { useMessageQueue } from '@/hooks/queue/useMessageQueue';
-import { useQueueMonitor } from '@/hooks/queue/useQueueMonitor';
+import { useState, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { useMessageHandling } from '@/hooks/chat/useMessageHandling';
+import ChatInputField from './input/ChatInputField';
+import ChatInputActions from './input/ChatInputActions';
+import { logger, LogCategory } from '@/utils/logging';
 
-interface ChatInputContainerProps {
-  onSend: (message: string, type?: 'text' | 'audio') => Promise<any>;
-  onTranscriptionComplete: (text: string) => void;
-  onTranscriptionUpdate?: (text: string) => void;
-  isLoading?: boolean;
-}
-
-const ChatInputContainer = ({
-  onSend,
-  onTranscriptionComplete,
-  onTranscriptionUpdate,
-  isLoading = false
-}: ChatInputContainerProps) => {
-  const [message, setMessage] = useState("");
+const ChatInputContainer = () => {
+  const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { retryCount, handleRetry, resetRetryCount } = useRetryLogic();
-  const { validateMessage, MAX_MESSAGE_LENGTH } = useMessageValidation();
-  const { addMessage, processMessages } = useMessageQueue();
-  const queueStatus = useQueueMonitor();
+  const { handleMessageSubmit } = useMessageHandling();
+
+  const handleSetMessage = useCallback(async (newMessage: string) => {
+    setMessage(newMessage);
+  }, []);
+
+  const handleKeyDown = useCallback(async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      await handleSubmit();
+    }
+  }, []);
 
   const handleSubmit = async () => {
-    if (!message.trim() || isLoading) {
+    if (!message.trim()) {
       return;
     }
 
     try {
-      logger.debug(LogCategory.COMMUNICATION, 'ChatInput', 'Attempting to send message:', {
-        length: message.length,
-        retryCount
-      });
-
-      await onSend(message, 'text');
-      setMessage("");
-      
-      if (retryCount > 0) {
-        logger.info(LogCategory.STATE, 'ChatInput', 'Successfully sent message after retries:', {
-          attempts: retryCount + 1
-        });
-        resetRetryCount();
-      }
+      setIsLoading(true);
+      await handleMessageSubmit(message);
+      setMessage('');
     } catch (error) {
-      logger.error(LogCategory.ERROR, 'ChatInput', 'Error sending message:', {
-        error,
-        retryCount: retryCount + 1
+      logger.error(LogCategory.STATE, 'ChatInputContainer', 'Error submitting message:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to send message. Please try again.',
+        variant: 'destructive',
       });
-
-      const metadata: ErrorMetadata = {
-        component: 'ChatInput',
-        severity: 'high',
-        timestamp: new Date().toISOString(),
-        errorType: 'submission',
-        operation: 'send-message',
-        additionalInfo: {
-          messageLength: message.length,
-          retryCount
-        }
-      };
-      
-      ErrorTracker.trackError(error as Error, metadata);
-      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
-      e.preventDefault();
-      await handleSubmit();
-    }
-  };
-
-  const handleMessageChange = async (newMessage: string) => {
+  const handleFileUpload = async (file: File) => {
     try {
-      if (newMessage.length > MAX_MESSAGE_LENGTH) {
-        logger.warn(LogCategory.VALIDATION, 'ChatInput', 'Message exceeds maximum length:', {
-          length: newMessage.length,
-          limit: MAX_MESSAGE_LENGTH
-        });
-
-        toast({
-          title: "Message too long",
-          description: `Message cannot exceed ${MAX_MESSAGE_LENGTH} characters`,
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      setMessage(newMessage);
+      setIsLoading(true);
+      // File upload logic here
+      logger.debug(LogCategory.STATE, 'ChatInputContainer', 'File uploaded:', file.name);
     } catch (error) {
-      logger.error(LogCategory.ERROR, 'ChatInput', 'Error updating message:', {
-        error,
-        messageLength: newMessage.length
+      logger.error(LogCategory.STATE, 'ChatInputContainer', 'Error uploading file:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to upload file. Please try again.',
+        variant: 'destructive',
       });
-
-      const metadata: ErrorMetadata = {
-        component: 'ChatInput',
-        severity: 'low',
-        timestamp: new Date().toISOString(),
-        errorType: 'state',
-        operation: 'update-message',
-        additionalInfo: {
-          messageLength: newMessage.length,
-          retryCount
-        }
-      };
-      ErrorTracker.trackError(error as Error, metadata);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Process queued messages when connection is restored
-  useEffect(() => {
-    if (queueStatus.pending > 0) {
-      processMessages(async (queuedMessage) => {
-        await onSend(queuedMessage.content, 'text');
-      });
-    }
-  }, [queueStatus.pending, onSend, processMessages]);
+  const handleTranscriptionComplete = (text: string) => {
+    setMessage(text);
+  };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#1E1E1E]/80 backdrop-blur-sm py-4 px-4">
-      <div className="max-w-5xl mx-auto">
-        <div className="relative flex w-full flex-col items-center">
-          <div className="w-full rounded-xl overflow-hidden bg-[#2F2F2F] border border-white/[0.05] shadow-lg">
-            <ChatInputField
-              message={message}
-              setMessage={handleMessageChange}
-              handleKeyDown={handleKeyDown}
-              isLoading={isLoading}
-              maxLength={MAX_MESSAGE_LENGTH}
-            />
-            <ChatInputActions
-              isLoading={isLoading}
-              message={message}
-              handleSubmit={handleSubmit}
-              onTranscriptionComplete={onTranscriptionComplete}
-            />
-          </div>
-        </div>
-      </div>
+    <div className="flex flex-col gap-2 p-4 border-t border-gray-200 dark:border-gray-800">
+      <ChatInputField
+        message={message}
+        setMessage={handleSetMessage}
+        handleKeyDown={handleKeyDown}
+        isLoading={isLoading}
+        characterLimit={2000}
+      />
+      <ChatInputActions
+        isLoading={isLoading}
+        message={message}
+        handleSubmit={handleSubmit}
+        onTranscriptionComplete={handleTranscriptionComplete}
+        handleFileUpload={handleFileUpload}
+      />
     </div>
   );
 };
