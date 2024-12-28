@@ -37,7 +37,6 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     handleConnectionError
   );
 
-  // Update connection manager state when connection state changes
   useEffect(() => {
     logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Updating connection manager state', {
       status: connectionState.status,

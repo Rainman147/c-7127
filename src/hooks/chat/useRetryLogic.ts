@@ -55,10 +55,23 @@ export const useRetryLogic = () => {
     setRetryCount(0);
   };
 
+  const getNextDelay = () => {
+    return RETRY_DELAY * Math.pow(2, retryCount);
+  };
+
+  const getAttemptCount = () => retryCount;
+
+  const reset = () => {
+    resetRetryCount();
+  };
+
   return {
     retryCount,
     handleRetry,
     resetRetryCount,
-    hasReachedMaxRetries: retryCount >= MAX_RETRIES
+    hasReachedMaxRetries: retryCount >= MAX_RETRIES,
+    getNextDelay,
+    getAttemptCount,
+    reset
   };
 };

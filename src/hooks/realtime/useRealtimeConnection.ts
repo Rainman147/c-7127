@@ -3,11 +3,11 @@ import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
 import type { CustomError, ConnectionError } from '@/contexts/realtime/types/errors';
 import type { ConnectionState } from '@/contexts/realtime/types';
-import { useRetryManager } from './useRetryManager';
+import { useRetryLogic } from '@/hooks/chat/useRetryLogic';
 
 export const useRealtimeConnection = () => {
   const { toast } = useToast();
-  const retryManager = useRetryManager();
+  const retryManager = useRetryLogic();
   const connectionStateRef = useRef<ConnectionState>({
     status: 'connecting',
     retryCount: 0,
