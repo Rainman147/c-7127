@@ -1,86 +1,59 @@
-import { useState, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { useMessageHandling } from '@/hooks/chat/useMessageHandling';
-import ChatInputField from './input/ChatInputField';
-import ChatInputActions from './input/ChatInputActions';
-import { logger, LogCategory } from '@/utils/logging';
+import { useState } from "react";
+import { useMessageQueue } from '@/hooks/queue/useMessageQueue';
+import { useQueueMonitor } from '@/hooks/queue/useQueueMonitor';
+import { useChatInput } from "@/hooks/chat/useChatInput";
+import { useMessageHandling } from "./hooks/useMessageHandling";
+import ChatInputWrapper from "./ChatInputWrapper";
+import type { Message } from '@/types/chat';
 
-const ChatInputContainer = () => {
-  const [message, setMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-  const { handleMessageSubmit } = useMessageHandling();
+interface ChatInputContainerProps {
+  onSend: (message: string, type?: 'text' | 'audio') => Promise<Message>;
+  onTranscriptionComplete: (text: string) => void;
+  onTranscriptionUpdate?: (text: string) => void;
+  isLoading?: boolean;
+}
 
-  const handleSetMessage = useCallback(async (newMessage: string) => {
-    setMessage(newMessage);
-  }, []);
+const ChatInputContainer = ({
+  onSend,
+  onTranscriptionComplete,
+  onTranscriptionUpdate,
+  isLoading = false
+}: ChatInputContainerProps) => {
+  const [message, setMessage] = useState("");
+  const { addMessage, processMessages } = useMessageQueue();
+  const queueStatus = useQueueMonitor();
 
-  const handleKeyDown = useCallback(async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      await handleSubmit();
-    }
-  }, []);
+  const {
+    handleSubmit,
+    handleKeyDown,
+    handleTranscriptionComplete,
+    handleFileUpload,
+    isDisabled
+  } = useChatInput({
+    onSend,
+    onTranscriptionComplete,
+    message,
+    setMessage
+  });
 
-  const handleSubmit = async () => {
-    if (!message.trim()) {
-      return;
-    }
+  const { handleMessageChange } = useMessageHandling({
+    onSend,
+    message,
+    setMessage
+  });
 
-    try {
-      setIsLoading(true);
-      await handleMessageSubmit(message);
-      setMessage('');
-    } catch (error) {
-      logger.error(LogCategory.STATE, 'ChatInputContainer', 'Error submitting message:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to send message. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleFileUpload = async (file: File) => {
-    try {
-      setIsLoading(true);
-      // File upload logic here
-      logger.debug(LogCategory.STATE, 'ChatInputContainer', 'File uploaded:', file.name);
-    } catch (error) {
-      logger.error(LogCategory.STATE, 'ChatInputContainer', 'Error uploading file:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to upload file. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleTranscriptionComplete = (text: string) => {
-    setMessage(text);
-  };
+  const inputDisabled = isDisabled || isLoading;
 
   return (
-    <div className="flex flex-col gap-2 p-4 border-t border-gray-200 dark:border-gray-800">
-      <ChatInputField
-        message={message}
-        setMessage={handleSetMessage}
-        handleKeyDown={handleKeyDown}
-        isLoading={isLoading}
-        characterLimit={2000}
-      />
-      <ChatInputActions
-        isLoading={isLoading}
-        message={message}
-        handleSubmit={handleSubmit}
-        onTranscriptionComplete={handleTranscriptionComplete}
-        handleFileUpload={handleFileUpload}
-      />
-    </div>
+    <ChatInputWrapper
+      message={message}
+      handleMessageChange={handleMessageChange}
+      handleKeyDown={handleKeyDown}
+      handleSubmit={handleSubmit}
+      handleTranscriptionComplete={handleTranscriptionComplete}
+      handleFileUpload={handleFileUpload}
+      inputDisabled={inputDisabled}
+    />
   );
 };
 
