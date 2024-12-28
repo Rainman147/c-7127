@@ -9,6 +9,8 @@ import { useChatInput } from "@/hooks/chat/useChatInput";
 import { useToast } from "@/hooks/use-toast";
 import { useRetryLogic } from "@/hooks/chat/useRetryLogic";
 import { useMessageValidation } from "@/hooks/chat/useMessageValidation";
+import { useMessageQueue } from '@/hooks/queue/useMessageQueue';
+import { useQueueMonitor } from '@/hooks/queue/useQueueMonitor';
 
 interface ChatInputContainerProps {
   onSend: (message: string, type?: 'text' | 'audio') => Promise<any>;
@@ -27,6 +29,8 @@ const ChatInputContainer = ({
   const { toast } = useToast();
   const { retryCount, handleRetry, resetRetryCount } = useRetryLogic();
   const { validateMessage, MAX_MESSAGE_LENGTH } = useMessageValidation();
+  const { addMessage, processMessages } = useMessageQueue();
+  const queueStatus = useQueueMonitor();
 
   const {
     handleSubmit: originalHandleSubmit,
@@ -94,7 +98,7 @@ const ChatInputContainer = ({
     setMessage
   });
 
-  const handleMessageChange = (newMessage: string) => {
+  const handleMessageChange = async (newMessage: string) => {
     try {
       if (newMessage.length > MAX_MESSAGE_LENGTH) {
         logger.warn(LogCategory.VALIDATION, 'ChatInput', 'Message exceeds maximum length:', {
@@ -110,11 +114,12 @@ const ChatInputContainer = ({
         return;
       }
       
-      logger.debug(LogCategory.STATE, 'ChatInput', 'Message changed:', { 
-        length: newMessage.length,
-        connectionState: connectionState.status
-      });
       setMessage(newMessage);
+
+      // Queue message for offline support
+      if (connectionState.status !== 'connected') {
+        await addMessage(newMessage, 'medium');
+      }
     } catch (error) {
       logger.error(LogCategory.ERROR, 'ChatInput', 'Error updating message:', {
         error,
@@ -137,6 +142,15 @@ const ChatInputContainer = ({
       ErrorTracker.trackError(error as Error, metadata);
     }
   };
+
+  // Process queued messages when connection is available
+  useEffect(() => {
+    if (connectionState.status === 'connected' && queueStatus.pending > 0) {
+      processMessages(async (queuedMessage) => {
+        await onSend(queuedMessage.content, 'text');
+      });
+    }
+  }, [connectionState.status, queueStatus.pending, onSend, processMessages]);
 
   const inputDisabled = isDisabled || 
     (connectionState.status === 'disconnected' && connectionState.retryCount >= 5) ||
@@ -166,6 +180,6 @@ const ChatInputContainer = ({
       </div>
     </div>
   );
-};
+});
 
 export default ChatInputContainer;
