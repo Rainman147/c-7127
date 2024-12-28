@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
 import { debounce } from 'lodash';
-import type { ConnectionState } from '@/contexts/realtime/config';
+import type { ConnectionState } from '@/contexts/realtime/types';
 
 const INITIAL_STATE: ConnectionState = {
   status: 'connecting',
@@ -15,17 +15,23 @@ export const useConnectionState = () => {
   const [connectionState, setConnectionState] = useState<ConnectionState>(INITIAL_STATE);
   const { toast } = useToast();
   const retryTimeoutRef = useRef<NodeJS.Timeout>();
+  const lastUpdateRef = useRef<number>(Date.now());
 
   // Debounced state update to prevent rapid changes
   const debouncedSetState = useCallback(
     debounce((newState: ConnectionState) => {
+      const now = Date.now();
+      const timeSinceLastUpdate = now - lastUpdateRef.current;
+
       logger.info(LogCategory.STATE, 'ConnectionState', 'State transition', {
         from: connectionState.status,
         to: newState.status,
         retryCount: newState.retryCount,
+        timeSinceLastUpdate,
         timestamp: new Date().toISOString()
       });
 
+      lastUpdateRef.current = now;
       setConnectionState(newState);
 
       // Show toast notification for state changes
@@ -87,6 +93,7 @@ export const useConnectionState = () => {
   return {
     connectionState,
     handleConnectionSuccess,
-    handleConnectionError
+    handleConnectionError,
+    resetState: () => debouncedSetState(INITIAL_STATE)
   };
 };

@@ -1,15 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { RealTimeContext } from './RealTimeContext';
 import { useWebSocketManager } from './realtime/WebSocketManager';
 import { useSubscriptionManager } from './realtime/SubscriptionManager';
 import { useMessageHandlers } from '@/hooks/realtime/useMessageHandlers';
-import { useRealtimeConnection } from '@/hooks/realtime/useRealtimeConnection';
+import { useConnectionState } from '@/hooks/realtime/useConnectionState';
 import { useChatSubscription } from '@/hooks/realtime/useChatSubscription';
 import { useMessageSubscription } from '@/hooks/realtime/useMessageSubscription';
 import { ConnectionManager } from '@/utils/realtime/ConnectionManager';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
-import type { RealtimeContextValue, SubscriptionConfig } from './realtime/types';
+import type { RealtimeContextValue } from './realtime/types';
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [lastMessage, setLastMessage] = useState<Message>();
@@ -17,9 +17,9 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   
   const {
     connectionState,
-    handleConnectionError,
-    retryManager
-  } = useRealtimeConnection();
+    handleConnectionSuccess,
+    handleConnectionError
+  } = useConnectionState();
 
   const {
     subscribe: subscriptionManagerSubscribe,
@@ -28,32 +28,19 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   } = useSubscriptionManager();
 
   const { handleChatMessage, handleMessageUpdate } = useMessageHandlers(
-    setLastMessage,
-    retryManager.getNextDelay
+    setLastMessage
   );
 
   const { lastPingTime } = useWebSocketManager(
-    undefined,
+    handleConnectionSuccess,
     handleConnectionError
   );
 
-  useEffect(() => {
-    logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Updating connection manager state', {
-      status: connectionState.status,
-      retryCount: connectionState.retryCount,
-      timestamp: new Date().toISOString()
-    });
-    
-    connectionManager.current.updateConnectionState(connectionState);
-  }, [connectionState]);
-
   const { subscribeToChat, unsubscribeFromChat } = useChatSubscription(
-    (config: SubscriptionConfig) => {
-      const subscribeFunc = () => subscriptionManagerSubscribe(config);
-      connectionManager.current.queueSubscription(config);
-    },
+    subscriptionManagerSubscribe,
     cleanupSubscriptions,
-    handleConnectionError
+    handleConnectionError,
+    handleChatMessage
   );
 
   const { subscribeToMessage, unsubscribeFromMessage } = useMessageSubscription(
@@ -63,13 +50,12 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     handleMessageUpdate
   );
 
-  useEffect(() => {
-    return () => {
-      cleanupSubscriptions();
-      retryManager.reset();
-      connectionManager.current.clearQueue();
-    };
-  }, [cleanupSubscriptions, retryManager]);
+  logger.debug(LogCategory.STATE, 'RealTimeProvider', 'Provider state', {
+    connectionStatus: connectionState.status,
+    activeSubscriptions: getActiveSubscriptions().length,
+    lastPingTime,
+    timestamp: new Date().toISOString()
+  });
 
   const value: RealtimeContextValue = {
     connectionState,
