@@ -35,6 +35,7 @@ const ChatInputWrapper = ({
               setMessage={handleMessageChange}
               handleKeyDown={handleKeyDown}
               isLoading={inputDisabled}
+              maxLength={4000}
             />
             <ChatInputActions
               isLoading={inputDisabled}
