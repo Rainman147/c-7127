@@ -13,10 +13,16 @@ export interface SubscriptionConfig {
 }
 
 export interface ConnectionState {
-  status: 'connecting' | 'connected' | 'disconnected';
+  status: 'connected' | 'connecting' | 'disconnected';
   retryCount: number;
   lastAttempt: number;
   error?: Error;
+}
+
+export interface ConnectionStore {
+  connectionState: ConnectionState;
+  setConnectionState: (state: Partial<ConnectionState>) => void;
+  resetState: () => void;
 }
 
 export interface RealtimeContextValue {
@@ -28,9 +34,4 @@ export interface RealtimeContextValue {
   unsubscribeFromMessage: (messageId: string, componentId: string) => void;
   subscribe: (config: SubscriptionConfig) => void;
   cleanup: () => void;
-}
-
-export interface ConnectionStore {
-  connectionState: ConnectionState;
-  setConnectionState: (state: Partial<ConnectionState>) => void;
 }

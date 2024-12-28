@@ -10,25 +10,24 @@ const INITIAL_STATE: ConnectionState = {
 };
 
 export const useConnectionState = create<ConnectionStore>((set) => ({
-  state: INITIAL_STATE,
-  updateState: (newState) => {
+  connectionState: INITIAL_STATE,
+  setConnectionState: (newState) => 
     set((current) => {
       const updatedState = {
-        ...current.state,
+        ...current.connectionState,
         ...newState,
         lastAttempt: Date.now()
       };
 
       logger.info(LogCategory.STATE, 'ConnectionState', 'State transition', {
-        from: current.state.status,
+        from: current.connectionState.status,
         to: updatedState.status,
         retryCount: updatedState.retryCount,
         error: updatedState.error?.message,
         timestamp: new Date().toISOString()
       });
 
-      return { state: updatedState };
-    });
-  },
-  resetState: () => set({ state: INITIAL_STATE })
+      return { connectionState: updatedState };
+    }),
+  resetState: () => set({ connectionState: INITIAL_STATE })
 }));
