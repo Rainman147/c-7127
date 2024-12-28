@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { logger, LogCategory } from "@/utils/logging";
 import { ErrorTracker } from "@/utils/errorTracking";
 import type { ErrorMetadata } from "@/types/errorTracking";
@@ -180,6 +180,6 @@ const ChatInputContainer = ({
       </div>
     </div>
   );
-});
+};
 
 export default ChatInputContainer;
