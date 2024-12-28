@@ -26,9 +26,7 @@ export class SubscriptionManager {
       timestamp: new Date().toISOString()
     });
 
-    const channel = supabase.channel(channelKey);
-
-    channel
+    const channel = supabase.channel(channelKey)
       .on(
         'postgres_changes',
         { 

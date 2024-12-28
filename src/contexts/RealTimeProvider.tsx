@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logger, LogCategory } from '@/utils/logging';
+import { SubscriptionManager } from './realtime/SubscriptionManager';
 import type { Message } from '@/types/chat';
 import type { ConnectionState, RealtimeContextValue, SubscriptionConfig } from './realtime/types';
 
@@ -24,7 +25,7 @@ export const RealTimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     error: undefined
   });
   const [lastMessage, setLastMessage] = useState<Message | null>(null);
-  const subscriptions = useRef<Map<string, any>>(new Map());
+  const subscriptionManager = useRef(new SubscriptionManager());
 
   const subscribeToChat = (chatId: string, componentId: string) => {
     const subscriptionKey = `messages-chat_id=eq.${chatId}`;
@@ -63,7 +64,7 @@ export const RealTimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     };
 
-    subscribe(config);
+    subscriptionManager.current.subscribe(config);
   };
 
   const unsubscribeFromChat = (chatId: string, componentId: string) => {
@@ -74,12 +75,59 @@ export const RealTimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       componentId
     });
     
-    unsubscribeFromChannel(subscriptionKey);
+    subscriptionManager.current.cleanup(subscriptionKey);
   };
+
+  const subscribeToMessage = (messageId: string, componentId: string, onMessage: (content: string) => void) => {
+    const config: SubscriptionConfig = {
+      event: '*',
+      schema: 'public',
+      table: 'messages',
+      filter: `id=eq.${messageId}`,
+      onMessage: (payload) => {
+        if (payload.new?.content) {
+          onMessage(payload.new.content);
+        }
+      },
+      onError: (error) => {
+        logger.error(LogCategory.SUBSCRIPTION, 'RealTimeProvider', 'Message subscription error:', {
+          error,
+          messageId
+        });
+      },
+      onSubscriptionStatus: (status) => {
+        logger.info(LogCategory.SUBSCRIPTION, 'RealTimeProvider', 'Message subscription status:', {
+          status,
+          messageId
+        });
+      }
+    };
+
+    subscriptionManager.current.subscribe(config);
+  };
+
+  const unsubscribeFromMessage = (messageId: string, componentId: string) => {
+    const subscriptionKey = `messages-id=eq.${messageId}`;
+    subscriptionManager.current.cleanup(subscriptionKey);
+  };
+
+  const subscribe = (config: SubscriptionConfig) => {
+    subscriptionManager.current.subscribe(config);
+  };
+
+  const cleanup = () => {
+    subscriptionManager.current.cleanup();
+  };
+
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, []);
 
   const value: RealtimeContextValue = {
     connectionState,
-    lastMessage: lastMessage || null,
+    lastMessage,
     subscribeToChat,
     unsubscribeFromChat,
     subscribeToMessage,

@@ -51,7 +51,6 @@ class Logger {
 
 export const logger = new Logger();
 
-// WebSocket specific logger with the same interface
 export const wsLogger = {
   connectionStateChange: (component: string, from: string, to: string, data?: any) => {
     logger.info(LogCategory.WEBSOCKET, component, `Connection state changed from ${from} to ${to}`, data);
