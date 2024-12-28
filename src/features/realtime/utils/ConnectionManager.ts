@@ -1,26 +1,18 @@
 import { logger, LogCategory } from '@/utils/logging';
 import { ExponentialBackoff } from '@/utils/backoff';
-import type { SubscriptionConfig } from './types';
-import type { ConnectionState } from './types';
-
-interface QueuedSubscription {
-  config: SubscriptionConfig;
-  timestamp: number;
-  retryCount: number;
-}
+import { QueueManager } from './QueueManager';
+import { ConnectionStateTracker } from './ConnectionStateTracker';
+import type { SubscriptionConfig } from '../types';
+import type { ConnectionState } from '../types';
 
 export class ConnectionManager {
-  private connectionState: ConnectionState = {
-    status: 'connecting',
-    retryCount: 0,
-    lastAttempt: Date.now(),
-    error: undefined
-  };
-  private subscriptionQueue: QueuedSubscription[] = [];
+  private stateTracker: ConnectionStateTracker;
+  private queueManager: QueueManager;
   private backoff: ExponentialBackoff;
-  private isProcessingQueue = false;
 
   constructor() {
+    this.stateTracker = new ConnectionStateTracker();
+    this.queueManager = new QueueManager();
     this.backoff = new ExponentialBackoff({
       initialDelay: 1000,
       maxDelay: 30000,
@@ -29,87 +21,35 @@ export class ConnectionManager {
   }
 
   public isReady(): boolean {
-    return this.connectionState.status === 'connected';
+    return this.stateTracker.isReady();
   }
 
   public queueSubscription(config: SubscriptionConfig): void {
-    logger.debug(LogCategory.WEBSOCKET, 'ConnectionManager', 'Queueing subscription', {
-      table: config.table,
-      filter: config.filter,
-      timestamp: new Date().toISOString()
-    });
-
-    this.subscriptionQueue.push({
-      config,
-      timestamp: Date.now(),
-      retryCount: 0
-    });
-
-    if (this.isReady() && !this.isProcessingQueue) {
+    this.queueManager.queueSubscription(config);
+    
+    if (this.isReady()) {
       this.processQueue();
     }
   }
 
-  public async processQueue(): Promise<void> {
-    if (this.isProcessingQueue || !this.isReady()) {
-      return;
-    }
-
-    this.isProcessingQueue = true;
-    logger.info(LogCategory.WEBSOCKET, 'ConnectionManager', 'Processing subscription queue', {
-      queueLength: this.subscriptionQueue.length,
-      timestamp: new Date().toISOString()
-    });
-
-    while (this.subscriptionQueue.length > 0 && this.isReady()) {
-      const subscription = this.subscriptionQueue.shift();
-      if (!subscription) continue;
-
-      try {
-        await this.processSubscription(subscription);
-      } catch (error) {
-        logger.error(LogCategory.WEBSOCKET, 'ConnectionManager', 'Failed to process subscription', {
-          error: error instanceof Error ? error.message : String(error),
-          table: subscription.config.table,
-          retryCount: subscription.retryCount,
-          timestamp: new Date().toISOString()
-        });
-
-        if (subscription.retryCount < 3) {
-          this.subscriptionQueue.push({
-            ...subscription,
-            retryCount: subscription.retryCount + 1
-          });
-        }
-      }
-    }
-
-    this.isProcessingQueue = false;
-  }
-
-  private async processSubscription(subscription: QueuedSubscription): Promise<void> {
+  private async processSubscription(subscription: any): Promise<void> {
     const delay = this.backoff.nextDelay();
     if (delay !== null) {
       await new Promise(resolve => setTimeout(resolve, delay));
     }
 
-    // This will be handled by the RealTimeProvider
     subscription.config.onSubscriptionStatus?.('SUBSCRIBING');
   }
 
-  public updateConnectionState(newState: Partial<ConnectionState>): void {
-    this.connectionState = {
-      ...this.connectionState,
-      ...newState,
-      lastAttempt: Date.now()
-    };
+  public async processQueue(): Promise<void> {
+    await this.queueManager.processQueue(
+      this.isReady(),
+      this.processSubscription.bind(this)
+    );
+  }
 
-    logger.info(LogCategory.WEBSOCKET, 'ConnectionManager', 'Connection state updated', {
-      previousStatus: this.connectionState.status,
-      newStatus: newState.status,
-      retryCount: this.connectionState.retryCount,
-      timestamp: new Date().toISOString()
-    });
+  public updateConnectionState(newState: Partial<ConnectionState>): void {
+    this.stateTracker.updateConnectionState(newState);
 
     if (this.isReady()) {
       this.processQueue();
@@ -117,11 +57,10 @@ export class ConnectionManager {
   }
 
   public getConnectionState(): ConnectionState {
-    return { ...this.connectionState };
+    return this.stateTracker.getConnectionState();
   }
 
   public clearQueue(): void {
-    this.subscriptionQueue = [];
-    this.isProcessingQueue = false;
+    this.queueManager.clearQueue();
   }
 }

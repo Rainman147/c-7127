@@ -3,7 +3,7 @@ import { queueManager } from '@/utils/queue/QueueManager';
 import type { QueuedMessage } from '@/utils/queue/QueueTypes';
 import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
-import { useConnectionState } from '@/hooks/realtime/useConnectionState';
+import { useConnectionState } from '@/features/realtime';
 
 export const useMessageQueue = () => {
   const { toast } = useToast();

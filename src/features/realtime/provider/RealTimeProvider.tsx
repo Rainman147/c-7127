@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { RealTimeContext } from '../context/RealTimeContext';
-import { useWebSocketManager } from './WebSocketManager';
-import { useSubscriptionManager } from './SubscriptionManager';
+import { useWebSocketManager } from '../hooks/useWebSocketManager';
+import { useSubscriptionManager } from '../hooks/useSubscriptionManager';
 import { useMessageHandlers } from '../hooks/useMessageHandlers';
 import { useConnectionState } from '../hooks/useConnectionState';
 import { useChatSubscription } from '../hooks/useChatSubscription';
