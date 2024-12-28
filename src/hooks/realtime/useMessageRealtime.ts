@@ -3,6 +3,7 @@ import { logger, LogCategory } from '@/utils/logging';
 import { useRealTime } from '@/contexts/RealTimeContext';
 import { useMessageQueue } from './useMessageQueue';
 import { useQueryClient } from '@tanstack/react-query';
+import type { Message } from '@/types/chat';
 
 export const useMessageRealtime = (
   messageId: string | undefined,
@@ -33,10 +34,12 @@ export const useMessageRealtime = (
       lastUpdateTimeRef.current = Date.now();
       messageProcessingTimeRef.current = performance.now() - startTime;
 
+      const messages = queryClient.getQueryData<Message[]>(['messages']) || [];
+      
       logger.info(LogCategory.PERFORMANCE, 'MessageRealtime', 'Message processing completed', {
         messageId,
         processingTime: messageProcessingTimeRef.current,
-        queueSize: queryClient.getQueryData(['messageQueue'])?.length || 0,
+        queueSize: messages.length,
         timestamp: new Date().toISOString()
       });
 
