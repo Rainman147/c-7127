@@ -14,7 +14,7 @@ export enum LogCategory {
   USER_ACTION = 'user_action',
   METRICS = 'metrics',
   AUTH = 'auth',
-  QUEUE = 'queue'
+  SUBSCRIPTION = 'subscription'
 }
 
 export interface LogMetadata {

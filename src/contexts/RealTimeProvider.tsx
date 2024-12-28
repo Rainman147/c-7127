@@ -7,7 +7,7 @@ import { SessionValidator } from '@/utils/realtime/SessionValidator';
 import { SubscriptionManager } from '@/utils/realtime/SubscriptionManager';
 import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/types/chat';
-import type { RealtimeContextValue } from './realtime/types';
+import type { RealtimeContextValue, SubscriptionConfig } from './realtime/types';
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const { toast } = useToast();
@@ -168,7 +168,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
             timestamp: new Date().toISOString()
           });
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
           logger.error(LogCategory.SUBSCRIPTION, 'ChatSubscription', 'Subscription error', {
             chatId,
             error: error.message,
@@ -205,7 +205,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
             timestamp: new Date().toISOString()
           });
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
           logger.error(LogCategory.SUBSCRIPTION, 'MessageSubscription', 'Subscription error', {
             messageId,
             error: error.message,
@@ -226,6 +226,16 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     unsubscribeFromMessage: (messageId: string, componentId: string) => {
       const subscriptionKey = `messages-id=eq.${messageId}`;
       subscriptionManager.current.removeSubscription(subscriptionKey);
+    },
+    subscribe: (config: SubscriptionConfig) => {
+      return subscriptionManager.current.subscribe(config);
+    },
+    cleanup: (channelKey?: string) => {
+      if (channelKey) {
+        subscriptionManager.current.removeSubscription(channelKey);
+      } else {
+        subscriptionManager.current.cleanupSubscriptions();
+      }
     }
   };
 
