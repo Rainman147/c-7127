@@ -1,78 +1,48 @@
-import { useCallback, useRef } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
+import { supabase } from '@/integrations/supabase/client';
 import type { SubscriptionConfig } from './types';
-import type { SubscriptionError } from './types/errors';
 
-interface SubscriptionMetrics {
-  createdAt: number;
-  lastEventAt: number;
-  errorCount: number;
-  reconnectCount: number;
-}
+export class SubscriptionManager {
+  private subscriptions: Map<string, RealtimeChannel>;
+  private cleanupTimeouts: Map<string, NodeJS.Timeout>;
 
-export const useSubscriptionManager = () => {
-  const subscriptions = useRef(new Map<string, RealtimeChannel>());
-  const subscriptionTimers = useRef(new Map<string, NodeJS.Timeout>());
-  const subscriptionMetrics = useRef(new Map<string, SubscriptionMetrics>());
+  constructor() {
+    this.subscriptions = new Map();
+    this.cleanupTimeouts = new Map();
+  }
 
-  const cleanupChannel = useCallback((channelKey: string) => {
-    const channel = subscriptions.current.get(channelKey);
-    if (channel) {
-      logger.info(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Cleaning up channel', {
-        channelKey,
-        metrics: subscriptionMetrics.current.get(channelKey),
-        timestamp: new Date().toISOString()
-      });
-      
-      supabase.removeChannel(channel);
-      subscriptions.current.delete(channelKey);
-      subscriptionMetrics.current.delete(channelKey);
-      
-      const timer = subscriptionTimers.current.get(channelKey);
-      if (timer) {
-        clearTimeout(timer);
-        subscriptionTimers.current.delete(channelKey);
-      }
-    }
-  }, []);
-
-  const subscribe = useCallback((config: SubscriptionConfig): RealtimeChannel => {
+  public subscribe(config: SubscriptionConfig): RealtimeChannel {
     const channelKey = `${config.table}-${config.filter || 'all'}`;
-    const startTime = Date.now();
     
-    if (subscriptions.current.has(channelKey)) {
-      cleanupChannel(channelKey);
+    if (this.subscriptions.has(channelKey)) {
+      this.cleanup(channelKey);
     }
+
+    logger.debug(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Creating subscription', {
+      channelKey,
+      table: config.table,
+      filter: config.filter,
+      timestamp: new Date().toISOString()
+    });
 
     const channel = supabase.channel(channelKey);
-    const metrics = {
-      createdAt: startTime,
-      lastEventAt: startTime,
-      errorCount: 0,
-      reconnectCount: 0
-    };
-    
-    subscriptionMetrics.current.set(channelKey, metrics);
 
     channel
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         { 
           event: config.event,
           schema: config.schema,
           table: config.table,
           filter: config.filter 
         },
-        (payload: any) => {
+        (payload) => {
           logger.debug(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Received message', {
             channelKey,
             event: payload.type,
-            timestamp: new Date().toISOString(),
-            timeSinceLastEvent: Date.now() - metrics.lastEventAt
+            timestamp: new Date().toISOString()
           });
-          metrics.lastEventAt = Date.now();
           config.onMessage(payload);
         }
       )
@@ -80,45 +50,45 @@ export const useSubscriptionManager = () => {
         logger.info(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Subscription status changed', {
           channelKey,
           status,
-          metrics: subscriptionMetrics.current.get(channelKey),
           timestamp: new Date().toISOString()
         });
         
         if (status === 'SUBSCRIBED') {
-          subscriptions.current.set(channelKey, channel);
+          this.subscriptions.set(channelKey, channel);
+          config.onSubscriptionStatus?.('SUBSCRIBED');
         } else if (status === 'CHANNEL_ERROR') {
-          metrics.errorCount++;
-          const error: SubscriptionError = {
-            channelId: channelKey,
-            event: 'error',
-            name: 'ChannelError',
-            message: `Channel error for ${config.table}`,
-            timestamp: new Date().toISOString(),
-            connectionState: 'error',
-            retryCount: metrics.errorCount,
-            lastAttempt: Date.now(),
-            backoffDelay: Math.min(1000 * Math.pow(2, metrics.errorCount), 30000),
-            reason: `Channel error for ${config.table}`
-          };
-          logger.error(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Subscription error', {
-            error,
-            channelKey,
-            metrics,
-            timestamp: new Date().toISOString()
-          });
-          config.onError?.(new Error(error.message));
+          const error = new Error(`Channel error for ${config.table}`);
+          config.onError?.(error);
+          this.cleanup(channelKey);
+          config.onSubscriptionStatus?.('CHANNEL_ERROR');
         }
-        
-        config.onSubscriptionStatus?.(status);
       });
 
     return channel;
-  }, [cleanupChannel]);
+  }
 
-  return {
-    subscribe,
-    cleanup: cleanupChannel,
-    getActiveSubscriptions: () => Array.from(subscriptions.current.keys()),
-    getMetrics: () => Array.from(subscriptionMetrics.current.entries())
-  };
-};
+  public cleanup(channelKey?: string): void {
+    if (channelKey) {
+      const channel = this.subscriptions.get(channelKey);
+      if (channel) {
+        logger.info(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Cleaning up subscription', {
+          channelKey,
+          timestamp: new Date().toISOString()
+        });
+        channel.unsubscribe();
+        this.subscriptions.delete(channelKey);
+      }
+    } else {
+      logger.info(LogCategory.SUBSCRIPTION, 'SubscriptionManager', 'Cleaning up all subscriptions', {
+        count: this.subscriptions.size,
+        subscriptionKeys: Array.from(this.subscriptions.keys()),
+        timestamp: new Date().toISOString()
+      });
+      this.subscriptions.forEach((channel, key) => this.cleanup(key));
+    }
+  }
+
+  public getActiveSubscriptions(): string[] {
+    return Array.from(this.subscriptions.keys());
+  }
+}

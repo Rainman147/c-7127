@@ -1,25 +1,19 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { RealTimeContext } from './RealTimeContext';
 import { useToast } from '@/hooks/use-toast';
 import { logger, LogCategory } from '@/utils/logging';
-import { ConnectionStateManager } from '@/utils/realtime/ConnectionStateManager';
+import { useConnectionState } from './realtime/connectionState';
 import { SessionValidator } from '@/utils/realtime/SessionValidator';
-import { SubscriptionManager } from '@/utils/realtime/SubscriptionManager';
+import { SubscriptionManager } from './realtime/SubscriptionManager';
 import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/types/chat';
-import type { RealtimeContextValue, SubscriptionConfig } from './realtime/types';
+import type { RealtimeContextValue } from './realtime/types';
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   const { toast } = useToast();
-  const [lastMessage, setLastMessage] = useState<Message>();
-  const [connectionState, setConnectionState] = useState({
-    status: 'connecting' as const,
-    retryCount: 0,
-    lastAttempt: Date.now(),
-    error: undefined as Error | undefined
-  });
-
-  const connectionManager = useRef(new ConnectionStateManager());
+  const [lastMessage, setLastMessage] = React.useState<Message>();
+  const { state: connectionState, updateState, resetState } = useConnectionState();
+  
   const subscriptionManager = useRef(new SubscriptionManager());
   const channelRef = useRef<any>(null);
   const sessionRef = useRef<string | null>(null);
@@ -55,44 +49,6 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     getSession();
   }, []);
 
-  const handleConnectionStateChange = (newState: typeof connectionState) => {
-    if (!connectionManager.current.shouldUpdateState(newState, connectionState)) {
-      return;
-    }
-
-    logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Connection state changing', {
-      from: connectionState.status,
-      to: newState.status,
-      retryCount: connectionManager.current.getCurrentRetryCount(),
-      timestamp: new Date().toISOString()
-    });
-
-    setConnectionState(newState);
-
-    if (newState.status === 'disconnected') {
-      const activeSubscriptions = subscriptionManager.current.getActiveSubscriptions();
-      activeSubscriptions.forEach(key => {
-        subscriptionManager.current.scheduleCleanup(key, 5000); // Clean up after 5 seconds of disconnection
-      });
-
-      toast({
-        title: "Connection Lost",
-        description: `Reconnecting... (Attempt ${connectionManager.current.getCurrentRetryCount()}/5)`,
-        variant: "destructive",
-      });
-    } else if (newState.status === 'connected') {
-      connectionManager.current.reset();
-      subscriptionManager.current.getActiveSubscriptions().forEach(key => {
-        subscriptionManager.current.cancelScheduledCleanup(key);
-      });
-
-      toast({
-        description: "Connection restored",
-        className: "bg-green-500 text-white",
-      });
-    }
-  };
-
   useEffect(() => {
     if (!sessionRef.current) {
       logger.warn(LogCategory.WEBSOCKET, 'RealTimeProvider', 'No session available for channel setup', {
@@ -122,18 +78,21 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         });
 
         if (status === 'SUBSCRIBED') {
-          handleConnectionStateChange({
-            status: 'connected',
-            retryCount: 0,
-            lastAttempt: Date.now(),
-            error: undefined
+          updateState({ status: 'connected', retryCount: 0, error: undefined });
+          toast({
+            description: "Connection restored",
+            className: "bg-green-500 text-white",
           });
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          handleConnectionStateChange({
+          updateState({
             status: 'disconnected',
             retryCount: connectionState.retryCount + 1,
-            lastAttempt: Date.now(),
             error: new Error(`Channel ${status}`)
+          });
+          toast({
+            title: "Connection Lost",
+            description: `Reconnecting... (Attempt ${connectionState.retryCount + 1}/5)`,
+            variant: "destructive",
           });
         }
       });
@@ -144,17 +103,16 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       });
       
       if (channelRef.current) {
-        subscriptionManager.current.cleanupSubscriptions();
+        subscriptionManager.current.cleanup();
         supabase.removeChannel(channelRef.current);
       }
     };
-  }, [connectionState.retryCount, toast]);
+  }, [connectionState.retryCount, toast, updateState]);
 
   const value: RealtimeContextValue = {
     connectionState,
     lastMessage,
     subscribeToChat: (chatId: string, componentId: string) => {
-      const subscriptionKey = `messages-chat_id=eq.${chatId}`;
       const config = {
         event: '*',
         schema: 'public',
@@ -167,6 +125,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
             type: payload.type,
             timestamp: new Date().toISOString()
           });
+          setLastMessage(payload.new as Message);
         },
         onError: (error: Error) => {
           logger.error(LogCategory.SUBSCRIPTION, 'ChatSubscription', 'Subscription error', {
@@ -184,14 +143,12 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         }
       };
 
-      subscriptionManager.current.addSubscription(subscriptionKey, supabase.channel(subscriptionKey).on(config));
+      subscriptionManager.current.subscribe(config);
     },
-    unsubscribeFromChat: (chatId: string, componentId: string) => {
-      const subscriptionKey = `messages-chat_id=eq.${chatId}`;
-      subscriptionManager.current.removeSubscription(subscriptionKey);
+    unsubscribeFromChat: (chatId: string) => {
+      subscriptionManager.current.cleanup(`messages-chat_id=eq.${chatId}`);
     },
     subscribeToMessage: (messageId: string, componentId: string, onUpdate: (content: string) => void) => {
-      const subscriptionKey = `messages-id=eq.${messageId}`;
       const config = {
         event: '*',
         schema: 'public',
@@ -221,21 +178,16 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
         }
       };
 
-      subscriptionManager.current.addSubscription(subscriptionKey, supabase.channel(subscriptionKey).on(config));
+      subscriptionManager.current.subscribe(config);
     },
-    unsubscribeFromMessage: (messageId: string, componentId: string) => {
-      const subscriptionKey = `messages-id=eq.${messageId}`;
-      subscriptionManager.current.removeSubscription(subscriptionKey);
+    unsubscribeFromMessage: (messageId: string) => {
+      subscriptionManager.current.cleanup(`messages-id=eq.${messageId}`);
     },
-    subscribe: (config: SubscriptionConfig) => {
+    subscribe: (config) => {
       return subscriptionManager.current.subscribe(config);
     },
     cleanup: (channelKey?: string) => {
-      if (channelKey) {
-        subscriptionManager.current.removeSubscription(channelKey);
-      } else {
-        subscriptionManager.current.cleanupSubscriptions();
-      }
+      subscriptionManager.current.cleanup(channelKey);
     }
   };
 

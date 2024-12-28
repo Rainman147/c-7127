@@ -1,10 +1,29 @@
-export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { Message } from '@/types/chat';
+
+export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
 export interface ConnectionState {
   status: ConnectionStatus;
   retryCount: number;
   lastAttempt: number;
   error?: Error;
+}
+
+export interface ConnectionStore {
+  state: ConnectionState;
+  updateState: (newState: Partial<ConnectionState>) => void;
+  resetState: () => void;
+}
+
+export interface SubscriptionConfig {
+  event: '*' | 'INSERT' | 'UPDATE' | 'DELETE';
+  schema: string;
+  table: string;
+  filter?: string;
+  onMessage: (payload: any) => void;
+  onError?: (error: Error) => void;
+  onSubscriptionStatus?: (status: string) => void;
 }
 
 export interface RealtimeContextValue {
@@ -16,14 +35,4 @@ export interface RealtimeContextValue {
   unsubscribeFromMessage: (messageId: string, componentId: string) => void;
   subscribe: (config: SubscriptionConfig) => RealtimeChannel;
   cleanup: (channelKey?: string) => void;
-}
-
-export interface SubscriptionConfig {
-  event: '*' | 'INSERT' | 'UPDATE' | 'DELETE';
-  schema: string;
-  table: string;
-  filter?: string;
-  onMessage: (payload: any) => void;
-  onError?: (error: Error) => void;
-  onSubscriptionStatus?: (status: string) => void;
 }
