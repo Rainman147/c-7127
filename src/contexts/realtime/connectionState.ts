@@ -5,8 +5,8 @@ import type { ConnectionState, ConnectionStore } from './types';
 const INITIAL_STATE: ConnectionState = {
   status: 'connecting',
   retryCount: 0,
-  error: undefined,
-  lastAttempt: Date.now()
+  lastAttempt: Date.now(),
+  error: undefined
 };
 
 export const useConnectionState = create<ConnectionStore>((set) => ({

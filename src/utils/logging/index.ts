@@ -1,2 +1,2 @@
 export * from './LogTypes';
-export { logger, wsLogger, LogCategory } from './LoggerCore';
+export { logger, wsLogger } from './LoggerCore';

@@ -1,5 +1,3 @@
-import type { Message } from '@/types/chat';
-
 export type SubscriptionEvent = '*' | 'INSERT' | 'UPDATE' | 'DELETE';
 
 export interface SubscriptionConfig {
@@ -27,10 +25,9 @@ export interface ConnectionStore {
 
 export interface RealtimeContextValue {
   connectionState: ConnectionState;
-  lastMessage: Message | null;
   subscribeToChat: (chatId: string, componentId: string) => void;
   unsubscribeFromChat: (chatId: string, componentId: string) => void;
-  subscribeToMessage: (messageId: string, componentId: string, onMessage: (content: string) => void) => void;
+  subscribeToMessage: (messageId: string, componentId: string) => void;
   unsubscribeFromMessage: (messageId: string, componentId: string) => void;
   subscribe: (config: SubscriptionConfig) => void;
   cleanup: () => void;

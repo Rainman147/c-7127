@@ -22,3 +22,9 @@ export interface LogMetadata {
 }
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+export interface WebSocketLogPayload {
+  from: string;
+  to: string;
+  metadata?: Record<string, any>;
+}

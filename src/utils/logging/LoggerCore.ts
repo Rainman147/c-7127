@@ -56,5 +56,3 @@ export const wsLogger = {
     logger.info(LogCategory.WEBSOCKET, component, `Connection state changed from ${from} to ${to}`, data);
   }
 };
-
-export { LogCategory };
