@@ -1,99 +1,51 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
-import { useToast } from '@/hooks/use-toast';
-import { debounce } from 'lodash';
-import type { ConnectionState } from '@/contexts/realtime/types';
+import type { ConnectionError } from '../types/errors';
 
-const INITIAL_STATE: ConnectionState = {
-  status: 'connecting',
-  lastAttempt: Date.now(),
-  retryCount: 0,
-  error: undefined
-};
+interface ConnectionState {
+  status: 'connecting' | 'connected' | 'disconnected';
+  retryCount: number;
+  lastAttempt: number;
+  error?: Error;
+}
 
 export const useConnectionState = () => {
-  const [connectionState, setConnectionState] = useState<ConnectionState>(INITIAL_STATE);
-  const { toast } = useToast();
-  const retryTimeoutRef = useRef<NodeJS.Timeout>();
-  const lastUpdateRef = useRef<number>(Date.now());
-
-  // Debounced state update to prevent rapid changes
-  const debouncedSetState = useCallback(
-    debounce((newState: ConnectionState) => {
-      const now = Date.now();
-      const timeSinceLastUpdate = now - lastUpdateRef.current;
-
-      logger.info(LogCategory.STATE, 'ConnectionState', 'State transition', {
-        from: connectionState.status,
-        to: newState.status,
-        retryCount: newState.retryCount,
-        timeSinceLastUpdate,
-        timestamp: new Date().toISOString()
-      });
-
-      lastUpdateRef.current = now;
-      setConnectionState(newState);
-
-      // Show toast notification for state changes
-      if (newState.status === 'connected' && connectionState.status !== 'connected') {
-        toast({
-          description: "Connection restored",
-          className: "bg-green-500 text-white",
-        });
-      } else if (newState.status === 'disconnected' && connectionState.status !== 'disconnected') {
-        toast({
-          title: "Connection Lost",
-          description: `Reconnecting... (Attempt ${newState.retryCount}/5)`,
-          variant: "destructive",
-        });
-      }
-    }, 300),
-    [connectionState.status, toast]
-  );
+  const [connectionState, setConnectionState] = useState<ConnectionState>({
+    status: 'connecting',
+    retryCount: 0,
+    lastAttempt: Date.now()
+  });
 
   const handleConnectionSuccess = useCallback(() => {
-    logger.info(LogCategory.COMMUNICATION, 'ConnectionState', 'Connection successful', {
-      previousState: connectionState.status,
-      timestamp: new Date().toISOString()
-    });
-
-    debouncedSetState({
+    setConnectionState({
       status: 'connected',
-      lastAttempt: Date.now(),
       retryCount: 0,
-      error: undefined
+      lastAttempt: Date.now()
     });
-  }, [debouncedSetState]);
-
-  const handleConnectionError = useCallback((error: Error) => {
-    logger.error(LogCategory.ERROR, 'ConnectionState', 'Connection error', {
-      error: error.message,
-      retryCount: connectionState.retryCount,
+    
+    logger.info(LogCategory.WEBSOCKET, 'ConnectionState', 'Connection established', {
       timestamp: new Date().toISOString()
     });
+  }, []);
 
-    debouncedSetState({
+  const handleConnectionError = useCallback((error: ConnectionError) => {
+    setConnectionState(prev => ({
       status: 'disconnected',
+      retryCount: prev.retryCount + 1,
       lastAttempt: Date.now(),
-      retryCount: connectionState.retryCount + 1,
-      error
-    });
-  }, [connectionState.retryCount, debouncedSetState]);
+      error: new Error(error.reason || 'Unknown connection error')
+    }));
 
-  // Cleanup function
-  useEffect(() => {
-    return () => {
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-      }
-      debouncedSetState.cancel();
-    };
-  }, [debouncedSetState]);
+    logger.error(LogCategory.WEBSOCKET, 'ConnectionState', 'Connection error:', {
+      error,
+      retryCount: connectionState.retryCount + 1,
+      timestamp: new Date().toISOString()
+    });
+  }, [connectionState.retryCount]);
 
   return {
     connectionState,
     handleConnectionSuccess,
-    handleConnectionError,
-    resetState: () => debouncedSetState(INITIAL_STATE)
+    handleConnectionError
   };
 };

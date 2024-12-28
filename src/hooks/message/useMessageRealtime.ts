@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
-import { useMessageQueue } from '@/hooks/realtime/useMessageQueue';
+import { useMessageQueue } from '@/hooks/queue/useMessageQueue';
 import { useRealTime } from '@/contexts/RealTimeContext';
 
 export const useMessageRealtime = (
@@ -10,13 +10,13 @@ export const useMessageRealtime = (
   componentId: string
 ) => {
   const { connectionState, subscribeToMessage, unsubscribeFromMessage } = useRealTime();
-  const messageQueue = useMessageQueue();
+  const { addMessage, processMessages, clearQueue } = useMessageQueue();
   const lastUpdateTimeRef = useRef<number>(Date.now());
 
   const processMessage = useCallback((content: string) => {
     try {
-      messageQueue.addMessage(content);
-      messageQueue.processMessages(async (msg) => {
+      addMessage(messageId!, content);
+      processMessages(async (msg) => {
         if (msg.content !== editedContent) {
           setEditedContent(msg.content);
         }
@@ -36,7 +36,7 @@ export const useMessageRealtime = (
         timestamp: new Date().toISOString()
       });
     }
-  }, [messageId, editedContent, setEditedContent, messageQueue, componentId]);
+  }, [messageId, editedContent, setEditedContent, addMessage, processMessages, componentId]);
 
   useEffect(() => {
     if (!messageId) {
@@ -52,9 +52,10 @@ export const useMessageRealtime = (
     return () => {
       if (messageId) {
         unsubscribeFromMessage(messageId, componentId);
+        clearQueue();
       }
     };
-  }, [messageId, componentId, subscribeToMessage, unsubscribeFromMessage, processMessage]);
+  }, [messageId, componentId, subscribeToMessage, unsubscribeFromMessage, clearQueue, processMessage]);
 
   return {
     connectionState,

@@ -1,44 +1,48 @@
 import { useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
-import type { CustomError } from '@/contexts/realtime/types/errors';
+import type { SubscriptionConfig } from '../types';
+import type { ConnectionError } from '../types/errors';
 
 export const useMessageSubscription = (
-  subscribeToChannel: (config: any) => void,
-  unsubscribeFromChannel: (channelKey: string) => void,
-  handleError: (error: CustomError) => void,
-  handleMessageUpdate: (messageId: string, onUpdate: (content: string) => void) => (payload: any) => void
+  subscribe: (config: SubscriptionConfig) => void,
+  cleanup: (channelKey?: string) => void,
+  onError: (error: ConnectionError) => void,
+  onMessageUpdate: (content: string) => void
 ) => {
-  const subscribeToMessage = useCallback((messageId: string, componentId: string, onUpdate: (content: string) => void) => {
-    const subscriptionKey = `messages-id=eq.${messageId}`;
-    const config = {
-      event: '*',
-      schema: 'public',
-      table: 'messages',
-      filter: `id=eq.${messageId}`,
-      onMessage: handleMessageUpdate(messageId, onUpdate),
-      onError: handleError,
-      onSubscriptionStatus: (status: string) => {
-        logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Message subscription status changed', {
-          messageId,
-          status,
-          timestamp: new Date().toISOString()
-        });
-      }
-    };
-
-    subscribeToChannel(config);
-    
-    logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Message subscription queued', {
+  const subscribeToMessage = useCallback((
+    messageId: string,
+    componentId: string,
+    onUpdate: (content: string) => void
+  ) => {
+    logger.info(LogCategory.WEBSOCKET, 'MessageSubscription', 'Subscribing to message:', {
       messageId,
       componentId,
       timestamp: new Date().toISOString()
     });
-  }, [subscribeToChannel, handleError, handleMessageUpdate]);
+
+    const config: SubscriptionConfig = {
+      table: 'edited_messages',
+      schema: 'public',
+      filter: `message_id=eq.${messageId}`,
+      event: '*',
+      onMessage: (payload) => {
+        if (payload.new?.edited_content) {
+          onUpdate(payload.new.edited_content);
+        }
+      }
+    };
+
+    subscribe(config);
+  }, [subscribe]);
 
   const unsubscribeFromMessage = useCallback((messageId: string, componentId: string) => {
-    const subscriptionKey = `messages-id=eq.${messageId}`;
-    unsubscribeFromChannel(subscriptionKey);
-  }, [unsubscribeFromChannel]);
+    logger.info(LogCategory.WEBSOCKET, 'MessageSubscription', 'Unsubscribing from message:', {
+      messageId,
+      componentId,
+      timestamp: new Date().toISOString()
+    });
+    cleanup(`edited_messages-message_id=eq.${messageId}`);
+  }, [cleanup]);
 
   return {
     subscribeToMessage,

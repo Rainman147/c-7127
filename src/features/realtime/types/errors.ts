@@ -1,35 +1,15 @@
-export interface RetryMetadata {
-  attemptCount: number;
-  lastAttemptTime: number;
-  nextDelayMs: number;
-  maxAttemptsReached: boolean;
-}
-
-export interface CustomError {
-  name: ErrorType;
+export interface WebSocketError {
+  name: string;
   message: string;
   timestamp: string;
-  connectionState: string;
+  connectionState: 'error' | 'disconnected';
   retryCount: number;
   lastAttempt: number;
   backoffDelay: number;
-  reason: string;
-  code?: number;
 }
 
-export type ErrorType = 'WebSocketError' | 'ChannelError' | 'ConnectionError';
-
-export interface WebSocketError extends CustomError {
-  name: 'WebSocketError';
-}
-
-export interface SubscriptionError extends CustomError {
-  name: 'ChannelError';
-  channelId: string;
-  event: string;
-}
-
-export interface ConnectionError extends CustomError {
-  name: 'ConnectionError';
-  code: number;
+export interface ConnectionError {
+  reason?: string;
+  timestamp: string;
+  retryCount: number;
 }
