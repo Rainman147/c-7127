@@ -25,7 +25,7 @@ describe('ConnectionStateTracker', () => {
 
   describe('updateConnectionState', () => {
     it('should update state and log changes', () => {
-      const newState = { status: 'connected', retryCount: 0 };
+      const newState = { status: 'connected' as const, retryCount: 0 };
       stateTracker.updateConnectionState(newState);
       expect(logger.info).toHaveBeenCalled();
       expect(stateTracker.getConnectionState().status).toBe('connected');

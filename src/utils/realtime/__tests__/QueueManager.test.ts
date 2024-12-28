@@ -1,5 +1,6 @@
 import { QueueManager } from '../QueueManager';
 import { logger } from '@/utils/logging';
+import type { SubscriptionConfig } from '@/contexts/realtime/types';
 
 jest.mock('@/utils/logging');
 
@@ -13,7 +14,13 @@ describe('QueueManager', () => {
 
   describe('queueSubscription', () => {
     it('should add subscription to queue', () => {
-      const config = { table: 'test', filter: 'test' };
+      const config: SubscriptionConfig = {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'test',
+        filter: 'test',
+        onMessage: () => {}
+      };
       queueManager.queueSubscription(config);
       expect(queueManager.getQueueSize()).toBe(1);
     });
@@ -21,8 +28,14 @@ describe('QueueManager', () => {
 
   describe('processQueue', () => {
     it('should process all queued subscriptions when ready', async () => {
-      const config = { table: 'test', filter: 'test' };
       const processSubscription = jest.fn();
+      const config: SubscriptionConfig = {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'test',
+        filter: 'test',
+        onMessage: () => {}
+      };
       
       queueManager.queueSubscription(config);
       await queueManager.processQueue(true, processSubscription);
@@ -34,8 +47,14 @@ describe('QueueManager', () => {
     });
 
     it('should not process queue when not ready', async () => {
-      const config = { table: 'test', filter: 'test' };
       const processSubscription = jest.fn();
+      const config: SubscriptionConfig = {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'test',
+        filter: 'test',
+        onMessage: () => {}
+      };
       
       queueManager.queueSubscription(config);
       await queueManager.processQueue(false, processSubscription);
