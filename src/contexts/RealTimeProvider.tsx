@@ -33,18 +33,34 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
 
   useEffect(() => {
     const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const newSessionId = session?.user?.id || null;
-      
-      logger.info(LogCategory.STATE, 'RealTimeProvider', 'Session state updated', {
-        previousSessionId: sessionRef.current,
-        newSessionId,
-        hasSession: !!session,
-        connectionState: connectionState.status,
-        timestamp: new Date().toISOString()
-      });
-      
-      sessionRef.current = newSessionId;
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          logger.error(LogCategory.STATE, 'RealTimeProvider', 'Failed to get session', {
+            error: error.message,
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
+        const newSessionId = data?.session?.user?.id || null;
+        
+        logger.info(LogCategory.STATE, 'RealTimeProvider', 'Session state updated', {
+          previousSessionId: sessionRef.current,
+          newSessionId,
+          hasSession: !!data?.session,
+          connectionState: connectionState.status,
+          timestamp: new Date().toISOString()
+        });
+        
+        sessionRef.current = newSessionId;
+      } catch (error) {
+        logger.error(LogCategory.STATE, 'RealTimeProvider', 'Unexpected error getting session', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString()
+        });
+      }
     };
     
     getSession();
@@ -89,7 +105,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     subscriptionManagerSubscribe, 
     cleanupSubscriptions, 
     handleConnectionError,
-    handleMessageUpdate // Now correctly passing the message update handler
+    handleMessageUpdate
   );
 
   useEffect(() => {
