@@ -1,48 +1,61 @@
-import { LogCategory, LogMetadata } from './LogTypes';
+import { LogCategory, LogMetadata, LogLevel } from './LogTypes';
 
 class Logger {
-  debug(category: LogCategory, component: string, message: string, data?: any) {
+  private logToConsole(level: LogLevel, category: LogCategory, component: string, message: string, data?: any) {
     const metadata: LogMetadata = {
       timestamp: new Date().toISOString(),
       ...data
     };
-    console.debug(`[${category}] [${component}] ${message}`, metadata);
+
+    const logMessage = `[${category}] [${component}] ${message}`;
+
+    switch (level) {
+      case 'debug':
+        console.debug(logMessage, metadata);
+        break;
+      case 'info':
+        console.log(logMessage, metadata);
+        break;
+      case 'warn':
+        console.warn(logMessage, metadata);
+        break;
+      case 'error':
+        console.error(logMessage, metadata);
+        break;
+    }
+  }
+
+  debug(category: LogCategory, component: string, message: string, data?: any) {
+    this.logToConsole('debug', category, component, message, data);
   }
 
   info(category: LogCategory, component: string, message: string, data?: any) {
-    const metadata: LogMetadata = {
-      timestamp: new Date().toISOString(),
-      ...data
-    };
-    console.log(`[${category}] [${component}] ${message}`, metadata);
+    this.logToConsole('info', category, component, message, data);
   }
 
   warn(category: LogCategory, component: string, message: string, data?: any) {
-    const metadata: LogMetadata = {
-      timestamp: new Date().toISOString(),
-      ...data
-    };
-    console.warn(`[${category}] [${component}] ${message}`, metadata);
+    this.logToConsole('warn', category, component, message, data);
   }
 
   error(category: LogCategory, component: string, message: string, data?: any) {
-    const metadata: LogMetadata = {
-      timestamp: new Date().toISOString(),
-      ...data
-    };
-    console.error(`[${category}] [${component}] ${message}`, metadata);
+    this.logToConsole('error', category, component, message, data);
   }
 
   performance(component: string, operation: string, duration: number, data?: any) {
-    const metadata: LogMetadata = {
-      timestamp: new Date().toISOString(),
+    this.logToConsole('info', LogCategory.PERFORMANCE, component, operation, {
       duration,
       ...data
-    };
-    console.log(`[${LogCategory.PERFORMANCE}] [${component}] ${operation}`, metadata);
+    });
   }
 }
 
 export const logger = new Logger();
-export const wsLogger = logger; // Alias for WebSocket specific logging
+
+// WebSocket specific logger with the same interface
+export const wsLogger = {
+  connectionStateChange: (component: string, from: string, to: string, data?: any) => {
+    logger.info(LogCategory.WEBSOCKET, component, `Connection state changed from ${from} to ${to}`, data);
+  }
+};
+
 export { LogCategory };

@@ -20,3 +20,5 @@ export interface LogMetadata {
   timestamp: string;
   [key: string]: any;
 }
+
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
