@@ -11,7 +11,8 @@ export enum LogCategory {
   CACHE = 'cache',
   LIFECYCLE = 'lifecycle',
   COMPONENT = 'component',
-  USER_ACTION = 'user_action'
+  USER_ACTION = 'user_action',
+  METRICS = 'metrics'  // Added this new category
 }
 
 interface LogMetadata {
