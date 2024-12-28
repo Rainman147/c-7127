@@ -1,15 +1,9 @@
-import React, { useState } from "react";
-import { logger, LogCategory } from "@/utils/logging";
-import { ErrorTracker } from "@/utils/errorTracking";
-import type { ErrorMetadata } from "@/types/errorTracking";
-import ChatInputField from "./ChatInputField";
-import ChatInputActions from "./ChatInputActions";
-import { ConnectionStatusBar } from "./ConnectionStatusBar";
+import { useState, useEffect } from "react";
+import { useMessageQueue } from '@/hooks/queue/useMessageQueue';
+import { useQueueMonitor } from '@/hooks/queue/useQueueMonitor';
 import { useChatInput } from "@/hooks/chat/useChatInput";
-import { useToast } from "@/hooks/use-toast";
-import { useRetryLogic } from "@/hooks/chat/useRetryLogic";
-import { useMessageValidation } from "@/hooks/chat/useMessageValidation";
-import { ChatInputErrorBoundary } from "@/components/error-boundaries/ChatInputErrorBoundary";
+import { useMessageHandling } from "./hooks/useMessageHandling";
+import ChatInputWrapper from "./ChatInputWrapper";
 
 interface ChatInputContainerProps {
   onSend: (message: string, type?: 'text' | 'audio') => Promise<any>;
@@ -25,9 +19,8 @@ const ChatInputContainer = ({
   isLoading = false
 }: ChatInputContainerProps) => {
   const [message, setMessage] = useState("");
-  const { toast } = useToast();
-  const { retryCount, handleRetry, resetRetryCount } = useRetryLogic();
-  const { validateMessage, MAX_MESSAGE_LENGTH } = useMessageValidation();
+  const { addMessage, processMessages } = useMessageQueue();
+  const queueStatus = useQueueMonitor();
 
   const {
     handleSubmit: originalHandleSubmit,
@@ -37,138 +30,43 @@ const ChatInputContainer = ({
     isDisabled,
     connectionState
   } = useChatInput({
-    onSend: async (msg: string, type?: 'text' | 'audio') => {
-      try {
-        if (!validateMessage(msg)) {
-          return;
-        }
-
-        logger.debug(LogCategory.COMMUNICATION, 'ChatInput', 'Attempting to send message:', {
-          length: msg.length,
-          type,
-          connectionState: connectionState.status,
-          retryCount
-        });
-
-        await onSend(msg, type);
-        
-        if (retryCount > 0) {
-          logger.info(LogCategory.STATE, 'ChatInput', 'Successfully sent message after retries:', {
-            attempts: retryCount + 1
-          });
-          resetRetryCount();
-        }
-        
-        logger.debug(LogCategory.STATE, 'ChatInput', 'Message sent successfully');
-      } catch (error) {
-        logger.error(LogCategory.ERROR, 'ChatInput', 'Error sending message:', {
-          error,
-          retryCount: retryCount + 1,
-          connectionState: connectionState.status
-        });
-
-        await handleRetry(
-          () => originalHandleSubmit(),
-          connectionState.status
-        );
-
-        const metadata: ErrorMetadata = {
-          component: 'ChatInput',
-          severity: 'high',
-          timestamp: new Date().toISOString(),
-          errorType: 'submission',
-          operation: 'send-message',
-          additionalInfo: {
-            messageLength: msg.length,
-            messageType: type,
-            connectionState: connectionState.status,
-            retryCount,
-            lastRetryTimestamp: new Date().toISOString()
-          }
-        };
-        ErrorTracker.trackError(error as Error, metadata);
-        throw error;
-      }
-    },
+    onSend,
     onTranscriptionComplete,
     message,
     setMessage
   });
 
-  const handleMessageChange = (newMessage: string) => {
-    try {
-      if (newMessage.length > MAX_MESSAGE_LENGTH) {
-        logger.warn(LogCategory.VALIDATION, 'ChatInput', 'Message exceeds maximum length:', {
-          length: newMessage.length,
-          limit: MAX_MESSAGE_LENGTH
-        });
+  const { handleMessageChange, handleSubmit } = useMessageHandling({
+    onSend,
+    message,
+    setMessage,
+    connectionState
+  });
 
-        toast({
-          title: "Message too long",
-          description: `Message cannot exceed ${MAX_MESSAGE_LENGTH} characters`,
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      logger.debug(LogCategory.STATE, 'ChatInput', 'Message changed:', { 
-        length: newMessage.length,
-        connectionState: connectionState.status
+  // Process queued messages when connection is available
+  useEffect(() => {
+    if (connectionState.status === 'connected' && queueStatus.pending > 0) {
+      processMessages(async (queuedMessage) => {
+        await onSend(queuedMessage.content, 'text');
       });
-      setMessage(newMessage);
-    } catch (error) {
-      logger.error(LogCategory.ERROR, 'ChatInput', 'Error updating message:', {
-        error,
-        messageLength: newMessage.length,
-        connectionState: connectionState.status
-      });
-
-      const metadata: ErrorMetadata = {
-        component: 'ChatInput',
-        severity: 'low',
-        timestamp: new Date().toISOString(),
-        errorType: 'state',
-        operation: 'update-message',
-        additionalInfo: {
-          messageLength: newMessage.length,
-          retryCount,
-          connectionState: connectionState.status
-        }
-      };
-      ErrorTracker.trackError(error as Error, metadata);
     }
-  };
+  }, [connectionState.status, queueStatus.pending, onSend, processMessages]);
 
   const inputDisabled = isDisabled || 
     (connectionState.status === 'disconnected' && connectionState.retryCount >= 5) ||
     isLoading;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#1E1E1E]/80 backdrop-blur-sm py-4 px-4">
-      <div className="max-w-5xl mx-auto">
-        <ChatInputErrorBoundary>
-          <div className="relative flex w-full flex-col items-center">
-            <ConnectionStatusBar connectionState={connectionState} />
-            <div className="w-full rounded-xl overflow-hidden bg-[#2F2F2F] border border-white/[0.05] shadow-lg">
-              <ChatInputField
-                message={message}
-                setMessage={handleMessageChange}
-                handleKeyDown={handleKeyDown}
-                isLoading={inputDisabled}
-                maxLength={MAX_MESSAGE_LENGTH}
-              />
-              <ChatInputActions
-                isLoading={inputDisabled}
-                message={message}
-                handleSubmit={originalHandleSubmit}
-                onTranscriptionComplete={handleTranscriptionComplete}
-                handleFileUpload={handleFileUpload}
-              />
-            </div>
-          </div>
-        </ChatInputErrorBoundary>
-      </div>
-    </div>
+    <ChatInputWrapper
+      message={message}
+      handleMessageChange={handleMessageChange}
+      handleKeyDown={handleKeyDown}
+      handleSubmit={originalHandleSubmit}
+      handleTranscriptionComplete={handleTranscriptionComplete}
+      handleFileUpload={handleFileUpload}
+      inputDisabled={inputDisabled}
+      connectionState={connectionState}
+    />
   );
 };
 
