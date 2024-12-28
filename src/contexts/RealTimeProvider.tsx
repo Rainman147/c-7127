@@ -17,6 +17,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
   const [lastMessage, setLastMessage] = useState<Message>();
   const connectionManager = useRef(new ConnectionManager());
   const startTime = useRef(Date.now());
+  const channelRef = useRef<any>(null);
   
   const {
     connectionState,
@@ -35,26 +36,60 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
     () => Math.min(1000 * Math.pow(2, connectionState.retryCount), 30000)
   );
 
-  // Create a channel for WebSocket management
-  const channel = supabase.channel('connection-monitor');
-
+  // Initialize the channel
   useEffect(() => {
-    logger.info(LogCategory.LIFECYCLE, 'RealTimeProvider', 'Initializing provider', {
-      timestamp: new Date().toISOString(),
-      initializationTime: Date.now() - startTime.current
+    logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Setting up realtime channel');
+    
+    const channel = supabase.channel('chat-updates', {
+      config: {
+        broadcast: { self: true }
+      }
     });
 
-    return () => {
-      logger.info(LogCategory.LIFECYCLE, 'RealTimeProvider', 'Cleaning up provider', {
-        timestamp: new Date().toISOString(),
-        uptime: Date.now() - startTime.current,
-        activeSubscriptions: getActiveSubscriptions().length
-      });
-    };
-  }, []);
+    channelRef.current = channel;
 
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        logger.debug(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Presence sync', {
+          state: channel.presenceState()
+        });
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        logger.debug(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Presence join', {
+          key,
+          newPresences
+        });
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        logger.debug(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Presence leave', {
+          key,
+          leftPresences
+        });
+      })
+      .subscribe(async (status) => {
+        logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Channel status changed', {
+          status,
+          timestamp: new Date().toISOString()
+        });
+
+        if (status === 'SUBSCRIBED') {
+          handleConnectionSuccess();
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          handleConnectionError(new Error(`Channel ${status}`));
+        }
+      });
+
+    return () => {
+      logger.info(LogCategory.WEBSOCKET, 'RealTimeProvider', 'Cleaning up channel');
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+      }
+    };
+  }, [handleConnectionSuccess, handleConnectionError]);
+
+  // Create a channel for WebSocket management
   const { lastPingTime } = useWebSocketManager(
-    channel,
+    channelRef.current,
     handleConnectionError
   );
 
@@ -83,7 +118,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       uptime: Date.now() - startTime.current,
       timestamp: new Date().toISOString()
     });
-  }, [connectionState, lastPingTime]);
+  }, [connectionState, lastPingTime, getActiveSubscriptions]);
 
   const value: RealtimeContextValue = {
     connectionState,
