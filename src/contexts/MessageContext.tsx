@@ -10,6 +10,15 @@ interface MessageState {
   isProcessing: boolean;
 }
 
+interface MessageContextType extends MessageState {
+  setMessages: (messages: Message[]) => void;
+  addMessage: (message: Message) => void;
+  updateMessageStatus: (messageId: string, status: MessageStatus) => void;
+  confirmMessage: (tempId: string, confirmedMessage: Message) => void;
+  handleMessageFailure: (messageId: string, error: string) => void;
+  clearMessages: () => void;
+}
+
 type MessageAction = 
   | { type: 'SET_MESSAGES'; payload: Message[] }
   | { type: 'ADD_MESSAGE'; payload: Message }
