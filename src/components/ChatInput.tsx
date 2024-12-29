@@ -12,14 +12,12 @@ import ChatInputField from "./ChatInputField";
 interface ChatInputProps {
   onSend: (message: string, type?: 'text' | 'audio') => Promise<any>;
   onTranscriptionComplete: (text: string) => void;
-  onTranscriptionUpdate?: (text: string) => void;
   isLoading?: boolean;
 }
 
 const ChatInput = ({
   onSend,
   onTranscriptionComplete,
-  onTranscriptionUpdate,
   isLoading = false
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
@@ -35,8 +33,7 @@ const ChatInput = ({
     onSend,
     onTranscriptionComplete,
     message,
-    setMessage,
-    onTranscriptionUpdate
+    setMessage
   });
 
   const handleMessageChange = (newMessage: string) => {
@@ -71,7 +68,7 @@ const ChatInput = ({
             />
             <div className="flex items-center justify-between px-4 py-2">
               <div className="flex items-center gap-2">
-                <AudioRecorder onTranscriptionComplete={onTranscriptionComplete} />
+                <AudioRecorder onTranscriptionComplete={handleTranscriptionComplete} />
                 <FileUploader onFileSelected={handleFileUpload} />
               </div>
               <Tooltip content={

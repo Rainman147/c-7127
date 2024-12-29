@@ -1,10 +1,13 @@
-import React from 'react';
-import { useChatInput } from '@/hooks/chat/useChatInput';
-import { useMessageHandling } from '@/hooks/chat/useMessageHandling';
-import { useRealTime } from '@/contexts/RealTimeContext';
+import React, { useState } from 'react';
+import { useMessageQueue } from '@/hooks/queue/useMessageQueue';
+import { useQueueMonitor } from '@/hooks/queue/useQueueMonitor';
+import { useChatInput } from "@/hooks/chat/useChatInput";
+import { useMessageHandling } from "@/hooks/chat/useMessageHandling";
+import ChatInputWrapper from "./ChatInputWrapper";
+import type { Message } from '@/types/chat';
 
 interface ChatInputContainerProps {
-  onSend: (message: string, type?: 'text' | 'audio') => Promise<void>;
+  onSend: (message: string, type?: 'text' | 'audio') => Promise<Message>;
   onTranscriptionComplete: (text: string) => void;
   isLoading?: boolean;
 }
@@ -14,13 +17,16 @@ const ChatInputContainer = ({
   onTranscriptionComplete,
   isLoading = false
 }: ChatInputContainerProps) => {
-  const [message, setMessage] = React.useState("");
-  const { connectionState } = useRealTime();
+  const [message, setMessage] = useState("");
+  const { addMessage, processMessages } = useMessageQueue();
+  const queueStatus = useQueueMonitor();
 
   const {
-    handleSubmit: originalHandleSubmit,
+    handleSubmit,
     handleKeyDown,
-    handleTranscriptionComplete
+    handleTranscriptionComplete,
+    handleFileUpload,
+    isDisabled
   } = useChatInput({
     onSend,
     onTranscriptionComplete,
@@ -28,27 +34,24 @@ const ChatInputContainer = ({
     setMessage
   });
 
-  const { handleMessageChange, handleSubmit } = useMessageHandling({
+  const { handleMessageChange } = useMessageHandling({
     onSend,
     message,
-    setMessage,
-    connectionState
+    setMessage
   });
 
+  const inputDisabled = isDisabled || isLoading;
+
   return (
-    <div>
-      <textarea
-        value={message}
-        onChange={(e) => handleMessageChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Type your message..."
-        className="w-full min-h-[40px] max-h-[200px] resize-none bg-transparent px-4 py-3 focus:outline-none"
-        disabled={isLoading}
-      />
-      <button onClick={handleSubmit} disabled={isLoading}>
-        Send
-      </button>
-    </div>
+    <ChatInputWrapper
+      message={message}
+      handleMessageChange={handleMessageChange}
+      handleKeyDown={handleKeyDown}
+      handleSubmit={handleSubmit}
+      handleTranscriptionComplete={handleTranscriptionComplete}
+      handleFileUpload={handleFileUpload}
+      inputDisabled={inputDisabled}
+    />
   );
 };
 
