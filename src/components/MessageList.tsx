@@ -11,7 +11,13 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     isLoading,
     messageCount: messages.length,
     messageIds: messages.map(m => m.id),
-    hasMessages: messages.length > 0
+    hasMessages: messages.length > 0,
+    messageDetails: messages.map(m => ({
+      id: m.id,
+      sender: m.sender,
+      contentPreview: m.content?.substring(0, 50),
+      sequence: m.sequence
+    }))
   });
 
   if (isLoading) {
@@ -19,13 +25,18 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     return <MessageLoadingState />;
   }
 
-  if (messages.length === 0) {
-    logger.info(LogCategory.STATE, 'MessageList', 'Showing empty state');
+  if (!messages || messages.length === 0) {
+    logger.info(LogCategory.STATE, 'MessageList', 'Showing empty state', {
+      messages: messages,
+      isArray: Array.isArray(messages)
+    });
     return <MessageEmptyState />;
   }
 
   logger.debug(LogCategory.RENDER, 'MessageList', 'Rendering message container', {
-    messageCount: messages.length
+    messageCount: messages.length,
+    firstMessage: messages[0]?.content?.substring(0, 50),
+    lastMessage: messages[messages.length - 1]?.content?.substring(0, 50)
   });
   
   return <MessageListContainer />;
