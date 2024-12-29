@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMessageState } from './chat/useMessageState';
 import { useMessageLoader } from './chat/useMessageLoader';
 import { useMessageSender } from './chat/useMessageSender';
@@ -13,8 +13,8 @@ import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 
 export const useChat = (activeSessionId: string | null) => {
+  const [messages, setMessages] = useState<Message[]>([]);
   const { 
-    messages,
     pendingMessages,
     confirmedMessages,
     failedMessages,
@@ -38,6 +38,38 @@ export const useChat = (activeSessionId: string | null) => {
     invalidateCache
   );
 
+  const clearMessages = useCallback(() => {
+    logger.debug(LogCategory.STATE, 'useChat', 'Clearing messages');
+    setMessages([]);
+  }, []);
+
+  const handleMessagesLoad = useCallback(async (
+    sessionId: string,
+    updateMessages: (messages: Message[]) => void
+  ) => {
+    if (!sessionId) return;
+
+    logger.info(LogCategory.STATE, 'useChat', 'Loading messages for session:', { sessionId });
+    
+    try {
+      const cachedMessages = getCachedMessages(sessionId);
+      if (cachedMessages) {
+        updateMessages(cachedMessages);
+        return;
+      }
+
+      const loadedMessages = await loadMessages(sessionId, updateCache);
+      updateMessages(loadedMessages);
+    } catch (error) {
+      logger.error(LogCategory.ERROR, 'useChat', 'Error loading messages:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load chat messages",
+        variant: "destructive"
+      });
+    }
+  }, [getCachedMessages, loadMessages, updateCache, toast]);
+
   useEffect(() => {
     if (activeSessionId === prevSessionIdRef.current) {
       return;
@@ -52,8 +84,8 @@ export const useChat = (activeSessionId: string | null) => {
       return;
     }
 
-    handleMessagesLoad(activeSessionId, updateMessages);
-  }, [activeSessionId, handleMessagesLoad, clearMessages, updateMessages]);
+    handleMessagesLoad(activeSessionId, setMessages);
+  }, [activeSessionId, handleMessagesLoad, clearMessages]);
 
   const handleSendMessage = useCallback(async (
     content: string,
@@ -88,7 +120,7 @@ export const useChat = (activeSessionId: string | null) => {
     updateMessage,
     loadMoreMessages: useCallback(() => 
       loadMoreMessages(activeSessionId, messages, setMessages, updateCache),
-      [activeSessionId, messages, loadMoreMessages, updateCache, setMessages]
+      [activeSessionId, messages, loadMoreMessages, updateCache]
     )
   };
 };
