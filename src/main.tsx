@@ -5,6 +5,7 @@ import { SidebarProvider } from '@/contexts/SidebarContext'
 import MainLayout from '@/components/layout/MainLayout'
 import PatientsPage from '@/pages/Patients'
 import TemplateManager from '@/pages/TemplateManager'
+import Auth from '@/pages/Auth'
 import App from './App'
 import './index.css'
 
@@ -13,6 +14,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <SidebarProvider>
         <Routes>
+          <Route path="/auth" element={<Auth />} />
           <Route element={<MainLayout />}>
             <Route path="/" element={<App />} />
             <Route path="/c/:sessionId" element={<App />} />
