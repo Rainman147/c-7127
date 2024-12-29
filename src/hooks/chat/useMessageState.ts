@@ -18,6 +18,15 @@ export const useMessageState = () => {
     clearMessages
   } = useMessages();
 
+  logger.debug(LogCategory.STATE, 'useMessageState', 'Current message state:', {
+    totalMessages: messages.length,
+    pendingCount: pendingMessages.length,
+    confirmedCount: confirmedMessages.length,
+    failedCount: failedMessages.length,
+    isProcessing,
+    messageIds: messages.map(m => m.id)
+  });
+
   const addOptimisticMessage = useCallback((content: string, type: 'text' | 'audio' = 'text') => {
     logger.debug(LogCategory.STATE, 'useMessageState', 'Adding optimistic message:', { 
       contentLength: content.length,
@@ -35,6 +44,11 @@ export const useMessageState = () => {
       status: 'sending'
     };
 
+    logger.info(LogCategory.STATE, 'useMessageState', 'Created optimistic message:', {
+      id: optimisticMessage.id,
+      sequence: optimisticMessage.sequence
+    });
+
     addMessage(optimisticMessage);
     return optimisticMessage;
   }, [messages.length, addMessage]);
@@ -46,6 +60,12 @@ export const useMessageState = () => {
     });
     
     confirmMessage(tempId, { ...actualMessage, status: 'delivered' });
+
+    logger.info(LogCategory.STATE, 'useMessageState', 'Message confirmed:', {
+      tempId,
+      actualId: actualMessage.id,
+      status: 'delivered'
+    });
   }, [confirmMessage]);
 
   return {

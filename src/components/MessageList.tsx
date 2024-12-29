@@ -2,11 +2,12 @@ import { MessageLoadingState } from './message/MessageLoadingState';
 import { MessageEmptyState } from './message/MessageEmptyState';
 import MessageListContainer from './message/MessageListContainer';
 import { useMessageState } from '@/hooks/chat/useMessageState';
+import { logger, LogCategory } from '@/utils/logging';
 
 const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
   const { messages } = useMessageState();
 
-  console.log('[MessageList] Rendering with state:', {
+  logger.debug(LogCategory.RENDER, 'MessageList', 'Rendering with state:', {
     isLoading,
     messageCount: messages.length,
     messageIds: messages.map(m => m.id),
@@ -14,16 +15,19 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
   });
 
   if (isLoading) {
-    console.log('[MessageList] Showing loading state');
+    logger.info(LogCategory.STATE, 'MessageList', 'Showing loading state');
     return <MessageLoadingState />;
   }
 
   if (messages.length === 0) {
-    console.log('[MessageList] Showing empty state');
+    logger.info(LogCategory.STATE, 'MessageList', 'Showing empty state');
     return <MessageEmptyState />;
   }
 
-  console.log('[MessageList] Rendering message container');
+  logger.debug(LogCategory.RENDER, 'MessageList', 'Rendering message container', {
+    messageCount: messages.length
+  });
+  
   return <MessageListContainer />;
 };
 

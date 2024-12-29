@@ -27,8 +27,18 @@ const initialState: MessageState = {
 };
 
 const messageReducer = (state: MessageState, action: MessageAction): MessageState => {
+  logger.debug(LogCategory.STATE, 'MessageContext', 'Reducer action:', { 
+    type: action.type,
+    currentMessageCount: state.messages.length
+  });
+
   switch (action.type) {
     case 'SET_MESSAGES':
+      logger.info(LogCategory.STATE, 'MessageContext', 'Setting messages:', {
+        messageCount: action.payload.length,
+        messageIds: action.payload.map(m => m.id)
+      });
+
       return {
         ...state,
         messages: action.payload,
@@ -53,6 +63,10 @@ const messageReducer = (state: MessageState, action: MessageAction): MessageStat
       };
 
     case 'UPDATE_MESSAGE_STATUS':
+      logger.debug(LogCategory.STATE, 'MessageContext', 'Updating message status:', {
+        messageId: action.payload.messageId,
+        newStatus: action.payload.status
+      });
       return {
         ...state,
         messages: state.messages.map(msg =>
@@ -63,7 +77,7 @@ const messageReducer = (state: MessageState, action: MessageAction): MessageStat
       };
 
     case 'CONFIRM_MESSAGE':
-      logger.debug(LogCategory.STATE, 'MessageContext', 'Confirming message:', {
+      logger.info(LogCategory.STATE, 'MessageContext', 'Confirming message:', {
         tempId: action.payload.tempId,
         confirmedId: action.payload.confirmedMessage.id
       });
@@ -94,6 +108,7 @@ const messageReducer = (state: MessageState, action: MessageAction): MessageStat
       };
 
     case 'CLEAR_MESSAGES':
+      logger.info(LogCategory.STATE, 'MessageContext', 'Clearing all messages');
       return initialState;
 
     default:
@@ -101,19 +116,17 @@ const messageReducer = (state: MessageState, action: MessageAction): MessageStat
   }
 };
 
-interface MessageContextType extends MessageState {
-  setMessages: (messages: Message[]) => void;
-  addMessage: (message: Message) => void;
-  updateMessageStatus: (messageId: string, status: MessageStatus) => void;
-  confirmMessage: (tempId: string, confirmedMessage: Message) => void;
-  handleMessageFailure: (messageId: string, error: string) => void;
-  clearMessages: () => void;
-}
-
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
 
 export const MessageProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(messageReducer, initialState);
+
+  logger.debug(LogCategory.STATE, 'MessageContext', 'Provider state update:', {
+    messageCount: state.messages.length,
+    pendingCount: state.pendingMessages.length,
+    confirmedCount: state.confirmedMessages.length,
+    failedCount: state.failedMessages.length
+  });
 
   const setMessages = useCallback((messages: Message[]) => {
     dispatch({ type: 'SET_MESSAGES', payload: messages });
