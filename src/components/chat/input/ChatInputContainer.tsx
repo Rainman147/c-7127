@@ -1,40 +1,31 @@
-import { useState, useEffect } from "react";
-import { useMessageQueue } from '@/hooks/queue/useMessageQueue';
-import { useQueueMonitor } from '@/hooks/queue/useQueueMonitor';
-import { useChatInput } from "@/hooks/chat/useChatInput";
-import { useMessageHandling } from "./hooks/useMessageHandling";
-import ChatInputWrapper from "./ChatInputWrapper";
+import React from 'react';
+import { useChatInput } from '@/hooks/chat/useChatInput';
+import { useMessageHandling } from '@/hooks/chat/useMessageHandling';
+import { useRealTime } from '@/contexts/RealTimeContext';
 
 interface ChatInputContainerProps {
-  onSend: (message: string, type?: 'text' | 'audio') => Promise<any>;
+  onSend: (message: string, type?: 'text' | 'audio') => Promise<void>;
   onTranscriptionComplete: (text: string) => void;
-  onTranscriptionUpdate?: (text: string) => void;
   isLoading?: boolean;
 }
 
 const ChatInputContainer = ({
   onSend,
   onTranscriptionComplete,
-  onTranscriptionUpdate,
   isLoading = false
 }: ChatInputContainerProps) => {
-  const [message, setMessage] = useState("");
-  const { addMessage, processMessages } = useMessageQueue();
-  const queueStatus = useQueueMonitor();
+  const [message, setMessage] = React.useState("");
+  const { connectionState } = useRealTime();
 
   const {
     handleSubmit: originalHandleSubmit,
     handleKeyDown,
-    handleTranscriptionComplete,
-    handleFileUpload,
-    isDisabled,
-    connectionState
+    handleTranscriptionComplete
   } = useChatInput({
     onSend,
     onTranscriptionComplete,
     message,
-    setMessage,
-    onTranscriptionUpdate
+    setMessage
   });
 
   const { handleMessageChange, handleSubmit } = useMessageHandling({
@@ -44,30 +35,20 @@ const ChatInputContainer = ({
     connectionState
   });
 
-  // Process queued messages when connection is available
-  useEffect(() => {
-    if (connectionState.status === 'connected' && queueStatus.pending > 0) {
-      processMessages(async (queuedMessage) => {
-        await onSend(queuedMessage.content, 'text');
-      });
-    }
-  }, [connectionState.status, queueStatus.pending, onSend, processMessages]);
-
-  const inputDisabled = isDisabled || 
-    (connectionState.status === 'disconnected' && connectionState.retryCount >= 5) ||
-    isLoading;
-
   return (
-    <ChatInputWrapper
-      message={message}
-      handleMessageChange={handleMessageChange}
-      handleKeyDown={handleKeyDown}
-      handleSubmit={originalHandleSubmit}
-      handleTranscriptionComplete={handleTranscriptionComplete}
-      handleFileUpload={handleFileUpload}
-      inputDisabled={inputDisabled}
-      connectionState={connectionState}
-    />
+    <div>
+      <textarea
+        value={message}
+        onChange={(e) => handleMessageChange(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Type your message..."
+        className="w-full min-h-[40px] max-h-[200px] resize-none bg-transparent px-4 py-3 focus:outline-none"
+        disabled={isLoading}
+      />
+      <button onClick={handleSubmit} disabled={isLoading}>
+        Send
+      </button>
+    </div>
   );
 };
 

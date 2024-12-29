@@ -1,6 +1,8 @@
-export interface WebSocketError extends Error {
+export interface WebSocketError {
   code: number;
   status: number;
+  message: string;
+  name?: string;
   reason?: string;
 }
 
@@ -21,4 +23,13 @@ export interface SubscriptionConfig {
   onMessage: (payload: any) => void;
   onError?: (error: WebSocketError) => void;
   onSubscriptionStatus?: (status: string) => void;
+}
+
+export interface RealtimeChannel {
+  topic: string;
+  params: Record<string, any>;
+  socket: any;
+  bindings: any[];
+  subscribe: (timeout?: number) => Promise<'ok' | 'timed out' | 'error'>;
+  unsubscribe: () => void;
 }

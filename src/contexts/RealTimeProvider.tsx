@@ -1,8 +1,17 @@
 import React from 'react';
 import { RealTimeContext } from './RealTimeContext';
+import type { RealtimeChannel } from '@/types/websocket';
 
 export const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
-  // Temporarily disabled real-time functionality
+  const mockChannel: RealtimeChannel = {
+    topic: 'mock',
+    params: {},
+    socket: null,
+    bindings: [],
+    subscribe: async () => 'ok',
+    unsubscribe: () => {}
+  };
+
   return (
     <RealTimeContext.Provider value={{
       connectionState: { 
@@ -15,10 +24,7 @@ export const RealTimeProvider = ({ children }: { children: React.ReactNode }) =>
       unsubscribeFromChat: () => {},
       subscribeToMessage: () => {},
       unsubscribeFromMessage: () => {},
-      subscribe: () => ({ 
-        subscribe: () => ({}),
-        unsubscribe: () => {}
-      }),
+      subscribe: () => mockChannel,
       cleanup: () => {}
     }}>
       {children}
