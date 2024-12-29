@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { VariableSizeList as List } from 'react-window';
 import { logger, LogCategory } from '@/utils/logging';
 import { groupMessages } from '@/utils/messageGrouping';
@@ -35,12 +35,29 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
     }
   }, []);
 
+  // Reset list when messages change
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.resetAfterIndex(0);
+    }
+    logger.debug(LogCategory.STATE, 'MessageListContent', 'Messages updated, resetting list', {
+      messageCount: messages.length
+    });
+  }, [messages]);
+
   const messageGroups = groupMessages(messages);
 
   logger.debug(LogCategory.RENDER, 'MessageListContent', 'Render', {
     messageCount: messages.length,
-    groupCount: messageGroups.length
+    groupCount: messageGroups.length,
+    height,
+    width
   });
+
+  // Don't render if we don't have valid dimensions
+  if (!height || !width) {
+    return null;
+  }
 
   return (
     <List
