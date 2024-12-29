@@ -10,7 +10,7 @@ export const useMessageState = () => {
     confirmedMessages,
     failedMessages,
     isProcessing,
-    setMessages,
+    setMessages: contextSetMessages,
     addMessage,
     updateMessageStatus,
     confirmMessage,
@@ -70,8 +70,12 @@ export const useMessageState = () => {
       }))
     });
     
-    setMessages(newMessages);
-  }, [messages, setMessages]);
+    if (typeof newMessages === 'function') {
+      contextSetMessages(newMessages(messages));
+    } else {
+      contextSetMessages(newMessages);
+    }
+  }, [messages, contextSetMessages]);
 
   return {
     messages,
