@@ -23,7 +23,7 @@ const ChatContent = () => {
     isValidSessionId
   } = useSessionParams();
   
-  const { messages, isLoading, handleSendMessage } = useChat(isValidSessionId ? sessionId : null);
+  const { isLoading, handleSendMessage } = useChat(isValidSessionId ? sessionId : null);
 
   // Handle invalid routes
   useEffect(() => {
@@ -46,7 +46,7 @@ const ChatContent = () => {
       <div className="flex-1 overflow-hidden mt-[60px] relative">
         <div className="max-w-3xl mx-auto px-4 h-full">
           <PostMessageErrorBoundary>
-            <MessageList messages={messages} />
+            <MessageList isLoading={isLoading} />
           </PostMessageErrorBoundary>
         </div>
       </div>
