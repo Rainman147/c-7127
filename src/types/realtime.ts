@@ -46,7 +46,6 @@ export interface RetryMetadata {
   maxAttemptsReached: boolean;
 }
 
-// Supabase specific types
 export type RealtimeSubscribeStates = 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR';
 
 export interface SupabaseRealtimePayload<T = any> {
@@ -57,3 +56,6 @@ export interface SupabaseRealtimePayload<T = any> {
   record: T;
   old_record?: T;
 }
+
+// Re-export all realtime types
+export * from './websocket';

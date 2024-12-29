@@ -1,3 +1,5 @@
+import type { ConnectionState } from './realtime';
+
 export type MessageRole = 'user' | 'assistant';
 export type MessageType = 'text' | 'audio';
 
@@ -13,7 +15,7 @@ export interface Message {
 }
 
 export interface ChatInputProps {
-  onSend: (message: string, type?: MessageType) => Promise<any>;
+  onSend: (message: string, type?: MessageType) => Promise<Message>;
   onTranscriptionComplete: (text: string) => void;
   isLoading?: boolean;
   connectionState?: ConnectionState;
@@ -30,9 +32,9 @@ export interface ChatInputFieldProps {
 export interface ChatInputActionsProps {
   isLoading: boolean;
   message: string;
-  handleSubmit: () => void;
+  handleSubmit: () => Promise<void>;
   onTranscriptionComplete: (text: string) => void;
-  handleFileUpload: (file: File) => void;
+  handleFileUpload: (file: File) => Promise<void>;
 }
 
 export interface ChatInputContainerProps {
@@ -83,6 +85,3 @@ export interface MessageFilter {
   startDate?: Date;
   endDate?: Date;
 }
-
-// Import from realtime types to avoid circular dependencies
-import type { ConnectionState } from './realtime';
