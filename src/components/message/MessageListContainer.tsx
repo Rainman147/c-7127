@@ -2,9 +2,17 @@ import { useRef } from 'react';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { MessageListContent } from './MessageListContent';
 import { MessageListErrorBoundary } from './MessageListErrorBoundary';
+import { logger, LogCategory } from '@/utils/logging';
 
 const MessageListContainer = () => {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  logger.debug(LogCategory.RENDER, 'MessageListContainer', 'Rendering container:', {
+    containerHeight: containerRef.current?.clientHeight,
+    containerScrollHeight: containerRef.current?.scrollHeight,
+    renderStack: new Error().stack,
+    renderTime: performance.now()
+  });
 
   return (
     <div 
@@ -13,12 +21,20 @@ const MessageListContainer = () => {
     >
       <MessageListErrorBoundary>
         <AutoSizer>
-          {({ height, width }) => (
-            <MessageListContent 
-              height={height - 240}
-              width={width}
-            />
-          )}
+          {({ height, width }) => {
+            logger.debug(LogCategory.RENDER, 'MessageListContainer', 'AutoSizer dimensions:', {
+              height,
+              width,
+              renderTime: performance.now()
+            });
+            
+            return (
+              <MessageListContent 
+                height={height - 240}
+                width={width}
+              />
+            );
+          }}
         </AutoSizer>
       </MessageListErrorBoundary>
     </div>

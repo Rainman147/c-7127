@@ -3,6 +3,7 @@ import MessageAvatar from '../MessageAvatar';
 import MessageContent from './MessageContent';
 import MessageActions from '../MessageActions';
 import type { MessageProps } from './types';
+import { logger, LogCategory } from '@/utils/logging';
 
 const MessageContainer = memo(({ 
   role, 
@@ -35,6 +36,23 @@ const MessageContainer = memo(({
   onEdit: () => void;
   onRetry?: () => void;
 }) => {
+  logger.debug(LogCategory.RENDER, 'MessageContainer', 'Rendering container:', {
+    id,
+    role,
+    contentPreview: content?.substring(0, 50),
+    editedContentPreview: editedContent?.substring(0, 50),
+    messageState: {
+      isEditing,
+      wasEdited,
+      isSaving,
+      isTyping,
+      isOptimistic,
+      isFailed
+    },
+    renderStack: new Error().stack,
+    renderTime: performance.now()
+  });
+
   return (
     <div className={`group transition-opacity duration-300 ${isStreaming ? 'opacity-70' : 'opacity-100'}`}>
       <div className={`flex gap-4 max-w-4xl mx-auto ${role === 'user' ? 'flex-row-reverse' : ''}`}>

@@ -4,6 +4,7 @@ import { useMessageState } from './message/useMessageState';
 import { useMessageRealtime } from './message/useMessageRealtime';
 import { useTypingEffect } from './message/useTypingEffect';
 import type { MessageProps } from './message/types';
+import { logger, LogCategory } from '@/utils/logging';
 
 const Message = memo(({ 
   role, 
@@ -34,7 +35,7 @@ const Message = memo(({
   useMessageRealtime(id, editedContent, setEditedContent);
   const { isTyping } = useTypingEffect(role, isStreaming, content);
 
-  console.log('[Message] Rendering message:', {
+  logger.debug(LogCategory.RENDER, 'Message', 'Rendering message:', {
     id,
     role,
     contentPreview: content?.substring(0, 50),
@@ -42,7 +43,15 @@ const Message = memo(({
     isFailed,
     wasEdited,
     isEditing,
-    isTyping
+    isTyping,
+    renderStack: new Error().stack,
+    renderTime: performance.now(),
+    messageState: {
+      editedContent: editedContent?.substring(0, 50),
+      isEditing,
+      wasEdited,
+      isSaving
+    }
   });
 
   return (
