@@ -25,7 +25,7 @@ class MessageQueue {
     });
     
     this.queue.push({
-      message: { ...message, status: 'queued' },
+      message,
       retryCount: 0
     });
 
@@ -47,9 +47,6 @@ class MessageQueue {
       const { message, retryCount } = queuedMessage;
 
       try {
-        // Update message status to sending
-        await this.updateMessageStatus(message.id, 'sending');
-
         // Attempt to send the message
         const { data, error } = await supabase
           .from('messages')
@@ -58,7 +55,9 @@ class MessageQueue {
             content: message.content,
             sender: message.role,
             type: message.type || 'text',
-            sequence: message.sequence
+            sequence: message.sequence,
+            delivered_at: null,
+            seen_at: null
           }])
           .select()
           .single();
@@ -66,7 +65,6 @@ class MessageQueue {
         if (error) throw error;
 
         // Message sent successfully
-        await this.updateMessageStatus(message.id, 'delivered', new Date().toISOString());
         this.queue.shift(); // Remove from queue
 
         logger.info(LogCategory.STATE, 'MessageQueue', 'Message sent successfully:', { 
@@ -81,8 +79,7 @@ class MessageQueue {
         });
 
         if (retryCount >= this.maxRetries) {
-          // Max retries reached, mark as failed and remove from queue
-          await this.updateMessageStatus(message.id, 'failed');
+          // Max retries reached, remove from queue
           this.queue.shift();
         } else {
           // Update retry count and move to end of queue
@@ -98,35 +95,6 @@ class MessageQueue {
     }
 
     this.isProcessing = false;
-  }
-
-  private async updateMessageStatus(
-    messageId: string, 
-    status: MessageStatus, 
-    deliveredAt?: string
-  ) {
-    try {
-      const { error } = await supabase
-        .from('messages')
-        .update({ 
-          status,
-          ...(deliveredAt && { delivered_at: deliveredAt })
-        })
-        .eq('id', messageId);
-
-      if (error) throw error;
-
-      logger.debug(LogCategory.STATE, 'MessageQueue', 'Message status updated:', { 
-        messageId, 
-        status 
-      });
-    } catch (error) {
-      logger.error(LogCategory.ERROR, 'MessageQueue', 'Error updating message status:', {
-        messageId,
-        status,
-        error
-      });
-    }
   }
 }
 

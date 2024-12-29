@@ -347,27 +347,36 @@ export type Database = {
           chat_id: string
           content: string
           created_at: string
+          delivered_at: string | null
           id: string
+          seen_at: string | null
           sender: string
           sequence: number | null
+          status: string | null
           type: string
         }
         Insert: {
           chat_id: string
           content: string
           created_at?: string
+          delivered_at?: string | null
           id?: string
+          seen_at?: string | null
           sender: string
           sequence?: number | null
+          status?: string | null
           type?: string
         }
         Update: {
           chat_id?: string
           content?: string
           created_at?: string
+          delivered_at?: string | null
           id?: string
+          seen_at?: string | null
           sender?: string
           sequence?: number | null
+          status?: string | null
           type?: string
         }
         Relationships: [
