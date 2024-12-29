@@ -34,13 +34,15 @@ const Message = memo(({
   useMessageRealtime(id, editedContent, setEditedContent);
   const { isTyping } = useTypingEffect(role, isStreaming, content);
 
-  console.log('[Message] Rendering with state:', {
-    role,
+  console.log('[Message] Rendering message:', {
     id,
-    isEditing,
-    isSaving,
+    role,
+    contentPreview: content?.substring(0, 50),
     isOptimistic,
-    isFailed
+    isFailed,
+    wasEdited,
+    isEditing,
+    isTyping
   });
 
   return (
