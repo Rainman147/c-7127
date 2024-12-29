@@ -35,6 +35,15 @@ const Message = memo(({
   useMessageRealtime(id, editedContent, setEditedContent);
   const { isTyping } = useTypingEffect(role, isStreaming, content);
 
+  console.log('[Message] Rendering with state:', {
+    role,
+    id,
+    isEditing,
+    isSaving,
+    isOptimistic,
+    isFailed
+  });
+
   return (
     <MessageContainer
       role={role}

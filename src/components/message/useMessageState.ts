@@ -16,13 +16,18 @@ export const useMessageState = (initialContent: string, messageId?: string) => {
       return;
     }
 
+    setIsSaving(true);
+    logger.info(LogCategory.STATE, 'Message', 'Saving edited content:', { 
+      messageId,
+      contentLength: newContent.length
+    });
+
+    // Optimistically update the content
+    setEditedContent(newContent);
+    setIsEditing(false);
+    setWasEdited(true);
+    
     try {
-      setIsSaving(true);
-      logger.info(LogCategory.STATE, 'Message', 'Saving edited content:', { 
-        messageId,
-        contentLength: newContent.length
-      });
-      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
@@ -40,10 +45,6 @@ export const useMessageState = (initialContent: string, messageId?: string) => {
 
       if (error) throw error;
       
-      setEditedContent(newContent);
-      setIsEditing(false);
-      setWasEdited(true);
-      
       toast({
         description: "Changes saved successfully",
         className: "bg-[#10A37F] text-white",
@@ -52,6 +53,11 @@ export const useMessageState = (initialContent: string, messageId?: string) => {
       logger.debug(LogCategory.STATE, 'Message', 'Save complete');
     } catch (error: any) {
       logger.error(LogCategory.ERROR, 'Message', 'Error saving edit:', error);
+      
+      // Revert optimistic update on error
+      setEditedContent(initialContent);
+      setWasEdited(false);
+      
       toast({
         title: "Error saving changes",
         description: error.message,
@@ -60,7 +66,7 @@ export const useMessageState = (initialContent: string, messageId?: string) => {
     } finally {
       setIsSaving(false);
     }
-  }, [messageId, toast]);
+  }, [messageId, initialContent, toast]);
 
   const handleCancel = useCallback(() => {
     logger.info(LogCategory.STATE, 'Message', 'Canceling edit:', { messageId });
