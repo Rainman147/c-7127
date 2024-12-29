@@ -22,6 +22,13 @@ const MessageRow = memo(({ style, group, onHeightChange, isScrolling }: MessageR
       logger.debug(LogCategory.STATE, 'MessageRow', 'Starting height measurement:', {
         groupId: group.label,
         messageCount: group.messages.length,
+        messageIds: group.messages.map(m => m.id),
+        messageDetails: group.messages.map(m => ({
+          id: m.id,
+          role: m.role,
+          contentPreview: m.content?.substring(0, 50),
+          status: m.status
+        })),
         initialHeight: rowRef.current.offsetHeight,
         measurementStartTime: new Date(measurementStartTime.current).toISOString(),
         timestamp: new Date().toISOString()
@@ -41,6 +48,7 @@ const MessageRow = memo(({ style, group, onHeightChange, isScrolling }: MessageR
               newHeight: height,
               groupId: group.label,
               messageCount: group.messages.length,
+              messageIds: group.messages.map(m => m.id),
               measurementDuration,
               hasImages: group.messages.some(m => m.content.includes('img')),
               timestamp: new Date().toISOString()

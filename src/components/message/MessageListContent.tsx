@@ -32,17 +32,18 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
       containerHeight: containerRef.current?.clientHeight,
       containerScrollHeight: containerRef.current?.scrollHeight,
       messageCount: messages.length,
+      messageDetails: messages.map(m => ({
+        id: m.id,
+        role: m.role,
+        contentPreview: m.content?.substring(0, 50),
+        status: m.status,
+        sequence: m.sequence
+      })),
       cachedSizes: Object.keys(sizeMap.current).length,
       shouldAutoScroll,
       timestamp: new Date().toISOString()
     });
-
-    // Log current size map state
-    logger.debug(LogCategory.STATE, 'MessageListContent', 'Current size map state:', {
-      sizes: sizeMap.current,
-      timestamp: new Date().toISOString()
-    });
-  }, [height, width, messages.length, shouldAutoScroll]);
+  }, [height, width, messages, shouldAutoScroll]);
 
   const getItemSize = useCallback((index: number) => {
     const size = sizeMap.current[index] || MIN_MESSAGE_HEIGHT;
@@ -101,8 +102,16 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
 
   // Reset measurements when messages change
   useEffect(() => {
-    logger.debug(LogCategory.STATE, 'MessageListContent', 'Messages updated:', {
+    logger.info(LogCategory.STATE, 'MessageListContent', 'Messages updated:', {
       messageCount: messages.length,
+      messageIds: messages.map(m => m.id),
+      messageDetails: messages.map(m => ({
+        id: m.id,
+        role: m.role,
+        contentPreview: m.content?.substring(0, 50),
+        status: m.status,
+        sequence: m.sequence
+      })),
       previousCachedSizes: Object.keys(sizeMap.current).length,
       timestamp: new Date().toISOString()
     });
