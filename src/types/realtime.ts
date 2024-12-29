@@ -1,7 +1,9 @@
 export interface WebSocketError {
+  name: string;
   code: number;
   message: string;
   status: number;
+  reason?: string;
 }
 
 export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
@@ -42,4 +44,16 @@ export interface RetryMetadata {
   lastAttemptTime: number;
   nextDelayMs: number;
   maxAttemptsReached: boolean;
+}
+
+// Supabase specific types
+export type RealtimeSubscribeStates = 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR';
+
+export interface SupabaseRealtimePayload<T = any> {
+  commit_timestamp: string;
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+  schema: string;
+  table: string;
+  record: T;
+  old_record?: T;
 }

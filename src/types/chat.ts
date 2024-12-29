@@ -16,6 +16,7 @@ export interface ChatInputProps {
   onSend: (message: string, type?: MessageType) => Promise<any>;
   onTranscriptionComplete: (text: string) => void;
   isLoading?: boolean;
+  connectionState?: ConnectionState;
 }
 
 export interface ChatInputFieldProps {
@@ -38,6 +39,17 @@ export interface ChatInputContainerProps {
   onSend: (message: string, type?: MessageType) => Promise<Message>;
   onTranscriptionComplete: (text: string) => void;
   isLoading?: boolean;
+}
+
+export interface ChatInputWrapperProps {
+  message: string;
+  handleMessageChange: (message: string) => void;
+  handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  handleSubmit: () => Promise<void>;
+  handleTranscriptionComplete: (text: string) => void;
+  handleFileUpload: (file: File) => Promise<void>;
+  inputDisabled: boolean;
+  connectionState: ConnectionState;
 }
 
 export interface UseChatInputProps {
@@ -71,3 +83,6 @@ export interface MessageFilter {
   startDate?: Date;
   endDate?: Date;
 }
+
+// Import from realtime types to avoid circular dependencies
+import type { ConnectionState } from './realtime';
