@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import Message from './Message';
 import { logger, LogCategory } from '@/utils/logging';
 import { groupMessages } from '@/utils/messageGrouping';
@@ -6,9 +7,12 @@ import { useViewportMonitor } from '@/hooks/useViewportMonitor';
 import { useMessageState } from '@/hooks/chat/useMessageState';
 import { Loader2 } from 'lucide-react';
 
+const ITEM_SIZE = 100; // Average height of a message item
+
 const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
   const renderStartTime = performance.now();
   const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<List>(null);
   const lastScrollPosition = useRef<number>(0);
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
   const { messages } = useMessageState();
@@ -38,26 +42,23 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     return () => container.removeEventListener('scroll', handleScroll);
   }, [messages.length, viewportHeight, keyboardVisible]);
 
-  // Enhanced scroll to bottom with performance tracking
+  // Scroll to bottom when new messages arrive
   useEffect(() => {
-    if (containerRef.current && messages.length > 0) {
+    if (listRef.current && messages.length > 0) {
       const scrollStartTime = performance.now();
       
       logger.debug(LogCategory.STATE, 'MessageList', 'Initiating scroll to bottom', {
         messageCount: messages.length,
         scrollStartTime,
         viewportHeight,
-        keyboardVisible,
-        currentScrollPosition: containerRef.current.scrollTop,
-        scrollHeight: containerRef.current.scrollHeight
+        keyboardVisible
       });
       
       try {
-        containerRef.current.scrollTop = containerRef.current.scrollHeight;
+        listRef.current.scrollToItem(messages.length - 1);
         
         logger.debug(LogCategory.STATE, 'MessageList', 'Scroll complete', {
-          duration: performance.now() - scrollStartTime,
-          finalScrollPosition: containerRef.current.scrollTop
+          duration: performance.now() - scrollStartTime
         });
       } catch (error) {
         logger.error(LogCategory.ERROR, 'MessageList', 'Scroll failed', {
@@ -90,20 +91,8 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     );
   }
 
-  // Track message grouping performance
-  const messageGroups = (() => {
-    const groupStartTime = performance.now();
-    const groups = groupMessages(messages);
-    
-    logger.debug(LogCategory.RENDER, 'MessageList', 'Message grouping complete', {
-      duration: performance.now() - groupStartTime,
-      messageCount: messages.length,
-      groupCount: groups.length
-    });
-    
-    return groups;
-  })();
-
+  const messageGroups = groupMessages(messages);
+  
   logger.debug(LogCategory.RENDER, 'MessageList', 'Render complete', {
     duration: performance.now() - renderStartTime,
     messageCount: messages.length,
@@ -112,29 +101,43 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     keyboardVisible
   });
 
+  const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {
+    const group = messageGroups[index];
+    return (
+      <div style={style} className="py-2">
+        <div className="flex items-center justify-center mb-2">
+          <div className="text-xs text-white/50 bg-chatgpt-secondary/30 px-2 py-1 rounded">
+            {group.label} · {group.timestamp}
+          </div>
+        </div>
+        <div className="space-y-2">
+          {group.messages.map((message, idx) => (
+            <Message 
+              key={message.id || idx} 
+              {...message} 
+              showAvatar={idx === 0 || message.role !== group.messages[idx - 1].role}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div 
       ref={containerRef}
-      className="flex-1 overflow-y-auto chat-scrollbar space-y-6 pb-[180px] pt-4 px-4"
+      className="flex-1 overflow-hidden chat-scrollbar pb-[180px] pt-4 px-4"
     >
-      {messageGroups.map((group) => (
-        <div key={group.id} className="space-y-4">
-          <div className="flex items-center justify-center">
-            <div className="text-xs text-white/50 bg-chatgpt-secondary/30 px-2 py-1 rounded">
-              {group.label} · {group.timestamp}
-            </div>
-          </div>
-          <div className="space-y-2">
-            {group.messages.map((message, index) => (
-              <Message 
-                key={message.id || index} 
-                {...message} 
-                showAvatar={index === 0 || message.role !== group.messages[index - 1].role}
-              />
-            ))}
-          </div>
-        </div>
-      ))}
+      <List
+        ref={listRef}
+        height={viewportHeight - 240} // Account for header and input area
+        itemCount={messageGroups.length}
+        itemSize={ITEM_SIZE}
+        width="100%"
+        className="chat-scrollbar"
+      >
+        {Row}
+      </List>
     </div>
   );
 };
