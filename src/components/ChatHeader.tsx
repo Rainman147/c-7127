@@ -42,13 +42,11 @@ const ChatHeaderComponent = ({
   return (
     <div className="fixed top-0 z-20 w-full">
       <div className="max-w-3xl mx-auto">
-        <div className="flex h-[60px] items-center justify-between px-4">
+        <div className="flex h-[60px] items-center justify-between">
+          {/* Add a placeholder div to ensure proper spacing */}
+          <div className="w-16" />
           <div className="flex items-center gap-2">
-            <span className={`${!isSidebarOpen ? 'ml-16' : ''} transition-all duration-300`}>
-              <TemplateSelector 
-                onTemplateChange={handleTemplateChange}
-              />
-            </span>
+            <TemplateSelector onTemplateChange={handleTemplateChange} />
           </div>
           <ProfileMenu profilePhotoUrl={profilePhotoUrl} />
         </div>

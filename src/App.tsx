@@ -40,32 +40,34 @@ const ChatContent = () => {
   }, [isNewSession, isValidSessionId, navigate, toast]);
 
   return (
-    <>
-      <SidebarToggle />
-      <div className="flex flex-col h-[calc(100vh-2rem)] relative">
-        <ChatHeader isSidebarOpen={isOpen} />
-        
-        <div className="flex-1 overflow-hidden mt-[60px] relative">
-          <div className="max-w-3xl mx-auto px-4 h-full">
-            <PostMessageErrorBoundary>
-              <MessageList isLoading={isLoading} />
-            </PostMessageErrorBoundary>
-          </div>
-        </div>
-        
-        <div className="w-full pb-4 pt-2 fixed bottom-0 left-0 right-0 bg-chatgpt-main/95 backdrop-blur">
-          <div className="max-w-3xl mx-auto px-4">
-            <PostMessageErrorBoundary>
-              <ChatInput 
-                onSend={handleSendMessage}
-                onTranscriptionComplete={(text) => handleSendMessage(text, 'audio')}
-                isLoading={isLoading}
-              />
-            </PostMessageErrorBoundary>
-          </div>
+    <div className="flex flex-col h-[calc(100vh-2rem)] relative">
+      {/* Create a placeholder for the toggle button */}
+      <div className="fixed top-4 left-4 w-10 h-10 z-50">
+        <SidebarToggle />
+      </div>
+      
+      <ChatHeader isSidebarOpen={isOpen} />
+      
+      <div className="flex-1 overflow-hidden mt-[60px] relative">
+        <div className="max-w-3xl mx-auto px-4 h-full">
+          <PostMessageErrorBoundary>
+            <MessageList isLoading={isLoading} />
+          </PostMessageErrorBoundary>
         </div>
       </div>
-    </>
+      
+      <div className="w-full pb-4 pt-2 fixed bottom-0 left-0 right-0 bg-chatgpt-main/95 backdrop-blur">
+        <div className="max-w-3xl mx-auto px-4">
+          <PostMessageErrorBoundary>
+            <ChatInput 
+              onSend={handleSendMessage}
+              onTranscriptionComplete={(text) => handleSendMessage(text, 'audio')}
+              isLoading={isLoading}
+            />
+          </PostMessageErrorBoundary>
+        </div>
+      </div>
+    </div>
   );
 };
 
