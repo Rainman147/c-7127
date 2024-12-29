@@ -4,6 +4,7 @@ import { useMessageState } from './message/useMessageState';
 import { useMessageRealtime } from './message/useMessageRealtime';
 import { useTypingEffect } from './message/useTypingEffect';
 import type { MessageProps } from './message/types';
+import { Loader2, AlertCircle } from 'lucide-react';
 
 const Message = memo(({ 
   role, 
@@ -11,8 +12,13 @@ const Message = memo(({
   isStreaming, 
   type, 
   id,
-  showAvatar = true 
-}: MessageProps) => {
+  showAvatar = true,
+  isOptimistic,
+  isFailed 
+}: MessageProps & {
+  isOptimistic?: boolean;
+  isFailed?: boolean;
+}) => {
   const {
     editedContent,
     setEditedContent,
@@ -40,6 +46,8 @@ const Message = memo(({
       wasEdited={wasEdited}
       isSaving={isSaving}
       isTyping={isTyping}
+      isOptimistic={isOptimistic}
+      isFailed={isFailed}
       onSave={handleSave}
       onCancel={handleCancel}
       onEdit={handleEdit}

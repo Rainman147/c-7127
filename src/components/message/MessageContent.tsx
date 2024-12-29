@@ -1,5 +1,7 @@
-import { Loader2, Mic } from 'lucide-react';
+import { Loader2, Mic, AlertCircle } from 'lucide-react';
 import TiptapEditor from '../message-editor/TiptapEditor';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 type MessageContentProps = {
   role: 'user' | 'assistant';
@@ -11,8 +13,11 @@ type MessageContentProps = {
   wasEdited: boolean;
   isSaving: boolean;
   isTyping: boolean;
+  isOptimistic?: boolean;
+  isFailed?: boolean;
   onSave: (newContent: string) => void;
   onCancel: () => void;
+  onRetry?: () => void;
 };
 
 const MessageContent = ({ 
@@ -25,14 +30,19 @@ const MessageContent = ({
   wasEdited,
   isSaving,
   isTyping,
+  isOptimistic,
+  isFailed,
   onSave,
-  onCancel
+  onCancel,
+  onRetry
 }: MessageContentProps) => {
   console.log('[MessageContent] Rendering with:', { 
     role, 
     id, 
     isEditing,
     isTyping,
+    isOptimistic,
+    isFailed,
     hasContent: !!content,
     contentPreview: content.substring(0, 50) + '...'
   });
@@ -46,11 +56,13 @@ const MessageContent = ({
       }`}
     >
       <div 
-        className={`${
+        className={cn(
           role === 'user' 
             ? 'bg-[#3A3A3A] rounded-2xl px-4 py-3 max-w-[70%] sm:max-w-[90%] text-left' 
-            : 'prose prose-invert max-w-none'
-        }`}
+            : 'prose prose-invert max-w-none',
+          isOptimistic && 'opacity-70',
+          isFailed && 'border border-red-500'
+        )}
       >
         {type === 'audio' && (
           <span className="inline-flex items-center gap-2 mr-2 text-gray-400">
@@ -98,6 +110,26 @@ const MessageContent = ({
             <span className="text-xs">
               {isTyping ? 'Typing...' : 'Processing...'}
             </span>
+          </div>
+        )}
+        {isOptimistic && (
+          <div className="inline-flex items-center gap-2 ml-2 text-gray-400">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span className="text-xs">Sending...</span>
+          </div>
+        )}
+        {isFailed && onRetry && (
+          <div className="flex items-center gap-2 mt-2 text-red-400">
+            <AlertCircle className="h-4 w-4" />
+            <span className="text-sm">Failed to send</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRetry}
+              className="text-white hover:text-white hover:bg-red-500/20"
+            >
+              Retry
+            </Button>
           </div>
         )}
       </div>

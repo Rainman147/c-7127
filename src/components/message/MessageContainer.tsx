@@ -16,18 +16,24 @@ const MessageContainer = memo(({
   wasEdited,
   isSaving,
   isTyping,
+  isOptimistic,
+  isFailed,
   onSave,
   onCancel,
-  onEdit
+  onEdit,
+  onRetry
 }: MessageProps & {
   editedContent: string;
   isEditing: boolean;
   wasEdited: boolean;
   isSaving: boolean;
   isTyping: boolean;
+  isOptimistic?: boolean;
+  isFailed?: boolean;
   onSave: (content: string) => void;
   onCancel: () => void;
   onEdit: () => void;
+  onRetry?: () => void;
 }) => {
   return (
     <div className={`group transition-opacity duration-300 ${isStreaming ? 'opacity-70' : 'opacity-100'}`}>
@@ -46,8 +52,11 @@ const MessageContainer = memo(({
             wasEdited={wasEdited}
             isSaving={isSaving}
             isTyping={isTyping}
+            isOptimistic={isOptimistic}
+            isFailed={isFailed}
             onSave={onSave}
             onCancel={onCancel}
+            onRetry={onRetry}
           />
           {role === 'assistant' && id && (
             <MessageActions 
