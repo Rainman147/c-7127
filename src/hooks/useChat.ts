@@ -40,13 +40,21 @@ export const useChat = (activeSessionId: string | null) => {
     }
 
     const loadSessionMessages = async () => {
+      const startTime = performance.now();
+      
       try {
+        logger.info(LogCategory.STATE, 'useChat', 'Starting message load:', {
+          sessionId: activeSessionId,
+          startTime: new Date().toISOString()
+        });
+
         const cachedMessages = getCachedMessages(activeSessionId);
         if (cachedMessages) {
           logger.info(LogCategory.STATE, 'useChat', 'Using cached messages:', {
             sessionId: activeSessionId,
             messageCount: cachedMessages.length,
             messageIds: cachedMessages.map(m => m.id),
+            loadDuration: performance.now() - startTime,
             timestamp: new Date().toISOString()
           });
           setMessages(cachedMessages);
@@ -66,14 +74,20 @@ export const useChat = (activeSessionId: string | null) => {
           sessionId: activeSessionId,
           messageCount: loadedMessages.length,
           messageIds: loadedMessages.map(m => m.id),
-          timestamp: new Date().toISOString()
+          performance: {
+            totalDuration: performance.now() - startTime,
+            timestamp: new Date().toISOString()
+          }
         });
       } catch (error) {
         logger.error(LogCategory.ERROR, 'useChat', 'Error loading messages:', {
           sessionId: activeSessionId,
           error,
           stack: error instanceof Error ? error.stack : undefined,
-          timestamp: new Date().toISOString()
+          performance: {
+            failureDuration: performance.now() - startTime,
+            timestamp: new Date().toISOString()
+          }
         });
         toast({
           title: "Error",

@@ -5,15 +5,22 @@ import type { Message, MessageStatus } from '@/types/chat';
 
 export const useMessageLoading = () => {
   const loadMessages = useCallback(async (sessionId: string): Promise<Message[]> => {
+    const startTime = performance.now();
+    
     logger.info(LogCategory.STATE, 'useMessageLoading', 'Starting message load:', {
       sessionId,
       timestamp: new Date().toISOString(),
       performance: {
-        now: performance.now()
+        startTime
       }
     });
 
     try {
+      logger.debug(LogCategory.STATE, 'useMessageLoading', 'Executing database query:', {
+        sessionId,
+        queryStartTime: performance.now() - startTime
+      });
+
       const { data: messages, error } = await supabase
         .from('messages')
         .select('*')
@@ -24,7 +31,14 @@ export const useMessageLoading = () => {
         logger.error(LogCategory.ERROR, 'useMessageLoading', 'Database query failed:', {
           sessionId,
           error,
-          timestamp: new Date().toISOString()
+          errorDetails: {
+            message: error.message,
+            code: error.code,
+            hint: error.hint,
+            details: error.details
+          },
+          timestamp: new Date().toISOString(),
+          queryDuration: performance.now() - startTime
         });
         throw error;
       }
@@ -33,6 +47,7 @@ export const useMessageLoading = () => {
         sessionId,
         count: messages?.length || 0,
         messageIds: messages?.map(m => m.id),
+        queryDuration: performance.now() - startTime,
         timestamp: new Date().toISOString()
       });
 
@@ -59,7 +74,10 @@ export const useMessageLoading = () => {
           status: m.status,
           contentPreview: m.content.substring(0, 50)
         })),
-        timestamp: new Date().toISOString()
+        performance: {
+          totalDuration: performance.now() - startTime,
+          timestamp: new Date().toISOString()
+        }
       });
 
       return transformedMessages;
@@ -68,7 +86,10 @@ export const useMessageLoading = () => {
         sessionId,
         error,
         stack: error instanceof Error ? error.stack : undefined,
-        timestamp: new Date().toISOString()
+        performance: {
+          failureDuration: performance.now() - startTime,
+          timestamp: new Date().toISOString()
+        }
       });
       throw error;
     }
