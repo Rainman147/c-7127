@@ -3,14 +3,15 @@ import Message from './Message';
 import { logger, LogCategory } from '@/utils/logging';
 import { groupMessages } from '@/utils/messageGrouping';
 import { useViewportMonitor } from '@/hooks/useViewportMonitor';
-import type { Message as MessageType } from '@/types/chat';
+import { useMessageState } from '@/hooks/chat/useMessageState';
 import { Loader2 } from 'lucide-react';
 
-const MessageList = ({ messages, isLoading }: { messages: MessageType[], isLoading?: boolean }) => {
+const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
   const renderStartTime = performance.now();
   const containerRef = useRef<HTMLDivElement>(null);
   const lastScrollPosition = useRef<number>(0);
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
+  const { messages } = useMessageState();
   
   // Track scroll position changes
   useEffect(() => {

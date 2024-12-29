@@ -4,7 +4,6 @@ import { useMessageState } from './message/useMessageState';
 import { useMessageRealtime } from './message/useMessageRealtime';
 import { useTypingEffect } from './message/useTypingEffect';
 import type { MessageProps } from './message/types';
-import { Loader2, AlertCircle } from 'lucide-react';
 
 const Message = memo(({ 
   role, 

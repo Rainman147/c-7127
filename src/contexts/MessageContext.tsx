@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, useReducer, ReactNode } from 'react';
+import { createContext, useContext, useReducer, ReactNode } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message, MessageStatus } from '@/types/chat';
 
