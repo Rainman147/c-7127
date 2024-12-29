@@ -8,12 +8,7 @@ import AudioRecorder from "./AudioRecorder";
 import FileUploader from "./audio/FileUploader";
 import { Tooltip } from "./ui/tooltip";
 import ChatInputField from "./ChatInputField";
-
-interface ChatInputProps {
-  onSend: (message: string, type?: 'text' | 'audio') => Promise<any>;
-  onTranscriptionComplete: (text: string) => void;
-  isLoading?: boolean;
-}
+import type { ChatInputProps } from "@/types/chat";
 
 const ChatInput = ({
   onSend,
