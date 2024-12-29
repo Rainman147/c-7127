@@ -9,6 +9,7 @@ import { useMessageLoading } from './chat/useMessageLoading';
 import { useSessionCoordinator } from './chat/useSessionCoordinator';
 import { useToast } from './use-toast';
 import { logger, LogCategory } from '@/utils/logging';
+import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/types/chat';
 
 export const useChat = (activeSessionId: string | null) => {
@@ -112,19 +113,17 @@ export const useChat = (activeSessionId: string | null) => {
     addOptimisticMessage(optimisticMessage);
 
     try {
-      const result = await fetch('/api/messages', {
-        method: 'POST',
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('messages', {
+        body: {
           content,
           type,
           sessionId: currentSessionId
-        })
+        }
       });
 
-      if (!result.ok) throw new Error('Failed to send message');
+      if (error) throw error;
       
-      const confirmedMessage = await result.json();
-      confirmMessage(optimisticMessage.id, confirmedMessage);
+      confirmMessage(optimisticMessage.id, data);
     } catch (error) {
       handleMessageFailure(optimisticMessage.id, error);
     }
