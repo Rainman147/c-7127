@@ -1,4 +1,5 @@
 import { MessageProvider } from './contexts/MessageContext';
+import { TemplateProvider } from './contexts/TemplateContext';
 import { useState, useCallback, useEffect } from 'react';
 import { useChat } from '@/hooks/useChat';
 import { ChatHeader } from '@/components/ChatHeader';
@@ -72,9 +73,11 @@ const Index = () => {
 
 const App = () => {
   return (
-    <MessageProvider>
-      <Index />
-    </MessageProvider>
+    <TemplateProvider>
+      <MessageProvider>
+        <Index />
+      </MessageProvider>
+    </TemplateProvider>
   );
 };
 
