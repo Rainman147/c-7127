@@ -18,37 +18,66 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
   const sizeMap = useRef<{[key: number]: number}>({});
   const [isScrolling, setIsScrolling] = useState(false);
   const { messages } = useMessageState();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const { handleScroll, shouldAutoScroll } = useScrollManager(listRef);
 
+  // Debug viewport dimensions
+  useEffect(() => {
+    logger.debug(LogCategory.STATE, 'MessageListContent', 'Viewport dimensions:', {
+      providedHeight: height,
+      providedWidth: width,
+      containerHeight: containerRef.current?.clientHeight,
+      containerScrollHeight: containerRef.current?.scrollHeight,
+      messageCount: messages.length,
+      cachedSizes: Object.keys(sizeMap.current).length,
+      timestamp: new Date().toISOString()
+    });
+  }, [height, width, messages.length]);
+
   const getItemSize = useCallback((index: number) => {
-    logger.debug(LogCategory.STATE, 'MessageListContent', 'Getting item size', {
+    const size = sizeMap.current[index] || MIN_MESSAGE_HEIGHT;
+    logger.debug(LogCategory.STATE, 'MessageListContent', 'Getting item size:', {
       index,
       cachedSize: sizeMap.current[index],
-      defaultSize: MIN_MESSAGE_HEIGHT
+      returnedSize: size,
+      hasSize: !!sizeMap.current[index]
     });
-    return sizeMap.current[index] || MIN_MESSAGE_HEIGHT;
+    return size;
   }, []);
 
   const setItemSize = useCallback((index: number, size: number) => {
-    const hasChanged = sizeMap.current[index] !== size;
+    const previousSize = sizeMap.current[index];
+    const hasChanged = previousSize !== size;
+    
+    logger.debug(LogCategory.STATE, 'MessageListContent', 'Setting item size:', {
+      index,
+      previousSize,
+      newSize: size,
+      hasChanged,
+      timestamp: new Date().toISOString()
+    });
+
     if (hasChanged) {
-      logger.debug(LogCategory.STATE, 'MessageListContent', 'Updating item size', {
-        index,
-        oldSize: sizeMap.current[index],
-        newSize: size
-      });
       sizeMap.current[index] = Math.max(size, MIN_MESSAGE_HEIGHT);
       if (listRef.current) {
         listRef.current.resetAfterIndex(index);
+        
+        logger.debug(LogCategory.STATE, 'MessageListContent', 'Reset list after size change:', {
+          index,
+          newSize: sizeMap.current[index],
+          totalCachedSizes: Object.keys(sizeMap.current).length
+        });
       }
     }
   }, []);
 
   // Reset measurements when messages change
   useEffect(() => {
-    logger.debug(LogCategory.STATE, 'MessageListContent', 'Messages updated, resetting measurements', {
-      messageCount: messages.length
+    logger.debug(LogCategory.STATE, 'MessageListContent', 'Messages updated, resetting measurements:', {
+      messageCount: messages.length,
+      previousCachedSizes: Object.keys(sizeMap.current).length,
+      timestamp: new Date().toISOString()
     });
     
     // Clear size cache
@@ -65,54 +94,55 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
       const messageGroups = groupMessages(messages);
       if (messageGroups.length > 0) {
         list.scrollToItem(messageGroups.length - 1, 'end');
+        
+        logger.debug(LogCategory.STATE, 'MessageListContent', 'Scrolled to bottom:', {
+          groupCount: messageGroups.length,
+          timestamp: new Date().toISOString()
+        });
       }
     }
   }, [messages, shouldAutoScroll]);
 
   const messageGroups = groupMessages(messages);
 
-  logger.debug(LogCategory.RENDER, 'MessageListContent', 'Rendering message list', {
-    messageCount: messages.length,
-    groupCount: messageGroups.length,
-    height,
-    width,
-    isScrolling,
-    shouldAutoScroll
-  });
-
   // Don't render if we don't have valid dimensions
   if (!height || !width) {
-    logger.warn(LogCategory.RENDER, 'MessageListContent', 'Invalid dimensions, skipping render', {
+    logger.warn(LogCategory.RENDER, 'MessageListContent', 'Invalid dimensions, skipping render:', {
       height,
-      width
+      width,
+      timestamp: new Date().toISOString()
     });
     return null;
   }
 
   return (
-    <List
-      ref={listRef}
-      height={height}
-      width={width}
-      itemCount={messageGroups.length}
-      itemSize={getItemSize}
-      onScroll={handleScroll}
-      onItemsRendered={({ visibleStartIndex, visibleStopIndex }) => {
-        logger.debug(LogCategory.STATE, 'MessageList', 'Visible items updated', {
-          visibleStartIndex,
-          visibleStopIndex,
-          totalItems: messageGroups.length
-        });
-      }}
-    >
-      {({ index, style }) => (
-        <MessageRow 
-          style={style}
-          group={messageGroups[index]}
-          onHeightChange={(height) => setItemSize(index, height)}
-          isScrolling={isScrolling}
-        />
-      )}
-    </List>
+    <div ref={containerRef} style={{ height, width }}>
+      <List
+        ref={listRef}
+        height={height}
+        width={width}
+        itemCount={messageGroups.length}
+        itemSize={getItemSize}
+        onScroll={handleScroll}
+        onItemsRendered={({ visibleStartIndex, visibleStopIndex }) => {
+          logger.debug(LogCategory.STATE, 'MessageListContent', 'Visible items updated:', {
+            visibleStartIndex,
+            visibleStopIndex,
+            totalItems: messageGroups.length,
+            containerHeight: containerRef.current?.clientHeight,
+            timestamp: new Date().toISOString()
+          });
+        }}
+      >
+        {({ index, style }) => (
+          <MessageRow 
+            style={style}
+            group={messageGroups[index]}
+            onHeightChange={(height) => setItemSize(index, height)}
+            isScrolling={isScrolling}
+          />
+        )}
+      </List>
+    </div>
   );
 };

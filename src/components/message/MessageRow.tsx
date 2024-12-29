@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef } from 'react';
 import Message from '../Message';
 import type { MessageGroup } from '@/types/chat';
+import { logger, LogCategory } from '@/utils/logging';
 
 interface MessageRowProps {
   style: React.CSSProperties;
@@ -14,9 +15,25 @@ const MessageRow = memo(({ style, group, onHeightChange, isScrolling }: MessageR
 
   useEffect(() => {
     if (rowRef.current && onHeightChange) {
+      logger.debug(LogCategory.STATE, 'MessageRow', 'Initial height measurement:', {
+        height: rowRef.current.offsetHeight,
+        groupId: group.label,
+        messageCount: group.messages.length,
+        timestamp: new Date().toISOString()
+      });
+
       const observer = new ResizeObserver((entries) => {
         for (const entry of entries) {
           const height = entry.borderBoxSize[0]?.blockSize || entry.contentRect.height;
+          
+          logger.debug(LogCategory.STATE, 'MessageRow', 'Height changed:', {
+            previousHeight: rowRef.current?.offsetHeight,
+            newHeight: height,
+            groupId: group.label,
+            messageCount: group.messages.length,
+            timestamp: new Date().toISOString()
+          });
+          
           onHeightChange(Math.ceil(height));
         }
       });
@@ -24,7 +41,7 @@ const MessageRow = memo(({ style, group, onHeightChange, isScrolling }: MessageR
       observer.observe(rowRef.current);
       return () => observer.disconnect();
     }
-  }, [onHeightChange]);
+  }, [onHeightChange, group]);
 
   return (
     <div ref={rowRef} style={style} className="py-2">
