@@ -63,6 +63,8 @@ const MessageContainer = memo(({
               content={editedContent}
               messageId={id}
               onEdit={onEdit}
+              onRetry={onRetry}
+              isFailed={isFailed}
             />
           )}
         </div>

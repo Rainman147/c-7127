@@ -14,10 +14,12 @@ const Message = memo(({
   id,
   showAvatar = true,
   isOptimistic,
-  isFailed 
+  isFailed,
+  onRetry 
 }: MessageProps & {
   isOptimistic?: boolean;
   isFailed?: boolean;
+  onRetry?: () => void;
 }) => {
   const {
     editedContent,
@@ -51,6 +53,7 @@ const Message = memo(({
       onSave={handleSave}
       onCancel={handleCancel}
       onEdit={handleEdit}
+      onRetry={onRetry}
     />
   );
 });

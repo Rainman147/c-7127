@@ -9,9 +9,17 @@ type MessageActionsProps = {
   content: string;
   messageId?: string;
   onEdit?: () => void;
+  onRetry?: () => void;
+  isFailed?: boolean;
 };
 
-const MessageActions = ({ content, messageId, onEdit }: MessageActionsProps) => {
+const MessageActions = ({ 
+  content, 
+  messageId, 
+  onEdit,
+  onRetry,
+  isFailed 
+}: MessageActionsProps) => {
   console.log('[MessageActions] Rendering actions');
   
   const { toast } = useToast();
@@ -97,9 +105,17 @@ const MessageActions = ({ content, messageId, onEdit }: MessageActionsProps) => 
           <Pencil className="h-4 w-4" />
         </button>
       )}
-      <button className="p-1 hover:text-white transition-colors">
-        <RotateCcw className="h-4 w-4" />
-      </button>
+      {isFailed && onRetry && (
+        <button 
+          className="p-1 hover:text-white transition-colors text-red-400 hover:text-red-300"
+          onClick={() => {
+            console.log('[MessageActions] Retry button clicked');
+            onRetry();
+          }}
+        >
+          <RotateCcw className="h-4 w-4" />
+        </button>
+      )}
       <button className="p-1 hover:text-white transition-colors">
         <MoreHorizontal className="h-4 w-4" />
       </button>
