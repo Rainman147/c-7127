@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import type { Message } from '@/types/chat';
+import type { Message, MessageStatus } from '@/types/chat';
 
 export const useMessageLoading = () => {
   const loadMessages = useCallback(async (sessionId: string): Promise<Message[]> => {
@@ -23,15 +23,20 @@ export const useMessageLoading = () => {
       throw error;
     }
 
-    const transformedMessages = messages.map((msg, index) => ({
-      id: msg.id,
-      role: msg.sender as 'user' | 'assistant',
-      content: msg.content,
-      type: msg.type as 'text' | 'audio',
-      sequence: msg.sequence ?? index,
-      created_at: msg.created_at,
-      status: msg.status
-    }));
+    const transformedMessages = messages.map((msg, index) => {
+      // Ensure status is a valid MessageStatus
+      const status: MessageStatus = (msg.status as MessageStatus) || 'queued';
+
+      return {
+        id: msg.id,
+        role: msg.sender as 'user' | 'assistant',
+        content: msg.content,
+        type: msg.type as 'text' | 'audio',
+        sequence: msg.sequence ?? index,
+        created_at: msg.created_at,
+        status
+      };
+    });
 
     logger.debug(LogCategory.STATE, 'useMessageLoading', 'Messages loaded:', {
       sessionId,
@@ -39,7 +44,8 @@ export const useMessageLoading = () => {
       messages: transformedMessages.map(m => ({
         id: m.id,
         sequence: m.sequence,
-        role: m.role
+        role: m.role,
+        status: m.status
       }))
     });
 
