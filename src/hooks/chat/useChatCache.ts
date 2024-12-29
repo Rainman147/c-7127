@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import type { Message } from '@/types/chat';
 
 type ChatCache = {
@@ -11,10 +11,10 @@ type ChatCache = {
 const CACHE_EXPIRY_TIME = 30 * 60 * 1000; // 30 minutes
 
 export const useChatCache = () => {
-  const [cache, setCache] = useState<ChatCache>({});
+  const cacheRef = useRef<ChatCache>({});
 
   const isCacheValid = useCallback((chatId: string): boolean => {
-    const cachedData = cache[chatId];
+    const cachedData = cacheRef.current[chatId];
     if (!cachedData) {
       console.log('[useChatCache] Cache miss - no data for chat:', chatId);
       return false;
@@ -28,7 +28,7 @@ export const useChatCache = () => {
 
     console.log('[useChatCache] Cache hit for chat:', chatId);
     return true;
-  }, [cache]);
+  }, []);
 
   const getCachedMessages = useCallback((chatId: string): Message[] | null => {
     console.log('[useChatCache] Retrieving messages for chat:', chatId);
@@ -39,12 +39,12 @@ export const useChatCache = () => {
 
     console.log('[useChatCache] Returning cached messages:', {
       chatId,
-      messageCount: cache[chatId].messages.length,
-      timestamp: new Date(cache[chatId].timestamp).toISOString()
+      messageCount: cacheRef.current[chatId].messages.length,
+      timestamp: new Date(cacheRef.current[chatId].timestamp).toISOString()
     });
     
-    return cache[chatId].messages;
-  }, [cache, isCacheValid]);
+    return cacheRef.current[chatId].messages;
+  }, [isCacheValid]);
 
   const updateCache = useCallback((chatId: string, messages: Message[]) => {
     console.log('[useChatCache] Updating cache for chat:', {
@@ -53,22 +53,20 @@ export const useChatCache = () => {
       sequences: messages.map(m => m.sequence)
     });
     
-    setCache(prevCache => ({
-      ...prevCache,
+    cacheRef.current = {
+      ...cacheRef.current,
       [chatId]: {
         messages,
         timestamp: Date.now()
       }
-    }));
+    };
   }, []);
 
   const invalidateCache = useCallback((chatId: string) => {
     console.log('[useChatCache] Invalidating cache for chat:', chatId);
-    setCache(prevCache => {
-      const newCache = { ...prevCache };
-      delete newCache[chatId];
-      return newCache;
-    });
+    const newCache = { ...cacheRef.current };
+    delete newCache[chatId];
+    cacheRef.current = newCache;
   }, []);
 
   return {
