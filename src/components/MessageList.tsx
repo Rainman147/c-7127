@@ -1,11 +1,12 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
 import Message from './Message';
 import { logger, LogCategory } from '@/utils/logging';
 import { groupMessages } from '@/utils/messageGrouping';
 import { useViewportMonitor } from '@/hooks/useViewportMonitor';
 import type { Message as MessageType } from '@/types/chat';
+import { Loader2 } from 'lucide-react';
 
-const MessageList = ({ messages }: { messages: MessageType[] }) => {
+const MessageList = ({ messages, isLoading }: { messages: MessageType[], isLoading?: boolean }) => {
   const renderStartTime = performance.now();
   const containerRef = useRef<HTMLDivElement>(null);
   const lastScrollPosition = useRef<number>(0);
@@ -68,6 +69,26 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
     }
   }, [messages.length, viewportHeight, keyboardVisible]);
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-gray-400">
+        <Loader2 className="h-8 w-8 animate-spin mb-4" />
+        <p>Loading messages...</p>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (messages.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-gray-400">
+        <p className="text-lg mb-2">No messages yet</p>
+        <p className="text-sm">Start a conversation to begin</p>
+      </div>
+    );
+  }
+
   // Track message grouping performance
   const messageGroups = (() => {
     const groupStartTime = performance.now();
@@ -81,14 +102,6 @@ const MessageList = ({ messages }: { messages: MessageType[] }) => {
     
     return groups;
   })();
-
-  if (messages.length === 0) {
-    return (
-      <div className="text-center text-white/70 mt-8">
-        No messages yet. Start a conversation!
-      </div>
-    );
-  }
 
   logger.debug(LogCategory.RENDER, 'MessageList', 'Render complete', {
     duration: performance.now() - renderStartTime,
