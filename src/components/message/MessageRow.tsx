@@ -1,15 +1,32 @@
-import { memo } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import Message from '../Message';
 import type { MessageGroup } from '@/types/chat';
 
 interface MessageRowProps {
   style: React.CSSProperties;
   group: MessageGroup;
+  onHeightChange?: (height: number) => void;
+  isScrolling?: boolean;
 }
 
-const MessageRow = memo(({ style, group }: MessageRowProps) => {
+const MessageRow = memo(({ style, group, onHeightChange, isScrolling }: MessageRowProps) => {
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (rowRef.current && onHeightChange) {
+      const observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          onHeightChange(entry.contentRect.height);
+        }
+      });
+
+      observer.observe(rowRef.current);
+      return () => observer.disconnect();
+    }
+  }, [onHeightChange]);
+
   return (
-    <div style={style} className="py-2">
+    <div ref={rowRef} style={style} className="py-2">
       <div className="flex items-center justify-center mb-2">
         <div className="text-xs text-white/50 bg-chatgpt-secondary/30 px-2 py-1 rounded">
           {group.label} · {group.timestamp}

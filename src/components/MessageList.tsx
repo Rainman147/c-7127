@@ -1,5 +1,6 @@
-import { useRef, useEffect } from 'react';
-import { FixedSizeList as List } from 'react-window';
+import { useRef, useEffect, useState } from 'react';
+import { VariableSizeList as List } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 import { logger, LogCategory } from '@/utils/logging';
 import { groupMessages } from '@/utils/messageGrouping';
 import { useViewportMonitor } from '@/hooks/useViewportMonitor';
@@ -8,39 +9,27 @@ import MessageRow from './message/MessageRow';
 import { MessageLoadingState } from './message/MessageLoadingState';
 import { MessageEmptyState } from './message/MessageEmptyState';
 
-const ITEM_SIZE = 100; // Average height of a message item
-
 const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
   const renderStartTime = performance.now();
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<List>(null);
-  const lastScrollPosition = useRef<number>(0);
+  const sizeMap = useRef<{[key: number]: number}>({});
+  const [isScrolling, setIsScrolling] = useState(false);
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
   const { messages } = useMessageState();
-  
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
 
-    const handleScroll = () => {
-      const currentPosition = container.scrollTop;
-      const scrollDelta = currentPosition - lastScrollPosition.current;
-      
-      logger.debug(LogCategory.STATE, 'MessageList', 'Scroll position changed', {
-        previousPosition: lastScrollPosition.current,
-        currentPosition,
-        delta: scrollDelta,
-        viewportHeight,
-        keyboardVisible,
-        messageCount: messages.length
-      });
-      
-      lastScrollPosition.current = currentPosition;
-    };
+  const getItemSize = (index: number) => {
+    return sizeMap.current[index] || 100; // Default height
+  };
 
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [messages.length, viewportHeight, keyboardVisible]);
+  const setItemSize = (index: number, size: number) => {
+    if (sizeMap.current[index] !== size) {
+      sizeMap.current[index] = size;
+      if (listRef.current) {
+        listRef.current.resetAfterIndex(index);
+      }
+    }
+  };
 
   useEffect(() => {
     if (listRef.current && messages.length > 0) {
@@ -54,7 +43,7 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
       });
       
       try {
-        listRef.current.scrollToItem(messages.length - 1);
+        listRef.current.scrollToItem(messages.length - 1, 'end');
         
         logger.debug(LogCategory.STATE, 'MessageList', 'Scroll complete', {
           duration: performance.now() - scrollStartTime
@@ -93,21 +82,40 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
       ref={containerRef}
       className="flex-1 overflow-hidden chat-scrollbar pb-[180px] pt-4 px-4"
     >
-      <List
-        ref={listRef}
-        height={viewportHeight - 240}
-        itemCount={messageGroups.length}
-        itemSize={ITEM_SIZE}
-        width="100%"
-        className="chat-scrollbar"
-      >
-        {({ index, style }) => (
-          <MessageRow 
-            style={style}
-            group={messageGroups[index]}
-          />
+      <AutoSizer>
+        {({ height, width }) => (
+          <List
+            ref={listRef}
+            height={height - 240}
+            width={width}
+            itemCount={messageGroups.length}
+            itemSize={getItemSize}
+            onItemsRendered={({ visibleStartIndex, visibleStopIndex }) => {
+              logger.debug(LogCategory.STATE, 'MessageList', 'Visible items updated', {
+                visibleStartIndex,
+                visibleStopIndex,
+                totalItems: messageGroups.length
+              });
+            }}
+            onScroll={({ scrollOffset, scrollDirection }) => {
+              setIsScrolling(true);
+              logger.debug(LogCategory.STATE, 'MessageList', 'Scroll event', {
+                scrollOffset,
+                scrollDirection
+              });
+            }}
+          >
+            {({ index, style }) => (
+              <MessageRow 
+                style={style}
+                group={messageGroups[index]}
+                onHeightChange={(height) => setItemSize(index, height)}
+                isScrolling={isScrolling}
+              />
+            )}
+          </List>
         )}
-      </List>
+      </AutoSizer>
     </div>
   );
 };
