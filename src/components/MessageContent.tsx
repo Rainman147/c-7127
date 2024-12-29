@@ -1,7 +1,6 @@
-import { Loader2, AlertCircle } from 'lucide-react';
-import TiptapEditor from '../message-editor/TiptapEditor';
-import { Button } from '@/components/ui/button';
+import { Loader2, AlertCircle, Check, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { MessageStatus } from '@/types/chat';
 
 type MessageContentProps = {
   role: 'user' | 'assistant';
@@ -15,6 +14,7 @@ type MessageContentProps = {
   isTyping: boolean;
   isOptimistic?: boolean;
   isFailed?: boolean;
+  status?: MessageStatus;
   onSave: (newContent: string) => void;
   onCancel: () => void;
   onRetry?: () => void;
@@ -32,6 +32,7 @@ const MessageContent = ({
   isTyping,
   isOptimistic,
   isFailed,
+  status,
   onSave,
   onCancel,
   onRetry
@@ -43,9 +44,58 @@ const MessageContent = ({
     isTyping,
     isOptimistic,
     isFailed,
+    status,
     hasContent: !!content,
     contentPreview: content.substring(0, 50) + '...'
   });
+
+  const renderStatus = () => {
+    if (isOptimistic || status === 'queued' || status === 'sending') {
+      return (
+        <div className="flex items-center gap-2 text-gray-400 text-xs">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>{status === 'queued' ? 'Queued...' : 'Sending...'}</span>
+        </div>
+      );
+    }
+
+    if (status === 'delivered') {
+      return (
+        <div className="flex items-center gap-1 text-gray-400 text-xs">
+          <Check className="h-3 w-3" />
+          <span>Delivered</span>
+        </div>
+      );
+    }
+
+    if (status === 'seen') {
+      return (
+        <div className="flex items-center gap-1 text-gray-400 text-xs">
+          <CheckCheck className="h-3 w-3" />
+          <span>Seen</span>
+        </div>
+      );
+    }
+
+    if (isFailed || status === 'failed') {
+      return (
+        <div className="flex items-center gap-2 text-red-400 text-xs">
+          <AlertCircle className="h-3 w-3" />
+          <span>Failed to send</span>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="text-white hover:text-white hover:underline"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    return null;
+  };
 
   // Loading state UI
   if (isOptimistic || isTyping) {
@@ -56,74 +106,28 @@ const MessageContent = ({
       )}>
         <div className="h-4 bg-gray-700 rounded w-3/4"></div>
         <div className="h-4 bg-gray-700 rounded w-1/2"></div>
-        <div className="flex items-center gap-2 text-gray-400 mt-1">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span className="text-xs">
-            {isOptimistic ? 'Sending...' : 'Typing...'}
-          </span>
-        </div>
+        {renderStatus()}
       </div>
     );
   }
 
-  // Error state UI
-  if (isFailed) {
-    return (
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2 text-red-400">
-          <AlertCircle className="h-4 w-4" />
-          <span>Failed to send message</span>
-        </div>
-        <div className="text-gray-400 bg-red-500/10 rounded-md p-3">
-          {content}
-        </div>
-        {onRetry && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onRetry}
-            className="self-start text-white hover:text-white hover:bg-red-500/20"
-          >
-            Try again
-          </Button>
-        )}
-      </div>
-    );
-  }
-
-  // Editor state
-  if (isEditing && id) {
-    return (
-      <div>
-        <TiptapEditor 
-          content={content} 
-          messageId={id}
-          onSave={onSave}
-          onCancel={onCancel}
-          editable={!isSaving}
-        />
-        {isSaving && (
-          <div className="flex items-center gap-2 mt-2 text-gray-400">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Saving changes...</span>
+  return (
+    <div className={cn(
+      "flex flex-col gap-2",
+      role === 'user' ? 'items-end' : 'items-start'
+    )}>
+      <div className={cn(
+        "rounded-lg px-4 py-2",
+        role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-100'
+      )}>
+        <div className="whitespace-pre-wrap">{content}</div>
+        {wasEdited && (
+          <div className="text-xs text-gray-400 mt-1">
+            (edited)
           </div>
         )}
       </div>
-    );
-  }
-
-  // Normal content display
-  return (
-    <div>
-      <div 
-        className="text-gray-200"
-        dangerouslySetInnerHTML={{ __html: content }}
-      />
-      {wasEdited && (
-        <div className="text-xs text-gray-400 mt-1">
-          (edited)
-        </div>
-      )}
+      {renderStatus()}
     </div>
   );
 };

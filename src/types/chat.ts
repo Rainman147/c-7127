@@ -1,3 +1,5 @@
+export type MessageStatus = 'queued' | 'sending' | 'sent' | 'delivered' | 'seen' | 'failed';
+
 export type Message = {
   id: string;
   role: 'user' | 'assistant';
@@ -6,6 +8,10 @@ export type Message = {
   sequence?: number;
   created_at?: string;
   isOptimistic?: boolean;
+  status?: MessageStatus;
+  deliveredAt?: string;
+  seenAt?: string;
+  error?: string;
 };
 
 export type MessageGroup = {
