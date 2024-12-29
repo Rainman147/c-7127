@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useMessageState } from './chat/useMessageState';
+import { useCallback, useEffect, useRef } from 'react';
+import { useMessageOrchestration } from './chat/useMessageOrchestration';
 import { useMessageLoader } from './chat/useMessageLoader';
 import { useMessageSender } from './chat/useMessageSender';
 import { useMessageHandling } from './chat/useMessageHandling';
@@ -7,22 +7,24 @@ import { useChatCache } from './chat/useChatCache';
 import { useRealtimeMessages } from './chat/useRealtimeMessages';
 import { useMessageLoading } from './chat/useMessageLoading';
 import { useSessionCoordinator } from './chat/useSessionCoordinator';
-import { useMessageOrchestrator } from './chat/useMessageOrchestrator';
 import { useToast } from './use-toast';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 
 export const useChat = (activeSessionId: string | null) => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const { 
+  const {
+    messages,
     pendingMessages,
     confirmedMessages,
     failedMessages,
-    addMessage,
-    retryMessage,
-    updateMessage,
-    isProcessing
-  } = useMessageOrchestrator(activeSessionId);
+    isProcessing,
+    updateMessages,
+    clearMessages,
+    addOptimisticMessage,
+    confirmMessage,
+    handleMessageFailure,
+    retryMessage
+  } = useMessageOrchestration(activeSessionId);
   
   const { getCachedMessages, updateCache, invalidateCache } = useChatCache();
   const { loadMessages, loadMoreMessages, isLoadingMore } = useMessageLoading();
@@ -33,20 +35,12 @@ export const useChat = (activeSessionId: string | null) => {
   useRealtimeMessages(
     activeSessionId,
     messages,
-    setMessages,
+    updateMessages,
     updateCache,
     invalidateCache
   );
 
-  const clearMessages = useCallback(() => {
-    logger.debug(LogCategory.STATE, 'useChat', 'Clearing messages');
-    setMessages([]);
-  }, []);
-
-  const handleMessagesLoad = useCallback(async (
-    sessionId: string,
-    updateMessages: (messages: Message[]) => void
-  ) => {
+  const handleMessagesLoad = useCallback(async (sessionId: string) => {
     if (!sessionId) return;
 
     logger.info(LogCategory.STATE, 'useChat', 'Loading messages for session:', { sessionId });
@@ -68,7 +62,7 @@ export const useChat = (activeSessionId: string | null) => {
         variant: "destructive"
       });
     }
-  }, [getCachedMessages, loadMessages, updateCache, toast]);
+  }, [getCachedMessages, loadMessages, updateCache, updateMessages, toast]);
 
   useEffect(() => {
     if (activeSessionId === prevSessionIdRef.current) {
@@ -84,7 +78,7 @@ export const useChat = (activeSessionId: string | null) => {
       return;
     }
 
-    handleMessagesLoad(activeSessionId, setMessages);
+    handleMessagesLoad(activeSessionId);
   }, [activeSessionId, handleMessagesLoad, clearMessages]);
 
   const handleSendMessage = useCallback(async (
@@ -105,8 +99,36 @@ export const useChat = (activeSessionId: string | null) => {
       throw new Error('Failed to create or get chat session');
     }
 
-    await addMessage(content, type);
-  }, [activeSessionId, ensureSession, addMessage]);
+    const optimisticMessage: Message = {
+      id: `temp-${Date.now()}`,
+      content,
+      type,
+      role: 'user',
+      sequence: messages.length,
+      created_at: new Date().toISOString(),
+      isOptimistic: true
+    };
+
+    addOptimisticMessage(optimisticMessage);
+
+    try {
+      const result = await fetch('/api/messages', {
+        method: 'POST',
+        body: JSON.stringify({
+          content,
+          type,
+          sessionId: currentSessionId
+        })
+      });
+
+      if (!result.ok) throw new Error('Failed to send message');
+      
+      const confirmedMessage = await result.json();
+      confirmMessage(optimisticMessage.id, confirmedMessage);
+    } catch (error) {
+      handleMessageFailure(optimisticMessage.id, error);
+    }
+  }, [activeSessionId, ensureSession, messages.length, addOptimisticMessage, confirmMessage, handleMessageFailure]);
 
   return {
     messages,
@@ -117,10 +139,9 @@ export const useChat = (activeSessionId: string | null) => {
     isLoadingMore,
     handleSendMessage,
     retryMessage,
-    updateMessage,
     loadMoreMessages: useCallback(() => 
-      loadMoreMessages(activeSessionId, messages, setMessages, updateCache),
-      [activeSessionId, messages, loadMoreMessages, updateCache]
+      loadMoreMessages(activeSessionId, messages, updateMessages, updateCache),
+      [activeSessionId, messages, loadMoreMessages, updateCache, updateMessages]
     )
   };
 };
