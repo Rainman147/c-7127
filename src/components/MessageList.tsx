@@ -7,6 +7,7 @@ import { logger, LogCategory } from '@/utils/logging';
 const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
   const { messages } = useMessageState();
 
+  // Enhanced logging for message loading and state transitions
   logger.debug(LogCategory.STATE, 'MessageList', 'Rendering with state:', {
     isLoading,
     messageCount: messages.length,
@@ -20,12 +21,15 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
       isOptimistic: m.isOptimistic,
       contentPreview: m.content?.substring(0, 50),
       created_at: m.created_at,
-      status: m.status
+      status: m.status,
+      timestamp: new Date().toISOString()
     }))
   });
 
   if (isLoading) {
-    logger.info(LogCategory.STATE, 'MessageList', 'Showing loading state');
+    logger.info(LogCategory.STATE, 'MessageList', 'Showing loading state', {
+      timestamp: new Date().toISOString()
+    });
     return <MessageLoadingState />;
   }
 
@@ -33,7 +37,8 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     logger.info(LogCategory.STATE, 'MessageList', 'Showing empty state', {
       messages: messages,
       isArray: Array.isArray(messages),
-      isLoading
+      isLoading,
+      timestamp: new Date().toISOString()
     });
     return <MessageEmptyState />;
   }
@@ -45,15 +50,18 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
       role: messages[0].role,
       contentPreview: messages[0].content?.substring(0, 50),
       sequence: messages[0].sequence,
-      status: messages[0].status
+      status: messages[0].status,
+      created_at: messages[0].created_at
     } : null,
     lastMessage: messages.length > 0 ? {
       id: messages[messages.length - 1].id,
       role: messages[messages.length - 1].role,
       contentPreview: messages[messages.length - 1].content?.substring(0, 50),
       sequence: messages[messages.length - 1].sequence,
-      status: messages[messages.length - 1].status
-    } : null
+      status: messages[messages.length - 1].status,
+      created_at: messages[messages.length - 1].created_at
+    } : null,
+    timestamp: new Date().toISOString()
   });
   
   return <MessageListContainer />;
