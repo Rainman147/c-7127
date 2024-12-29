@@ -8,6 +8,10 @@ import { useMessageState } from '@/hooks/chat/useMessageState';
 import MessageRow from './message/MessageRow';
 import { MessageLoadingState } from './message/MessageLoadingState';
 import { MessageEmptyState } from './message/MessageEmptyState';
+import { MessageListErrorBoundary } from './message/MessageListErrorBoundary';
+
+const MIN_MESSAGE_HEIGHT = 60; // Minimum height for a message
+const SCROLL_THRESHOLD = 100; // Pixels from bottom to trigger auto-scroll
 
 const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
   const renderStartTime = performance.now();
@@ -21,13 +25,13 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
   const lastScrollTopRef = useRef(0);
 
   const getItemSize = useCallback((index: number) => {
-    return sizeMap.current[index] || 100; // Default height
+    return sizeMap.current[index] || MIN_MESSAGE_HEIGHT;
   }, []);
 
   const setItemSize = useCallback((index: number, size: number) => {
     const hasChanged = sizeMap.current[index] !== size;
     if (hasChanged) {
-      sizeMap.current[index] = size;
+      sizeMap.current[index] = Math.max(size, MIN_MESSAGE_HEIGHT);
       if (listRef.current) {
         listRef.current.resetAfterIndex(index);
       }
@@ -39,15 +43,13 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     const isScrollingUp = scrollOffset < lastScrollTopRef.current;
     lastScrollTopRef.current = scrollOffset;
 
-    // Disable auto-scroll if user scrolls up
     if (isScrollingUp) {
       setShouldAutoScroll(false);
     }
 
-    // Enable auto-scroll if user scrolls to bottom
     if (listRef.current) {
       const list = listRef.current as any;
-      const isAtBottom = scrollOffset >= list._outerRef.scrollHeight - list._outerRef.clientHeight - 100;
+      const isAtBottom = scrollOffset >= list._outerRef.scrollHeight - list._outerRef.clientHeight - SCROLL_THRESHOLD;
       if (isAtBottom) {
         setShouldAutoScroll(true);
       }
@@ -56,11 +58,10 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     logger.debug(LogCategory.STATE, 'MessageList', 'Scroll event', {
       scrollOffset,
       scrollDirection,
-      shouldAutoScroll: shouldAutoScroll
+      shouldAutoScroll
     });
   }, []);
 
-  // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (listRef.current && messages.length > 0 && shouldAutoScroll) {
       const scrollStartTime = performance.now();
@@ -112,34 +113,36 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
       ref={containerRef}
       className="flex-1 overflow-hidden chat-scrollbar pb-[180px] pt-4 px-4"
     >
-      <AutoSizer>
-        {({ height, width }) => (
-          <List
-            ref={listRef}
-            height={height - 240}
-            width={width}
-            itemCount={messageGroups.length}
-            itemSize={getItemSize}
-            onScroll={handleScroll}
-            onItemsRendered={({ visibleStartIndex, visibleStopIndex }) => {
-              logger.debug(LogCategory.STATE, 'MessageList', 'Visible items updated', {
-                visibleStartIndex,
-                visibleStopIndex,
-                totalItems: messageGroups.length
-              });
-            }}
-          >
-            {({ index, style }) => (
-              <MessageRow 
-                style={style}
-                group={messageGroups[index]}
-                onHeightChange={(height) => setItemSize(index, height)}
-                isScrolling={isScrolling}
-              />
-            )}
-          </List>
-        )}
-      </AutoSizer>
+      <MessageListErrorBoundary>
+        <AutoSizer>
+          {({ height, width }) => (
+            <List
+              ref={listRef}
+              height={height - 240}
+              width={width}
+              itemCount={messageGroups.length}
+              itemSize={getItemSize}
+              onScroll={handleScroll}
+              onItemsRendered={({ visibleStartIndex, visibleStopIndex }) => {
+                logger.debug(LogCategory.STATE, 'MessageList', 'Visible items updated', {
+                  visibleStartIndex,
+                  visibleStopIndex,
+                  totalItems: messageGroups.length
+                });
+              }}
+            >
+              {({ index, style }) => (
+                <MessageRow 
+                  style={style}
+                  group={messageGroups[index]}
+                  onHeightChange={(height) => setItemSize(index, height)}
+                  isScrolling={isScrolling}
+                />
+              )}
+            </List>
+          )}
+        </AutoSizer>
+      </MessageListErrorBoundary>
     </div>
   );
 };
