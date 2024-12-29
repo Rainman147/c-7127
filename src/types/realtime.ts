@@ -1,5 +1,4 @@
 import type { RealtimeChannel, REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js';
-import type { Message } from './chat';
 
 export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
 
@@ -11,14 +10,9 @@ export interface ConnectionState {
 }
 
 export interface WebSocketError {
-  name: string;
+  code?: number;
   message: string;
-  timestamp: string;
-  connectionState: ConnectionStatus;
-  retryCount: number;
-  lastAttempt: number;
-  backoffDelay: number;
-  reason?: string;
+  status?: number;
 }
 
 export interface SubscriptionConfig {
@@ -27,7 +21,7 @@ export interface SubscriptionConfig {
   table: string;
   filter?: string;
   onMessage: (payload: any) => void;
-  onError?: (error: WebSocketError) => void;
+  onError?: (error: Error) => void;
   onSubscriptionStatus?: (status: REALTIME_SUBSCRIBE_STATES) => void;
 }
 
@@ -49,12 +43,3 @@ export interface RetryMetadata {
 }
 
 export type RealtimeSubscribeStates = REALTIME_SUBSCRIBE_STATES;
-
-export interface SupabaseRealtimePayload<T = any> {
-  commit_timestamp: string;
-  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
-  schema: string;
-  table: string;
-  record: T;
-  old_record?: T;
-}

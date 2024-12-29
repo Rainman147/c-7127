@@ -12,9 +12,10 @@ export const usePatientRealtime = () => {
     logger.debug(LogCategory.WEBSOCKET, 'PatientGrid', 'Setting up patient subscriptions');
     
     const channel = subscribe({
+      event: 'postgres_changes',
       schema: 'public',
       table: 'patients',
-      event: '*',
+      filter: '*',
       onMessage: (payload) => {
         logger.debug(LogCategory.WEBSOCKET, 'PatientGrid', 'Received patient update:', payload);
         
