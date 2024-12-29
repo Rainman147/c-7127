@@ -1,34 +1,38 @@
 import { useCallback } from 'react';
-import { useChatCache } from './useChatCache';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 
-export const useMessageCache = () => {
-  const { getCachedMessages, updateCache, invalidateCache } = useChatCache();
+const messageCache = new Map<string, Message[]>();
 
-  const ensureMessageIntegrity = useCallback((messages: Message[]) => {
-    return messages.map((msg, index) => ({
-      ...msg,
-      sequence: msg.sequence ?? index,
-      created_at: msg.created_at ?? new Date().toISOString()
-    }));
+export const useMessageCache = () => {
+  const getCachedMessages = useCallback((chatId: string) => {
+    logger.debug(LogCategory.STATE, 'useMessageCache', 'Checking cache:', {
+      chatId,
+      hasCachedData: messageCache.has(chatId),
+      cachedMessageCount: messageCache.get(chatId)?.length || 0,
+      timestamp: new Date().toISOString()
+    });
+    return messageCache.get(chatId) || null;
   }, []);
 
-  const updateMessageCache = useCallback((sessionId: string, messages: Message[]) => {
+  const updateMessageCache = useCallback((chatId: string, messages: Message[]) => {
     logger.debug(LogCategory.STATE, 'useMessageCache', 'Updating cache:', {
-      sessionId,
+      chatId,
       messageCount: messages.length,
-      messageDetails: messages.map(m => ({
-        id: m.id,
-        sequence: m.sequence,
-        role: m.role,
-        type: m.type
-      }))
+      messageIds: messages.map(m => m.id),
+      timestamp: new Date().toISOString()
     });
+    messageCache.set(chatId, messages);
+  }, []);
 
-    const validatedMessages = ensureMessageIntegrity(messages);
-    updateCache(sessionId, validatedMessages);
-  }, [ensureMessageIntegrity, updateCache]);
+  const invalidateCache = useCallback((chatId: string) => {
+    logger.debug(LogCategory.STATE, 'useMessageCache', 'Invalidating cache:', {
+      chatId,
+      hadCachedData: messageCache.has(chatId),
+      timestamp: new Date().toISOString()
+    });
+    messageCache.delete(chatId);
+  }, []);
 
   return {
     getCachedMessages,

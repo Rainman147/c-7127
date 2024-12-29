@@ -16,13 +16,19 @@ export const useChat = (activeSessionId: string | null) => {
 
   useEffect(() => {
     if (activeSessionId === prevSessionIdRef.current) {
+      logger.debug(LogCategory.STATE, 'useChat', 'Session ID unchanged, skipping load:', {
+        activeSessionId,
+        previousSessionId: prevSessionIdRef.current,
+        timestamp: new Date().toISOString()
+      });
       return;
     }
 
     logger.info(LogCategory.STATE, 'useChat', 'Active session changed:', {
       activeSessionId,
       previousSessionId: prevSessionIdRef.current,
-      currentMessagesCount: messages.length
+      currentMessagesCount: messages.length,
+      timestamp: new Date().toISOString()
     });
 
     prevSessionIdRef.current = activeSessionId;
@@ -39,19 +45,35 @@ export const useChat = (activeSessionId: string | null) => {
         if (cachedMessages) {
           logger.info(LogCategory.STATE, 'useChat', 'Using cached messages:', {
             sessionId: activeSessionId,
-            messageCount: cachedMessages.length
+            messageCount: cachedMessages.length,
+            messageIds: cachedMessages.map(m => m.id),
+            timestamp: new Date().toISOString()
           });
           setMessages(cachedMessages);
           return;
         }
 
+        logger.debug(LogCategory.STATE, 'useChat', 'Cache miss, loading from database:', {
+          sessionId: activeSessionId,
+          timestamp: new Date().toISOString()
+        });
+
         const loadedMessages = await loadMessages(activeSessionId);
         updateMessageCache(activeSessionId, loadedMessages);
         setMessages(loadedMessages);
+        
+        logger.info(LogCategory.STATE, 'useChat', 'Messages loaded and cached:', {
+          sessionId: activeSessionId,
+          messageCount: loadedMessages.length,
+          messageIds: loadedMessages.map(m => m.id),
+          timestamp: new Date().toISOString()
+        });
       } catch (error) {
         logger.error(LogCategory.ERROR, 'useChat', 'Error loading messages:', {
           sessionId: activeSessionId,
-          error
+          error,
+          stack: error instanceof Error ? error.stack : undefined,
+          timestamp: new Date().toISOString()
         });
         toast({
           title: "Error",
