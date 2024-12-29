@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { ChatInput } from '@/components/ChatInput';
+import ChatInput from '@/components/ChatInput';
 import { MessageList } from '@/components/MessageList';
 import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
 import { logger, LogCategory } from '@/utils/logging';

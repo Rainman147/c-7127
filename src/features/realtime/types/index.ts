@@ -1,5 +1,10 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { WebSocketError } from './errors';
+
+export interface WebSocketError {
+  code: number;
+  message: string;
+  status: number;
+}
 
 export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
 
@@ -20,6 +25,15 @@ export interface SubscriptionConfig {
   onSubscriptionStatus?: (status: string) => void;
 }
 
+export interface Message {
+  id: string;
+  content: string;
+  role: 'user' | 'assistant';
+  type: 'text' | 'audio';
+  sequence?: number;
+  created_at?: string;
+}
+
 export interface RealtimeContextValue {
   connectionState: ConnectionState;
   lastMessage?: Message;
@@ -31,11 +45,4 @@ export interface RealtimeContextValue {
   cleanup: (channelKey?: string) => void;
 }
 
-export interface Message {
-  id: string;
-  content: string;
-  role: 'user' | 'assistant';
-  type: 'text' | 'audio';
-  sequence?: number;
-  created_at?: string;
-}
+export type SubscriptionHandler = (payload: any) => void;
