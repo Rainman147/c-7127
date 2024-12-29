@@ -14,7 +14,7 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     hasMessages: messages.length > 0,
     messageDetails: messages.map(m => ({
       id: m.id,
-      sender: m.sender,
+      role: m.role,
       contentPreview: m.content?.substring(0, 50),
       sequence: m.sequence
     }))
