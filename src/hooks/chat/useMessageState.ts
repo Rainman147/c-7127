@@ -28,9 +28,11 @@ export const useMessageState = () => {
     messageSequences: messages.map(m => m.sequence),
     messageStates: messages.map(m => ({
       id: m.id,
+      role: m.role,
       status: m.status,
       sequence: m.sequence,
-      isOptimistic: m.isOptimistic
+      isOptimistic: m.isOptimistic,
+      created_at: m.created_at
     }))
   });
 
