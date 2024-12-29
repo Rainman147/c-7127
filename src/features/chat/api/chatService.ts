@@ -3,7 +3,7 @@ import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 
 export const chatService = {
-  async sendMessage(chatId: string, content: string, role: 'user' | 'assistant', type: 'text' | 'audio' = 'text') {
+  async sendMessage(chatId: string, content: string, role: 'user' | 'assistant', type: 'text' | 'audio' = 'text'): Promise<Message> {
     logger.debug(LogCategory.COMMUNICATION, 'ChatService', 'Sending message:', {
       chatId,
       contentLength: content.length,
@@ -19,7 +19,7 @@ export const chatService = {
           content,
           sender: role,
           type,
-          sequence: Date.now() // Temporary sequence until we implement proper ordering
+          sequence: Date.now()
         })
         .select()
         .single();
@@ -37,7 +37,7 @@ export const chatService = {
         type: message.type as 'text' | 'audio',
         sequence: message.sequence,
         created_at: message.created_at
-      } as Message;
+      };
     } catch (error) {
       logger.error(LogCategory.ERROR, 'ChatService', 'Error sending message:', error);
       throw error;
@@ -70,32 +70,6 @@ export const chatService = {
       }));
     } catch (error) {
       logger.error(LogCategory.ERROR, 'ChatService', 'Error fetching messages:', error);
-      throw error;
-    }
-  },
-
-  async processAIResponse(message: string, chatId: string) {
-    logger.debug(LogCategory.COMMUNICATION, 'ChatService', 'Processing AI response:', {
-      chatId,
-      messageLength: message.length
-    });
-
-    try {
-      const response = await supabase.functions.invoke('chat', {
-        body: { message, chatId }
-      });
-
-      if (response.error) throw response.error;
-
-      const aiMessage = await this.sendMessage(chatId, response.data.content, 'assistant');
-      
-      logger.info(LogCategory.COMMUNICATION, 'ChatService', 'AI response processed and saved:', {
-        messageId: aiMessage.id
-      });
-
-      return aiMessage;
-    } catch (error) {
-      logger.error(LogCategory.ERROR, 'ChatService', 'Error processing AI response:', error);
       throw error;
     }
   }

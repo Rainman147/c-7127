@@ -1,80 +1,42 @@
 import { useEffect } from 'react';
-import { useChat } from '@/features/chat/hooks/useChat';
-import { ChatHeader } from '@/components/ChatHeader';
-import MessageList from '@/components/MessageList';
-import ChatInput from '@/components/ChatInput';
-import { useSidebar } from '@/contexts/SidebarContext';
-import { SidebarToggle } from '@/components/SidebarToggle';
-import { useSessionParams } from '@/hooks/routing/useSessionParams';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-import { PostMessageErrorBoundary } from '@/components/error-boundaries/PostMessageErrorBoundary';
+import { useParams } from 'react-router-dom';
+import { ChatInput } from '@/components/ChatInput';
+import { MessageList } from '@/components/MessageList';
+import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
 import { logger, LogCategory } from '@/utils/logging';
 
-const ChatContent = () => {
-  const { isOpen } = useSidebar();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { 
-    sessionId, 
-    isNewSession,
-    isValidSessionId
-  } = useSessionParams();
-  
-  const { messages, isLoading, sendMessage, loadMessages } = useChat(isValidSessionId ? sessionId : null);
+export default function Index() {
+  const { chatId } = useParams<{ chatId: string }>();
+  const { messages, isLoading, sendMessage, loadMessages } = useChatMessages(chatId || '');
 
-  // Load initial messages
   useEffect(() => {
-    if (isValidSessionId && sessionId) {
+    if (chatId) {
+      logger.debug(LogCategory.STATE, 'Index', 'Loading messages for chat:', { chatId });
       loadMessages();
     }
-  }, [isValidSessionId, sessionId, loadMessages]);
-
-  // Handle invalid routes
-  useEffect(() => {
-    if (!isNewSession && !isValidSessionId) {
-      logger.warn(LogCategory.STATE, 'Index', 'Invalid session ID, redirecting to new chat');
-      toast({
-        title: "Invalid Session",
-        description: "The requested chat session could not be found.",
-        variant: "destructive"
-      });
-      navigate('/');
-    }
-  }, [isNewSession, isValidSessionId, navigate, toast]);
+  }, [chatId, loadMessages]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] relative">
-      <SidebarToggle />
-      <ChatHeader isSidebarOpen={isOpen} />
-      
-      <div className="flex-1 overflow-hidden mt-[60px] relative">
-        <div className="max-w-3xl mx-auto px-4 h-full">
-          <PostMessageErrorBoundary>
-            <MessageList messages={messages} />
-          </PostMessageErrorBoundary>
-        </div>
+    <div className="flex flex-col h-screen">
+      <div className="flex-1 overflow-hidden">
+        <MessageList messages={messages} />
       </div>
-      
-      <div className="w-full pb-4 pt-2 fixed bottom-0 left-0 right-0 bg-chatgpt-main/95 backdrop-blur">
-        <div className="max-w-3xl mx-auto px-4">
-          <PostMessageErrorBoundary>
-            <ChatInput 
-              onSend={sendMessage}
-              onTranscriptionComplete={(text) => sendMessage(text, 'audio')}
-              isLoading={isLoading}
-            />
-          </PostMessageErrorBoundary>
-        </div>
+      <div className="p-4 border-t">
+        <ChatInput 
+          onSend={sendMessage}
+          isLoading={isLoading}
+          onTranscriptionComplete={(text) => {
+            logger.debug(LogCategory.COMMUNICATION, 'Index', 'Transcription completed:', { 
+              textLength: text.length 
+            });
+          }}
+          onTranscriptionUpdate={(text) => {
+            logger.debug(LogCategory.COMMUNICATION, 'Index', 'Transcription updated:', { 
+              textLength: text.length 
+            });
+          }}
+        />
       </div>
     </div>
   );
-};
-
-const Index = () => {
-  return (
-    <ChatContent />
-  );
-};
-
-export default Index;
+}
