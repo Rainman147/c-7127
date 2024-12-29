@@ -23,20 +23,32 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
       created_at: m.created_at,
       status: m.status,
       timestamp: new Date().toISOString(),
-      loadTime: Date.now()  // Add load time for tracking
+      loadTime: Date.now(),
+      stateTransition: isLoading ? 'loading' : messages.length === 0 ? 'empty' : 'loaded'
     })),
     sessionInfo: {
       totalMessages: messages.length,
       oldestMessage: messages[0]?.created_at,
       newestMessage: messages[messages.length - 1]?.created_at,
-      loadTimestamp: new Date().toISOString()
+      loadTimestamp: new Date().toISOString(),
+      messageGaps: messages.reduce((gaps, m, i) => {
+        if (i > 0 && m.sequence - messages[i-1].sequence > 1) {
+          gaps.push({
+            beforeId: messages[i-1].id,
+            afterId: m.id,
+            gap: m.sequence - messages[i-1].sequence
+          });
+        }
+        return gaps;
+      }, [] as any[])
     }
   });
 
   if (isLoading) {
     logger.info(LogCategory.STATE, 'MessageList', 'Showing loading state', {
       timestamp: new Date().toISOString(),
-      currentMessageCount: messages.length
+      currentMessageCount: messages.length,
+      transitionType: 'loading->empty'
     });
     return <MessageLoadingState />;
   }
@@ -47,7 +59,8 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
       isArray: Array.isArray(messages),
       isLoading,
       timestamp: new Date().toISOString(),
-      context: 'Empty messages array detected'
+      context: 'Empty messages array detected',
+      transitionType: 'loaded->empty'
     });
     return <MessageEmptyState />;
   }
@@ -75,8 +88,13 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     timestamp: new Date().toISOString(),
     renderContext: {
       totalMessages: messages.length,
-      messageOrder: messages.map(m => ({id: m.id, sequence: m.sequence})),
-      renderTime: Date.now()
+      messageOrder: messages.map(m => ({
+        id: m.id, 
+        sequence: m.sequence,
+        timeDiff: m.created_at ? new Date(m.created_at).getTime() - Date.now() : null
+      })),
+      renderTime: Date.now(),
+      transitionType: 'loaded->rendered'
     }
   });
   
