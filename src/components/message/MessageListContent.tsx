@@ -22,12 +22,22 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
   const { handleScroll, shouldAutoScroll } = useScrollManager(listRef);
 
   const getItemSize = useCallback((index: number) => {
+    logger.debug(LogCategory.STATE, 'MessageListContent', 'Getting item size', {
+      index,
+      cachedSize: sizeMap.current[index],
+      defaultSize: MIN_MESSAGE_HEIGHT
+    });
     return sizeMap.current[index] || MIN_MESSAGE_HEIGHT;
   }, []);
 
   const setItemSize = useCallback((index: number, size: number) => {
     const hasChanged = sizeMap.current[index] !== size;
     if (hasChanged) {
+      logger.debug(LogCategory.STATE, 'MessageListContent', 'Updating item size', {
+        index,
+        oldSize: sizeMap.current[index],
+        newSize: size
+      });
       sizeMap.current[index] = Math.max(size, MIN_MESSAGE_HEIGHT);
       if (listRef.current) {
         listRef.current.resetAfterIndex(index);
@@ -35,27 +45,47 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
     }
   }, []);
 
-  // Reset list when messages change
+  // Reset measurements when messages change
   useEffect(() => {
+    logger.debug(LogCategory.STATE, 'MessageListContent', 'Messages updated, resetting measurements', {
+      messageCount: messages.length
+    });
+    
+    // Clear size cache
+    sizeMap.current = {};
+    
+    // Reset list measurements
     if (listRef.current) {
       listRef.current.resetAfterIndex(0);
     }
-    logger.debug(LogCategory.STATE, 'MessageListContent', 'Messages updated, resetting list', {
-      messageCount: messages.length
-    });
-  }, [messages]);
+
+    // Scroll to bottom if needed
+    if (shouldAutoScroll && listRef.current) {
+      const list = listRef.current;
+      const messageGroups = groupMessages(messages);
+      if (messageGroups.length > 0) {
+        list.scrollToItem(messageGroups.length - 1, 'end');
+      }
+    }
+  }, [messages, shouldAutoScroll]);
 
   const messageGroups = groupMessages(messages);
 
-  logger.debug(LogCategory.RENDER, 'MessageListContent', 'Render', {
+  logger.debug(LogCategory.RENDER, 'MessageListContent', 'Rendering message list', {
     messageCount: messages.length,
     groupCount: messageGroups.length,
     height,
-    width
+    width,
+    isScrolling,
+    shouldAutoScroll
   });
 
   // Don't render if we don't have valid dimensions
   if (!height || !width) {
+    logger.warn(LogCategory.RENDER, 'MessageListContent', 'Invalid dimensions, skipping render', {
+      height,
+      width
+    });
     return null;
   }
 
