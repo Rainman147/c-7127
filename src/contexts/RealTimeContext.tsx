@@ -1,6 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { RealtimeContextValue } from './realtime/types';
-import { RealTimeProvider } from './RealTimeProvider';
+import type { RealtimeContextValue } from '@/types/realtime';
 
 export const RealTimeContext = createContext<RealtimeContextValue | undefined>(undefined);
 
@@ -11,5 +10,3 @@ export const useRealTime = () => {
   }
   return context;
 };
-
-export { RealTimeProvider };

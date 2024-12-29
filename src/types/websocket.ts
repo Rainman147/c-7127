@@ -1,35 +1,26 @@
 export interface WebSocketError {
+  name: string;
   code: number;
-  status: number;
   message: string;
-  name?: string;
+  status: number;
   reason?: string;
 }
 
-export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+export interface WebSocketConfig {
+  url: string;
+  protocols?: string | string[];
+  options?: {
+    timeout?: number;
+    maxRetries?: number;
+    retryInterval?: number;
+  };
+}
 
-export interface ConnectionState {
-  status: ConnectionStatus;
-  retryCount: number;
-  lastAttempt: number;
+export type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+
+export interface WebSocketState {
+  status: WebSocketStatus;
   error?: WebSocketError;
-}
-
-export interface SubscriptionConfig {
-  event: 'postgres_changes';
-  schema: string;
-  table: string;
-  filter?: string;
-  onMessage: (payload: any) => void;
-  onError?: (error: WebSocketError) => void;
-  onSubscriptionStatus?: (status: string) => void;
-}
-
-export interface RealtimeChannel {
-  topic: string;
-  params: Record<string, any>;
-  socket: any;
-  bindings: any[];
-  subscribe: (timeout?: number) => Promise<'ok' | 'timed out' | 'error'>;
-  unsubscribe: () => void;
+  lastPing?: number;
+  reconnectAttempts: number;
 }

@@ -1,10 +1,5 @@
-export interface WebSocketError {
-  name: string;
-  code: number;
-  message: string;
-  status: number;
-  reason?: string;
-}
+import type { WebSocketError, WebSocketStatus } from './websocket';
+import type { Message } from './chat';
 
 export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
 
@@ -25,20 +20,6 @@ export interface SubscriptionConfig {
   onSubscriptionStatus?: (status: string) => void;
 }
 
-export interface RealtimeContextValue {
-  connectionState: ConnectionState;
-  subscribeToChat: (chatId: string, componentId: string) => void;
-  unsubscribeFromChat: (chatId: string, componentId: string) => void;
-  subscribeToMessage: (messageId: string, componentId: string, onUpdate: (content: string) => void) => void;
-  unsubscribeFromMessage: (messageId: string, componentId: string) => void;
-  subscribe: (config: SubscriptionConfig) => any;
-  cleanup: (channelKey?: string) => void;
-}
-
-export interface SubscriptionHandler {
-  (payload: any): void;
-}
-
 export interface RetryMetadata {
   attemptCount: number;
   lastAttemptTime: number;
@@ -57,5 +38,12 @@ export interface SupabaseRealtimePayload<T = any> {
   old_record?: T;
 }
 
-// Re-export all realtime types
-export * from './websocket';
+export interface RealtimeContextValue {
+  connectionState: ConnectionState;
+  subscribeToChat: (chatId: string, componentId: string) => void;
+  unsubscribeFromChat: (chatId: string, componentId: string) => void;
+  subscribeToMessage: (messageId: string, componentId: string, onUpdate: (content: string) => void) => void;
+  unsubscribeFromMessage: (messageId: string, componentId: string) => void;
+  subscribe: (config: SubscriptionConfig) => any;
+  cleanup: (channelKey?: string) => void;
+}

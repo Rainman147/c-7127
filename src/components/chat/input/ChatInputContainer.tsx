@@ -1,16 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from "react";
 import { useMessageQueue } from '@/hooks/queue/useMessageQueue';
 import { useQueueMonitor } from '@/hooks/queue/useQueueMonitor';
 import { useChatInput } from "@/hooks/chat/useChatInput";
 import { useMessageHandling } from "@/hooks/chat/useMessageHandling";
+import { useRealTime } from "@/contexts/RealTimeContext";
 import ChatInputWrapper from "./ChatInputWrapper";
-import type { Message } from '@/types/chat';
-
-interface ChatInputContainerProps {
-  onSend: (message: string, type?: 'text' | 'audio') => Promise<Message>;
-  onTranscriptionComplete: (text: string) => void;
-  isLoading?: boolean;
-}
+import type { ChatInputContainerProps } from "@/types/chat";
 
 const ChatInputContainer = ({
   onSend,
@@ -20,6 +15,7 @@ const ChatInputContainer = ({
   const [message, setMessage] = useState("");
   const { addMessage, processMessages } = useMessageQueue();
   const queueStatus = useQueueMonitor();
+  const { connectionState } = useRealTime();
 
   const {
     handleSubmit,
@@ -51,6 +47,7 @@ const ChatInputContainer = ({
       handleTranscriptionComplete={handleTranscriptionComplete}
       handleFileUpload={handleFileUpload}
       inputDisabled={inputDisabled}
+      connectionState={connectionState}
     />
   );
 };
