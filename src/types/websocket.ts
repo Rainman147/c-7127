@@ -1,11 +1,3 @@
-export interface WebSocketError {
-  name: string;
-  code: number;
-  message: string;
-  status: number;
-  reason?: string;
-}
-
 export interface WebSocketConfig {
   url: string;
   protocols?: string | string[];
@@ -20,7 +12,7 @@ export type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'err
 
 export interface WebSocketState {
   status: WebSocketStatus;
-  error?: WebSocketError;
+  error?: Error;
   lastPing?: number;
   reconnectAttempts: number;
 }

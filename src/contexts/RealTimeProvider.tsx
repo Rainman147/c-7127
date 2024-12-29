@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect } from 'react';
 import { useConnectionState } from '@/features/realtime/hooks/useConnectionState';
 import { useMessageHandlers } from '@/features/realtime/hooks/useMessageHandlers';
 import { useSubscriptionManager } from '@/features/realtime/hooks/useSubscriptionManager';
-import type { RealtimeContextValue, ConnectionState } from '@/types/realtime';
+import type { RealtimeContextValue } from '@/types/realtime';
 import { supabase } from '@/integrations/supabase/client';
 
 const RealTimeContext = createContext<RealtimeContextValue | undefined>(undefined);
@@ -26,46 +26,40 @@ export const RealTimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
-  }, []);
-
-  const subscribeToChat = (chatId: string, componentId: string) => {
-    subscribe({
-      event: 'postgres_changes',
-      schema: 'public',
-      table: 'messages',
-      filter: `chat_id=eq.${chatId}`,
-      onMessage: handleChatMessage,
-      onError: handleConnectionError
-    });
-  };
-
-  const unsubscribeFromChat = (chatId: string, componentId: string) => {
-    cleanup(`messages:${chatId}`);
-  };
-
-  const subscribeToMessage = (messageId: string, componentId: string, onUpdate: (content: string) => void) => {
-    subscribe({
-      event: 'postgres_changes',
-      schema: 'public',
-      table: 'messages',
-      filter: `id=eq.${messageId}`,
-      onMessage: (payload) => handleMessageUpdate(payload, onUpdate),
-      onError: handleConnectionError
-    });
-  };
-
-  const unsubscribeFromMessage = (messageId: string, componentId: string) => {
-    cleanup(`messages:${messageId}`);
-  };
+  }, [handleConnectionSuccess, handleConnectionError]);
 
   const value: RealtimeContextValue = {
     connectionState,
-    subscribeToChat,
-    unsubscribeFromChat,
-    subscribeToMessage,
-    unsubscribeFromMessage,
+    subscribeToChat: (chatId: string, componentId: string) => {
+      subscribe({
+        event: 'postgres_changes',
+        schema: 'public',
+        table: 'messages',
+        filter: `chat_id=eq.${chatId}`,
+        onMessage: handleChatMessage,
+        onError: handleConnectionError
+      });
+    },
+    unsubscribeFromChat: (chatId: string, componentId: string) => {
+      cleanup(`messages:${chatId}`);
+    },
+    subscribeToMessage: (messageId: string, componentId: string, onUpdate: (content: string) => void) => {
+      subscribe({
+        event: 'postgres_changes',
+        schema: 'public',
+        table: 'messages',
+        filter: `id=eq.${messageId}`,
+        onMessage: (payload) => handleMessageUpdate(payload, onUpdate),
+        onError: handleConnectionError
+      });
+    },
+    unsubscribeFromMessage: (messageId: string, componentId: string) => {
+      cleanup(`messages:${messageId}`);
+    },
     subscribe,
     cleanup
   };

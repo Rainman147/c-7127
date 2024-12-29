@@ -33,7 +33,8 @@ const ChatInputContainer = ({
   const { handleMessageChange } = useMessageHandling({
     onSend,
     message,
-    setMessage
+    setMessage,
+    connectionState
   });
 
   const inputDisabled = isDisabled || isLoading;

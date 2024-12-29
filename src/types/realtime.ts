@@ -1,4 +1,4 @@
-import type { WebSocketError, WebSocketStatus } from './websocket';
+import type { RealtimeChannel, REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js';
 import type { Message } from './chat';
 
 export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
@@ -7,7 +7,18 @@ export interface ConnectionState {
   status: ConnectionStatus;
   retryCount: number;
   lastAttempt: number;
-  error?: WebSocketError;
+  error?: Error;
+}
+
+export interface WebSocketError {
+  name: string;
+  message: string;
+  timestamp: string;
+  connectionState: ConnectionStatus;
+  retryCount: number;
+  lastAttempt: number;
+  backoffDelay: number;
+  reason?: string;
 }
 
 export interface SubscriptionConfig {
@@ -17,7 +28,17 @@ export interface SubscriptionConfig {
   filter?: string;
   onMessage: (payload: any) => void;
   onError?: (error: WebSocketError) => void;
-  onSubscriptionStatus?: (status: string) => void;
+  onSubscriptionStatus?: (status: REALTIME_SUBSCRIBE_STATES) => void;
+}
+
+export interface RealtimeContextValue {
+  connectionState: ConnectionState;
+  subscribeToChat: (chatId: string, componentId: string) => void;
+  unsubscribeFromChat: (chatId: string, componentId: string) => void;
+  subscribeToMessage: (messageId: string, componentId: string, onUpdate: (content: string) => void) => void;
+  unsubscribeFromMessage: (messageId: string, componentId: string) => void;
+  subscribe: (config: SubscriptionConfig) => RealtimeChannel;
+  cleanup: (channelKey?: string) => void;
 }
 
 export interface RetryMetadata {
@@ -27,7 +48,7 @@ export interface RetryMetadata {
   maxAttemptsReached: boolean;
 }
 
-export type RealtimeSubscribeStates = 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR';
+export type RealtimeSubscribeStates = REALTIME_SUBSCRIBE_STATES;
 
 export interface SupabaseRealtimePayload<T = any> {
   commit_timestamp: string;
@@ -36,14 +57,4 @@ export interface SupabaseRealtimePayload<T = any> {
   table: string;
   record: T;
   old_record?: T;
-}
-
-export interface RealtimeContextValue {
-  connectionState: ConnectionState;
-  subscribeToChat: (chatId: string, componentId: string) => void;
-  unsubscribeFromChat: (chatId: string, componentId: string) => void;
-  subscribeToMessage: (messageId: string, componentId: string, onUpdate: (content: string) => void) => void;
-  unsubscribeFromMessage: (messageId: string, componentId: string) => void;
-  subscribe: (config: SubscriptionConfig) => any;
-  cleanup: (channelKey?: string) => void;
 }
