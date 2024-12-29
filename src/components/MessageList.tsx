@@ -22,13 +22,21 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
       contentPreview: m.content?.substring(0, 50),
       created_at: m.created_at,
       status: m.status,
-      timestamp: new Date().toISOString()
-    }))
+      timestamp: new Date().toISOString(),
+      loadTime: Date.now()  // Add load time for tracking
+    })),
+    sessionInfo: {
+      totalMessages: messages.length,
+      oldestMessage: messages[0]?.created_at,
+      newestMessage: messages[messages.length - 1]?.created_at,
+      loadTimestamp: new Date().toISOString()
+    }
   });
 
   if (isLoading) {
     logger.info(LogCategory.STATE, 'MessageList', 'Showing loading state', {
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      currentMessageCount: messages.length
     });
     return <MessageLoadingState />;
   }
@@ -38,7 +46,8 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
       messages: messages,
       isArray: Array.isArray(messages),
       isLoading,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      context: 'Empty messages array detected'
     });
     return <MessageEmptyState />;
   }
@@ -51,7 +60,8 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
       contentPreview: messages[0].content?.substring(0, 50),
       sequence: messages[0].sequence,
       status: messages[0].status,
-      created_at: messages[0].created_at
+      created_at: messages[0].created_at,
+      loadTime: Date.now()
     } : null,
     lastMessage: messages.length > 0 ? {
       id: messages[messages.length - 1].id,
@@ -59,9 +69,15 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
       contentPreview: messages[messages.length - 1].content?.substring(0, 50),
       sequence: messages[messages.length - 1].sequence,
       status: messages[messages.length - 1].status,
-      created_at: messages[messages.length - 1].created_at
+      created_at: messages[messages.length - 1].created_at,
+      loadTime: Date.now()
     } : null,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    renderContext: {
+      totalMessages: messages.length,
+      messageOrder: messages.map(m => ({id: m.id, sequence: m.sequence})),
+      renderTime: Date.now()
+    }
   });
   
   return <MessageListContainer />;
