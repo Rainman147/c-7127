@@ -1,11 +1,12 @@
 import { useRef, useEffect } from 'react';
 import { FixedSizeList as List } from 'react-window';
-import Message from './Message';
 import { logger, LogCategory } from '@/utils/logging';
 import { groupMessages } from '@/utils/messageGrouping';
 import { useViewportMonitor } from '@/hooks/useViewportMonitor';
 import { useMessageState } from '@/hooks/chat/useMessageState';
-import { Loader2 } from 'lucide-react';
+import MessageRow from './message/MessageRow';
+import { MessageLoadingState } from './message/MessageLoadingState';
+import { MessageEmptyState } from './message/MessageEmptyState';
 
 const ITEM_SIZE = 100; // Average height of a message item
 
@@ -17,7 +18,6 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
   const { messages } = useMessageState();
   
-  // Track scroll position changes
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -42,7 +42,6 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     return () => container.removeEventListener('scroll', handleScroll);
   }, [messages.length, viewportHeight, keyboardVisible]);
 
-  // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (listRef.current && messages.length > 0) {
       const scrollStartTime = performance.now();
@@ -71,24 +70,12 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     }
   }, [messages.length, viewportHeight, keyboardVisible]);
 
-  // Loading state
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-gray-400">
-        <Loader2 className="h-8 w-8 animate-spin mb-4" />
-        <p>Loading messages...</p>
-      </div>
-    );
+    return <MessageLoadingState />;
   }
 
-  // Empty state
   if (messages.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-gray-400">
-        <p className="text-lg mb-2">No messages yet</p>
-        <p className="text-sm">Start a conversation to begin</p>
-      </div>
-    );
+    return <MessageEmptyState />;
   }
 
   const messageGroups = groupMessages(messages);
@@ -101,28 +88,6 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     keyboardVisible
   });
 
-  const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {
-    const group = messageGroups[index];
-    return (
-      <div style={style} className="py-2">
-        <div className="flex items-center justify-center mb-2">
-          <div className="text-xs text-white/50 bg-chatgpt-secondary/30 px-2 py-1 rounded">
-            {group.label} · {group.timestamp}
-          </div>
-        </div>
-        <div className="space-y-2">
-          {group.messages.map((message, idx) => (
-            <Message 
-              key={message.id || idx} 
-              {...message} 
-              showAvatar={idx === 0 || message.role !== group.messages[idx - 1].role}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div 
       ref={containerRef}
@@ -130,13 +95,18 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     >
       <List
         ref={listRef}
-        height={viewportHeight - 240} // Account for header and input area
+        height={viewportHeight - 240}
         itemCount={messageGroups.length}
         itemSize={ITEM_SIZE}
         width="100%"
         className="chat-scrollbar"
       >
-        {Row}
+        {({ index, style }) => (
+          <MessageRow 
+            style={style}
+            group={messageGroups[index]}
+          />
+        )}
       </List>
     </div>
   );
