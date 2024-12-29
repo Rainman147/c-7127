@@ -26,19 +26,8 @@ export const useChatSessions = () => {
 
       if (error) throw error;
       
-      // Filter out sessions with no messages
-      const { data: sessionsWithMessages, error: messagesError } = await supabase
-        .from('messages')
-        .select('chat_id')
-        .in('chat_id', sessions?.map(s => s.id) || []);
-        
-      if (messagesError) throw messagesError;
-      
-      const validSessionIds = new Set(sessionsWithMessages?.map(m => m.chat_id));
-      const validSessions = sessions?.filter(s => validSessionIds.has(s.id)) || [];
-      
-      console.log('[useChatSessions] Filtered sessions:', validSessions);
-      setSessions(validSessions);
+      console.log('[useChatSessions] Fetched sessions:', sessions);
+      setSessions(sessions || []);
     } catch (error: any) {
       console.error('[useChatSessions] Error fetching sessions:', error);
       toast({
@@ -156,14 +145,6 @@ export const useChatSessions = () => {
         { event: '*', schema: 'public', table: 'chats' },
         (payload) => {
           console.log('[useChatSessions] Chat change received:', payload);
-          debouncedFetchSessions();
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages' },
-        (payload) => {
-          console.log('[useChatSessions] Message change received:', payload);
           debouncedFetchSessions();
         }
       )
