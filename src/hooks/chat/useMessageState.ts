@@ -18,6 +18,7 @@ export const useMessageState = () => {
     clearMessages
   } = useMessages();
 
+  // Enhanced logging for message state changes
   logger.debug(LogCategory.STATE, 'useMessageState', 'Current message state:', {
     totalMessages: messages.length,
     pendingCount: pendingMessages.length,
@@ -27,7 +28,10 @@ export const useMessageState = () => {
     messageStatuses: messages.map(m => ({
       id: m.id,
       status: m.status,
-      isOptimistic: m.isOptimistic
+      isOptimistic: m.isOptimistic,
+      sequence: m.sequence,
+      role: m.role,
+      contentPreview: m.content?.substring(0, 50)
     }))
   });
 
@@ -35,7 +39,8 @@ export const useMessageState = () => {
     logger.debug(LogCategory.STATE, 'useMessageState', 'Adding optimistic message:', {
       contentLength: content.length,
       type,
-      currentMessageCount: messages.length
+      currentMessageCount: messages.length,
+      timestamp: new Date().toISOString()
     });
 
     const optimisticMessage: Message = {
@@ -57,7 +62,9 @@ export const useMessageState = () => {
     logger.debug(LogCategory.STATE, 'useMessageState', 'Replacing optimistic message:', {
       tempId,
       confirmedId: confirmedMessage.id,
-      newStatus: confirmedMessage.status
+      newStatus: confirmedMessage.status,
+      sequence: confirmedMessage.sequence,
+      timestamp: new Date().toISOString()
     });
 
     confirmMessage(tempId, {
@@ -65,6 +72,22 @@ export const useMessageState = () => {
       status: 'delivered'
     });
   }, [confirmMessage]);
+
+  const setMessagesWithLogging = useCallback((newMessages: Message[]) => {
+    logger.info(LogCategory.STATE, 'useMessageState', 'Setting messages:', {
+      messageCount: newMessages.length,
+      messageDetails: newMessages.map(m => ({
+        id: m.id,
+        role: m.role,
+        status: m.status,
+        sequence: m.sequence,
+        contentPreview: m.content?.substring(0, 50)
+      })),
+      timestamp: new Date().toISOString()
+    });
+    
+    setMessages(newMessages);
+  }, [setMessages]);
 
   return {
     messages,
@@ -76,6 +99,6 @@ export const useMessageState = () => {
     replaceOptimisticMessage,
     handleMessageFailure,
     clearMessages,
-    setMessages
+    setMessages: setMessagesWithLogging
   };
 };
