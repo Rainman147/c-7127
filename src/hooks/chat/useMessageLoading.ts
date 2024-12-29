@@ -1,73 +1,52 @@
-import { useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { useMessagePersistence } from './useMessagePersistence';
+import { useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 
-const MESSAGES_PER_BATCH = 50;
-
 export const useMessageLoading = () => {
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const { toast } = useToast();
-  const { loadChatMessages } = useMessagePersistence();
+  const loadMessages = useCallback(async (sessionId: string): Promise<Message[]> => {
+    logger.info(LogCategory.STATE, 'useMessageLoading', 'Loading messages from database:', {
+      sessionId
+    });
 
-  const loadMessages = async (
-    chatId: string,
-    updateCache: (chatId: string, messages: Message[]) => void
-  ) => {
-    try {
-      console.log('[useMessageLoading] Loading messages for chat:', chatId);
-      const loadedMessages = await loadChatMessages(chatId, MESSAGES_PER_BATCH);
-      updateCache(chatId, loadedMessages);
-      return loadedMessages;
-    } catch (error) {
-      console.error('[useMessageLoading] Error loading messages:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load messages",
-        variant: "destructive"
+    const { data: messages, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('chat_id', sessionId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      logger.error(LogCategory.ERROR, 'useMessageLoading', 'Error loading messages:', {
+        sessionId,
+        error
       });
-      return [];
+      throw error;
     }
-  };
 
-  const loadMoreMessages = async (
-    chatId: string,
-    currentMessages: Message[],
-    setMessages: (messages: Message[]) => void,
-    updateCache: (chatId: string, messages: Message[]) => void
-  ) => {
-    if (!chatId || isLoadingMore) return;
+    const transformedMessages = messages.map((msg, index) => ({
+      id: msg.id,
+      role: msg.sender as 'user' | 'assistant',
+      content: msg.content,
+      type: msg.type as 'text' | 'audio',
+      sequence: msg.sequence ?? index,
+      created_at: msg.created_at,
+      status: msg.status
+    }));
 
-    try {
-      setIsLoadingMore(true);
-      console.log('[useMessageLoading] Loading more messages, current count:', currentMessages.length);
-      
-      const olderMessages = await loadChatMessages(
-        chatId,
-        MESSAGES_PER_BATCH,
-        currentMessages.length
-      );
+    logger.debug(LogCategory.STATE, 'useMessageLoading', 'Messages loaded:', {
+      sessionId,
+      count: transformedMessages.length,
+      messages: transformedMessages.map(m => ({
+        id: m.id,
+        sequence: m.sequence,
+        role: m.role
+      }))
+    });
 
-      if (olderMessages.length > 0) {
-        const updatedMessages = [...currentMessages, ...olderMessages];
-        setMessages(updatedMessages);
-        updateCache(chatId, updatedMessages);
-      }
-    } catch (error) {
-      console.error('[useMessageLoading] Error loading more messages:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load more messages",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
+    return transformedMessages;
+  }, []);
 
   return {
-    loadMessages,
-    loadMoreMessages,
-    isLoadingMore
+    loadMessages
   };
 };
