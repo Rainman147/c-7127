@@ -1,36 +1,40 @@
-import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import ChatInput from '@/components/ChatInput';
-import { MessageList } from '@/components/MessageList';
-import { useChat } from '@/hooks/chat/useChat';
+import MessageList from '@/components/MessageList';
+import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
 import { logger, LogCategory } from '@/utils/logging';
 
 const Index = () => {
   const { chatId } = useParams();
-  const { messages, isLoading, sendMessage, loadMessages } = useChat(chatId || null);
+  const { messages, sendMessage, isLoading } = useChatMessages(chatId || null);
 
-  useEffect(() => {
-    if (chatId) {
-      logger.debug(LogCategory.STATE, 'Index', 'Loading messages for chat:', { chatId });
-      loadMessages();
+  logger.debug(LogCategory.RENDER, 'Index', 'Rendering with:', {
+    chatId,
+    messageCount: messages.length,
+    isLoading
+  });
+
+  const handleSendMessage = async (content: string, type: 'text' | 'audio' = 'text') => {
+    if (!chatId) return;
+    await sendMessage(content, type);
+  };
+
+  const handleTranscriptionComplete = (text: string) => {
+    if (text.trim()) {
+      handleSendMessage(text, 'audio');
     }
-  }, [chatId, loadMessages]);
+  };
 
   return (
-    <div className="flex-1 overflow-hidden bg-chatgpt-gray">
-      <div className="relative h-full">
+    <div className="flex flex-col h-screen bg-background">
+      <div className="flex-1 overflow-hidden relative">
         <MessageList messages={messages} />
-        <div className="absolute bottom-0 left-0 w-full">
-          <ChatInput 
-            onSend={sendMessage} 
-            isLoading={isLoading}
-            onTranscriptionComplete={(text) => {
-              logger.debug(LogCategory.COMMUNICATION, 'Index', 'Transcription completed:', { textLength: text.length });
-              sendMessage(text, 'audio');
-            }}
-          />
-        </div>
       </div>
+      <ChatInput
+        onSend={handleSendMessage}
+        onTranscriptionComplete={handleTranscriptionComplete}
+        isLoading={isLoading}
+      />
     </div>
   );
 };

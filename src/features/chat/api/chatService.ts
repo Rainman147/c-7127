@@ -16,7 +16,7 @@ export const chatService = {
       contentLength: content.length
     });
 
-    const { data: message, error } = await supabase
+    const { data, error } = await supabase
       .from('messages')
       .insert({
         chat_id: chatId,
@@ -33,34 +33,34 @@ export const chatService = {
     }
 
     return {
-      id: message.id,
-      content: message.content,
-      role: message.sender,
-      type: message.type,
-      sequence: message.sequence
+      id: data.id,
+      content: data.content,
+      role: data.sender,
+      type: data.type,
+      sequence: data.sequence,
+      created_at: data.created_at
     };
   },
 
   async getMessages(chatId: string): Promise<Message[]> {
-    logger.debug(LogCategory.COMMUNICATION, 'chatService', 'Getting messages:', { chatId });
-
-    const { data: messages, error } = await supabase
+    const { data, error } = await supabase
       .from('messages')
       .select('*')
       .eq('chat_id', chatId)
       .order('created_at', { ascending: true });
 
     if (error) {
-      logger.error(LogCategory.ERROR, 'chatService', 'Error getting messages:', error);
+      logger.error(LogCategory.ERROR, 'chatService', 'Error fetching messages:', error);
       throw error;
     }
 
-    return messages.map(msg => ({
+    return data.map(msg => ({
       id: msg.id,
       content: msg.content,
       role: msg.sender,
       type: msg.type,
-      sequence: msg.sequence
+      sequence: msg.sequence,
+      created_at: msg.created_at
     }));
   }
 };
