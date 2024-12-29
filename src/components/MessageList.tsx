@@ -7,7 +7,7 @@ import { logger, LogCategory } from '@/utils/logging';
 const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
   const { messages } = useMessageState();
 
-  logger.debug(LogCategory.RENDER, 'MessageList', 'Rendering with state:', {
+  logger.debug(LogCategory.STATE, 'MessageList', 'Rendering with state:', {
     isLoading,
     messageCount: messages.length,
     messageIds: messages.map(m => m.id),
@@ -19,7 +19,8 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
       sequence: m.sequence,
       isOptimistic: m.isOptimistic,
       contentPreview: m.content?.substring(0, 50),
-      created_at: m.created_at
+      created_at: m.created_at,
+      status: m.status
     }))
   });
 
@@ -39,18 +40,20 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
 
   logger.debug(LogCategory.RENDER, 'MessageList', 'Rendering message container', {
     messageCount: messages.length,
-    firstMessage: {
-      id: messages[0]?.id,
-      role: messages[0]?.role,
-      contentPreview: messages[0]?.content?.substring(0, 50),
-      sequence: messages[0]?.sequence
-    },
-    lastMessage: {
-      id: messages[messages.length - 1]?.id,
-      role: messages[messages.length - 1]?.role,
-      contentPreview: messages[messages.length - 1]?.content?.substring(0, 50),
-      sequence: messages[messages.length - 1]?.sequence
-    }
+    firstMessage: messages[0] ? {
+      id: messages[0].id,
+      role: messages[0].role,
+      contentPreview: messages[0].content?.substring(0, 50),
+      sequence: messages[0].sequence,
+      status: messages[0].status
+    } : null,
+    lastMessage: messages.length > 0 ? {
+      id: messages[messages.length - 1].id,
+      role: messages[messages.length - 1].role,
+      contentPreview: messages[messages.length - 1].content?.substring(0, 50),
+      sequence: messages[messages.length - 1].sequence,
+      status: messages[messages.length - 1].status
+    } : null
   });
   
   return <MessageListContainer />;
