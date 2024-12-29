@@ -31,8 +31,18 @@ export const useMessageState = () => {
       isOptimistic: m.isOptimistic,
       sequence: m.sequence,
       role: m.role,
-      contentPreview: m.content?.substring(0, 50)
-    }))
+      contentPreview: m.content?.substring(0, 50),
+      created_at: m.created_at,
+      loadTime: Date.now(),
+      stateSource: 'useMessageState'
+    })),
+    stateSnapshot: {
+      timestamp: new Date().toISOString(),
+      messageIds: messages.map(m => m.id),
+      pendingIds: pendingMessages.map(m => m.id),
+      confirmedIds: confirmedMessages.map(m => m.id),
+      failedIds: failedMessages.map(m => m.id)
+    }
   });
 
   const addOptimisticMessage = useCallback((content: string, type: 'text' | 'audio' = 'text') => {
@@ -40,7 +50,8 @@ export const useMessageState = () => {
       contentLength: content.length,
       type,
       currentMessageCount: messages.length,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      existingMessageIds: messages.map(m => m.id)
     });
 
     const optimisticMessage: Message = {
@@ -64,14 +75,21 @@ export const useMessageState = () => {
       confirmedId: confirmedMessage.id,
       newStatus: confirmedMessage.status,
       sequence: confirmedMessage.sequence,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      messageState: {
+        beforeReplace: messages.map(m => ({
+          id: m.id,
+          isOptimistic: m.isOptimistic,
+          sequence: m.sequence
+        }))
+      }
     });
 
     confirmMessage(tempId, {
       ...confirmedMessage,
       status: 'delivered'
     });
-  }, [confirmMessage]);
+  }, [confirmMessage, messages]);
 
   const setMessagesWithLogging = useCallback((newMessages: Message[]) => {
     logger.info(LogCategory.STATE, 'useMessageState', 'Setting messages:', {
@@ -81,9 +99,12 @@ export const useMessageState = () => {
         role: m.role,
         status: m.status,
         sequence: m.sequence,
-        contentPreview: m.content?.substring(0, 50)
+        contentPreview: m.content?.substring(0, 50),
+        created_at: m.created_at
       })),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      operation: 'setMessages',
+      source: 'useMessageState'
     });
     
     setMessages(newMessages);
