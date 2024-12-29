@@ -10,8 +10,29 @@ export enum LogCategory {
   STATE = 'state',
   COMMUNICATION = 'communication',
   ERROR = 'error',
-  DATABASE = 'database'  // Added this category
+  DATABASE = 'database',
+  LIFECYCLE = 'lifecycle',  // Added this category
+  HOOKS = 'hooks'          // Added this category
 }
+
+// Add type definition for Chrome's non-standard Performance interface
+interface ExtendedPerformance extends Performance {
+  memory?: {
+    usedJSHeapSize: number;
+    totalJSHeapSize: number;
+    jsHeapSizeLimit: number;
+  };
+}
+
+// Helper function to safely get memory info
+const getMemoryInfo = () => {
+  const performance = window.performance as ExtendedPerformance;
+  return performance?.memory ? {
+    usedJSHeapSize: performance.memory.usedJSHeapSize,
+    totalJSHeapSize: performance.memory.totalJSHeapSize,
+    jsHeapSizeLimit: performance.memory.jsHeapSizeLimit
+  } : 'Not available';
+};
 
 type LogEntry = {
   timestamp: string;
@@ -33,9 +54,15 @@ export const logger = {
         category,
         component,
         message,
-        data
+        data: data ? {
+          ...data,
+          performance: data.performance ? {
+            ...data.performance,
+            memory: getMemoryInfo()
+          } : undefined
+        } : undefined
       };
-      console.debug(`[${entry.component}] ${entry.message}`, data || '');
+      console.debug(`[${entry.component}] ${entry.message}`, entry.data || '');
     }
   },
 
@@ -47,9 +74,15 @@ export const logger = {
         category,
         component,
         message,
-        data
+        data: data ? {
+          ...data,
+          performance: data.performance ? {
+            ...data.performance,
+            memory: getMemoryInfo()
+          } : undefined
+        } : undefined
       };
-      console.log(`[${entry.component}] ${entry.message}`, data || '');
+      console.log(`[${entry.component}] ${entry.message}`, entry.data || '');
     }
   },
 
@@ -61,9 +94,15 @@ export const logger = {
         category,
         component,
         message,
-        data
+        data: data ? {
+          ...data,
+          performance: data.performance ? {
+            ...data.performance,
+            memory: getMemoryInfo()
+          } : undefined
+        } : undefined
       };
-      console.warn(`[${entry.component}] ${entry.message}`, data || '');
+      console.warn(`[${entry.component}] ${entry.message}`, entry.data || '');
     }
   },
 
@@ -75,9 +114,15 @@ export const logger = {
         category,
         component,
         message,
-        data
+        data: data ? {
+          ...data,
+          performance: data.performance ? {
+            ...data.performance,
+            memory: getMemoryInfo()
+          } : undefined
+        } : undefined
       };
-      console.error(`[${entry.component}] ${entry.message}`, data || '');
+      console.error(`[${entry.component}] ${entry.message}`, entry.data || '');
     }
   }
 };

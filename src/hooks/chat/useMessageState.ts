@@ -24,11 +24,7 @@ export const useMessageState = () => {
       timestamp: new Date().toISOString(),
       initializationStack: new Error().stack,
       performance: {
-        now: performance.now(),
-        memory: window.performance?.memory ? {
-          usedJSHeapSize: window.performance.memory.usedJSHeapSize,
-          totalJSHeapSize: window.performance.memory.totalJSHeapSize
-        } : 'Not available'
+        now: performance.now()
       }
     }
   });
@@ -70,11 +66,7 @@ export const useMessageState = () => {
       }, [] as any[])
     },
     performance: {
-      timestamp: performance.now(),
-      memory: window.performance?.memory ? {
-        usedJSHeapSize: window.performance.memory.usedJSHeapSize,
-        totalJSHeapSize: window.performance.memory.totalJSHeapSize
-      } : 'Not available'
+      timestamp: performance.now()
     }
   });
 

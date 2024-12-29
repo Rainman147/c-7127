@@ -55,11 +55,7 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     },
     renderContext: {
       componentStack: new Error().stack,
-      renderTime: performance.now(),
-      memoryUsage: window.performance?.memory ? {
-        usedJSHeapSize: window.performance.memory.usedJSHeapSize,
-        totalJSHeapSize: window.performance.memory.totalJSHeapSize
-      } : 'Not available'
+      renderTime: performance.now()
     }
   });
 
