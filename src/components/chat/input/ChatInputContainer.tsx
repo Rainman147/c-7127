@@ -33,7 +33,8 @@ const ChatInputContainer = ({
     onSend,
     onTranscriptionComplete,
     message,
-    setMessage
+    setMessage,
+    onTranscriptionUpdate
   });
 
   const { handleMessageChange, handleSubmit } = useMessageHandling({

@@ -41,13 +41,13 @@ export const useChat = (chatId: string | null) => {
       const userMessage = await chatService.sendMessage(chatId, content, 'user', type);
       setMessages(prev => [...prev, userMessage]);
 
-      // Process AI response
-      const aiMessage = await chatService.processAIResponse(content, chatId);
-      setMessages(prev => [...prev, aiMessage]);
+      // Send assistant message
+      const assistantMessage = await chatService.sendMessage(chatId, content, 'assistant', 'text');
+      setMessages(prev => [...prev, assistantMessage]);
 
       logger.info(LogCategory.COMMUNICATION, 'useChat', 'Message exchange completed:', {
         userMessageId: userMessage.id,
-        aiMessageId: aiMessage.id
+        assistantMessageId: assistantMessage.id
       });
     } catch (error) {
       logger.error(LogCategory.ERROR, 'useChat', 'Error in message exchange:', error);
