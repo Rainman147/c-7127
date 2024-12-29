@@ -5,7 +5,7 @@ export interface Message {
   id: string;
   role: MessageRole;
   content: string;
-  type?: MessageType;
+  type: MessageType;
   sequence?: number;
   created_at?: string;
   isOptimistic?: boolean;

@@ -7,7 +7,7 @@ import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 import type { ErrorSeverity } from '@/types/errorTracking';
 
-export const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) => {
+const MessageList = memo(({ messages: propMessages }: { messages: Message[] }) => {
   const componentId = useId();
   const {
     containerRef,
@@ -74,3 +74,5 @@ export const MessageList = memo(({ messages: propMessages }: { messages: Message
 });
 
 MessageList.displayName = 'MessageList';
+
+export { MessageList };

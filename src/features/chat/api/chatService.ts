@@ -1,13 +1,13 @@
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import type { Message } from '@/types/chat';
+import type { Message, MessageRole, MessageType } from '@/types/chat';
 
 export const chatService = {
   async sendMessage(
     chatId: string,
     content: string,
-    role: 'user' | 'assistant',
-    type: 'text' | 'audio' = 'text'
+    role: MessageRole,
+    type: MessageType = 'text'
   ): Promise<Message> {
     logger.debug(LogCategory.COMMUNICATION, 'chatService', 'Sending message:', {
       chatId,
@@ -35,8 +35,8 @@ export const chatService = {
     return {
       id: data.id,
       content: data.content,
-      role: data.sender,
-      type: data.type,
+      role: data.sender as MessageRole,
+      type: data.type as MessageType,
       sequence: data.sequence,
       created_at: data.created_at
     };
@@ -57,8 +57,8 @@ export const chatService = {
     return data.map(msg => ({
       id: msg.id,
       content: msg.content,
-      role: msg.sender,
-      type: msg.type,
+      role: msg.sender as MessageRole,
+      type: msg.type as MessageType,
       sequence: msg.sequence,
       created_at: msg.created_at
     }));
