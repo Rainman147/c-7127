@@ -2,12 +2,12 @@ import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import ChatInput from '@/components/ChatInput';
 import { MessageList } from '@/components/MessageList';
-import { useChatMessages } from '@/features/chat/hooks/useChatMessages';
+import { useChat } from '@/hooks/chat/useChat';
 import { logger, LogCategory } from '@/utils/logging';
 
-export default function Index() {
-  const { chatId } = useParams<{ chatId: string }>();
-  const { messages, isLoading, sendMessage, loadMessages } = useChatMessages(chatId || '');
+const Index = () => {
+  const { chatId } = useParams();
+  const { messages, isLoading, sendMessage, loadMessages } = useChat(chatId || null);
 
   useEffect(() => {
     if (chatId) {
@@ -17,26 +17,22 @@ export default function Index() {
   }, [chatId, loadMessages]);
 
   return (
-    <div className="flex flex-col h-screen">
-      <div className="flex-1 overflow-hidden">
+    <div className="flex-1 overflow-hidden bg-chatgpt-gray">
+      <div className="relative h-full">
         <MessageList messages={messages} />
-      </div>
-      <div className="p-4 border-t">
-        <ChatInput 
-          onSend={sendMessage}
-          isLoading={isLoading}
-          onTranscriptionComplete={(text) => {
-            logger.debug(LogCategory.COMMUNICATION, 'Index', 'Transcription completed:', { 
-              textLength: text.length 
-            });
-          }}
-          onTranscriptionUpdate={(text) => {
-            logger.debug(LogCategory.COMMUNICATION, 'Index', 'Transcription updated:', { 
-              textLength: text.length 
-            });
-          }}
-        />
+        <div className="absolute bottom-0 left-0 w-full">
+          <ChatInput 
+            onSend={sendMessage} 
+            isLoading={isLoading}
+            onTranscriptionComplete={(text) => {
+              logger.debug(LogCategory.COMMUNICATION, 'Index', 'Transcription completed:', { textLength: text.length });
+              sendMessage(text, 'audio');
+            }}
+          />
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default Index;
