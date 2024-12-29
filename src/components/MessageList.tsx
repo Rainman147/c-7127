@@ -41,6 +41,12 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     return <MessageEmptyState />;
   }
 
+  logger.info(LogCategory.STATE, 'MessageList', 'Rendering messages', {
+    messageCount: messages.length,
+    firstMessageId: messages[0]?.id,
+    lastMessageId: messages[messages.length - 1]?.id
+  });
+
   return <MessageListContainer />;
 };
 

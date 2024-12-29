@@ -7,8 +7,8 @@ import type { Message } from '@/types/chat';
 export const useMessageFlow = (activeSessionId: string | null) => {
   const { 
     addOptimisticMessage, 
-    replaceOptimisticMessage, 
-    handleMessageFailure 
+    handleMessageFailure,
+    setMessages 
   } = useMessageState();
 
   const handleSendMessage = useCallback(async (
@@ -55,16 +55,21 @@ export const useMessageFlow = (activeSessionId: string | null) => {
         sessionId: activeSessionId
       });
 
-      replaceOptimisticMessage(optimisticMessage.id, data);
+      // Replace optimistic message with confirmed message
+      const updatedMessages = (prevMessages: Message[]) => 
+        prevMessages.map(msg => msg.id === optimisticMessage.id ? data : msg);
+      
+      setMessages(updatedMessages);
+
     } catch (error) {
       logger.error(LogCategory.ERROR, 'useMessageFlow', 'Message failed:', {
         messageId: optimisticMessage.id,
         error,
         stack: error instanceof Error ? error.stack : undefined
       });
-      handleMessageFailure(optimisticMessage.id, error);
+      handleMessageFailure(optimisticMessage.id, error as string);
     }
-  }, [activeSessionId, addOptimisticMessage, replaceOptimisticMessage, handleMessageFailure]);
+  }, [activeSessionId, addOptimisticMessage, handleMessageFailure, setMessages]);
 
   return {
     handleSendMessage

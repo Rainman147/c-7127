@@ -58,10 +58,10 @@ export const useMessageState = () => {
     return optimisticMessage;
   }, [messages.length, addMessage]);
 
-  const setMessagesWithLogging = useCallback((newMessages: Message[]) => {
+  const setMessagesWithLogging = useCallback((newMessages: Message[] | ((prev: Message[]) => Message[])) => {
     logger.info(LogCategory.STATE, 'useMessageState', 'Setting messages:', {
-      messageCount: newMessages.length,
-      messageDetails: newMessages.map(m => ({
+      messageCount: typeof newMessages === 'function' ? 'using updater function' : newMessages.length,
+      messageDetails: (typeof newMessages === 'function' ? messages : newMessages).map(m => ({
         id: m.id,
         role: m.role,
         contentPreview: m.content?.substring(0, 50),
@@ -71,7 +71,7 @@ export const useMessageState = () => {
     });
     
     setMessages(newMessages);
-  }, [setMessages]);
+  }, [messages, setMessages]);
 
   return {
     messages,
