@@ -13,6 +13,7 @@ interface MessageRowProps {
 const MessageRow = memo(({ style, group, onHeightChange, isScrolling }: MessageRowProps) => {
   const rowRef = useRef<HTMLDivElement>(null);
   const measurementStartTime = useRef<number>();
+  const lastMeasuredHeight = useRef<number>();
 
   useEffect(() => {
     if (rowRef.current && onHeightChange) {
@@ -33,17 +34,21 @@ const MessageRow = memo(({ style, group, onHeightChange, isScrolling }: MessageR
             ? Date.now() - measurementStartTime.current 
             : 0;
           
-          logger.debug(LogCategory.STATE, 'MessageRow', 'Height changed:', {
-            previousHeight: rowRef.current?.offsetHeight,
-            newHeight: height,
-            groupId: group.label,
-            messageCount: group.messages.length,
-            measurementDuration,
-            hasImages: group.messages.some(m => m.content.includes('img')),
-            timestamp: new Date().toISOString()
-          });
-          
-          onHeightChange(Math.ceil(height));
+          // Only log if height actually changed
+          if (height !== lastMeasuredHeight.current) {
+            logger.debug(LogCategory.STATE, 'MessageRow', 'Height changed:', {
+              previousHeight: lastMeasuredHeight.current,
+              newHeight: height,
+              groupId: group.label,
+              messageCount: group.messages.length,
+              measurementDuration,
+              hasImages: group.messages.some(m => m.content.includes('img')),
+              timestamp: new Date().toISOString()
+            });
+            
+            lastMeasuredHeight.current = height;
+            onHeightChange(Math.ceil(height));
+          }
         }
       });
 

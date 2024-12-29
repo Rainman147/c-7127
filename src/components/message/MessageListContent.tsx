@@ -20,12 +20,13 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
   const { messages } = useMessageState();
   const containerRef = useRef<HTMLDivElement>(null);
   const lastMeasuredTime = useRef<{[key: number]: number}>({});
+  const measurementStartTime = useRef<{[key: number]: number}>({});
 
   const { handleScroll, shouldAutoScroll } = useScrollManager(listRef);
 
   // Debug viewport dimensions and message state
   useEffect(() => {
-    logger.debug(LogCategory.STATE, 'MessageListContent', 'Component state update:', {
+    logger.debug(LogCategory.STATE, 'MessageListContent', 'Component mounted/updated:', {
       providedHeight: height,
       providedWidth: width,
       containerHeight: containerRef.current?.clientHeight,
@@ -33,6 +34,12 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
       messageCount: messages.length,
       cachedSizes: Object.keys(sizeMap.current).length,
       shouldAutoScroll,
+      timestamp: new Date().toISOString()
+    });
+
+    // Log current size map state
+    logger.debug(LogCategory.STATE, 'MessageListContent', 'Current size map state:', {
+      sizes: sizeMap.current,
       timestamp: new Date().toISOString()
     });
   }, [height, width, messages.length, shouldAutoScroll]);
@@ -47,6 +54,9 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
       returnedSize: size,
       hasSize: !!sizeMap.current[index],
       lastMeasuredAt: lastMeasured ? new Date(lastMeasured).toISOString() : 'never',
+      measurementDuration: measurementStartTime.current[index] 
+        ? Date.now() - measurementStartTime.current[index] 
+        : 'not started',
       timestamp: new Date().toISOString()
     });
     
@@ -66,6 +76,9 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
       timeSinceLastMeasurement: lastMeasuredTime.current[index] 
         ? now - lastMeasuredTime.current[index] 
         : 'first measurement',
+      measurementDuration: measurementStartTime.current[index]
+        ? now - measurementStartTime.current[index]
+        : 'not started',
       timestamp: new Date().toISOString()
     });
 
@@ -97,10 +110,12 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
     // Clear size cache
     sizeMap.current = {};
     lastMeasuredTime.current = {};
+    measurementStartTime.current = {};
     
     // Reset list measurements
     if (listRef.current) {
       listRef.current.resetAfterIndex(0);
+      logger.debug(LogCategory.STATE, 'MessageListContent', 'Reset all measurements');
     }
 
     // Scroll to bottom if needed
