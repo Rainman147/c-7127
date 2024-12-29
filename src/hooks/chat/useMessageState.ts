@@ -18,6 +18,21 @@ export const useMessageState = () => {
     clearMessages
   } = useMessages();
 
+  // Enhanced logging for hook initialization
+  logger.debug(LogCategory.HOOKS, 'useMessageState', 'Hook initialized:', {
+    hookContext: {
+      timestamp: new Date().toISOString(),
+      initializationStack: new Error().stack,
+      performance: {
+        now: performance.now(),
+        memory: window.performance?.memory ? {
+          usedJSHeapSize: window.performance.memory.usedJSHeapSize,
+          totalJSHeapSize: window.performance.memory.totalJSHeapSize
+        } : 'Not available'
+      }
+    }
+  });
+
   // Enhanced logging for message state changes
   logger.debug(LogCategory.STATE, 'useMessageState', 'Current message state:', {
     totalMessages: messages.length,
@@ -41,7 +56,25 @@ export const useMessageState = () => {
       messageIds: messages.map(m => m.id),
       pendingIds: pendingMessages.map(m => m.id),
       confirmedIds: confirmedMessages.map(m => m.id),
-      failedIds: failedMessages.map(m => m.id)
+      failedIds: failedMessages.map(m => m.id),
+      messageSequences: messages.map(m => m.sequence),
+      gaps: messages.reduce((gaps, m, i) => {
+        if (i > 0 && m.sequence - messages[i-1].sequence > 1) {
+          gaps.push({
+            beforeId: messages[i-1].id,
+            afterId: m.id,
+            gap: m.sequence - messages[i-1].sequence
+          });
+        }
+        return gaps;
+      }, [] as any[])
+    },
+    performance: {
+      timestamp: performance.now(),
+      memory: window.performance?.memory ? {
+        usedJSHeapSize: window.performance.memory.usedJSHeapSize,
+        totalJSHeapSize: window.performance.memory.totalJSHeapSize
+      } : 'Not available'
     }
   });
 
@@ -51,7 +84,8 @@ export const useMessageState = () => {
       type,
       currentMessageCount: messages.length,
       timestamp: new Date().toISOString(),
-      existingMessageIds: messages.map(m => m.id)
+      existingMessageIds: messages.map(m => m.id),
+      callStack: new Error().stack
     });
 
     const optimisticMessage: Message = {
@@ -82,7 +116,8 @@ export const useMessageState = () => {
           isOptimistic: m.isOptimistic,
           sequence: m.sequence
         }))
-      }
+      },
+      callStack: new Error().stack
     });
 
     confirmMessage(tempId, {
@@ -104,7 +139,8 @@ export const useMessageState = () => {
       })),
       timestamp: new Date().toISOString(),
       operation: 'setMessages',
-      source: 'useMessageState'
+      source: 'useMessageState',
+      callStack: new Error().stack
     });
     
     setMessages(newMessages);

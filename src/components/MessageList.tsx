@@ -7,13 +7,24 @@ import { logger, LogCategory } from '@/utils/logging';
 const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
   const { messages } = useMessageState();
 
+  // Enhanced logging for component mount/unmount lifecycle
+  logger.debug(LogCategory.LIFECYCLE, 'MessageList', 'Component lifecycle event:', {
+    event: 'render',
+    timestamp: new Date().toISOString(),
+    componentState: {
+      isLoading,
+      hasMessages: messages?.length > 0,
+      messageCount: messages?.length || 0
+    }
+  });
+
   // Enhanced logging for message loading and state transitions
   logger.debug(LogCategory.STATE, 'MessageList', 'Rendering with state:', {
     isLoading,
-    messageCount: messages.length,
-    messageIds: messages.map(m => m.id),
-    hasMessages: messages.length > 0,
-    messageDetails: messages.map(m => ({
+    messageCount: messages?.length || 0,
+    messageIds: messages?.map(m => m.id) || [],
+    hasMessages: messages?.length > 0,
+    messageDetails: messages?.map(m => ({
       id: m.id,
       role: m.role,
       type: m.type,
@@ -24,14 +35,14 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
       status: m.status,
       timestamp: new Date().toISOString(),
       loadTime: Date.now(),
-      stateTransition: isLoading ? 'loading' : messages.length === 0 ? 'empty' : 'loaded'
+      stateTransition: isLoading ? 'loading' : messages?.length === 0 ? 'empty' : 'loaded'
     })),
     sessionInfo: {
-      totalMessages: messages.length,
-      oldestMessage: messages[0]?.created_at,
-      newestMessage: messages[messages.length - 1]?.created_at,
+      totalMessages: messages?.length || 0,
+      oldestMessage: messages?.[0]?.created_at,
+      newestMessage: messages?.[messages?.length - 1]?.created_at,
       loadTimestamp: new Date().toISOString(),
-      messageGaps: messages.reduce((gaps, m, i) => {
+      messageGaps: messages?.reduce((gaps, m, i) => {
         if (i > 0 && m.sequence - messages[i-1].sequence > 1) {
           gaps.push({
             beforeId: messages[i-1].id,
@@ -40,15 +51,27 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
           });
         }
         return gaps;
-      }, [] as any[])
+      }, [] as any[]) || []
+    },
+    renderContext: {
+      componentStack: new Error().stack,
+      renderTime: performance.now(),
+      memoryUsage: window.performance?.memory ? {
+        usedJSHeapSize: window.performance.memory.usedJSHeapSize,
+        totalJSHeapSize: window.performance.memory.totalJSHeapSize
+      } : 'Not available'
     }
   });
 
   if (isLoading) {
     logger.info(LogCategory.STATE, 'MessageList', 'Showing loading state', {
       timestamp: new Date().toISOString(),
-      currentMessageCount: messages.length,
-      transitionType: 'loading->empty'
+      currentMessageCount: messages?.length || 0,
+      transitionType: 'loading->empty',
+      renderContext: {
+        componentStack: new Error().stack,
+        renderTime: performance.now()
+      }
     });
     return <MessageLoadingState />;
   }
@@ -60,7 +83,11 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
       isLoading,
       timestamp: new Date().toISOString(),
       context: 'Empty messages array detected',
-      transitionType: 'loaded->empty'
+      transitionType: 'loaded->empty',
+      renderContext: {
+        componentStack: new Error().stack,
+        renderTime: performance.now()
+      }
     });
     return <MessageEmptyState />;
   }
@@ -93,8 +120,9 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
         sequence: m.sequence,
         timeDiff: m.created_at ? new Date(m.created_at).getTime() - Date.now() : null
       })),
-      renderTime: Date.now(),
-      transitionType: 'loaded->rendered'
+      renderTime: performance.now(),
+      transitionType: 'loaded->rendered',
+      componentStack: new Error().stack
     }
   });
   
