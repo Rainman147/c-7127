@@ -1,54 +1,77 @@
-import React, { useState } from "react";
-import { useMessageQueue } from '@/hooks/queue/useMessageQueue';
-import { useChatInput } from "@/hooks/chat/useChatInput";
-import { logger, LogCategory } from '@/utils/logging';
-import { Button } from "./ui/button";
-import { Send, Loader2 } from "lucide-react";
-import AudioRecorder from "./AudioRecorder";
-import FileUploader from "./audio/FileUploader";
-import { Tooltip } from "./ui/tooltip";
-import ChatInputField from "./ChatInputField";
-import type { ChatInputProps } from "@/types/chat";
+import { useMessageSubmission } from "@/hooks/chat/useMessageSubmission";
+import { useTranscriptionHandler } from "@/hooks/chat/useTranscriptionHandler";
+import { logger, LogCategory } from "@/utils/logging";
+import ChatInputField from "./chat/ChatInputField";
+import ChatInputActions from "./chat/ChatInputActions";
+import { useState } from "react";
 
-const ChatInput = ({
-  onSend,
+interface ChatInputProps {
+  onSend: (message: string, type?: 'text' | 'audio') => Promise<any>;
+  onTranscriptionComplete: (text: string) => void;
+  onTranscriptionUpdate?: (text: string) => void;
+  isLoading?: boolean;
+}
+
+const ChatInput = ({ 
+  onSend, 
   onTranscriptionComplete,
-  isLoading = false
+  onTranscriptionUpdate,
+  isLoading = false 
 }: ChatInputProps) => {
+  logger.debug(LogCategory.RENDER, 'ChatInput', 'Rendering with props:', { isLoading });
+  
   const [message, setMessage] = useState("");
-  const { addMessage } = useMessageQueue();
-
+  
   const {
     handleSubmit: originalHandleSubmit,
-    handleKeyDown,
-    handleTranscriptionComplete,
-    handleFileUpload,
-    isDisabled
-  } = useChatInput({
+    isProcessing
+  } = useMessageSubmission({ 
     onSend,
-    onTranscriptionComplete,
     message,
     setMessage
   });
 
+  const {
+    handleTranscriptionComplete,
+    handleFileUpload
+  } = useTranscriptionHandler({
+    onTranscriptionComplete,
+    setMessage
+  });
+
+  const handleSubmit = async () => {
+    logger.info(LogCategory.COMMUNICATION, 'ChatInput', 'Handling submit with message:', 
+      { messageLength: message.length }
+    );
+    
+    if (message.trim()) {
+      try {
+        await originalHandleSubmit();
+      } catch (error) {
+        logger.error(LogCategory.ERROR, 'ChatInput', 'Error submitting message:', error);
+      }
+    }
+  };
+
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && !isLoading && !isProcessing) {
+      logger.debug(LogCategory.COMMUNICATION, 'ChatInput', 'Enter key pressed, submitting message');
+      e.preventDefault();
+      await handleSubmit();
+    }
+  };
+
   const handleMessageChange = (newMessage: string) => {
-    logger.debug(LogCategory.STATE, 'ChatInput', 'Message changed:', { 
-      length: newMessage.length 
-    });
+    logger.debug(LogCategory.STATE, 'ChatInput', 'Message changed:', 
+      { length: newMessage.length }
+    );
     setMessage(newMessage);
   };
 
-  const handleSubmit = async () => {
-    if (!message.trim()) return;
-
-    try {
-      await onSend(message, 'text');
-      setMessage('');
-    } catch (error) {
-      logger.error(LogCategory.ERROR, 'ChatInput', 'Failed to send message:', error);
-      addMessage({ content: message, type: 'text' });
-    }
-  };
+  const isDisabled = isLoading || isProcessing;
+  logger.debug(LogCategory.STATE, 'ChatInput', 'Component state:', 
+    { isDisabled, messageLength: message.length }
+  );
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-[#1E1E1E]/80 backdrop-blur-sm py-4 px-4">
@@ -59,35 +82,15 @@ const ChatInput = ({
               message={message}
               setMessage={handleMessageChange}
               handleKeyDown={handleKeyDown}
-              isLoading={isLoading}
+              isLoading={isDisabled}
             />
-            <div className="flex items-center justify-between px-4 py-2">
-              <div className="flex items-center gap-2">
-                <AudioRecorder onTranscriptionComplete={handleTranscriptionComplete} />
-                <FileUploader onFileSelected={handleFileUpload} />
-              </div>
-              <Tooltip content={
-                isLoading ? "Sending message..." : 
-                !message.trim() ? "Please enter a message" : 
-                "Send message"
-              }>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isLoading || !message.trim()}
-                  className={`transition-all duration-200 ${
-                    !message.trim() ? 'opacity-50' : ''
-                  }`}
-                  size="icon"
-                  variant="ghost"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <Send className="h-5 w-5" />
-                  )}
-                </Button>
-              </Tooltip>
-            </div>
+            <ChatInputActions
+              isLoading={isDisabled}
+              message={message}
+              handleSubmit={handleSubmit}
+              onTranscriptionComplete={handleTranscriptionComplete}
+              handleFileUpload={handleFileUpload}
+            />
           </div>
         </div>
       </div>

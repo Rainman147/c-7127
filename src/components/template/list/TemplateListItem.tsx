@@ -6,21 +6,24 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { Template } from "../templateTypes";
 
 interface TemplateListItemProps {
-  template: Template;
+  template: {
+    id: string;
+    name: string;
+    instructions?: {
+      dataFormatting?: string;
+      priorityRules?: string;
+      specialConditions?: string;
+    };
+  };
   onEdit: (templateId: string) => void;
   onDelete: (templateId: string) => void;
-  onSelect?: () => void;
 }
 
-export const TemplateListItem = ({ template, onEdit, onDelete, onSelect }: TemplateListItemProps) => {
+export const TemplateListItem = ({ template, onEdit, onDelete }: TemplateListItemProps) => {
   return (
-    <div 
-      className="menu-box p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100/5"
-      onClick={onSelect}
-    >
+    <div className="menu-box p-4 flex items-center justify-between">
       <div className="flex items-center gap-2">
         <span className="font-medium">{template.name}</span>
         <TooltipProvider>
@@ -30,7 +33,7 @@ export const TemplateListItem = ({ template, onEdit, onDelete, onSelect }: Templ
                 <Info className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
+            <TooltipContent className="menu-box p-3 max-w-xs">
               <div className="space-y-2">
                 <p className="font-medium">Instructions:</p>
                 {template.instructions && (
@@ -50,20 +53,14 @@ export const TemplateListItem = ({ template, onEdit, onDelete, onSelect }: Templ
         <Button
           variant="ghost"
           size="icon"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(template.id);
-          }}
+          onClick={() => onEdit(template.id)}
         >
           <Pencil className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
           size="icon"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(template.id);
-          }}
+          onClick={() => onDelete(template.id)}
         >
           <Trash2 className="h-4 w-4" />
         </Button>

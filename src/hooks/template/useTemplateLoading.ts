@@ -1,59 +1,67 @@
-import { useState, useCallback } from 'react';
-import { logger, LogCategory } from '@/utils/logging';
-import { ErrorTracker } from '@/utils/errorTracking';
-import { useToast } from '@/hooks/use-toast';
-import type { ErrorMetadata } from '@/types/errorTracking';
-import type { Template } from '@/components/template/templateTypes';
-import { useAvailableTemplates } from './useAvailableTemplates';
+import { useEffect } from "react";
+import { useAvailableTemplates } from "./useAvailableTemplates";
+import { useTemplatePersistence } from "./useTemplatePersistence";
+import type { Template } from "@/components/template/templateTypes";
 
-export interface UseTemplateLoadingResult {
-  isLoading: boolean;
-  setIsLoading: (loading: boolean) => void;
-  error: Error | null;
-  handleError: (error: Error, operation: string) => void;
-  availableTemplates: Template[];
-}
-
-export const useTemplateLoading = (): UseTemplateLoadingResult => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const { toast } = useToast();
+export const useTemplateLoading = (
+  onTemplateChange: (template: Template) => void,
+  selectedTemplate: Template | null,
+  setSelectedTemplate: (template: Template) => void,
+  setIsLoading: (loading: boolean) => void,
+  globalTemplateRef: React.RefObject<Template>
+) => {
   const availableTemplates = useAvailableTemplates();
+  const { loadTemplate } = useTemplatePersistence();
 
-  const handleError = useCallback((error: Error, operation: string) => {
-    logger.error(LogCategory.STATE, 'useTemplateLoading', 'Template loading error:', {
-      error,
-      operation,
-      timestamp: new Date().toISOString()
-    });
-
-    const metadata: ErrorMetadata = {
-      component: 'useTemplateLoading',
-      severity: 'medium',
-      timestamp: new Date().toISOString(),
-      errorType: 'data',
-      operation,
-      additionalInfo: {
-        isLoading,
-        hasError: !!error
+  useEffect(() => {
+    const loadTemplateForChat = async () => {
+      try {
+        setIsLoading(true);
+        const templateId = await loadTemplate();
+        
+        if (templateId) {
+          // Find the template object from available templates using the ID
+          const loadedTemplate = availableTemplates.find(t => t.id === templateId);
+          
+          if (loadedTemplate) {
+            console.log('[useTemplateLoading] Loaded template:', loadedTemplate.name);
+            if (selectedTemplate?.id === loadedTemplate.id) {
+              console.log('[useTemplateLoading] Loaded template matches current, skipping update');
+              return;
+            }
+            setSelectedTemplate(loadedTemplate);
+            onTemplateChange(loadedTemplate);
+          } else {
+            console.log('[useTemplateLoading] Template ID not found in available templates, using global template');
+            if (selectedTemplate?.id === globalTemplateRef.current.id) {
+              console.log('[useTemplateLoading] Global template matches current, skipping update');
+              return;
+            }
+            setSelectedTemplate(globalTemplateRef.current);
+            onTemplateChange(globalTemplateRef.current);
+          }
+        } else {
+          console.log('[useTemplateLoading] No saved template, using global template');
+          if (selectedTemplate?.id === globalTemplateRef.current.id) {
+            console.log('[useTemplateLoading] Global template matches current, skipping update');
+            return;
+          }
+          setSelectedTemplate(globalTemplateRef.current);
+          onTemplateChange(globalTemplateRef.current);
+        }
+      } catch (error) {
+        console.error('[useTemplateLoading] Failed to load template:', error);
+        setSelectedTemplate(globalTemplateRef.current);
+        onTemplateChange(globalTemplateRef.current);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    ErrorTracker.trackError(error, metadata);
-
-    setError(error);
-    toast({
-      title: "Error Loading Template",
-      description: error.message,
-      variant: "destructive",
-    });
-  }, [isLoading, error, toast]);
+    loadTemplateForChat();
+  }, [onTemplateChange, loadTemplate, selectedTemplate, setSelectedTemplate, setIsLoading, globalTemplateRef, availableTemplates]);
 
   return {
-    isLoading,
-    setIsLoading,
-    error,
-    handleError,
     availableTemplates
   };
 };

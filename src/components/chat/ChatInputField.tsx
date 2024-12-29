@@ -1,10 +1,5 @@
 import React, { useEffect, useRef, memo } from "react";
 import { logger, LogCategory } from "@/utils/logging";
-import { useRealTime } from "@/contexts/RealTimeContext";
-import { Tooltip } from "../ui/tooltip";
-import { toast } from "@/hooks/use-toast";
-
-const MAX_MESSAGE_LENGTH = 4000;
 
 interface ChatInputFieldProps {
   message: string;
@@ -24,7 +19,6 @@ const ChatInputField = memo(({
   );
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { connectionState } = useRealTime();
 
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
@@ -41,68 +35,21 @@ const ChatInputField = memo(({
     adjustTextareaHeight();
   }, [message]);
 
-  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newMessage = e.target.value;
-    if (newMessage.length > MAX_MESSAGE_LENGTH) {
-      logger.warn(LogCategory.VALIDATION, 'ChatInputField', 'Message exceeds length limit:', {
-        length: newMessage.length,
-        limit: MAX_MESSAGE_LENGTH
-      });
-      toast({
-        title: "Message too long",
-        description: `Messages cannot exceed ${MAX_MESSAGE_LENGTH} characters`,
-        variant: "destructive",
-      });
-      return;
-    }
-    setMessage(newMessage);
-    adjustTextareaHeight();
-  };
-
-  const getPlaceholder = () => {
-    if (connectionState.status === 'disconnected' && connectionState.retryCount >= 5) {
-      return 'Connection lost. Please refresh the page...';
-    }
-    if (connectionState.status === 'disconnected') {
-      return 'Connection lost. Messages will be sent when reconnected...';
-    }
-    if (connectionState.status === 'connecting') {
-      return 'Reconnecting...';
-    }
-    return 'Message DocTation';
-  };
-
-  const getInputTooltip = () => {
-    if (connectionState.status === 'disconnected' && connectionState.retryCount >= 5) {
-      return 'Please refresh the page to reconnect';
-    }
-    if (connectionState.status === 'disconnected') {
-      return 'Messages will be queued and sent when connection is restored';
-    }
-    if (connectionState.status === 'connecting') {
-      return 'Attempting to reconnect to chat service';
-    }
-    return '';
-  };
-
-  const tooltipContent = getInputTooltip();
-
   return (
     <div className="w-full">
-      <Tooltip content={tooltipContent} open={tooltipContent ? undefined : false}>
-        <textarea
-          ref={textareaRef}
-          rows={1}
-          value={message}
-          onChange={handleMessageChange}
-          onKeyDown={handleKeyDown}
-          placeholder={getPlaceholder()}
-          className={`w-full min-h-[40px] max-h-[200px] resize-none bg-transparent px-4 py-3 focus:outline-none overflow-y-auto transition-all duration-150 ease-in-out chat-input-scrollbar ${
-            isLoading ? 'cursor-not-allowed opacity-50' : ''
-          } ${connectionState.status !== 'connected' ? 'text-gray-500' : ''}`}
-          disabled={isLoading}
-        />
-      </Tooltip>
+      <textarea
+        ref={textareaRef}
+        rows={1}
+        value={message}
+        onChange={(e) => {
+          setMessage(e.target.value);
+          adjustTextareaHeight();
+        }}
+        onKeyDown={handleKeyDown}
+        placeholder="Message DocTation"
+        className="w-full min-h-[40px] max-h-[200px] resize-none bg-transparent px-4 py-3 focus:outline-none overflow-y-auto transition-all duration-150 ease-in-out chat-input-scrollbar"
+        disabled={isLoading}
+      />
     </div>
   );
 });

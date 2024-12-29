@@ -1,137 +1,83 @@
-export enum LogCategory {
-  STATE = 'state',
-  RENDER = 'render',
-  COMMUNICATION = 'communication',
-  ERROR = 'error',
-  ROUTING = 'routing',
-  DATABASE = 'database',
-  PERFORMANCE = 'performance',
-  VALIDATION = 'validation',
-  WEBSOCKET = 'websocket',
-  CACHE = 'cache',
-  LIFECYCLE = 'lifecycle',
-  COMPONENT = 'component',
-  USER_ACTION = 'user_action',
-  METRICS = 'metrics'  // Added this new category
+export enum LogLevel {
+  DEBUG = 0,
+  INFO = 1,
+  WARN = 2,
+  ERROR = 3
 }
 
-interface LogMetadata {
-  timestamp: string;
-  retryCount?: number;
-  connectionState?: string;
-  duration?: number;
-  [key: string]: any;
+export enum LogCategory {
+  RENDER = 'render',
+  STATE = 'state',
+  COMMUNICATION = 'communication',
+  ERROR = 'error',
+  DATABASE = 'database'  // Added this category
 }
+
+type LogEntry = {
+  timestamp: string;
+  level: LogLevel;
+  category: LogCategory;
+  component?: string;
+  message: string;
+  data?: any;
+};
+
+const LOG_LEVEL = process.env.NODE_ENV === 'development' ? LogLevel.DEBUG : LogLevel.INFO;
 
 export const logger = {
   debug: (category: LogCategory, component: string, message: string, data?: any) => {
-    const metadata: LogMetadata = {
-      timestamp: new Date().toISOString(),
-      ...data
-    };
-    console.debug(`[${category}] [${component}] ${message}`, metadata);
+    if (LOG_LEVEL <= LogLevel.DEBUG) {
+      const entry: LogEntry = {
+        timestamp: new Date().toISOString(),
+        level: LogLevel.DEBUG,
+        category,
+        component,
+        message,
+        data
+      };
+      console.debug(`[${entry.component}] ${entry.message}`, data || '');
+    }
   },
+
   info: (category: LogCategory, component: string, message: string, data?: any) => {
-    const metadata: LogMetadata = {
-      timestamp: new Date().toISOString(),
-      ...data
-    };
-    console.log(`[${category}] [${component}] ${message}`, metadata);
+    if (LOG_LEVEL <= LogLevel.INFO) {
+      const entry: LogEntry = {
+        timestamp: new Date().toISOString(),
+        level: LogLevel.INFO,
+        category,
+        component,
+        message,
+        data
+      };
+      console.log(`[${entry.component}] ${entry.message}`, data || '');
+    }
   },
+
   warn: (category: LogCategory, component: string, message: string, data?: any) => {
-    const metadata: LogMetadata = {
-      timestamp: new Date().toISOString(),
-      ...data
-    };
-    console.warn(`[${category}] [${component}] ${message}`, metadata);
+    if (LOG_LEVEL <= LogLevel.WARN) {
+      const entry: LogEntry = {
+        timestamp: new Date().toISOString(),
+        level: LogLevel.WARN,
+        category,
+        component,
+        message,
+        data
+      };
+      console.warn(`[${entry.component}] ${entry.message}`, data || '');
+    }
   },
+
   error: (category: LogCategory, component: string, message: string, data?: any) => {
-    const metadata: LogMetadata = {
-      timestamp: new Date().toISOString(),
-      ...data
-    };
-    console.error(`[${category}] [${component}] ${message}`, metadata);
-  },
-  performance: (component: string, operation: string, duration: number, data?: any) => {
-    const metadata: LogMetadata = {
-      timestamp: new Date().toISOString(),
-      duration,
-      ...data
-    };
-    console.log(`[${LogCategory.PERFORMANCE}] [${component}] ${operation}`, metadata);
-  }
-};
-
-// Performance tracking utility
-export const measurePerformance = async <T>(
-  component: string,
-  operation: string,
-  fn: () => Promise<T>,
-  additionalData?: any
-): Promise<T> => {
-  const start = performance.now();
-  try {
-    const result = await fn();
-    const duration = performance.now() - start;
-    logger.performance(component, operation, duration, {
-      success: true,
-      ...additionalData
-    });
-    return result;
-  } catch (error) {
-    const duration = performance.now() - start;
-    logger.performance(component, operation, duration, {
-      success: false,
-      error,
-      ...additionalData
-    });
-    throw error;
-  }
-};
-
-// WebSocket specific logging
-export const wsLogger = {
-  connectionStateChange: (component: string, from: string, to: string, metadata?: any) => {
-    logger.info(LogCategory.WEBSOCKET, component, 'Connection state changed', {
-      from,
-      to,
-      ...metadata
-    });
-  },
-  messageAttempt: (component: string, messageId: string, metadata?: any) => {
-    logger.debug(LogCategory.WEBSOCKET, component, 'Message submission attempt', {
-      messageId,
-      ...metadata
-    });
-  },
-  messageOutcome: (component: string, messageId: string, success: boolean, metadata?: any) => {
-    logger.info(LogCategory.WEBSOCKET, component, `Message ${success ? 'sent' : 'failed'}`, {
-      messageId,
-      success,
-      ...metadata
-    });
-  }
-};
-
-// Cache specific logging
-export const cacheLogger = {
-  queryExecution: (component: string, queryKey: unknown[], metadata?: any) => {
-    logger.debug(LogCategory.CACHE, component, 'Query execution', {
-      queryKey,
-      ...metadata
-    });
-  },
-  cacheInvalidation: (component: string, queryKey: unknown[], reason: string, metadata?: any) => {
-    logger.info(LogCategory.CACHE, component, 'Cache invalidation', {
-      queryKey,
-      reason,
-      ...metadata
-    });
-  },
-  cacheHit: (component: string, queryKey: unknown[], metadata?: any) => {
-    logger.debug(LogCategory.CACHE, component, 'Cache hit', {
-      queryKey,
-      ...metadata
-    });
+    if (LOG_LEVEL <= LogLevel.ERROR) {
+      const entry: LogEntry = {
+        timestamp: new Date().toISOString(),
+        level: LogLevel.ERROR,
+        category,
+        component,
+        message,
+        data
+      };
+      console.error(`[${entry.component}] ${entry.message}`, data || '');
+    }
   }
 };

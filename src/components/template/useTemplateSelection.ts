@@ -17,7 +17,13 @@ export const useTemplateSelection = (
     globalTemplateRef
   } = useTemplateState(globalTemplate);
 
-  const { availableTemplates, handleError } = useTemplateLoading();
+  const { availableTemplates } = useTemplateLoading(
+    onTemplateChange,
+    selectedTemplate,
+    setSelectedTemplate,
+    setIsLoading,
+    globalTemplateRef
+  );
 
   const { handleTemplateChange } = useTemplateUpdates(
     selectedTemplate,

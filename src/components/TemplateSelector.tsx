@@ -1,6 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
-import { ErrorTracker } from "@/utils/errorTracking";
-import type { ErrorMetadata } from "@/types/errorTracking";
+import { memo, useCallback, useEffect, useMemo } from "react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { TemplateTrigger } from "./template/dropdown/TemplateTrigger";
 import { TemplateDropdownContent } from "./template/dropdown/TemplateDropdownContent";
@@ -16,30 +14,12 @@ interface TemplateSelectorProps {
 export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProps) => {
   const { sessionId, templateId } = useSessionParams();
   const { globalTemplate } = useTemplateContext();
-  const loadStartTime = useRef(Date.now());
   
   useEffect(() => {
-    try {
-      console.log('[TemplateSelector] Component mounted/updated:', {
-        sessionId,
-        templateId,
-        loadStartTime: loadStartTime.current
-      });
-    } catch (error) {
-      const metadata: ErrorMetadata = {
-        component: 'TemplateSelector',
-        severity: 'low',
-        timestamp: new Date().toISOString(),
-        errorType: 'lifecycle',
-        operation: 'component-mount',
-        additionalInfo: { 
-          sessionId, 
-          templateId,
-          loadDuration: Date.now() - loadStartTime.current
-        }
-      };
-      ErrorTracker.trackError(error as Error, metadata);
-    }
+    console.log('[TemplateSelector] Component mounted/updated:', {
+      sessionId,
+      templateId
+    });
 
     return () => {
       console.log('[TemplateSelector] Component cleanup for chat:', sessionId);
@@ -54,66 +34,28 @@ export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProp
   } = useTemplateSelection(onTemplateChange, globalTemplate);
 
   const handleTemplateSelect = useCallback((template: Template) => {
-    try {
-      const startTime = Date.now();
-      console.log('[TemplateSelector] Template selection requested:', {
-        sessionId,
-        currentTemplateId: selectedTemplate?.id,
-        newTemplateId: template.id,
-        templateName: template.name
-      });
+    console.log('[TemplateSelector] Template selection requested:', {
+      sessionId,
+      currentTemplateId: selectedTemplate?.id,
+      newTemplateId: template.id,
+      templateName: template.name
+    });
 
-      if (template.id === selectedTemplate?.id) {
-        console.log('[TemplateSelector] Skipping duplicate template selection');
-        return;
-      }
-      
-      handleTemplateChange(template);
-    } catch (error) {
-      const loadDuration = Date.now() - loadStartTime.current;
-      const metadata: ErrorMetadata = {
-        component: 'TemplateSelector',
-        severity: 'medium',
-        timestamp: new Date().toISOString(),
-        errorType: 'selection',
-        operation: 'select-template',
-        additionalInfo: {
-          templateId: template.id,
-          templateName: template.name,
-          sessionId,
-          loadDuration,
-          timeoutThreshold: 5000,
-          isTimeout: loadDuration > 5000
-        }
-      };
-      ErrorTracker.trackError(error as Error, metadata);
+    if (template.id === selectedTemplate?.id) {
+      console.log('[TemplateSelector] Skipping duplicate template selection');
+      return;
     }
+    
+    handleTemplateChange(template);
   }, [handleTemplateChange, sessionId, selectedTemplate?.id]);
 
   const displayTemplate = useMemo(() => {
-    try {
-      console.log('[TemplateSelector] Display template updated:', {
-        sessionId,
-        templateId: selectedTemplate?.id,
-        templateName: selectedTemplate?.name
-      });
-      return selectedTemplate;
-    } catch (error) {
-      const metadata: ErrorMetadata = {
-        component: 'TemplateSelector',
-        severity: 'low',
-        timestamp: new Date().toISOString(),
-        errorType: 'render',
-        operation: 'update-display',
-        additionalInfo: {
-          templateId: selectedTemplate?.id,
-          sessionId,
-          loadDuration: Date.now() - loadStartTime.current
-        }
-      };
-      ErrorTracker.trackError(error as Error, metadata);
-      return selectedTemplate;
-    }
+    console.log('[TemplateSelector] Display template updated:', {
+      sessionId,
+      templateId: selectedTemplate?.id,
+      templateName: selectedTemplate?.name
+    });
+    return selectedTemplate;
   }, [selectedTemplate, sessionId]);
 
   return (

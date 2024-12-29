@@ -1,9 +1,8 @@
 import { memo } from 'react';
 import MessageContainer from './message/MessageContainer';
-import { useMessageStateManager } from '@/hooks/message/useMessageStateManager';
-import { useMessageRealtimeSync } from '@/hooks/message/useMessageRealtimeSync';
-import { useMessageTypingEffect } from '@/hooks/message/useMessageTypingEffect';
-import { logger, LogCategory } from '@/utils/logging';
+import { useMessageState } from './message/useMessageState';
+import { useMessageRealtime } from './message/useMessageRealtime';
+import { useTypingEffect } from './message/useTypingEffect';
 import type { MessageProps } from './message/types';
 
 const Message = memo(({ 
@@ -14,15 +13,6 @@ const Message = memo(({
   id,
   showAvatar = true 
 }: MessageProps) => {
-  logger.debug(LogCategory.RENDER, 'Message', 'Rendering message:', {
-    id,
-    role,
-    contentLength: content?.length,
-    isStreaming,
-    type,
-    timestamp: new Date().toISOString()
-  });
-
   const {
     editedContent,
     setEditedContent,
@@ -32,27 +22,10 @@ const Message = memo(({
     handleSave,
     handleCancel,
     handleEdit
-  } = useMessageStateManager(content, id);
+  } = useMessageState(content, id);
 
-  const { connectionState } = useMessageRealtimeSync(
-    id, 
-    editedContent, 
-    setEditedContent,
-    `message-${id}` // Add unique componentId for this message instance
-  );
-
-  const { isTyping } = useMessageTypingEffect(role, isStreaming, content);
-
-  // Enhanced connection state logging
-  logger.debug(LogCategory.STATE, 'Message', 'Message state:', {
-    id,
-    isEditing,
-    wasEdited,
-    isSaving,
-    connectionStatus: connectionState.status,
-    isTyping,
-    timestamp: new Date().toISOString()
-  });
+  useMessageRealtime(id, editedContent, setEditedContent);
+  const { isTyping } = useTypingEffect(role, isStreaming, content);
 
   return (
     <MessageContainer

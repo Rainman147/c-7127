@@ -1,7 +1,6 @@
 import { PatientCard } from "../PatientCard";
-import { LoadingState } from "./LoadingState";
-import { EmptyPatientState } from "./EmptyPatientState";
-import { usePatientRealtime } from "@/hooks/patient/usePatientRealtime";
+import { Button } from "@/components/ui/button";
+import { AlertCircle } from "lucide-react";
 import type { Patient } from "@/types/database/patients";
 
 interface PatientGridProps {
@@ -17,15 +16,22 @@ export const PatientGrid = ({
   onPatientClick,
   onPatientDelete,
 }: PatientGridProps) => {
-  // Set up realtime subscriptions
-  usePatientRealtime();
-
   if (isLoading) {
-    return <LoadingState />;
+    return (
+      <div className="col-span-full text-center text-gray-400 py-8">
+        <div className="animate-pulse">Loading patients...</div>
+      </div>
+    );
   }
 
   if (patients.length === 0) {
-    return <EmptyPatientState />;
+    return (
+      <div className="col-span-full text-center text-gray-400 py-8">
+        <AlertCircle className="mx-auto h-12 w-12 mb-4" />
+        <p className="text-lg mb-4">No patients found</p>
+        <p className="text-sm mb-4">Try a different search or add a new patient</p>
+      </div>
+    );
   }
 
   return (

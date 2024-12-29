@@ -1,60 +1,78 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import { useMessageQueue } from '@/hooks/realtime/useMessageQueue';
-import { useRealTime } from '@/contexts/RealTimeContext';
+import type { DatabaseMessage } from '@/types/database/messages';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 export const useMessageRealtime = (
   messageId: string | undefined,
   editedContent: string,
-  setEditedContent: (content: string) => void,
-  componentId: string
+  setEditedContent: (content: string) => void
 ) => {
-  const { connectionState, subscribeToMessage, unsubscribeFromMessage } = useRealTime();
-  const { addToQueue, processQueue, clearQueue } = useMessageQueue();
-  const lastUpdateTimeRef = useRef<number>(Date.now());
-
-  const processMessage = useCallback((content: string) => {
-    try {
-      addToQueue(messageId!, content);
-      processQueue(editedContent, setEditedContent);
-      lastUpdateTimeRef.current = Date.now();
-
-      logger.debug(LogCategory.STATE, 'MessageRealtime', 'Processed message update', {
-        messageId,
-        componentId,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      logger.error(LogCategory.STATE, 'MessageRealtime', 'Failed to process message', {
-        messageId,
-        componentId,
-        error: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString()
-      });
-    }
-  }, [messageId, editedContent, setEditedContent, addToQueue, processQueue, componentId]);
+  const [connectionStatus, setConnectionStatus] = useState<string>('connecting');
+  const [lastUpdateTime, setLastUpdateTime] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!messageId) {
-      logger.debug(LogCategory.COMMUNICATION, 'MessageRealtime', 'No message ID provided', {
-        componentId,
-        timestamp: new Date().toISOString()
-      });
-      return;
-    }
+    if (!messageId) return;
 
-    subscribeToMessage(messageId, componentId, processMessage);
+    const subscribeStartTime = performance.now();
+    
+    logger.debug(LogCategory.COMMUNICATION, 'Message', 'Setting up real-time subscription', { 
+      messageId,
+      subscribeStartTime,
+      connectionStatus
+    });
+    
+    const channel = supabase
+      .channel(`message-${messageId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `id=eq.${messageId}`
+        },
+        (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
+          const updateReceiveTime = performance.now();
+          const latency = lastUpdateTime ? updateReceiveTime - lastUpdateTime : null;
+          
+          logger.debug(LogCategory.COMMUNICATION, 'Message', 'Received real-time update', {
+            messageId,
+            payload,
+            updateReceiveTime,
+            latency,
+            connectionStatus
+          });
+          
+          const newData = payload.new as DatabaseMessage;
+          if (newData && newData.content !== editedContent) {
+            setEditedContent(newData.content);
+            setLastUpdateTime(updateReceiveTime);
+          }
+        }
+      )
+      .subscribe(status => {
+        setConnectionStatus(status);
+        logger.debug(LogCategory.COMMUNICATION, 'Message', 'Subscription status changed', { 
+          status,
+          messageId,
+          setupDuration: performance.now() - subscribeStartTime
+        });
+      });
 
     return () => {
-      if (messageId) {
-        unsubscribeFromMessage(messageId, componentId);
-        clearQueue();
-      }
+      logger.debug(LogCategory.COMMUNICATION, 'Message', 'Cleaning up real-time subscription', {
+        messageId,
+        finalConnectionStatus: connectionStatus,
+        totalDuration: performance.now() - subscribeStartTime
+      });
+      supabase.removeChannel(channel);
     };
-  }, [messageId, componentId, subscribeToMessage, unsubscribeFromMessage, clearQueue, processMessage]);
+  }, [messageId, editedContent, setEditedContent, connectionStatus, lastUpdateTime]);
 
   return {
-    connectionState,
-    lastUpdateTime: lastUpdateTimeRef.current
+    connectionStatus,
+    lastUpdateTime
   };
 };
