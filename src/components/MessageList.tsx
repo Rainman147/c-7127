@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { VariableSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { logger, LogCategory } from '@/utils/logging';
@@ -17,22 +17,52 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
   const [isScrolling, setIsScrolling] = useState(false);
   const { viewportHeight, keyboardVisible } = useViewportMonitor();
   const { messages } = useMessageState();
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const lastScrollTopRef = useRef(0);
 
-  const getItemSize = (index: number) => {
+  const getItemSize = useCallback((index: number) => {
     return sizeMap.current[index] || 100; // Default height
-  };
+  }, []);
 
-  const setItemSize = (index: number, size: number) => {
-    if (sizeMap.current[index] !== size) {
+  const setItemSize = useCallback((index: number, size: number) => {
+    const hasChanged = sizeMap.current[index] !== size;
+    if (hasChanged) {
       sizeMap.current[index] = size;
       if (listRef.current) {
         listRef.current.resetAfterIndex(index);
       }
     }
-  };
+  }, []);
 
+  const handleScroll = useCallback(({ scrollOffset, scrollDirection }) => {
+    setIsScrolling(true);
+    const isScrollingUp = scrollOffset < lastScrollTopRef.current;
+    lastScrollTopRef.current = scrollOffset;
+
+    // Disable auto-scroll if user scrolls up
+    if (isScrollingUp) {
+      setShouldAutoScroll(false);
+    }
+
+    // Enable auto-scroll if user scrolls to bottom
+    if (listRef.current) {
+      const list = listRef.current as any;
+      const isAtBottom = scrollOffset >= list._outerRef.scrollHeight - list._outerRef.clientHeight - 100;
+      if (isAtBottom) {
+        setShouldAutoScroll(true);
+      }
+    }
+
+    logger.debug(LogCategory.STATE, 'MessageList', 'Scroll event', {
+      scrollOffset,
+      scrollDirection,
+      shouldAutoScroll: shouldAutoScroll
+    });
+  }, []);
+
+  // Scroll to bottom when new messages arrive
   useEffect(() => {
-    if (listRef.current && messages.length > 0) {
+    if (listRef.current && messages.length > 0 && shouldAutoScroll) {
       const scrollStartTime = performance.now();
       
       logger.debug(LogCategory.STATE, 'MessageList', 'Initiating scroll to bottom', {
@@ -57,7 +87,7 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
         });
       }
     }
-  }, [messages.length, viewportHeight, keyboardVisible]);
+  }, [messages.length, viewportHeight, keyboardVisible, shouldAutoScroll]);
 
   if (isLoading) {
     return <MessageLoadingState />;
@@ -90,18 +120,12 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
             width={width}
             itemCount={messageGroups.length}
             itemSize={getItemSize}
+            onScroll={handleScroll}
             onItemsRendered={({ visibleStartIndex, visibleStopIndex }) => {
               logger.debug(LogCategory.STATE, 'MessageList', 'Visible items updated', {
                 visibleStartIndex,
                 visibleStopIndex,
                 totalItems: messageGroups.length
-              });
-            }}
-            onScroll={({ scrollOffset, scrollDirection }) => {
-              setIsScrolling(true);
-              logger.debug(LogCategory.STATE, 'MessageList', 'Scroll event', {
-                scrollOffset,
-                scrollDirection
               });
             }}
           >

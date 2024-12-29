@@ -16,7 +16,8 @@ const MessageRow = memo(({ style, group, onHeightChange, isScrolling }: MessageR
     if (rowRef.current && onHeightChange) {
       const observer = new ResizeObserver((entries) => {
         for (const entry of entries) {
-          onHeightChange(entry.contentRect.height);
+          const height = entry.borderBoxSize[0]?.blockSize || entry.contentRect.height;
+          onHeightChange(Math.ceil(height));
         }
       });
 
