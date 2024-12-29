@@ -12,25 +12,34 @@ interface MessageRowProps {
 
 const MessageRow = memo(({ style, group, onHeightChange, isScrolling }: MessageRowProps) => {
   const rowRef = useRef<HTMLDivElement>(null);
+  const measurementStartTime = useRef<number>();
 
   useEffect(() => {
     if (rowRef.current && onHeightChange) {
-      logger.debug(LogCategory.STATE, 'MessageRow', 'Initial height measurement:', {
-        height: rowRef.current.offsetHeight,
+      measurementStartTime.current = Date.now();
+      
+      logger.debug(LogCategory.STATE, 'MessageRow', 'Starting height measurement:', {
         groupId: group.label,
         messageCount: group.messages.length,
+        initialHeight: rowRef.current.offsetHeight,
+        measurementStartTime: new Date(measurementStartTime.current).toISOString(),
         timestamp: new Date().toISOString()
       });
 
       const observer = new ResizeObserver((entries) => {
         for (const entry of entries) {
           const height = entry.borderBoxSize[0]?.blockSize || entry.contentRect.height;
+          const measurementDuration = measurementStartTime.current 
+            ? Date.now() - measurementStartTime.current 
+            : 0;
           
           logger.debug(LogCategory.STATE, 'MessageRow', 'Height changed:', {
             previousHeight: rowRef.current?.offsetHeight,
             newHeight: height,
             groupId: group.label,
             messageCount: group.messages.length,
+            measurementDuration,
+            hasImages: group.messages.some(m => m.content.includes('img')),
             timestamp: new Date().toISOString()
           });
           

@@ -19,54 +19,68 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
   const [isScrolling, setIsScrolling] = useState(false);
   const { messages } = useMessageState();
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastMeasuredTime = useRef<{[key: number]: number}>({});
 
   const { handleScroll, shouldAutoScroll } = useScrollManager(listRef);
 
-  // Debug viewport dimensions
+  // Debug viewport dimensions and message state
   useEffect(() => {
-    logger.debug(LogCategory.STATE, 'MessageListContent', 'Viewport dimensions:', {
+    logger.debug(LogCategory.STATE, 'MessageListContent', 'Component state update:', {
       providedHeight: height,
       providedWidth: width,
       containerHeight: containerRef.current?.clientHeight,
       containerScrollHeight: containerRef.current?.scrollHeight,
       messageCount: messages.length,
       cachedSizes: Object.keys(sizeMap.current).length,
+      shouldAutoScroll,
       timestamp: new Date().toISOString()
     });
-  }, [height, width, messages.length]);
+  }, [height, width, messages.length, shouldAutoScroll]);
 
   const getItemSize = useCallback((index: number) => {
     const size = sizeMap.current[index] || MIN_MESSAGE_HEIGHT;
+    const lastMeasured = lastMeasuredTime.current[index];
+    
     logger.debug(LogCategory.STATE, 'MessageListContent', 'Getting item size:', {
       index,
       cachedSize: sizeMap.current[index],
       returnedSize: size,
-      hasSize: !!sizeMap.current[index]
+      hasSize: !!sizeMap.current[index],
+      lastMeasuredAt: lastMeasured ? new Date(lastMeasured).toISOString() : 'never',
+      timestamp: new Date().toISOString()
     });
+    
     return size;
   }, []);
 
   const setItemSize = useCallback((index: number, size: number) => {
     const previousSize = sizeMap.current[index];
     const hasChanged = previousSize !== size;
+    const now = Date.now();
     
     logger.debug(LogCategory.STATE, 'MessageListContent', 'Setting item size:', {
       index,
       previousSize,
       newSize: size,
       hasChanged,
+      timeSinceLastMeasurement: lastMeasuredTime.current[index] 
+        ? now - lastMeasuredTime.current[index] 
+        : 'first measurement',
       timestamp: new Date().toISOString()
     });
 
     if (hasChanged) {
       sizeMap.current[index] = Math.max(size, MIN_MESSAGE_HEIGHT);
+      lastMeasuredTime.current[index] = now;
+      
       if (listRef.current) {
         listRef.current.resetAfterIndex(index);
         
         logger.debug(LogCategory.STATE, 'MessageListContent', 'Reset list after size change:', {
           index,
           newSize: sizeMap.current[index],
-          totalCachedSizes: Object.keys(sizeMap.current).length
+          totalCachedSizes: Object.keys(sizeMap.current).length,
+          timestamp: new Date().toISOString()
         });
       }
     }
@@ -74,7 +88,7 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
 
   // Reset measurements when messages change
   useEffect(() => {
-    logger.debug(LogCategory.STATE, 'MessageListContent', 'Messages updated, resetting measurements:', {
+    logger.debug(LogCategory.STATE, 'MessageListContent', 'Messages updated:', {
       messageCount: messages.length,
       previousCachedSizes: Object.keys(sizeMap.current).length,
       timestamp: new Date().toISOString()
@@ -82,6 +96,7 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
     
     // Clear size cache
     sizeMap.current = {};
+    lastMeasuredTime.current = {};
     
     // Reset list measurements
     if (listRef.current) {
@@ -95,7 +110,7 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
       if (messageGroups.length > 0) {
         list.scrollToItem(messageGroups.length - 1, 'end');
         
-        logger.debug(LogCategory.STATE, 'MessageListContent', 'Scrolled to bottom:', {
+        logger.debug(LogCategory.STATE, 'MessageListContent', 'Auto-scrolled to bottom:', {
           groupCount: messageGroups.length,
           timestamp: new Date().toISOString()
         });
@@ -107,7 +122,7 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
 
   // Don't render if we don't have valid dimensions
   if (!height || !width) {
-    logger.warn(LogCategory.RENDER, 'MessageListContent', 'Invalid dimensions, skipping render:', {
+    logger.warn(LogCategory.RENDER, 'MessageListContent', 'Invalid dimensions:', {
       height,
       width,
       timestamp: new Date().toISOString()
