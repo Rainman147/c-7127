@@ -111,6 +111,7 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
       return {
         ...state,
         pendingMessages: state.pendingMessages.filter(msg => msg.id !== messageId),
+        messages: state.messages.filter(msg => msg.id !== messageId),
         isProcessing: state.pendingMessages.length > 1,
         error
       };

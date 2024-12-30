@@ -21,11 +21,15 @@ export const handleSetMessages = (
     messageIds: messages.map(m => m.id)
   });
 
+  // Preserve pending messages when setting new messages
+  const newMessages = messages.filter(msg => 
+    !state.pendingMessages.some(pending => pending.id === msg.id)
+  );
+
   return {
     ...state,
-    messages,
-    pendingMessages: [],
-    isProcessing: false,
+    messages: [...newMessages, ...state.pendingMessages],
+    isProcessing: state.pendingMessages.length > 0,
     error: null
   };
 };
@@ -76,9 +80,6 @@ export const handleMessageFailure = (
   messageId: string,
   error: string
 ): MessageState => {
-  const failedMessage = state.pendingMessages.find(msg => msg.id === messageId);
-  if (!failedMessage) return state;
-
   logger.error(LogCategory.ERROR, 'MessageReducer', 'Message failed:', {
     messageId,
     error
