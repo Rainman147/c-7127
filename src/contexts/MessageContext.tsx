@@ -1,27 +1,13 @@
 import { createContext, useContext, useReducer, useCallback, useRef } from 'react';
-import { messageReducer } from './message/messageReducer';
+import { messageReducer, initialState } from './message/messageReducer';
 import type { Message, MessageStatus } from '@/types/chat';
 import type { MessageContextType, MessageState, MessageAction } from '@/types/messageContext';
 import { logger, LogCategory } from '@/utils/logging';
 
 const MessageContext = createContext<MessageContextType | null>(null);
 
-const initialState: MessageState = {
-  messages: [],
-  pendingMessages: [],
-  confirmedMessages: [],
-  failedMessages: [],
-  isProcessing: false,
-  editingMessageId: null,
-  error: null,
-};
-
 export const MessageProvider = ({ children }: { children: React.ReactNode }) => {
-  const [state, dispatch] = useReducer<(state: MessageState, action: MessageAction) => MessageState>(
-    messageReducer,
-    initialState
-  );
-  
+  const [state, dispatch] = useReducer(messageReducer, initialState);
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -37,10 +23,7 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
       currentState: {
         messageCount: prevState.messages.length,
         pendingCount: prevState.pendingMessages.length,
-        confirmedCount: prevState.confirmedMessages.length,
-        failedCount: prevState.failedMessages.length,
         isProcessing: prevState.isProcessing,
-        editingMessageId: prevState.editingMessageId,
         error: prevState.error
       },
       timestamp: new Date().toISOString()
@@ -54,10 +37,7 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
       stateChanges: {
         messageCountDiff: state.messages.length - prevState.messages.length,
         pendingCountDiff: state.pendingMessages.length - prevState.pendingMessages.length,
-        confirmedCountDiff: state.confirmedMessages.length - prevState.confirmedMessages.length,
-        failedCountDiff: state.failedMessages.length - prevState.failedMessages.length,
         processingChanged: state.isProcessing !== prevState.isProcessing,
-        editingChanged: state.editingMessageId !== prevState.editingMessageId,
         errorChanged: state.error !== prevState.error
       }
     });
@@ -101,55 +81,8 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
       dispatchWithLogging({ type: 'UPDATE_MESSAGE_CONTENT', payload: { messageId, content } });
     }, [dispatchWithLogging]),
 
-    handleMessageEdit: useCallback((messageId: string) => {
-      logger.debug(LogCategory.STATE, 'MessageContext', 'Editing message:', {
-        messageId,
-        timestamp: new Date().toISOString()
-      });
-      dispatchWithLogging({ type: 'START_MESSAGE_EDIT', payload: { messageId } });
-    }, [dispatchWithLogging]),
-
-    handleMessageSave: useCallback((messageId: string, content: string) => {
-      logger.debug(LogCategory.STATE, 'MessageContext', 'Saving message:', {
-        messageId,
-        contentLength: content.length,
-        timestamp: new Date().toISOString()
-      });
-      dispatchWithLogging({ type: 'SAVE_MESSAGE_EDIT', payload: { messageId, content } });
-    }, [dispatchWithLogging]),
-
-    handleMessageCancel: useCallback((messageId: string) => {
-      logger.debug(LogCategory.STATE, 'MessageContext', 'Canceling message edit:', {
-        messageId,
-        timestamp: new Date().toISOString()
-      });
-      dispatchWithLogging({ type: 'CANCEL_MESSAGE_EDIT', payload: { messageId } });
-    }, [dispatchWithLogging]),
-
-    retryMessage: useCallback((messageId: string) => {
-      logger.debug(LogCategory.STATE, 'MessageContext', 'Retrying message:', {
-        messageId,
-        timestamp: new Date().toISOString()
-      });
-      dispatchWithLogging({ type: 'RETRY_MESSAGE', payload: { messageId } });
-    }, [dispatchWithLogging]),
-
-    clearMessages: useCallback(() => {
-      logger.debug(LogCategory.STATE, 'MessageContext', 'Clearing all messages', {
-        timestamp: new Date().toISOString()
-      });
-      dispatchWithLogging({ type: 'CLEAR_MESSAGES', payload: null });
-    }, [dispatchWithLogging]),
-
-    retryLoading: useCallback(() => {
-      logger.debug(LogCategory.STATE, 'MessageContext', 'Retrying loading', {
-        timestamp: new Date().toISOString()
-      });
-      dispatchWithLogging({ type: 'CLEAR_ERROR', payload: null });
-    }, [dispatchWithLogging]),
-
     confirmMessage: useCallback((tempId: string, confirmedMessage: Message) => {
-      logger.debug(LogCategory.STATE, 'MessageContext', 'Confirming message:', {
+      logger.info(LogCategory.STATE, 'MessageContext', 'Confirming message:', {
         tempId,
         confirmedId: confirmedMessage.id,
         timestamp: new Date().toISOString()
@@ -165,6 +98,24 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
       });
       dispatchWithLogging({ type: 'HANDLE_MESSAGE_FAILURE', payload: { messageId, error } });
     }, [dispatchWithLogging]),
+
+    retryMessage: useCallback((messageId: string) => {
+      logger.info(LogCategory.STATE, 'MessageContext', 'Retrying message:', {
+        messageId,
+        timestamp: new Date().toISOString()
+      });
+      dispatchWithLogging({ type: 'RETRY_MESSAGE', payload: { messageId } });
+    }, [dispatchWithLogging]),
+
+    clearMessages: useCallback(() => {
+      logger.info(LogCategory.STATE, 'MessageContext', 'Clearing all messages');
+      dispatchWithLogging({ type: 'CLEAR_MESSAGES', payload: null });
+    }, [dispatchWithLogging]),
+
+    retryLoading: useCallback(() => {
+      logger.debug(LogCategory.STATE, 'MessageContext', 'Retrying loading');
+      dispatchWithLogging({ type: 'CLEAR_ERROR', payload: null });
+    }, [dispatchWithLogging])
   };
 
   return (
