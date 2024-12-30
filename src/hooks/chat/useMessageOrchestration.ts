@@ -41,7 +41,10 @@ export const useMessageOrchestration = (sessionId: string | null) => {
     };
 
     const transactionId = trackMessageStart(optimisticMessage);
-    optimisticMessage.transactionId = transactionId;
+    const messageWithTransaction = {
+      ...optimisticMessage,
+      transactionId
+    };
 
     logger.debug(LogCategory.STATE, 'MessageOrchestration', 'Adding optimistic message:', {
       id: optimisticId,
@@ -50,7 +53,7 @@ export const useMessageOrchestration = (sessionId: string | null) => {
       type
     });
 
-    updateMessageStates(optimisticMessage, 'add');
+    updateMessageStates(messageWithTransaction, 'add');
 
     try {
       const savedMessage = await saveMessage(content, type, messages.length);
@@ -59,7 +62,7 @@ export const useMessageOrchestration = (sessionId: string | null) => {
     } catch (error: any) {
       logger.error(LogCategory.ERROR, 'MessageOrchestration', 'Error saving message:', error);
       trackMessageComplete(optimisticId, false, error.message);
-      updateMessageStates(optimisticMessage, 'fail');
+      updateMessageStates(messageWithTransaction, 'fail');
       
       toast({
         title: "Failed to send message",

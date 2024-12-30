@@ -14,7 +14,7 @@ export interface Message {
   seen_at?: string;
   error?: string;
   chat_id: string;
-  transactionId?: string; // New field for transaction tracking
+  transactionId?: string; // Added this field
 }
 
 export interface MessageGroup {
