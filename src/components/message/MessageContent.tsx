@@ -1,8 +1,7 @@
-import MessageContentDisplay from './content/MessageContentDisplay';
-import MessageEditor from './content/MessageEditor';
+import { cn } from '@/lib/utils';
+import MessageContentWrapper from './content/MessageContentWrapper';
 import type { MessageContentProps } from '@/types/chat';
 import { logger, LogCategory } from '@/utils/logging';
-import { cn } from '@/lib/utils';
 
 const MessageContent = ({ 
   role, 
@@ -31,13 +30,7 @@ const MessageContent = ({
   });
   
   return (
-    <div 
-      className={`${
-        role === 'user' 
-          ? 'flex justify-end w-full' 
-          : 'w-full'
-      }`}
-    >
+    <div className={`${role === 'user' ? 'flex justify-end w-full' : 'w-full'}`}>
       <div 
         className={cn(
           role === 'user' 
@@ -47,48 +40,22 @@ const MessageContent = ({
           isFailed && 'border border-red-500'
         )}
       >
-        {role === 'assistant' && id ? (
-          <div>
-            {isEditing ? (
-              <MessageEditor
-                content={content}
-                messageId={id}
-                isSaving={isSaving}
-                onSave={onSave}
-                onCancel={onCancel}
-              />
-            ) : (
-              <>
-                <MessageContentDisplay
-                  role={role}
-                  content={content}
-                  type={type}
-                  isStreaming={isStreaming}
-                  isTyping={isTyping}
-                  isOptimistic={isOptimistic}
-                  isFailed={isFailed}
-                  onRetry={onRetry}
-                />
-                {wasEdited && (
-                  <div className="text-xs text-gray-400 mt-1">
-                    (edited)
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        ) : (
-          <MessageContentDisplay
-            role={role}
-            content={content}
-            type={type}
-            isStreaming={isStreaming}
-            isTyping={isTyping}
-            isOptimistic={isOptimistic}
-            isFailed={isFailed}
-            onRetry={onRetry}
-          />
-        )}
+        <MessageContentWrapper
+          role={role}
+          content={content}
+          type={type}
+          isStreaming={isStreaming}
+          isEditing={isEditing}
+          id={id}
+          wasEdited={wasEdited}
+          isSaving={isSaving}
+          isTyping={isTyping}
+          isOptimistic={isOptimistic}
+          isFailed={isFailed}
+          onSave={onSave}
+          onCancel={onCancel}
+          onRetry={onRetry}
+        />
       </div>
     </div>
   );

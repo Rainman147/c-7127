@@ -54,15 +54,7 @@ const Message = memo(({
     isFailed,
     wasEdited,
     isEditing,
-    isTyping,
-    created_at,
-    status,
-    messageState: {
-      editedContent: editedContent?.substring(0, 50),
-      isEditing,
-      wasEdited,
-      isSaving
-    }
+    isTyping
   });
 
   const handleSave = async (newContent: string) => {
