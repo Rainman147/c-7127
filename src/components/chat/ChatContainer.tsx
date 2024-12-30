@@ -6,28 +6,44 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Template } from '@/components/template/templateTypes';
+import { useSessionManagement } from '@/hooks/useSessionManagement';
 
 const ChatContainer = () => {
   const { sessionId, templateId } = useSessionParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { ensureActiveSession, isCreatingSession } = useSessionManagement();
 
   useEffect(() => {
-    logger.debug(LogCategory.RENDER, 'ChatContainer', 'Component mounted/updated:', {
-      sessionId,
-      templateId
-    });
+    const initializeSession = async () => {
+      logger.debug(LogCategory.RENDER, 'ChatContainer', 'Component mounted/updated:', {
+        sessionId,
+        templateId,
+        isCreatingSession,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!sessionId && !isCreatingSession) {
+        await ensureActiveSession();
+      }
+    };
+
+    initializeSession();
 
     return () => {
-      logger.debug(LogCategory.RENDER, 'ChatContainer', 'Component cleanup for session:', sessionId);
+      logger.debug(LogCategory.RENDER, 'ChatContainer', 'Component cleanup for session:', {
+        sessionId,
+        timestamp: new Date().toISOString()
+      });
     };
-  }, [sessionId, templateId]);
+  }, [sessionId, templateId, ensureActiveSession, isCreatingSession]);
 
   const handleTemplateChange = async (template: Template) => {
     logger.info(LogCategory.STATE, 'ChatContainer', 'Template change requested:', {
       sessionId,
       templateId: template.id,
-      templateName: template.name
+      templateName: template.name,
+      timestamp: new Date().toISOString()
     });
 
     try {
@@ -42,7 +58,10 @@ const ChatContainer = () => {
 
       logger.info(LogCategory.STATE, 'ChatContainer', 'Template changed successfully');
     } catch (error) {
-      logger.error(LogCategory.ERROR, 'ChatContainer', 'Error changing template:', error);
+      logger.error(LogCategory.ERROR, 'ChatContainer', 'Error changing template:', {
+        error,
+        stack: error instanceof Error ? error.stack : undefined
+      });
       toast({
         title: "Error",
         description: "Failed to update template. Please try again.",
