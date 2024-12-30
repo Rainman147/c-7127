@@ -11,7 +11,8 @@ export const sendMessage = async (
   logger.info(LogCategory.COMMUNICATION, 'messageOperations', 'Sending message:', {
     chatId,
     type,
-    contentLength: content.length
+    contentLength: content.length,
+    sequence
   });
 
   const { data: message, error } = await supabase

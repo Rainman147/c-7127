@@ -27,7 +27,7 @@ export type MessageAction =
 export interface MessageContextType extends MessageState {
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
-  sendMessage: (content: string, chatId: string, type: 'text' | 'audio', sequence: number) => Promise<any>;
+  sendMessage: (content: string, chatId: string, type: 'text' | 'audio', sequence: number) => Promise<Message>;
   editMessage: (messageId: string, content: string, userId: string) => Promise<any>;
   retryMessage: (messageId: string) => Promise<void>;
   updateMessageStatus: (messageId: string, status: MessageStatus) => void;
