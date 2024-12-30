@@ -1,36 +1,82 @@
-import { createContext, useContext, useReducer, ReactNode } from 'react';
-import { messageReducer, initialState } from './message/messageReducer';
-import { useMessageOperations } from '@/hooks/message/useMessageOperations';
-import { useMessageStateUpdates } from '@/hooks/message/useMessageStateUpdates';
+import { createContext, useContext, useReducer } from 'react';
+import { messageReducer } from './message/messageReducer';
+import type { Message, MessageStatus } from '@/types/chat';
 import type { MessageContextType } from '@/types/messageContext';
-import type { Message } from '@/types/chat';
+import { logger, LogCategory } from '@/utils/logging';
 
-const MessageContext = createContext<MessageContextType | undefined>(undefined);
+const MessageContext = createContext<MessageContextType | null>(null);
 
-export const MessageProvider = ({ children }: { children: ReactNode }) => {
+const initialState = {
+  messages: [],
+  editingMessageId: null,
+  error: null,
+};
+
+export const MessageProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, dispatch] = useReducer(messageReducer, initialState);
-  const operations = useMessageOperations();
-  const stateUpdates = useMessageStateUpdates(dispatch);
 
-  const value: MessageContextType = {
+  const setMessages = (messages: Message[]) => {
+    dispatch({ type: 'SET_MESSAGES', payload: messages });
+  };
+
+  const addMessage = (message: Message) => {
+    dispatch({ type: 'ADD_MESSAGE', payload: message });
+  };
+
+  const updateMessageStatus = (messageId: string, status: MessageStatus) => {
+    dispatch({ type: 'UPDATE_MESSAGE_STATUS', payload: { messageId, status } });
+  };
+
+  const updateMessageContent = (messageId: string, content: string) => {
+    dispatch({ type: 'UPDATE_MESSAGE_CONTENT', payload: { messageId, content } });
+  };
+
+  const handleMessageEdit = (messageId: string) => {
+    dispatch({ type: 'START_MESSAGE_EDIT', payload: { messageId } });
+  };
+
+  const handleMessageSave = (messageId: string, content: string) => {
+    dispatch({ type: 'SAVE_MESSAGE_EDIT', payload: { messageId, content } });
+  };
+
+  const handleMessageCancel = (messageId: string) => {
+    dispatch({ type: 'CANCEL_MESSAGE_EDIT', payload: { messageId } });
+  };
+
+  const retryMessage = (messageId: string) => {
+    dispatch({ type: 'RETRY_MESSAGE', payload: { messageId } });
+  };
+
+  const clearMessages = () => {
+    dispatch({ type: 'CLEAR_MESSAGES' });
+  };
+
+  const retryLoading = () => {
+    dispatch({ type: 'CLEAR_ERROR' });
+  };
+
+  const confirmMessage = (tempId: string, confirmedMessage: Message) => {
+    dispatch({ type: 'CONFIRM_MESSAGE', payload: { tempId, confirmedMessage } });
+  };
+
+  const handleMessageFailure = (messageId: string, error: string) => {
+    dispatch({ type: 'HANDLE_MESSAGE_FAILURE', payload: { messageId, error } });
+  };
+
+  const value = {
     ...state,
-    ...operations,
-    ...stateUpdates,
-    retryMessage: async (messageId: string) => {
-      dispatch({ type: 'RETRY_MESSAGE', payload: { messageId } });
-    },
-    clearMessages: () => {
-      dispatch({ type: 'CLEAR_MESSAGES' });
-    },
-    retryLoading: () => {
-      dispatch({ type: 'CLEAR_ERROR' });
-    },
-    confirmMessage: (tempId: string, confirmedMessage: Message) => {
-      dispatch({ type: 'CONFIRM_MESSAGE', payload: { tempId, confirmedMessage } });
-    },
-    handleMessageFailure: (messageId: string, error: string) => {
-      dispatch({ type: 'HANDLE_MESSAGE_FAILURE', payload: { messageId, error } });
-    }
+    setMessages,
+    addMessage,
+    updateMessageStatus,
+    updateMessageContent,
+    handleMessageEdit,
+    handleMessageSave,
+    handleMessageCancel,
+    retryMessage,
+    clearMessages,
+    retryLoading,
+    confirmMessage,
+    handleMessageFailure,
   };
 
   return (
@@ -42,7 +88,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
 
 export const useMessages = () => {
   const context = useContext(MessageContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useMessages must be used within a MessageProvider');
   }
   return context;
