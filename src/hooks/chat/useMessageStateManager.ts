@@ -7,6 +7,7 @@ export const useMessageStateManager = () => {
   const [pendingMessages, setPendingMessages] = useState<Message[]>([]);
   const [confirmedMessages, setConfirmedMessages] = useState<Message[]>([]);
   const [failedMessages, setFailedMessages] = useState<Message[]>([]);
+  const [currentSequence, setCurrentSequence] = useState(0);
 
   const updateMessageStates = useCallback((
     message: Message,
@@ -19,14 +20,20 @@ export const useMessageStateManager = () => {
         messages: messages.length,
         pending: pendingMessages.length,
         confirmed: confirmedMessages.length,
-        failed: failedMessages.length
+        failed: failedMessages.length,
+        currentSequence
       }
     });
 
     switch (type) {
       case 'add':
-        setMessages(prev => [...prev, message]);
-        setPendingMessages(prev => [...prev, message]);
+        const newMessage = {
+          ...message,
+          sequence: currentSequence + 1
+        };
+        setCurrentSequence(prev => prev + 1);
+        setMessages(prev => [...prev, newMessage]);
+        setPendingMessages(prev => [...prev, newMessage]);
         break;
       case 'confirm':
         setMessages(prev => 
@@ -43,13 +50,14 @@ export const useMessageStateManager = () => {
         setFailedMessages(prev => prev.filter(msg => msg.id !== message.id));
         break;
     }
-  }, [messages, pendingMessages, confirmedMessages, failedMessages]);
+  }, [messages, pendingMessages, confirmedMessages, failedMessages, currentSequence]);
 
   return {
     messages,
     pendingMessages,
     confirmedMessages,
     failedMessages,
+    currentSequence,
     updateMessageStates
   };
 };

@@ -51,13 +51,13 @@ class MessageQueue {
         const { data, error } = await supabase
           .from('messages')
           .insert([{
-            chat_id: message.id.split('-')[0], // Assuming chat_id is first part of message id
+            chat_id: message.chat_id,
             content: message.content,
             sender: message.role,
             type: message.type || 'text',
             sequence: message.sequence,
-            delivered_at: null,
-            seen_at: null
+            status: 'delivered',
+            delivered_at: new Date().toISOString()
           }])
           .select()
           .single();
@@ -95,6 +95,18 @@ class MessageQueue {
     }
 
     this.isProcessing = false;
+  }
+
+  public getQueueState() {
+    return {
+      queueLength: this.queue.length,
+      isProcessing: this.isProcessing,
+      messages: this.queue.map(({ message, retryCount, lastAttempt }) => ({
+        id: message.id,
+        retryCount,
+        lastAttempt
+      }))
+    };
   }
 }
 
