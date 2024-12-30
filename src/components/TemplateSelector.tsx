@@ -5,24 +5,27 @@ import { TemplateDropdownContent } from "./template/dropdown/TemplateDropdownCon
 import { useTemplateSelection } from "./template/useTemplateSelection";
 import { useSessionParams } from "@/hooks/routing/useSessionParams";
 import { useTemplateContext } from "@/contexts/TemplateContext";
+import { useToast } from "@/hooks/use-toast";
 import type { Template } from "@/components/template/templateTypes";
+import { logger, LogCategory } from "@/utils/logging";
 
 interface TemplateSelectorProps {
   onTemplateChange: (template: Template) => void;
 }
 
 export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProps) => {
-  const { sessionId, templateId } = useSessionParams();
+  const { sessionId, templateId, redirectToSession } = useSessionParams();
   const { globalTemplate } = useTemplateContext();
+  const { toast } = useToast();
   
   useEffect(() => {
-    console.log('[TemplateSelector] Component mounted/updated:', {
+    logger.debug(LogCategory.RENDER, 'TemplateSelector', 'Component mounted/updated:', {
       sessionId,
       templateId
     });
 
     return () => {
-      console.log('[TemplateSelector] Component cleanup for chat:', sessionId);
+      logger.debug(LogCategory.RENDER, 'TemplateSelector', 'Component cleanup for chat:', sessionId);
     };
   }, [sessionId, templateId]);
 
@@ -33,8 +36,8 @@ export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProp
     handleTemplateChange 
   } = useTemplateSelection(onTemplateChange, globalTemplate);
 
-  const handleTemplateSelect = useCallback((template: Template) => {
-    console.log('[TemplateSelector] Template selection requested:', {
+  const handleTemplateSelect = useCallback(async (template: Template) => {
+    logger.info(LogCategory.STATE, 'TemplateSelector', 'Template selection requested:', {
       sessionId,
       currentTemplateId: selectedTemplate?.id,
       newTemplateId: template.id,
@@ -42,15 +45,34 @@ export const TemplateSelector = memo(({ onTemplateChange }: TemplateSelectorProp
     });
 
     if (template.id === selectedTemplate?.id) {
-      console.log('[TemplateSelector] Skipping duplicate template selection');
+      logger.debug(LogCategory.STATE, 'TemplateSelector', 'Skipping duplicate template selection');
       return;
     }
     
-    handleTemplateChange(template);
-  }, [handleTemplateChange, sessionId, selectedTemplate?.id]);
+    try {
+      // Update URL and handle template change
+      if (sessionId) {
+        redirectToSession(sessionId, { template: template.id });
+      }
+      
+      handleTemplateChange(template);
+      
+      toast({
+        title: "Template Changed",
+        description: `Switched to ${template.name} template`,
+      });
+    } catch (error) {
+      logger.error(LogCategory.ERROR, 'TemplateSelector', 'Error changing template:', error);
+      toast({
+        title: "Error",
+        description: "Failed to change template. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [handleTemplateChange, sessionId, selectedTemplate?.id, redirectToSession, toast]);
 
   const displayTemplate = useMemo(() => {
-    console.log('[TemplateSelector] Display template updated:', {
+    logger.debug(LogCategory.STATE, 'TemplateSelector', 'Display template updated:', {
       sessionId,
       templateId: selectedTemplate?.id,
       templateName: selectedTemplate?.name

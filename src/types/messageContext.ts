@@ -1,22 +1,19 @@
 import type { Message, MessageStatus } from './chat';
 
-export interface MessageContextType {
+export interface MessageState {
   messages: Message[];
   pendingMessages: Message[];
   confirmedMessages: Message[];
   failedMessages: Message[];
   isProcessing: boolean;
   error: string | null;
-  setMessages: (messages: Message[]) => void;
-  addMessage: (message: Message) => void;
-  updateMessageStatus: (messageId: string, status: MessageStatus) => void;
-  updateMessageContent: (messageId: string, content: string) => void;
-  handleMessageEdit: (messageId: string) => void;
-  handleMessageSave: (messageId: string, content: string) => void;
-  handleMessageCancel: (messageId: string) => void;
-  retryMessage: (messageId: string) => Promise<void>;
-  clearMessages: () => void;
-  retryLoading: () => void;
-  confirmMessage: (tempId: string, confirmedMessage: Message) => void;
-  handleMessageFailure: (messageId: string, error: string) => void;
 }
+
+export type MessageAction =
+  | { type: 'SET_MESSAGES'; payload: Message[] }
+  | { type: 'ADD_MESSAGE'; payload: Message }
+  | { type: 'UPDATE_MESSAGE_STATUS'; payload: { messageId: string; status: MessageStatus } }
+  | { type: 'UPDATE_MESSAGE_CONTENT'; payload: { messageId: string; content: string } }
+  | { type: 'START_MESSAGE_EDIT'; payload: { messageId: string } }
+  | { type: 'SAVE_MESSAGE_EDIT'; payload: { messageId: string; content: string } }
+  | { type: 'CANCEL_MESSAGE_EDIT'; payload: { messageId: string } };
