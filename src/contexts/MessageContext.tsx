@@ -1,10 +1,10 @@
 import { createContext, useContext, useCallback, useReducer, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { logger, LogCategory } from '@/utils/logging';
-import { messageReducer, initialState } from '@/reducers/messageReducer';
-import type { MessageContextType, MessageState } from '@/types/messageContext';
-import type { Message, MessageStatus } from '@/types/chat';
 import { useToast } from '@/hooks/use-toast';
+import { logger, LogCategory } from '@/utils/logging';
+import { messageReducer, initialState } from './message/messageReducer';
+import { sendMessage, editMessage } from './message/messageOperations';
+import type { MessageContextType } from '@/types/messageContext';
+import type { Message, MessageStatus, MessageRole } from '@/types/chat';
 
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
 
@@ -12,37 +12,15 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(messageReducer, initialState);
   const { toast } = useToast();
 
-  logger.debug(LogCategory.STATE, 'MessageContext', 'Provider state update:', {
-    messageCount: state.messages.length,
-    pendingCount: state.pendingMessages.length,
-    confirmedCount: state.confirmedMessages.length,
-    failedCount: state.failedMessages.length
-  });
-
   const setMessages = useCallback((messages: Message[]) => {
-    logger.info(LogCategory.STATE, 'MessageContext', 'Setting messages:', {
-      count: messages.length,
-      messageIds: messages.map(m => m.id)
-    });
     dispatch({ type: 'SET_MESSAGES', payload: messages });
   }, []);
 
   const addMessage = useCallback((message: Message) => {
-    logger.info(LogCategory.STATE, 'MessageContext', 'Adding message:', {
-      id: message.id,
-      status: message.status,
-      isOptimistic: message.isOptimistic
-    });
     dispatch({ type: 'ADD_MESSAGE', payload: message });
   }, []);
 
-  const sendMessage = useCallback(async (content: string, chatId: string, type: 'text' | 'audio' = 'text') => {
-    logger.info(LogCategory.COMMUNICATION, 'MessageContext', 'Sending message:', {
-      chatId,
-      type,
-      contentLength: content.length
-    });
-
+  const handleMessageSend = useCallback(async (content: string, chatId: string, type: 'text' | 'audio' = 'text') => {
     const optimisticMessage: Message = {
       id: `temp-${Date.now()}`,
       content,
@@ -57,34 +35,13 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     addMessage(optimisticMessage);
 
     try {
-      const { data: message, error } = await supabase
-        .from('messages')
-        .insert({
-          chat_id: chatId,
-          content,
-          type,
-          sender: 'user',
-          sequence: state.messages.length,
-          status: 'delivered'
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      logger.info(LogCategory.STATE, 'MessageContext', 'Message sent successfully:', {
-        messageId: message.id
-      });
-
+      const message = await sendMessage(content, chatId, type, state.messages.length);
+      
       dispatch({ 
         type: 'CONFIRM_MESSAGE', 
         payload: { 
           tempId: optimisticMessage.id, 
-          confirmedMessage: {
-            ...message,
-            role: message.sender,
-            status: message.status || 'delivered'
-          }
+          confirmedMessage: message
         }
       });
 
@@ -198,7 +155,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     ...state,
     setMessages,
     addMessage,
-    sendMessage,
+    sendMessage: handleMessageSend,
     editMessage,
     retryMessage,
     updateMessageStatus,

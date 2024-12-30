@@ -1,8 +1,9 @@
+export type MessageRole = 'user' | 'assistant';
 export type MessageStatus = 'queued' | 'sending' | 'delivered' | 'seen' | 'failed';
 
 export interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: MessageRole;
   content: string;
   type?: 'text' | 'audio';
   sequence?: number;
@@ -27,7 +28,7 @@ export interface MessageProps extends Message {
 }
 
 export interface MessageContentProps {
-  role: 'user' | 'assistant';
+  role: MessageRole;
   content: string;
   type?: 'text' | 'audio';
   isStreaming?: boolean;
