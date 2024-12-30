@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
-import type { Message } from '@/types/chat';
+import type { Message, MessageStatus } from '@/types/chat';
 
 interface MessageState {
   messages: Message[];
@@ -54,12 +54,11 @@ export const useMessageOrchestration = (sessionId: string | null) => {
     });
     setState(prev => ({
       ...prev,
-      messages: [...prev.messages, message],
+      messages: [...prev.messages, { ...message, status: 'sending' as MessageStatus }],
       pendingMessages: [...prev.pendingMessages, message],
       isProcessing: true
     }));
 
-    // Show toast for message sending
     toast({
       description: "Sending message...",
       duration: 2000,
@@ -74,7 +73,7 @@ export const useMessageOrchestration = (sessionId: string | null) => {
     });
     setState(prev => {
       const updatedMessages = prev.messages.map(msg => 
-        msg.id === tempId ? confirmedMessage : msg
+        msg.id === tempId ? { ...confirmedMessage, status: 'delivered' as MessageStatus } : msg
       );
       return {
         ...prev,
@@ -97,7 +96,7 @@ export const useMessageOrchestration = (sessionId: string | null) => {
       if (!failedMessage) return prev;
 
       const updatedMessages = prev.messages.map(msg =>
-        msg.id === messageId ? { ...msg, status: 'failed' } : msg
+        msg.id === messageId ? { ...msg, status: 'failed' as MessageStatus } : msg
       );
 
       return {
@@ -125,7 +124,7 @@ export const useMessageOrchestration = (sessionId: string | null) => {
       const messageToRetry = prev.failedMessages.find(msg => msg.id === messageId);
       if (!messageToRetry) return prev;
 
-      const updatedMessage = { ...messageToRetry, status: 'sending' };
+      const updatedMessage = { ...messageToRetry, status: 'sending' as MessageStatus };
       const updatedMessages = prev.messages.map(msg =>
         msg.id === messageId ? updatedMessage : msg
       );

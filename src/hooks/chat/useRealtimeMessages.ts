@@ -12,7 +12,6 @@ const validateAndMergeMessages = (localMessages: Message[], newMessage: Message)
     return localMessages;
   }
 
-  // Preserve optimistic messages while adding new ones
   const nonOptimisticMessages = localMessages.filter(msg => !msg.isOptimistic);
   return [...nonOptimisticMessages, {
     ...newMessage,
@@ -75,19 +74,19 @@ export const useRealtimeMessages = (
           filter: `chat_id=eq.${currentChatId}`
         },
         (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
-          const newData = payload.new;
+          const newData = payload.new as DatabaseMessage;
           
           try {
-            if (payload.eventType === 'INSERT') {
+            if (payload.eventType === 'INSERT' && newData) {
               const newMessage: Message = {
-                role: newData.sender as 'user' | 'assistant',
+                role: newData.sender === 'user' ? 'user' : 'assistant',
                 content: newData.content,
                 type: newData.type as 'text' | 'audio',
                 id: newData.id,
                 chat_id: newData.chat_id,
                 sequence: newData.sequence || messages.length + 1,
                 created_at: newData.created_at,
-                status: newData.status as any
+                status: newData.status as Message['status']
               };
 
               logger.debug(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'Received new message:', {
@@ -99,7 +98,7 @@ export const useRealtimeMessages = (
               setMessages(updatedMessages);
               updateCache(currentChatId, updatedMessages);
               
-            } else if (payload.eventType === 'UPDATE') {
+            } else if (payload.eventType === 'UPDATE' && newData) {
               logger.debug(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'Received message update:', {
                 messageId: newData.id,
                 chatId: currentChatId
@@ -115,7 +114,7 @@ export const useRealtimeMessages = (
                   sequence: newData.sequence || msg.sequence,
                   created_at: newData.created_at,
                   chat_id: newData.chat_id,
-                  status: newData.status as any
+                  status: newData.status as Message['status']
                 } : msg
               );
               setMessages(updatedMessages);
@@ -153,7 +152,6 @@ export const useRealtimeMessages = (
 
     channelRef.current = channel;
 
-    // Set up subscription timeout
     subscriptionTimeoutRef.current = setTimeout(() => {
       if (channelRef.current) {
         logger.warn(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'Subscription timeout:', {
