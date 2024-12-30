@@ -12,7 +12,7 @@ interface MessageListContentProps {
 export const MessageListContent = ({ height, width }: MessageListContentProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { messages } = useMessageState();
-  const messageGroups = groupMessages(messages);
+  const messageGroups = groupMessages(messages || []);
   const lastGroupCountRef = useRef(messageGroups.length);
   const lastRenderTimeRef = useRef(performance.now());
 
@@ -21,7 +21,7 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
     logger.debug(LogCategory.STATE, 'MessageListContent', 'Message groups updated:', {
       previousGroupCount: lastGroupCountRef.current,
       newGroupCount: messageGroups.length,
-      messageCount: messages.length,
+      messageCount: messages?.length || 0,
       timestamp: new Date().toISOString(),
       performance: {
         timeSinceLastRender: currentTime - lastRenderTimeRef.current,
@@ -29,7 +29,7 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
           performance.memory.usedJSHeapSize : undefined
       },
       groupingMetrics: {
-        averageGroupSize: messages.length / messageGroups.length,
+        averageGroupSize: messages ? messages.length / messageGroups.length : 0,
         groupSizes: messageGroups.map(g => g.messages.length),
         timeRanges: messageGroups.map(g => ({
           label: g.label,
@@ -42,31 +42,7 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
 
     lastGroupCountRef.current = messageGroups.length;
     lastRenderTimeRef.current = currentTime;
-  }, [messageGroups.length, messages.length]);
-
-  logger.debug(LogCategory.RENDER, 'MessageListContent', 'Rendering content:', {
-    height,
-    width,
-    messageCount: messages.length,
-    groupCount: messageGroups.length,
-    timestamp: new Date().toISOString(),
-    renderMetrics: {
-      containerExists: !!containerRef.current,
-      visibleHeight: containerRef.current?.clientHeight,
-      scrollPosition: containerRef.current?.scrollTop,
-      isOverflowing: containerRef.current ? 
-        containerRef.current.scrollHeight > containerRef.current.clientHeight : false
-    },
-    messageMetrics: {
-      totalCharacters: messages.reduce((sum, m) => sum + (m.content?.length || 0), 0),
-      averageMessageLength: messages.length ? 
-        messages.reduce((sum, m) => sum + (m.content?.length || 0), 0) / messages.length : 0,
-      messageTypes: messages.reduce((acc, m) => {
-        acc[m.type] = (acc[m.type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>)
-    }
-  });
+  }, [messageGroups.length, messages]);
 
   if (!height || !width) {
     logger.warn(LogCategory.RENDER, 'MessageListContent', 'Invalid dimensions:', {

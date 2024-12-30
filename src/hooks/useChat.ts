@@ -7,7 +7,12 @@ import { useToast } from './use-toast';
 import { logger, LogCategory } from '@/utils/logging';
 
 export const useChat = (activeSessionId: string | null) => {
-  const { messages, isProcessing, clearMessages, setMessages } = useMessageState();
+  const { 
+    messages = [], 
+    isProcessing = false, 
+    clearMessages, 
+    setMessages 
+  } = useMessageState();
   const { handleSendMessage } = useMessageFlow(activeSessionId);
   const { getCachedMessages, updateMessageCache, invalidateCache } = useMessageCache();
   const { loadMessages } = useMessageLoading();
