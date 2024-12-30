@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useMessageLifecycle } from './useMessageLifecycle';
+import { usePerformanceTracking } from './usePerformanceTracking';
 import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
@@ -19,6 +20,8 @@ export const useMessageOrchestration = (sessionId: string | null) => {
     isProcessing,
     processingCount
   } = useMessageLifecycle(sessionId);
+
+  const { trackMessageProcessing, trackStateUpdate } = usePerformanceTracking();
 
   const addMessage = useCallback(async (content: string, type: 'text' | 'audio' = 'text') => {
     if (!sessionId || !content.trim()) {
@@ -42,6 +45,12 @@ export const useMessageOrchestration = (sessionId: string | null) => {
     const transactionId = trackMessageStart(optimisticMessage);
     optimisticMessage.transactionId = transactionId;
 
+    const perfTracker = trackMessageProcessing(optimisticId, {
+      messageType: type,
+      contentLength: content.length,
+      isOptimistic: true
+    });
+
     logger.debug(LogCategory.STATE, 'MessageOrchestration', 'Adding optimistic message:', {
       id: optimisticId,
       transactionId,
@@ -50,8 +59,12 @@ export const useMessageOrchestration = (sessionId: string | null) => {
       status: optimisticMessage.status
     });
 
+    const stateUpdateTracker = trackStateUpdate('add_pending_message', {
+      messageId: optimisticId
+    });
     setPendingMessages(prev => [...prev, optimisticMessage]);
     setMessages(prev => [...prev, optimisticMessage]);
+    stateUpdateTracker.complete();
 
     try {
       const { data: savedMessage, error } = await supabase
@@ -69,7 +82,6 @@ export const useMessageOrchestration = (sessionId: string | null) => {
 
       if (error) throw error;
 
-      // Validate state transition before confirming
       const isValidTransition = validateStateTransition('queued', 'sending', optimisticId);
       if (!isValidTransition) {
         throw new Error('Invalid state transition');
@@ -92,19 +104,41 @@ export const useMessageOrchestration = (sessionId: string | null) => {
         chat_id: sessionId
       };
 
+      const confirmStateTracker = trackStateUpdate('confirm_message', {
+        originalId: optimisticId,
+        confirmedId: savedMessage.id
+      });
+      
       setMessages(prev => 
         prev.map(msg => msg.id === optimisticId ? confirmedMessage : msg)
       );
       setPendingMessages(prev => prev.filter(msg => msg.id !== optimisticId));
       setConfirmedMessages(prev => [...prev, confirmedMessage]);
-
+      
+      confirmStateTracker.complete();
       trackMessageComplete(optimisticId, true);
+      perfTracker.complete({
+        success: true,
+        confirmedId: savedMessage.id
+      });
+
     } catch (error: any) {
       logger.error(LogCategory.ERROR, 'MessageOrchestration', 'Error saving message:', error);
       trackMessageComplete(optimisticId, false, error.message);
       
+      const errorStateTracker = trackStateUpdate('mark_message_failed', {
+        messageId: optimisticId,
+        error: error.message
+      });
+      
       setFailedMessages(prev => [...prev, optimisticMessage]);
       setPendingMessages(prev => prev.filter(msg => msg.id !== optimisticId));
+      
+      errorStateTracker.complete();
+      perfTracker.complete({
+        success: false,
+        error: error.message
+      });
       
       toast({
         title: "Failed to send message",
@@ -112,7 +146,7 @@ export const useMessageOrchestration = (sessionId: string | null) => {
         variant: "destructive"
       });
     }
-  }, [sessionId, messages.length, toast, trackMessageStart, trackMessageComplete]);
+  }, [sessionId, messages.length, toast, trackMessageStart, trackMessageComplete, trackMessageProcessing, trackStateUpdate]);
 
   const retryMessage = useCallback(async (messageId: string) => {
     const failedMessage = failedMessages.find(msg => msg.id === messageId);
