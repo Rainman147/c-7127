@@ -1,18 +1,16 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useMessageState } from './useMessageState';
-import { useSessionManagement } from '@/hooks/useSessionManagement';
+import { useMessages } from '@/contexts/MessageContext';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 
 export const useMessageFlow = (activeSessionId: string | null) => {
   const { 
-    addOptimisticMessage, 
+    addMessage, 
     handleMessageFailure,
     setMessages,
     messages 
-  } = useMessageState();
-  const { ensureActiveSession } = useSessionManagement();
+  } = useMessages();
 
   const handleSendMessage = useCallback(async (
     content: string,
@@ -47,7 +45,7 @@ export const useMessageFlow = (activeSessionId: string | null) => {
       sequence: messages?.length || 0
     };
 
-    const addedMessage = addOptimisticMessage(optimisticMessage);
+    const addedMessage = addMessage(optimisticMessage);
     
     if (!addedMessage) {
       logger.error(LogCategory.STATE, 'MessageFlow', 'Failed to add optimistic message');
@@ -64,10 +62,7 @@ export const useMessageFlow = (activeSessionId: string | null) => {
     try {
       let sessionId = activeSessionId;
       if (!sessionId) {
-        sessionId = await ensureActiveSession();
-        if (!sessionId) {
-          throw new Error('Failed to create session');
-        }
+        throw new Error('No active session');
       }
 
       const { data, error } = await supabase.functions.invoke('messages', {
@@ -93,7 +88,7 @@ export const useMessageFlow = (activeSessionId: string | null) => {
         handleMessageFailure(addedMessage.id, error as string);
       }
     }
-  }, [activeSessionId, addOptimisticMessage, handleMessageFailure, setMessages, messages, ensureActiveSession]);
+  }, [activeSessionId, addMessage, handleMessageFailure, setMessages, messages]);
 
   return {
     handleSendMessage

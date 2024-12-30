@@ -13,6 +13,7 @@ export interface Message {
   delivered_at?: string;
   seen_at?: string;
   error?: string;
+  chat_id: string;
 }
 
 export interface MessageGroup {
