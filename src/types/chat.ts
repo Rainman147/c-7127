@@ -21,6 +21,11 @@ export interface MessageGroup {
   messages: Message[];
 }
 
+export interface MessageProps extends Message {
+  isStreaming?: boolean;
+  showAvatar?: boolean;
+}
+
 export interface MessageContentProps {
   role: 'user' | 'assistant';
   content: string;
@@ -38,9 +43,4 @@ export interface MessageContentProps {
   onSave: (newContent: string) => void;
   onCancel: () => void;
   onRetry?: () => void;
-}
-
-export interface MessageProps extends Message {
-  isStreaming?: boolean;
-  showAvatar?: boolean;
 }

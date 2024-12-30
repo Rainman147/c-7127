@@ -2,7 +2,7 @@ import { Loader2, Mic, AlertCircle } from 'lucide-react';
 import TiptapEditor from '../message-editor/TiptapEditor';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { MessageContentProps } from './types';
+import type { MessageContentProps } from '@/types/chat';
 
 const MessageContent = ({ 
   role, 

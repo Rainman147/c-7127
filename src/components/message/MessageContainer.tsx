@@ -2,7 +2,7 @@ import { memo } from 'react';
 import MessageAvatar from '../MessageAvatar';
 import MessageContent from './MessageContent';
 import MessageActions from '../MessageActions';
-import type { MessageProps } from './types';
+import type { MessageProps } from '@/types/chat';
 import { logger, LogCategory } from '@/utils/logging';
 
 const MessageContainer = memo(({ 
