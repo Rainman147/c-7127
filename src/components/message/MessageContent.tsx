@@ -2,23 +2,7 @@ import { Loader2, Mic, AlertCircle } from 'lucide-react';
 import TiptapEditor from '../message-editor/TiptapEditor';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-
-type MessageContentProps = {
-  role: 'user' | 'assistant';
-  content: string;
-  type?: 'text' | 'audio';
-  isStreaming?: boolean;
-  isEditing: boolean;
-  id?: string;
-  wasEdited: boolean;
-  isSaving: boolean;
-  isTyping: boolean;
-  isOptimistic?: boolean;
-  isFailed?: boolean;
-  onSave: (newContent: string) => void;
-  onCancel: () => void;
-  onRetry?: () => void;
-};
+import type { MessageContentProps } from './types';
 
 const MessageContent = ({ 
   role, 
@@ -32,6 +16,8 @@ const MessageContent = ({
   isTyping,
   isOptimistic,
   isFailed,
+  created_at,
+  status,
   onSave,
   onCancel,
   onRetry
@@ -43,8 +29,10 @@ const MessageContent = ({
     isTyping,
     isOptimistic,
     isFailed,
+    created_at,
+    status,
     hasContent: !!content,
-    contentPreview: content.substring(0, 50) + '...'
+    contentPreview: content?.substring(0, 50) + '...'
   });
   
   return (
