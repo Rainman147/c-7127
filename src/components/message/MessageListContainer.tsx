@@ -7,20 +7,37 @@ import { logger, LogCategory } from '@/utils/logging';
 const MessageListContainer = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const renderCountRef = useRef(0);
+  const lastRenderTimeRef = useRef(performance.now());
 
   useEffect(() => {
     renderCountRef.current++;
-    logger.debug(LogCategory.RENDER, 'MessageListContainer', 'Component mounted/updated:', {
+    const mountTime = performance.now();
+    
+    logger.debug(LogCategory.LIFECYCLE, 'MessageListContainer', 'Component mounted/updated:', {
       renderCount: renderCountRef.current,
       containerHeight: containerRef.current?.clientHeight,
       containerScrollHeight: containerRef.current?.scrollHeight,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      performance: {
+        mountTime,
+        timeSinceLastRender: mountTime - lastRenderTimeRef.current,
+        memory: window.performance?.memory?.usedJSHeapSize
+      },
+      domMetrics: {
+        childCount: containerRef.current?.childNodes.length,
+        offsetHeight: containerRef.current?.offsetHeight,
+        clientHeight: containerRef.current?.clientHeight,
+        scrollHeight: containerRef.current?.scrollHeight
+      }
     });
 
+    lastRenderTimeRef.current = mountTime;
+
     return () => {
-      logger.debug(LogCategory.RENDER, 'MessageListContainer', 'Component will unmount:', {
+      logger.debug(LogCategory.LIFECYCLE, 'MessageListContainer', 'Component will unmount:', {
         finalRenderCount: renderCountRef.current,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        totalMountedDuration: performance.now() - mountTime
       });
     };
   }, []);
@@ -30,7 +47,17 @@ const MessageListContainer = () => {
     containerScrollHeight: containerRef.current?.scrollHeight,
     renderStack: new Error().stack,
     renderTime: performance.now(),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    renderMetrics: {
+      renderCount: renderCountRef.current,
+      timeSinceLastRender: performance.now() - lastRenderTimeRef.current,
+      containerState: {
+        isVisible: containerRef.current?.offsetParent !== null,
+        hasOverflow: containerRef.current ? 
+          containerRef.current.scrollHeight > containerRef.current.clientHeight : false,
+        scrollPosition: containerRef.current?.scrollTop
+      }
+    }
   });
 
   return (
@@ -45,7 +72,12 @@ const MessageListContainer = () => {
               height,
               width,
               renderTime: performance.now(),
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              viewport: {
+                windowInnerHeight: window.innerHeight,
+                windowInnerWidth: window.innerWidth,
+                devicePixelRatio: window.devicePixelRatio
+              }
             });
             
             return (
