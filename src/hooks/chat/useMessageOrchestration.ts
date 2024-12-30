@@ -4,6 +4,7 @@ import { logger, LogCategory } from '@/utils/logging';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
 import { supabase } from '@/integrations/supabase/client';
+import { validateStateTransition } from '@/utils/messageStateValidator';
 
 export const useMessageOrchestration = (sessionId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -33,6 +34,7 @@ export const useMessageOrchestration = (sessionId: string | null) => {
       role: 'user',
       chat_id: sessionId,
       sequence: messages.length,
+      status: 'queued',
       isOptimistic: true,
       created_at: new Date().toISOString()
     };
@@ -44,7 +46,8 @@ export const useMessageOrchestration = (sessionId: string | null) => {
       id: optimisticId,
       transactionId,
       contentLength: content.length,
-      type
+      type,
+      status: optimisticMessage.status
     });
 
     setPendingMessages(prev => [...prev, optimisticMessage]);
@@ -58,16 +61,24 @@ export const useMessageOrchestration = (sessionId: string | null) => {
           content,
           type,
           sender: 'user',
-          sequence: messages.length
+          sequence: messages.length,
+          status: 'sending'
         })
         .select()
         .single();
 
       if (error) throw error;
 
+      // Validate state transition before confirming
+      const isValidTransition = validateStateTransition('queued', 'sending', optimisticId);
+      if (!isValidTransition) {
+        throw new Error('Invalid state transition');
+      }
+
       logger.info(LogCategory.STATE, 'MessageOrchestration', 'Message saved successfully:', {
         id: savedMessage.id,
-        chatId: sessionId
+        chatId: sessionId,
+        status: savedMessage.status
       });
 
       const confirmedMessage: Message = {
@@ -75,6 +86,7 @@ export const useMessageOrchestration = (sessionId: string | null) => {
         content: savedMessage.content,
         type: savedMessage.type as 'text' | 'audio',
         role: 'user',
+        status: savedMessage.status,
         sequence: savedMessage.sequence || messages.length,
         created_at: savedMessage.created_at,
         chat_id: sessionId
@@ -96,7 +108,7 @@ export const useMessageOrchestration = (sessionId: string | null) => {
       
       toast({
         title: "Failed to send message",
-        description: "Please try again",
+        description: error.message,
         variant: "destructive"
       });
     }
