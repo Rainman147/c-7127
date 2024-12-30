@@ -22,7 +22,7 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
     initialState
   );
 
-  logger.debug(LogCategory.STATE, 'MessageContext', 'Current state:', {
+  logger.debug(LogCategory.STATE, 'MessageContext', 'Context state update:', {
     messageCount: state.messages.length,
     pendingCount: state.pendingMessages.length,
     confirmedCount: state.confirmedMessages.length,
@@ -30,28 +30,40 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
     isProcessing: state.isProcessing,
     editingMessageId: state.editingMessageId,
     error: state.error,
-    stateSnapshot: JSON.stringify(state),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    contextId: `ctx-${Date.now()}`
   });
 
   const setMessages = (messages: Message[]) => {
+    const setStartTime = performance.now();
     logger.info(LogCategory.STATE, 'MessageContext', 'Setting messages:', {
       messageCount: messages.length,
       messageIds: messages.map(m => m.id),
       operation: 'setMessages',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      flowId: `set-${Date.now()}`
     });
     dispatch({ type: 'SET_MESSAGES', payload: messages });
+    logger.debug(LogCategory.STATE, 'MessageContext', 'Messages set complete:', {
+      duration: `${(performance.now() - setStartTime).toFixed(2)}ms`,
+      timestamp: new Date().toISOString()
+    });
   };
 
   const addMessage = (message: Message) => {
+    const addStartTime = performance.now();
     logger.info(LogCategory.STATE, 'MessageContext', 'Adding message:', {
       messageId: message.id,
       isOptimistic: message.isOptimistic,
       operation: 'addMessage',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      flowId: `add-${Date.now()}`
     });
     dispatch({ type: 'ADD_MESSAGE', payload: message });
+    logger.debug(LogCategory.STATE, 'MessageContext', 'Message add complete:', {
+      duration: `${(performance.now() - addStartTime).toFixed(2)}ms`,
+      timestamp: new Date().toISOString()
+    });
   };
 
   const updateMessageStatus = (messageId: string, status: MessageStatus) => {
@@ -74,43 +86,37 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
     dispatch({ type: 'UPDATE_MESSAGE_CONTENT', payload: { messageId, content } });
   };
 
-  const handleMessageEdit = (messageId: string) => {
-    logger.info(LogCategory.STATE, 'MessageContext', 'Starting message edit:', {
-      messageId,
-      operation: 'handleMessageEdit',
-      timestamp: new Date().toISOString()
-    });
-    dispatch({ type: 'START_MESSAGE_EDIT', payload: { messageId } });
-  };
-
-  const handleMessageSave = (messageId: string, content: string) => {
-    logger.info(LogCategory.STATE, 'MessageContext', 'Saving message edit:', {
-      messageId,
-      contentLength: content.length,
-      operation: 'handleMessageSave',
-      timestamp: new Date().toISOString()
-    });
-    dispatch({ type: 'SAVE_MESSAGE_EDIT', payload: { messageId, content } });
-  };
-
-  const handleMessageCancel = (messageId: string) => {
-    logger.info(LogCategory.STATE, 'MessageContext', 'Canceling message edit:', {
-      messageId,
-      operation: 'handleMessageCancel',
-      timestamp: new Date().toISOString()
-    });
-    dispatch({ type: 'CANCEL_MESSAGE_EDIT', payload: { messageId } });
-  };
-
   const value: MessageContextType = {
     ...state,
     setMessages,
     addMessage,
     updateMessageStatus,
     updateMessageContent,
-    handleMessageEdit,
-    handleMessageSave,
-    handleMessageCancel,
+    handleMessageEdit: (messageId: string) => {
+      logger.info(LogCategory.STATE, 'MessageContext', 'Starting message edit:', {
+        messageId,
+        operation: 'handleMessageEdit',
+        timestamp: new Date().toISOString()
+      });
+      dispatch({ type: 'START_MESSAGE_EDIT', payload: { messageId } });
+    },
+    handleMessageSave: (messageId: string, content: string) => {
+      logger.info(LogCategory.STATE, 'MessageContext', 'Saving message edit:', {
+        messageId,
+        contentLength: content.length,
+        operation: 'handleMessageSave',
+        timestamp: new Date().toISOString()
+      });
+      dispatch({ type: 'SAVE_MESSAGE_EDIT', payload: { messageId, content } });
+    },
+    handleMessageCancel: (messageId: string) => {
+      logger.info(LogCategory.STATE, 'MessageContext', 'Canceling message edit:', {
+        messageId,
+        operation: 'handleMessageCancel',
+        timestamp: new Date().toISOString()
+      });
+      dispatch({ type: 'CANCEL_MESSAGE_EDIT', payload: { messageId } });
+    },
     retryMessage: (messageId: string) => {
       logger.info(LogCategory.STATE, 'MessageContext', 'Retrying message:', {
         messageId,
