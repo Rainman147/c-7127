@@ -60,7 +60,7 @@ export const useMessageState = () => {
       timestamp: new Date().toISOString(),
       performance: {
         startTime,
-        currentMemory: window.performance?.memory?.usedJSHeapSize
+        heapSize: window.performance?.memory?.usedJSHeapSize
       }
     });
 

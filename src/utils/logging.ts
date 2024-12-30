@@ -9,7 +9,9 @@ export enum LogCategory {
   HOOKS = 'HOOKS',
   VALIDATION = 'VALIDATION',
   SESSION = 'SESSION',
-  API = 'API'
+  API = 'API',
+  LIFECYCLE = 'LIFECYCLE',
+  PERFORMANCE = 'PERFORMANCE'
 }
 
 export const logger = {

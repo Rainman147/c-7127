@@ -13,28 +13,22 @@ const MessageListContainer = () => {
     renderCountRef.current++;
     const mountTime = performance.now();
     
-    logger.debug(LogCategory.LIFECYCLE, 'MessageListContainer', 'Component mounted/updated:', {
+    logger.info(LogCategory.LIFECYCLE, 'MessageListContainer', 'Component mounted:', {
       renderCount: renderCountRef.current,
-      containerHeight: containerRef.current?.clientHeight,
-      containerScrollHeight: containerRef.current?.scrollHeight,
+      containerDimensions: {
+        height: containerRef.current?.clientHeight,
+        scrollHeight: containerRef.current?.scrollHeight
+      },
       timestamp: new Date().toISOString(),
       performance: {
         mountTime,
         timeSinceLastRender: mountTime - lastRenderTimeRef.current,
-        memory: window.performance?.memory?.usedJSHeapSize
-      },
-      domMetrics: {
-        childCount: containerRef.current?.childNodes.length,
-        offsetHeight: containerRef.current?.offsetHeight,
-        clientHeight: containerRef.current?.clientHeight,
-        scrollHeight: containerRef.current?.scrollHeight
+        heapSize: window.performance?.memory?.usedJSHeapSize
       }
     });
 
-    lastRenderTimeRef.current = mountTime;
-
     return () => {
-      logger.debug(LogCategory.LIFECYCLE, 'MessageListContainer', 'Component will unmount:', {
+      logger.info(LogCategory.LIFECYCLE, 'MessageListContainer', 'Component will unmount:', {
         finalRenderCount: renderCountRef.current,
         timestamp: new Date().toISOString(),
         totalMountedDuration: performance.now() - mountTime
