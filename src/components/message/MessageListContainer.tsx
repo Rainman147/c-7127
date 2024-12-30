@@ -23,7 +23,7 @@ const MessageListContainer = () => {
       performance: {
         mountTime,
         timeSinceLastRender: mountTime - lastRenderTimeRef.current,
-        heapSize: window.performance?.memory?.usedJSHeapSize
+        heapSize: process.env.NODE_ENV === 'development' ? performance?.memory?.usedJSHeapSize : undefined
       }
     });
 

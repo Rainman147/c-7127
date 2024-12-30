@@ -25,7 +25,7 @@ export const MessageListContent = ({ height, width }: MessageListContentProps) =
       timestamp: new Date().toISOString(),
       performance: {
         timeSinceLastRender: currentTime - lastRenderTimeRef.current,
-        heapSize: window.performance?.memory?.usedJSHeapSize
+        heapSize: process.env.NODE_ENV === 'development' ? performance?.memory?.usedJSHeapSize : undefined
       },
       groupingMetrics: {
         averageGroupSize: messages.length / messageGroups.length,

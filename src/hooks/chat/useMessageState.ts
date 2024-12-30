@@ -60,7 +60,7 @@ export const useMessageState = () => {
       timestamp: new Date().toISOString(),
       performance: {
         startTime,
-        heapSize: window.performance?.memory?.usedJSHeapSize
+        heapSize: process.env.NODE_ENV === 'development' ? performance?.memory?.usedJSHeapSize : undefined
       }
     });
 
@@ -104,7 +104,7 @@ export const useMessageState = () => {
       startTime: new Date().toISOString(),
       performance: {
         startTime,
-        heapSize: window.performance?.memory?.usedJSHeapSize
+        heapSize: process.env.NODE_ENV === 'development' ? performance?.memory?.usedJSHeapSize : undefined
       }
     });
     
