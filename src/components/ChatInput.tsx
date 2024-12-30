@@ -3,7 +3,7 @@ import { useTranscriptionHandler } from "@/hooks/chat/useTranscriptionHandler";
 import { logger, LogCategory } from "@/utils/logging";
 import ChatInputField from "./chat/ChatInputField";
 import ChatInputActions from "./chat/ChatInputActions";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface ChatInputProps {
   onSend: (message: string, type?: 'text' | 'audio') => Promise<any>;
@@ -42,6 +42,15 @@ const ChatInput = ({
     onTranscriptionComplete,
     setMessage
   });
+
+  useEffect(() => {
+    logger.debug(LogCategory.STATE, 'ChatInput', 'Message state changed:', {
+      messageLength: message.length,
+      isProcessing,
+      isLoading,
+      timestamp: new Date().toISOString()
+    });
+  }, [message, isProcessing, isLoading]);
 
   const handleSubmit = async () => {
     const submitStartTime = performance.now();
