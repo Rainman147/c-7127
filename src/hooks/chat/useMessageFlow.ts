@@ -7,7 +7,7 @@ import type { Message } from '@/types/chat';
 
 export const useMessageFlow = (activeSessionId: string | null) => {
   const { 
-    addMessage: addOptimisticMessage, 
+    addOptimisticMessage, 
     handleMessageFailure,
     setMessages,
     messages 
@@ -42,7 +42,9 @@ export const useMessageFlow = (activeSessionId: string | null) => {
       role: 'user',
       isOptimistic: true,
       status: 'sending',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      chat_id: activeSessionId || '',
+      sequence: messages?.length || 0
     };
 
     const addedMessage = addOptimisticMessage(optimisticMessage);
