@@ -1,6 +1,6 @@
 import { Message, MessageStatus } from '@/types/chat';
 import { supabase } from '@/integrations/supabase/client';
-import { logger, LogCategory } from '@/utils/logging';
+import { messageLogger } from './messageLogger';
 
 type QueuedMessage = {
   message: Message;
@@ -15,12 +15,11 @@ class MessageQueue {
   private retryDelay: number = 2000; // 2 seconds
 
   constructor() {
-    // Start processing the queue
     this.processQueue();
   }
 
   public enqueue(message: Message) {
-    logger.info(LogCategory.STATE, 'MessageQueue', 'Enqueueing message:', { 
+    messageLogger.logQueueOperation('enqueue', this.queue.length + 1, { 
       messageId: message.id 
     });
     
@@ -38,16 +37,14 @@ class MessageQueue {
     if (this.isProcessing || this.queue.length === 0) return;
 
     this.isProcessing = true;
-    logger.debug(LogCategory.STATE, 'MessageQueue', 'Processing queue:', { 
-      queueLength: this.queue.length 
-    });
+    messageLogger.logQueueOperation('process_start', this.queue.length);
 
     while (this.queue.length > 0) {
       const queuedMessage = this.queue[0];
       const { message, retryCount } = queuedMessage;
+      const startTime = performance.now();
 
       try {
-        // Attempt to send the message
         const { data, error } = await supabase
           .from('messages')
           .insert([{
@@ -64,37 +61,41 @@ class MessageQueue {
 
         if (error) throw error;
 
-        // Message sent successfully
-        this.queue.shift(); // Remove from queue
-
-        logger.info(LogCategory.STATE, 'MessageQueue', 'Message sent successfully:', { 
-          messageId: message.id 
+        this.queue.shift();
+        
+        const duration = performance.now() - startTime;
+        messageLogger.logPerformanceMetric('message_processing', duration, {
+          messageId: message.id,
+          success: true
         });
 
       } catch (error) {
-        logger.error(LogCategory.ERROR, 'MessageQueue', 'Error sending message:', {
+        const duration = performance.now() - startTime;
+        messageLogger.logError('queue_processing', error as Error, {
           messageId: message.id,
-          error,
-          retryCount
+          retryCount,
+          duration
         });
 
         if (retryCount >= this.maxRetries) {
-          // Max retries reached, remove from queue
           this.queue.shift();
+          messageLogger.logQueueOperation('max_retries_reached', this.queue.length, {
+            messageId: message.id,
+            totalRetries: retryCount
+          });
         } else {
-          // Update retry count and move to end of queue
           queuedMessage.retryCount++;
           queuedMessage.lastAttempt = new Date();
           this.queue.shift();
           this.queue.push(queuedMessage);
           
-          // Wait before next retry
           await new Promise(resolve => setTimeout(resolve, this.retryDelay));
         }
       }
     }
 
     this.isProcessing = false;
+    messageLogger.logQueueOperation('process_complete', this.queue.length);
   }
 
   public getQueueState() {
@@ -110,5 +111,4 @@ class MessageQueue {
   }
 }
 
-// Export singleton instance
 export const messageQueue = new MessageQueue();
