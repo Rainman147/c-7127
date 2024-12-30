@@ -1,128 +1,102 @@
-export enum LogLevel {
-  DEBUG = 0,
-  INFO = 1,
-  WARN = 2,
-  ERROR = 3
-}
-
 export enum LogCategory {
-  RENDER = 'render',
-  STATE = 'state',
-  COMMUNICATION = 'communication',
-  ERROR = 'error',
-  DATABASE = 'database',
-  LIFECYCLE = 'lifecycle',  // Added this category
-  HOOKS = 'hooks'          // Added this category
+  STATE = 'STATE',
+  COMMUNICATION = 'COMMUNICATION',
+  ERROR = 'ERROR',
+  RENDER = 'RENDER',
+  HOOKS = 'HOOKS',
+  ROUTING = 'ROUTING'
 }
 
-// Add type definition for Chrome's non-standard Performance interface
-interface ExtendedPerformance extends Performance {
-  memory?: {
-    usedJSHeapSize: number;
-    totalJSHeapSize: number;
-    jsHeapSizeLimit: number;
-  };
-}
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-// Helper function to safely get memory info
-const getMemoryInfo = () => {
-  const performance = window.performance as ExtendedPerformance;
-  return performance?.memory ? {
-    usedJSHeapSize: performance.memory.usedJSHeapSize,
-    totalJSHeapSize: performance.memory.totalJSHeapSize,
-    jsHeapSizeLimit: performance.memory.jsHeapSizeLimit
-  } : 'Not available';
-};
-
-type LogEntry = {
+interface LogMessage {
   timestamp: string;
   level: LogLevel;
   category: LogCategory;
-  component?: string;
+  component: string;
   message: string;
-  data?: any;
-};
+  details?: any;
+}
 
-const LOG_LEVEL = process.env.NODE_ENV === 'development' ? LogLevel.DEBUG : LogLevel.INFO;
+class Logger {
+  private logs: LogMessage[] = [];
+  private readonly maxLogs = 1000;
 
-export const logger = {
-  debug: (category: LogCategory, component: string, message: string, data?: any) => {
-    if (LOG_LEVEL <= LogLevel.DEBUG) {
-      const entry: LogEntry = {
-        timestamp: new Date().toISOString(),
-        level: LogLevel.DEBUG,
-        category,
-        component,
-        message,
-        data: data ? {
-          ...data,
-          performance: data.performance ? {
-            ...data.performance,
-            memory: getMemoryInfo()
-          } : undefined
-        } : undefined
-      };
-      console.debug(`[${entry.component}] ${entry.message}`, entry.data || '');
+  private createLogMessage(
+    level: LogLevel,
+    category: LogCategory,
+    component: string,
+    message: string,
+    details?: any
+  ): LogMessage {
+    return {
+      timestamp: new Date().toISOString(),
+      level,
+      category,
+      component,
+      message,
+      details
+    };
+  }
+
+  private log(
+    level: LogLevel,
+    category: LogCategory,
+    component: string,
+    message: string,
+    details?: any
+  ) {
+    const logMessage = this.createLogMessage(level, category, component, message, details);
+    
+    // Add to internal logs array
+    this.logs.push(logMessage);
+    if (this.logs.length > this.maxLogs) {
+      this.logs.shift();
     }
-  },
 
-  info: (category: LogCategory, component: string, message: string, data?: any) => {
-    if (LOG_LEVEL <= LogLevel.INFO) {
-      const entry: LogEntry = {
-        timestamp: new Date().toISOString(),
-        level: LogLevel.INFO,
-        category,
-        component,
-        message,
-        data: data ? {
-          ...data,
-          performance: data.performance ? {
-            ...data.performance,
-            memory: getMemoryInfo()
-          } : undefined
-        } : undefined
-      };
-      console.log(`[${entry.component}] ${entry.message}`, entry.data || '');
-    }
-  },
-
-  warn: (category: LogCategory, component: string, message: string, data?: any) => {
-    if (LOG_LEVEL <= LogLevel.WARN) {
-      const entry: LogEntry = {
-        timestamp: new Date().toISOString(),
-        level: LogLevel.WARN,
-        category,
-        component,
-        message,
-        data: data ? {
-          ...data,
-          performance: data.performance ? {
-            ...data.performance,
-            memory: getMemoryInfo()
-          } : undefined
-        } : undefined
-      };
-      console.warn(`[${entry.component}] ${entry.message}`, entry.data || '');
-    }
-  },
-
-  error: (category: LogCategory, component: string, message: string, data?: any) => {
-    if (LOG_LEVEL <= LogLevel.ERROR) {
-      const entry: LogEntry = {
-        timestamp: new Date().toISOString(),
-        level: LogLevel.ERROR,
-        category,
-        component,
-        message,
-        data: data ? {
-          ...data,
-          performance: data.performance ? {
-            ...data.performance,
-            memory: getMemoryInfo()
-          } : undefined
-        } : undefined
-      };
-      console.error(`[${entry.component}] ${entry.message}`, entry.data || '');
+    // Log to console in development
+    if (process.env.NODE_ENV === 'development') {
+      const consoleMessage = `[${logMessage.timestamp}] ${level.toUpperCase()} - ${category} - ${component}: ${message}`;
+      switch (level) {
+        case 'debug':
+          console.debug(consoleMessage, details || '');
+          break;
+        case 'info':
+          console.info(consoleMessage, details || '');
+          break;
+        case 'warn':
+          console.warn(consoleMessage, details || '');
+          break;
+        case 'error':
+          console.error(consoleMessage, details || '');
+          break;
+      }
     }
   }
-};
+
+  debug(category: LogCategory, component: string, message: string, details?: any) {
+    this.log('debug', category, component, message, details);
+  }
+
+  info(category: LogCategory, component: string, message: string, details?: any) {
+    this.log('info', category, component, message, details);
+  }
+
+  warn(category: LogCategory, component: string, message: string, details?: any) {
+    this.log('warn', category, component, message, details);
+  }
+
+  error(category: LogCategory, component: string, message: string, details?: any) {
+    this.log('error', category, component, message, details);
+  }
+
+  getLogs(): LogMessage[] {
+    return [...this.logs];
+  }
+
+  clearLogs() {
+    this.logs = [];
+  }
+}
+
+export const logger = new Logger();

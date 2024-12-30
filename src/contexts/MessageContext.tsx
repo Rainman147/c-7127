@@ -3,6 +3,7 @@ import { messageReducer, initialState } from './message/messageReducer';
 import { useMessageOperations } from '@/hooks/message/useMessageOperations';
 import { useMessageStateUpdates } from '@/hooks/message/useMessageStateUpdates';
 import type { MessageContextType } from '@/types/messageContext';
+import type { Message } from '@/types/chat';
 
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
 
