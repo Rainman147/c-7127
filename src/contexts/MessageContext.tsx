@@ -101,11 +101,10 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // Remove from failed messages and add back to pending
     dispatch({ type: 'RETRY_MESSAGE', payload: { messageId } });
 
     try {
-      await sendMessage(failedMessage.content, failedMessage.id.split('-')[0], failedMessage.type);
+      await sendMessage(failedMessage.content, failedMessage.id.split('-')[0], failedMessage.type, failedMessage.sequence || 0);
     } catch (error) {
       logger.error(LogCategory.ERROR, 'MessageContext', 'Error retrying message:', error);
       toast({
@@ -114,7 +113,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         variant: "destructive"
       });
     }
-  }, [state.failedMessages, sendMessage, toast]);
+  }, [state.failedMessages, toast]);
 
   const updateMessageStatus = useCallback((messageId: string, status: MessageStatus) => {
     dispatch({ type: 'UPDATE_MESSAGE_STATUS', payload: { messageId, status } });
@@ -125,7 +124,9 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const handleMessageSave = useCallback(async (messageId: string, content: string) => {
-    await editMessage(messageId, content);
+    const userId = (await supabase.auth.getUser()).data.user?.id;
+    if (!userId) throw new Error('User not authenticated');
+    await editMessage(messageId, content, userId);
   }, []);
 
   const handleMessageCancel = useCallback((messageId: string) => {
