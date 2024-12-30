@@ -54,43 +54,12 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [state.messages.length, addMessage]);
 
-  const handleMessageEdit = useCallback(async (messageId: string, content: string) => {
-    logger.info(LogCategory.STATE, 'MessageContext', 'Editing message:', {
-      messageId,
-      contentLength: content.length
+  const handleMessageEdit = useCallback((messageId: string) => {
+    logger.info(LogCategory.STATE, 'MessageContext', 'Starting edit for message:', {
+      messageId
     });
-
-    try {
-      const { data: editedMessage, error } = await supabase
-        .from('edited_messages')
-        .upsert({
-          message_id: messageId,
-          edited_content: content,
-          user_id: (await supabase.auth.getUser()).data.user?.id
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      dispatch({ type: 'SAVE_MESSAGE_EDIT', payload: { messageId, content } });
-
-      logger.info(LogCategory.STATE, 'MessageContext', 'Message edited successfully:', {
-        messageId,
-        editId: editedMessage.id
-      });
-
-      return editedMessage;
-    } catch (error) {
-      logger.error(LogCategory.ERROR, 'MessageContext', 'Error editing message:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save message changes",
-        variant: "destructive"
-      });
-      throw error;
-    }
-  }, [toast]);
+    dispatch({ type: 'START_MESSAGE_EDIT', payload: { messageId } });
+  }, []);
 
   const retryMessage = useCallback(async (messageId: string) => {
     logger.info(LogCategory.STATE, 'MessageContext', 'Retrying message:', { messageId });
@@ -154,7 +123,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     setMessages,
     addMessage,
     sendMessage: handleMessageSend,
-    editMessage: handleMessageEdit,
+    editMessage,
     retryMessage,
     updateMessageStatus,
     updateMessageContent,
