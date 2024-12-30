@@ -10,9 +10,7 @@ export const useMessageLoading = () => {
     logger.info(LogCategory.STATE, 'useMessageLoading', 'Starting message load:', {
       sessionId,
       timestamp: new Date().toISOString(),
-      performance: {
-        startTime
-      }
+      performance: { startTime }
     });
 
     try {
@@ -37,7 +35,6 @@ export const useMessageLoading = () => {
             hint: error.hint,
             details: error.details
           },
-          timestamp: new Date().toISOString(),
           queryDuration: performance.now() - startTime
         });
         throw error;
@@ -47,8 +44,14 @@ export const useMessageLoading = () => {
         sessionId,
         count: messages?.length || 0,
         messageIds: messages?.map(m => m.id),
-        queryDuration: performance.now() - startTime,
-        timestamp: new Date().toISOString()
+        messageDetails: messages?.map(m => ({
+          id: m.id,
+          sequence: m.sequence,
+          status: m.status,
+          type: m.type,
+          contentPreview: m.content?.substring(0, 50)
+        })),
+        queryDuration: performance.now() - startTime
       });
 
       const transformedMessages = messages.map((msg, index) => {

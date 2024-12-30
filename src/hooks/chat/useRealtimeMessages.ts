@@ -7,13 +7,22 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { logger, LogCategory } from '@/utils/logging';
 
 const validateAndMergeMessages = (localMessages: Message[], newMessage: Message): Message[] => {
+  logger.merge('validateAndMergeMessages', 'Starting merge operation:', {
+    localMessageCount: localMessages.length,
+    newMessageId: newMessage.id,
+    localMessageIds: localMessages.map(m => m.id)
+  });
+
   const isDuplicate = localMessages.some(msg => msg.id === newMessage.id);
   if (isDuplicate) {
+    logger.debug(LogCategory.MERGE, 'validateAndMergeMessages', 'Duplicate message detected:', {
+      messageId: newMessage.id
+    });
     return localMessages;
   }
 
   const nonOptimisticMessages = localMessages.filter(msg => !msg.isOptimistic);
-  return [...nonOptimisticMessages, {
+  const mergedMessages = [...nonOptimisticMessages, {
     ...newMessage,
     chat_id: newMessage.chat_id
   }].sort((a, b) => {
@@ -22,6 +31,19 @@ const validateAndMergeMessages = (localMessages: Message[], newMessage: Message)
     }
     return new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime();
   });
+
+  logger.merge('validateAndMergeMessages', 'Merge complete:', {
+    originalCount: localMessages.length,
+    mergedCount: mergedMessages.length,
+    addedMessageId: newMessage.id,
+    messageOrder: mergedMessages.map(m => ({
+      id: m.id,
+      sequence: m.sequence,
+      created_at: m.created_at
+    }))
+  });
+
+  return mergedMessages;
 };
 
 export const useRealtimeMessages = (

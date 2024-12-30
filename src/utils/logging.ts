@@ -11,20 +11,40 @@ export enum LogCategory {
   SESSION = 'SESSION',
   API = 'API',
   LIFECYCLE = 'LIFECYCLE',
-  PERFORMANCE = 'PERFORMANCE'
+  PERFORMANCE = 'PERFORMANCE',
+  MERGE = 'MERGE'
 }
 
 export const logger = {
   debug: (category: LogCategory, source: string, message: string, data?: any) => {
-    console.debug(`[${category}] ${source}: ${message}`, data);
+    console.debug(`[${category}] ${source}: ${message}`, data ? {
+      timestamp: new Date().toISOString(),
+      ...data
+    } : '');
   },
   info: (category: LogCategory, source: string, message: string, data?: any) => {
-    console.info(`[${category}] ${source}: ${message}`, data);
+    console.info(`[${category}] ${source}: ${message}`, data ? {
+      timestamp: new Date().toISOString(),
+      ...data
+    } : '');
   },
   warn: (category: LogCategory, source: string, message: string, data?: any) => {
-    console.warn(`[${category}] ${source}: ${message}`, data);
+    console.warn(`[${category}] ${source}: ${message}`, data ? {
+      timestamp: new Date().toISOString(),
+      ...data
+    } : '');
   },
   error: (category: LogCategory, source: string, message: string, data?: any) => {
-    console.error(`[${category}] ${source}: ${message}`, data);
+    console.error(`[${category}] ${source}: ${message}`, data ? {
+      timestamp: new Date().toISOString(),
+      stack: new Error().stack,
+      ...data
+    } : '');
+  },
+  merge: (source: string, message: string, data?: any) => {
+    console.info(`[MERGE] ${source}: ${message}`, data ? {
+      timestamp: new Date().toISOString(),
+      ...data
+    } : '');
   }
 };

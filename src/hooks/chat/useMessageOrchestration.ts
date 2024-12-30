@@ -23,15 +23,45 @@ export const useMessageOrchestration = (sessionId: string | null) => {
   const { toast } = useToast();
 
   const updateMessages = useCallback((newMessages: Message[]) => {
-    logger.debug(LogCategory.STATE, 'useMessageOrchestration', 'Updating messages:', {
+    logger.debug(LogCategory.MERGE, 'useMessageOrchestration', 'Updating messages:', {
       count: newMessages.length,
-      sessionId
+      sessionId,
+      messageIds: newMessages.map(m => m.id),
+      messageStatuses: newMessages.map(m => ({
+        id: m.id,
+        status: m.status,
+        isOptimistic: m.isOptimistic
+      }))
     });
-    setState(prev => ({
-      ...prev,
-      messages: newMessages,
-      confirmedMessages: newMessages.filter(msg => !msg.isOptimistic)
-    }));
+
+    setState(prev => {
+      logger.merge('useMessageOrchestration', 'Previous state:', {
+        messageCount: prev.messages.length,
+        pendingCount: prev.pendingMessages.length,
+        confirmedCount: prev.confirmedMessages.length,
+        failedCount: prev.failedMessages.length
+      });
+
+      const updatedState = {
+        ...prev,
+        messages: newMessages,
+        confirmedMessages: newMessages.filter(msg => !msg.isOptimistic)
+      };
+
+      logger.merge('useMessageOrchestration', 'Updated state:', {
+        messageCount: updatedState.messages.length,
+        pendingCount: updatedState.pendingMessages.length,
+        confirmedCount: updatedState.confirmedMessages.length,
+        failedCount: updatedState.failedMessages.length,
+        changes: {
+          messagesAdded: updatedState.messages.length - prev.messages.length,
+          pendingChanged: updatedState.pendingMessages.length - prev.pendingMessages.length,
+          confirmedChanged: updatedState.confirmedMessages.length - prev.confirmedMessages.length
+        }
+      });
+
+      return updatedState;
+    });
   }, [sessionId]);
 
   const clearMessages = useCallback(() => {
@@ -50,14 +80,35 @@ export const useMessageOrchestration = (sessionId: string | null) => {
   const addOptimisticMessage = useCallback((message: Message) => {
     logger.debug(LogCategory.STATE, 'useMessageOrchestration', 'Adding optimistic message:', {
       id: message.id,
-      sessionId
+      sessionId,
+      messageDetails: {
+        type: message.type,
+        role: message.role,
+        status: message.status,
+        contentPreview: message.content.substring(0, 50)
+      }
     });
-    setState(prev => ({
-      ...prev,
-      messages: [...prev.messages, { ...message, status: 'sending' as MessageStatus }],
-      pendingMessages: [...prev.pendingMessages, message],
-      isProcessing: true
-    }));
+
+    setState(prev => {
+      const updatedState = {
+        ...prev,
+        messages: [...prev.messages, { ...message, status: 'sending' as MessageStatus }],
+        pendingMessages: [...prev.pendingMessages, message],
+        isProcessing: true
+      };
+
+      logger.merge('useMessageOrchestration', 'State after optimistic update:', {
+        messageCount: updatedState.messages.length,
+        pendingCount: updatedState.pendingMessages.length,
+        lastMessage: {
+          id: message.id,
+          status: 'sending',
+          isOptimistic: true
+        }
+      });
+
+      return updatedState;
+    });
 
     toast({
       description: "Sending message...",
@@ -69,19 +120,41 @@ export const useMessageOrchestration = (sessionId: string | null) => {
     logger.debug(LogCategory.STATE, 'useMessageOrchestration', 'Confirming message:', {
       tempId,
       confirmedId: confirmedMessage.id,
-      sessionId
+      sessionId,
+      messageDetails: {
+        type: confirmedMessage.type,
+        role: confirmedMessage.role,
+        status: confirmedMessage.status
+      }
     });
+
     setState(prev => {
       const updatedMessages = prev.messages.map(msg => 
         msg.id === tempId ? { ...confirmedMessage, status: 'delivered' as MessageStatus } : msg
       );
-      return {
+
+      const updatedState = {
         ...prev,
         messages: updatedMessages,
         pendingMessages: prev.pendingMessages.filter(msg => msg.id !== tempId),
         confirmedMessages: [...prev.confirmedMessages, confirmedMessage],
         isProcessing: prev.pendingMessages.length > 1
       };
+
+      logger.merge('useMessageOrchestration', 'State after message confirmation:', {
+        messageCount: updatedState.messages.length,
+        pendingCount: updatedState.pendingMessages.length,
+        confirmedCount: updatedState.confirmedMessages.length,
+        messageStatuses: updatedState.messages
+          .filter(m => m.id === confirmedMessage.id || m.id === tempId)
+          .map(m => ({
+            id: m.id,
+            status: m.status,
+            isOptimistic: m.isOptimistic
+          }))
+      });
+
+      return updatedState;
     });
   }, [sessionId]);
 
