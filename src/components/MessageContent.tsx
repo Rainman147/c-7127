@@ -1,6 +1,7 @@
 import { Loader2, AlertCircle, Check, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MessageStatus } from '@/types/chat';
+import { isMessageHistorical } from '@/utils/messageUtils';
 
 type MessageContentProps = {
   role: 'user' | 'assistant';
@@ -15,6 +16,7 @@ type MessageContentProps = {
   isOptimistic?: boolean;
   isFailed?: boolean;
   status?: MessageStatus;
+  created_at?: string;
   onSave: (newContent: string) => void;
   onCancel: () => void;
   onRetry?: () => void;
@@ -33,6 +35,7 @@ const MessageContent = ({
   isOptimistic,
   isFailed,
   status,
+  created_at,
   onSave,
   onCancel,
   onRetry
@@ -45,11 +48,17 @@ const MessageContent = ({
     isOptimistic,
     isFailed,
     status,
+    created_at,
     hasContent: !!content,
     contentPreview: content.substring(0, 50) + '...'
   });
 
+  const isHistorical = isMessageHistorical({ id, created_at } as any);
+
   const renderStatus = () => {
+    // Don't show status indicators for historical messages
+    if (isHistorical) return null;
+
     if (isOptimistic || status === 'queued' || status === 'sending') {
       return (
         <div className="flex items-center gap-2 text-gray-400 text-xs">
@@ -97,8 +106,8 @@ const MessageContent = ({
     return null;
   };
 
-  // Loading state UI
-  if (isOptimistic || isTyping) {
+  // Only show loading state for non-historical messages
+  if ((isOptimistic || isTyping) && !isHistorical) {
     return (
       <div className={cn(
         "flex flex-col gap-2 animate-pulse",
