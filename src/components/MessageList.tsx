@@ -9,12 +9,14 @@ interface MessageListProps {
   isLoading?: boolean;
   loadingMessage?: string;
   loadingProgress?: number;
+  currentOperation?: string;
 }
 
 const MessageList = ({ 
   isLoading, 
   loadingMessage,
-  loadingProgress 
+  loadingProgress,
+  currentOperation
 }: MessageListProps) => {
   const { messages, error, retryLoading } = useMessages();
 
@@ -23,6 +25,7 @@ const MessageList = ({
     messageCount: messages?.length || 0,
     error,
     loadingProgress,
+    currentOperation,
     messageDetails: messages?.map(m => ({
       id: m.id,
       role: m.role,
@@ -40,7 +43,13 @@ const MessageList = ({
 
   if (error) {
     logger.error(LogCategory.STATE, 'MessageList', 'Error state:', { error });
-    return <MessageErrorState error={error} onRetry={retryLoading} />;
+    return (
+      <MessageErrorState 
+        error={error} 
+        onRetry={retryLoading}
+        errorDetails="There was a problem loading your messages. Please try again."
+      />
+    );
   }
 
   if (isLoading) {
@@ -48,7 +57,8 @@ const MessageList = ({
     return (
       <MessageLoadingState 
         message={loadingMessage} 
-        progress={loadingProgress} 
+        progress={loadingProgress}
+        currentOperation={currentOperation}
       />
     );
   }
