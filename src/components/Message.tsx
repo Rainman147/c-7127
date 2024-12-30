@@ -36,7 +36,8 @@ const Message = memo(({
     setEditedContent,
     isEditing,
     wasEdited,
-    isSaving
+    isSaving,
+    setIsSaving
   } = useMessageRealtime(id, content, updateMessageContent);
 
   const { isTyping } = useTypingEffect(role, isStreaming, content);
@@ -60,6 +61,15 @@ const Message = memo(({
     }
   });
 
+  const handleSave = async (newContent: string) => {
+    setIsSaving(true);
+    try {
+      await handleMessageSave(id!, newContent);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <MessageContainer
       role={role}
@@ -77,7 +87,7 @@ const Message = memo(({
       isFailed={isFailed}
       created_at={created_at}
       status={status}
-      onSave={handleMessageSave}
+      onSave={handleSave}
       onCancel={handleMessageCancel}
       onEdit={handleMessageEdit}
       onRetry={onRetry}

@@ -8,19 +8,27 @@ export interface MessageState {
   isProcessing: boolean;
 }
 
-export interface MessageContextType extends MessageState {
-  setMessages: (messages: Message[]) => void;
-  addMessage: (message: Message) => void;
-  updateMessageStatus: (messageId: string, status: MessageStatus) => void;
-  confirmMessage: (tempId: string, confirmedMessage: Message) => void;
-  handleMessageFailure: (messageId: string, error: string) => void;
-  clearMessages: () => void;
-}
-
 export type MessageAction = 
   | { type: 'SET_MESSAGES'; payload: Message[] }
   | { type: 'ADD_MESSAGE'; payload: Message }
   | { type: 'UPDATE_MESSAGE_STATUS'; payload: { messageId: string; status: MessageStatus } }
+  | { type: 'UPDATE_MESSAGE_CONTENT'; payload: { messageId: string; content: string } }
+  | { type: 'START_MESSAGE_EDIT'; payload: { messageId: string } }
+  | { type: 'SAVE_MESSAGE_EDIT'; payload: { messageId: string; content: string } }
+  | { type: 'CANCEL_MESSAGE_EDIT'; payload: { messageId: string } }
   | { type: 'CONFIRM_MESSAGE'; payload: { tempId: string; confirmedMessage: Message } }
   | { type: 'HANDLE_MESSAGE_FAILURE'; payload: { messageId: string; error: string } }
   | { type: 'CLEAR_MESSAGES' };
+
+export interface MessageContextType extends MessageState {
+  setMessages: (messages: Message[]) => void;
+  addMessage: (message: Message) => void;
+  updateMessageStatus: (messageId: string, status: MessageStatus) => void;
+  updateMessageContent: (messageId: string, content: string) => void;
+  handleMessageEdit: (messageId: string) => void;
+  handleMessageSave: (messageId: string, content: string) => Promise<void>;
+  handleMessageCancel: (messageId: string) => void;
+  confirmMessage: (tempId: string, confirmedMessage: Message) => void;
+  handleMessageFailure: (messageId: string, error: string) => void;
+  clearMessages: () => void;
+}

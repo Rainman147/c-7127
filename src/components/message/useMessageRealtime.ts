@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
+import { useMessageState } from '@/hooks/chat/useMessageState';
 import type { DatabaseMessage } from '@/types/database/messages';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 export const useMessageRealtime = (
   messageId: string | undefined,
-  editedContent: string,
-  setEditedContent: (content: string) => void
+  initialContent: string,
+  updateMessageContent: (messageId: string, content: string) => void
 ) => {
   const [connectionStatus, setConnectionStatus] = useState<string>('connecting');
   const [lastUpdateTime, setLastUpdateTime] = useState<number | null>(null);
+  const [editedContent, setEditedContent] = useState(initialContent);
+  const [isEditing, setIsEditing] = useState(false);
+  const [wasEdited, setWasEdited] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!messageId) return;
@@ -48,6 +53,7 @@ export const useMessageRealtime = (
           const newData = payload.new as DatabaseMessage;
           if (newData && newData.content !== editedContent) {
             setEditedContent(newData.content);
+            updateMessageContent(messageId, newData.content);
             setLastUpdateTime(updateReceiveTime);
           }
         }
@@ -69,10 +75,18 @@ export const useMessageRealtime = (
       });
       supabase.removeChannel(channel);
     };
-  }, [messageId, editedContent, setEditedContent, connectionStatus, lastUpdateTime]);
+  }, [messageId, editedContent, updateMessageContent, connectionStatus, lastUpdateTime]);
 
   return {
     connectionStatus,
-    lastUpdateTime
+    lastUpdateTime,
+    editedContent,
+    setEditedContent,
+    isEditing,
+    setIsEditing,
+    wasEdited,
+    setWasEdited,
+    isSaving,
+    setIsSaving
   };
 };

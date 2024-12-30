@@ -46,10 +46,6 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
       };
 
     case 'UPDATE_MESSAGE_STATUS':
-      logger.debug(LogCategory.STATE, 'MessageContext', 'Updating message status:', {
-        messageId: action.payload.messageId,
-        newStatus: action.payload.status
-      });
       return {
         ...state,
         messages: state.messages.map(msg =>
