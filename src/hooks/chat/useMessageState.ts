@@ -33,14 +33,16 @@ export const useMessageState = () => {
       isOptimistic: m.isOptimistic
     })),
     hookStack: new Error().stack,
-    hookTime: performance.now()
+    hookTime: performance.now(),
+    timestamp: new Date().toISOString()
   });
 
   const addOptimisticMessage = useCallback((content: string, type: 'text' | 'audio' = 'text') => {
     logger.debug(LogCategory.STATE, 'useMessageState', 'Adding optimistic message:', {
       contentPreview: content?.substring(0, 50),
       type,
-      currentMessageCount: messages.length
+      currentMessageCount: messages.length,
+      timestamp: new Date().toISOString()
     });
 
     const optimisticMessage: Message = {
@@ -53,6 +55,12 @@ export const useMessageState = () => {
       isOptimistic: true,
       status: 'sending'
     };
+
+    logger.info(LogCategory.STATE, 'useMessageState', 'Created optimistic message:', {
+      messageId: optimisticMessage.id,
+      sequence: optimisticMessage.sequence,
+      timestamp: new Date().toISOString()
+    });
 
     addMessage(optimisticMessage);
     return optimisticMessage;
@@ -67,7 +75,8 @@ export const useMessageState = () => {
         contentPreview: m.content?.substring(0, 50),
         sequence: m.sequence,
         status: m.status
-      }))
+      })),
+      timestamp: new Date().toISOString()
     });
     
     if (typeof newMessages === 'function') {

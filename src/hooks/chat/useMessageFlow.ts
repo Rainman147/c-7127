@@ -22,33 +22,46 @@ export const useMessageFlow = (activeSessionId: string | null) => {
       return;
     }
 
-    logger.info(LogCategory.COMMUNICATION, 'useMessageFlow', 'Processing message:', {
+    const flowStartTime = performance.now();
+    logger.info(LogCategory.COMMUNICATION, 'useMessageFlow', 'Starting message flow:', {
       contentLength: content.length,
       type,
       activeSessionId,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      flowId: `flow-${Date.now()}`
     });
 
     // Create optimistic message
     const optimisticMessage = addOptimisticMessage(content, type);
+    logger.debug(LogCategory.STATE, 'useMessageFlow', 'Created optimistic message:', {
+      messageId: optimisticMessage.id,
+      flowDuration: performance.now() - flowStartTime
+    });
 
     try {
       // Ensure we have an active session before sending
       let sessionId = activeSessionId;
       if (!sessionId) {
-        logger.info(LogCategory.STATE, 'useMessageFlow', 'No active session, creating one');
+        logger.info(LogCategory.STATE, 'useMessageFlow', 'No active session, creating one', {
+          flowDuration: performance.now() - flowStartTime
+        });
+        
         sessionId = await ensureActiveSession();
         
         if (!sessionId) {
           throw new Error('Failed to create session');
         }
         
-        logger.info(LogCategory.STATE, 'useMessageFlow', 'Session created:', { sessionId });
+        logger.info(LogCategory.STATE, 'useMessageFlow', 'Session created:', { 
+          sessionId,
+          flowDuration: performance.now() - flowStartTime
+        });
       }
 
       logger.debug(LogCategory.COMMUNICATION, 'useMessageFlow', 'Invoking messages function:', {
         sessionId,
-        messageId: optimisticMessage.id
+        messageId: optimisticMessage.id,
+        flowDuration: performance.now() - flowStartTime
       });
 
       const { data, error } = await supabase.functions.invoke('messages', {
@@ -64,7 +77,8 @@ export const useMessageFlow = (activeSessionId: string | null) => {
       logger.info(LogCategory.STATE, 'useMessageFlow', 'Message confirmed:', {
         tempId: optimisticMessage.id,
         confirmedId: data.id,
-        sessionId
+        sessionId,
+        flowDuration: performance.now() - flowStartTime
       });
 
       // Replace optimistic message with confirmed message
@@ -77,7 +91,8 @@ export const useMessageFlow = (activeSessionId: string | null) => {
       logger.error(LogCategory.ERROR, 'useMessageFlow', 'Message failed:', {
         messageId: optimisticMessage.id,
         error,
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
+        flowDuration: performance.now() - flowStartTime
       });
       handleMessageFailure(optimisticMessage.id, error as string);
     }
