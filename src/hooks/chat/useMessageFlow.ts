@@ -35,19 +35,26 @@ export const useMessageFlow = (activeSessionId: string | null) => {
     }
 
     const flowStartTime = performance.now();
-    const optimisticMessage = addOptimisticMessage({
+    const optimisticMessage: Message = {
       id: `temp-${Date.now()}`,
       content,
       type,
-      sender: 'user',
+      role: 'user',
       isOptimistic: true,
       status: 'sending',
       created_at: new Date().toISOString()
-    });
+    };
+
+    const addedMessage = addOptimisticMessage(optimisticMessage);
+    
+    if (!addedMessage) {
+      logger.error(LogCategory.STATE, 'MessageFlow', 'Failed to add optimistic message');
+      return;
+    }
     
     logger.debug(LogCategory.STATE, 'MessageFlow', 'Created optimistic message:', {
       flowId,
-      messageId: optimisticMessage.id,
+      messageId: addedMessage.id,
       messageCount: messages?.length || 0,
       flowDuration: performance.now() - flowStartTime
     });
@@ -69,19 +76,19 @@ export const useMessageFlow = (activeSessionId: string | null) => {
 
       if (setMessages && messages) {
         setMessages(messages.map(msg => 
-          msg.id === optimisticMessage.id ? data : msg
+          msg.id === addedMessage.id ? data : msg
         ));
       }
 
     } catch (error) {
       logger.error(LogCategory.ERROR, 'MessageFlow', 'Message failed:', {
         flowId,
-        messageId: optimisticMessage.id,
+        messageId: addedMessage.id,
         error,
         flowDuration: performance.now() - flowStartTime
       });
       if (handleMessageFailure) {
-        handleMessageFailure(optimisticMessage.id, error as string);
+        handleMessageFailure(addedMessage.id, error as string);
       }
     }
   }, [activeSessionId, addOptimisticMessage, handleMessageFailure, setMessages, messages, ensureActiveSession]);
