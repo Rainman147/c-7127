@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
 import type { DatabaseMessage } from '@/types/database/messages';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { logger, LogCategory } from '@/utils/logging';
 
 const validateAndMergeMessages = (localMessages: Message[], newMessage: Message): Message[] => {
   const isDuplicate = localMessages.some(msg => msg.id === newMessage.id);
@@ -24,16 +25,6 @@ const validateAndMergeMessages = (localMessages: Message[], newMessage: Message)
   });
 };
 
-const isDatabaseMessage = (obj: any): obj is DatabaseMessage => {
-  return obj && 
-    typeof obj === 'object' && 
-    'id' in obj && 
-    'content' in obj && 
-    'sender' in obj &&
-    'type' in obj &&
-    'chat_id' in obj;
-};
-
 export const useRealtimeMessages = (
   currentChatId: string | null,
   messages: Message[],
@@ -44,16 +35,34 @@ export const useRealtimeMessages = (
   const { toast } = useToast();
   const prevChatIdRef = useRef<string | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const subscriptionTimeoutRef = useRef<number>();
+
+  const cleanupSubscription = useCallback(() => {
+    if (channelRef.current) {
+      logger.info(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'Cleaning up subscription:', {
+        chatId: prevChatIdRef.current,
+        timestamp: new Date().toISOString()
+      });
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+    if (subscriptionTimeoutRef.current) {
+      clearTimeout(subscriptionTimeoutRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (!currentChatId || currentChatId === prevChatIdRef.current) {
       return;
     }
 
+    cleanupSubscription();
     prevChatIdRef.current = currentChatId;
-    console.log('[useRealtimeMessages] Setting up subscription for chat:', currentChatId);
-    
-    let isSubscriptionActive = true;
+
+    logger.info(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'Setting up subscription:', {
+      chatId: currentChatId,
+      timestamp: new Date().toISOString()
+    });
     
     const channel = supabase
       .channel(`chat-${currentChatId}`)
@@ -66,15 +75,8 @@ export const useRealtimeMessages = (
           filter: `chat_id=eq.${currentChatId}`
         },
         (payload: RealtimePostgresChangesPayload<DatabaseMessage>) => {
-          if (!isSubscriptionActive) {
-            return;
-          }
-
           const newData = payload.new;
-          if (!newData || !isDatabaseMessage(newData)) {
-            return;
-          }
-
+          
           try {
             if (payload.eventType === 'INSERT') {
               const newMessage: Message = {
@@ -84,14 +86,25 @@ export const useRealtimeMessages = (
                 id: newData.id,
                 chat_id: newData.chat_id,
                 sequence: newData.sequence || messages.length + 1,
-                created_at: newData.created_at
+                created_at: newData.created_at,
+                status: newData.status as any
               };
+
+              logger.debug(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'Received new message:', {
+                messageId: newMessage.id,
+                chatId: currentChatId
+              });
 
               const updatedMessages = validateAndMergeMessages([...messages], newMessage);
               setMessages(updatedMessages);
               updateCache(currentChatId, updatedMessages);
               
             } else if (payload.eventType === 'UPDATE') {
+              logger.debug(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'Received message update:', {
+                messageId: newData.id,
+                chatId: currentChatId
+              });
+
               invalidateCache(currentChatId);
               
               const updatedMessages = messages.map(msg => 
@@ -101,13 +114,18 @@ export const useRealtimeMessages = (
                   type: newData.type as 'text' | 'audio',
                   sequence: newData.sequence || msg.sequence,
                   created_at: newData.created_at,
-                  chat_id: newData.chat_id
+                  chat_id: newData.chat_id,
+                  status: newData.status as any
                 } : msg
               );
               setMessages(updatedMessages);
             }
           } catch (error) {
-            console.error('[useRealtimeMessages] Error handling update:', error);
+            logger.error(LogCategory.ERROR, 'useRealtimeMessages', 'Error handling update:', {
+              error,
+              payload,
+              chatId: currentChatId
+            });
             toast({
               title: "Error",
               description: "Failed to process message update",
@@ -118,9 +136,13 @@ export const useRealtimeMessages = (
       )
       .subscribe(status => {
         if (status === 'SUBSCRIBED') {
-          console.log('[useRealtimeMessages] Successfully subscribed to chat:', currentChatId);
+          logger.info(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'Successfully subscribed:', {
+            chatId: currentChatId
+          });
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('[useRealtimeMessages] Error subscribing to chat:', currentChatId);
+          logger.error(LogCategory.ERROR, 'useRealtimeMessages', 'Subscription error:', {
+            chatId: currentChatId
+          });
           toast({
             title: "Connection Error",
             description: "Failed to connect to chat updates",
@@ -131,13 +153,21 @@ export const useRealtimeMessages = (
 
     channelRef.current = channel;
 
-    return () => {
-      console.log('[useRealtimeMessages] Cleaning up subscription for chat:', currentChatId);
-      isSubscriptionActive = false;
+    // Set up subscription timeout
+    subscriptionTimeoutRef.current = setTimeout(() => {
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
+        logger.warn(LogCategory.COMMUNICATION, 'useRealtimeMessages', 'Subscription timeout:', {
+          chatId: currentChatId
+        });
+        cleanupSubscription();
+        toast({
+          title: "Connection Timeout",
+          description: "Reconnecting to chat updates...",
+          variant: "destructive"
+        });
       }
-    };
-  }, [currentChatId, messages, setMessages, updateCache, invalidateCache, toast]);
+    }, 30000) as unknown as number;
+
+    return cleanupSubscription;
+  }, [currentChatId, messages, setMessages, updateCache, invalidateCache, toast, cleanupSubscription]);
 };

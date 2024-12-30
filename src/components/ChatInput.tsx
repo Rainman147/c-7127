@@ -18,13 +18,8 @@ const ChatInput = ({
   onTranscriptionUpdate,
   isLoading = false 
 }: ChatInputProps) => {
-  logger.debug(LogCategory.RENDER, 'ChatInput', 'Rendering with props:', { 
-    isLoading,
-    hasTranscriptionUpdate: !!onTranscriptionUpdate,
-    timestamp: new Date().toISOString()
-  });
-  
   const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const {
     handleSubmit: originalHandleSubmit,
@@ -44,57 +39,46 @@ const ChatInput = ({
   });
 
   useEffect(() => {
-    logger.debug(LogCategory.STATE, 'ChatInput', 'Message state changed:', {
+    logger.debug(LogCategory.STATE, 'ChatInput', 'State updated:', {
       messageLength: message.length,
       isProcessing,
       isLoading,
+      isSubmitting,
       timestamp: new Date().toISOString()
     });
-  }, [message, isProcessing, isLoading]);
+  }, [message, isProcessing, isLoading, isSubmitting]);
 
   const handleSubmit = async () => {
+    if (!message.trim() || isSubmitting) return;
+
     const submitStartTime = performance.now();
-    logger.info(LogCategory.COMMUNICATION, 'ChatInput', 'Starting message submission:', {
+    setIsSubmitting(true);
+
+    logger.info(LogCategory.COMMUNICATION, 'ChatInput', 'Starting submission:', {
       messageLength: message.length,
-      isProcessing,
-      isLoading,
-      timestamp: new Date().toISOString(),
-      flowId: `submit-${Date.now()}`
+      timestamp: new Date().toISOString()
     });
     
-    if (message.trim()) {
-      try {
-        logger.debug(LogCategory.STATE, 'ChatInput', 'Pre-submission state:', {
-          message: message.substring(0, 50),
-          isProcessing,
-          isLoading,
-          timestamp: new Date().toISOString()
-        });
-
-        await originalHandleSubmit();
-
-        const submitDuration = performance.now() - submitStartTime;
-        logger.info(LogCategory.COMMUNICATION, 'ChatInput', 'Message submission completed:', {
-          duration: `${submitDuration.toFixed(2)}ms`,
-          timestamp: new Date().toISOString()
-        });
-      } catch (error) {
-        logger.error(LogCategory.ERROR, 'ChatInput', 'Error submitting message:', {
-          error,
-          stack: error.stack,
-          messageLength: message.length,
-          duration: `${(performance.now() - submitStartTime).toFixed(2)}ms`,
-          timestamp: new Date().toISOString()
-        });
-      }
+    try {
+      await originalHandleSubmit();
+      
+      const submitDuration = performance.now() - submitStartTime;
+      logger.info(LogCategory.COMMUNICATION, 'ChatInput', 'Submission complete:', {
+        duration: `${submitDuration.toFixed(2)}ms`
+      });
+    } catch (error) {
+      logger.error(LogCategory.ERROR, 'ChatInput', 'Submission failed:', {
+        error,
+        duration: `${(performance.now() - submitStartTime).toFixed(2)}ms`
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !isLoading && !isProcessing) {
-      logger.debug(LogCategory.COMMUNICATION, 'ChatInput', 'Enter key pressed, submitting message:', {
-        timestamp: new Date().toISOString()
-      });
+    if (e.key === 'Enter' && !e.shiftKey && !isDisabled) {
+      logger.debug(LogCategory.COMMUNICATION, 'ChatInput', 'Enter pressed');
       e.preventDefault();
       await handleSubmit();
     }
@@ -103,18 +87,12 @@ const ChatInput = ({
   const handleMessageChange = (newMessage: string) => {
     logger.debug(LogCategory.STATE, 'ChatInput', 'Message changed:', {
       previousLength: message.length,
-      newLength: newMessage.length,
-      timestamp: new Date().toISOString()
+      newLength: newMessage.length
     });
     setMessage(newMessage);
   };
 
-  const isDisabled = isLoading || isProcessing;
-  logger.debug(LogCategory.STATE, 'ChatInput', 'Component state update:', {
-    isDisabled,
-    messageLength: message.length,
-    timestamp: new Date().toISOString()
-  });
+  const isDisabled = isLoading || isProcessing || isSubmitting;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-[#1E1E1E]/80 backdrop-blur-sm py-4 px-4">
