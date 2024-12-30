@@ -1,10 +1,10 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 import type { DatabaseMessage } from '@/types/database/messages';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { logger, LogCategory } from '@/utils/logging';
 
 const validateAndMergeMessages = (localMessages: Message[], newMessage: Message): Message[] => {
   logger.merge('validateAndMergeMessages', 'Starting merge operation:', {

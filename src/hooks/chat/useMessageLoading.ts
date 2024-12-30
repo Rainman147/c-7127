@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger, LogCategory } from '@/utils/logging';
-import type { Message, MessageStatus } from '@/types/chat';
+import type { Message } from '@/types/chat';
 
 export const useMessageLoading = () => {
   const loadMessages = useCallback(async (sessionId: string): Promise<Message[]> => {
@@ -40,9 +40,8 @@ export const useMessageLoading = () => {
         throw error;
       }
 
-      logger.debug(LogCategory.STATE, 'useMessageLoading', 'Raw messages received:', {
-        sessionId,
-        count: messages?.length || 0,
+      logger.debug(LogCategory.STATE, 'useMessageLoading', 'Server responded with:', {
+        messagesCount: messages?.length || 0,
         messageIds: messages?.map(m => m.id),
         messageDetails: messages?.map(m => ({
           id: m.id,
@@ -55,7 +54,7 @@ export const useMessageLoading = () => {
       });
 
       const transformedMessages = messages.map((msg, index) => {
-        const status: MessageStatus = (msg.status as MessageStatus) || 'queued';
+        const status = msg.status || 'queued';
         return {
           id: msg.id,
           role: msg.sender as 'user' | 'assistant',

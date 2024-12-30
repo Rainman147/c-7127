@@ -12,22 +12,43 @@ export const initialState: MessageState = {
 export const messageReducer = (state: MessageState, action: MessageAction): MessageState => {
   logger.debug(LogCategory.STATE, 'MessageReducer', 'Processing action:', { 
     type: action.type,
-    currentMessageCount: state.messages.length
+    currentMessageCount: state.messages.length,
+    actionPayload: action.type === 'SET_MESSAGES' ? {
+      messageCount: action.payload.length,
+      messageIds: action.payload.map(m => m.id)
+    } : action.payload
   });
 
   switch (action.type) {
     case 'SET_MESSAGES': {
-      // Preserve pending messages when setting new messages
+      logger.debug(LogCategory.STATE, 'MessageReducer', 'Current local messages before SET_MESSAGES:', {
+        messages: state.messages.map(m => ({
+          id: m.id,
+          status: m.status,
+          isOptimistic: m.isOptimistic
+        })),
+        pendingMessages: state.pendingMessages.map(m => m.id)
+      });
+
       const newMessages = action.payload.filter(msg => 
         !state.pendingMessages.some(pending => pending.id === msg.id)
       );
       
-      return {
+      const updatedState = {
         ...state,
         messages: [...newMessages, ...state.pendingMessages],
         isProcessing: state.pendingMessages.length > 0,
         error: null
       };
+
+      logger.debug(LogCategory.STATE, 'MessageReducer', 'Final state after SET_MESSAGES:', {
+        messageCount: updatedState.messages.length,
+        messageIds: updatedState.messages.map(m => m.id),
+        pendingCount: updatedState.pendingMessages.length,
+        isProcessing: updatedState.isProcessing
+      });
+
+      return updatedState;
     }
 
     case 'ADD_MESSAGE': {
