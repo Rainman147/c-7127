@@ -1,4 +1,5 @@
 import { createContext, useContext, useCallback, useReducer, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logger, LogCategory } from '@/utils/logging';
 import { messageReducer, initialState } from './message/messageReducer';
@@ -90,7 +91,15 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     dispatch(actions.clearError());
   }, []);
 
-  const value = {
+  const confirmMessageHandler = useCallback((tempId: string, confirmedMessage: Message) => {
+    dispatch(actions.confirmMessage(tempId, confirmedMessage));
+  }, []);
+
+  const handleMessageFailureHandler = useCallback((messageId: string, error: string) => {
+    dispatch(actions.handleMessageFailure(messageId, error));
+  }, []);
+
+  const value: MessageContextType = {
     ...state,
     setMessages,
     addMessage,
@@ -103,7 +112,9 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     handleMessageSave,
     handleMessageCancel,
     clearMessages,
-    retryLoading
+    retryLoading,
+    confirmMessage: confirmMessageHandler,
+    handleMessageFailure: handleMessageFailureHandler
   };
 
   return (
