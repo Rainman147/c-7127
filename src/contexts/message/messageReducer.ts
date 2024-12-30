@@ -5,7 +5,8 @@ export const initialState: MessageState = {
   messages: [],
   pendingMessages: [],
   isProcessing: false,
-  error: null
+  error: null,
+  editingMessageId: null
 };
 
 export const messageReducer = (state: MessageState, action: MessageAction): MessageState => {
@@ -60,6 +61,34 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
         messages: state.messages.map(msg =>
           msg.id === messageId ? { ...msg, content } : msg
         ),
+        error: null
+      };
+    }
+
+    case 'START_MESSAGE_EDIT': {
+      return {
+        ...state,
+        editingMessageId: action.payload.messageId,
+        error: null
+      };
+    }
+
+    case 'SAVE_MESSAGE_EDIT': {
+      const { messageId, content } = action.payload;
+      return {
+        ...state,
+        messages: state.messages.map(msg =>
+          msg.id === messageId ? { ...msg, content } : msg
+        ),
+        editingMessageId: null,
+        error: null
+      };
+    }
+
+    case 'CANCEL_MESSAGE_EDIT': {
+      return {
+        ...state,
+        editingMessageId: null,
         error: null
       };
     }

@@ -24,9 +24,7 @@ export const handleSetMessages = (
   return {
     ...state,
     messages,
-    confirmedMessages: messages,
     pendingMessages: [],
-    failedMessages: [],
     isProcessing: false,
     error: null
   };
@@ -68,7 +66,6 @@ export const handleConfirmMessage = (
       msg.id === tempId ? confirmedMessage : msg
     ),
     pendingMessages: state.pendingMessages.filter(msg => msg.id !== tempId),
-    confirmedMessages: [...state.confirmedMessages, confirmedMessage],
     isProcessing: state.pendingMessages.length > 1,
     error: null
   };
@@ -90,7 +87,7 @@ export const handleMessageFailure = (
   return {
     ...state,
     pendingMessages: state.pendingMessages.filter(msg => msg.id !== messageId),
-    failedMessages: [...state.failedMessages, { ...failedMessage, error }],
+    messages: state.messages.filter(msg => msg.id !== messageId),
     isProcessing: state.pendingMessages.length > 1,
     error
   };
