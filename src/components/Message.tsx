@@ -3,6 +3,7 @@ import MessageContainer from './message/MessageContainer';
 import { useMessageRealtime } from './message/useMessageRealtime';
 import { useTypingEffect } from './message/useTypingEffect';
 import { useMessages } from '@/contexts/MessageContext';
+import { useMessageOperations } from '@/hooks/message/useMessageOperations';
 import type { MessageProps } from '@/types/chat';
 import { logger, LogCategory } from '@/utils/logging';
 
@@ -31,6 +32,8 @@ const Message = memo(({
     handleMessageSave,
     handleMessageCancel
   } = useMessages();
+
+  const { handleMessageEdit: editMessage } = useMessageOperations();
 
   const {
     editedContent,
@@ -65,7 +68,10 @@ const Message = memo(({
   const handleSave = async (newContent: string) => {
     setIsSaving(true);
     try {
-      await handleMessageSave(id!, newContent);
+      if (id) {
+        await editMessage(id, newContent);
+        await handleMessageSave(id, newContent);
+      }
     } finally {
       setIsSaving(false);
     }

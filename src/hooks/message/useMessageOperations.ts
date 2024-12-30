@@ -57,8 +57,28 @@ export const useMessageOperations = () => {
     if (error) throw error;
   }, []);
 
+  const handleMessageRetry = useCallback(async (messageId: string) => {
+    logger.info(LogCategory.STATE, 'MessageOperations', 'Retrying message:', { messageId });
+
+    const { error } = await supabase
+      .from('messages')
+      .update({ status: 'sending' })
+      .eq('id', messageId);
+
+    if (error) {
+      logger.error(LogCategory.ERROR, 'MessageOperations', 'Error retrying message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to retry message",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }, [toast]);
+
   return {
     handleMessageSend,
-    handleMessageEdit
+    handleMessageEdit,
+    handleMessageRetry
   };
 };
