@@ -6,6 +6,11 @@ export interface MessageState {
   isProcessing: boolean;
   error: string | null;
   editingMessageId: string | null;
+  loadingStates: {
+    isSubmitting: boolean;
+    isFetching: boolean;
+    isProcessingOptimistic: boolean;
+  };
 }
 
 export type MessageAction =
@@ -19,6 +24,7 @@ export type MessageAction =
   | { type: 'CONFIRM_MESSAGE'; payload: { tempId: string; confirmedMessage: Message } }
   | { type: 'HANDLE_MESSAGE_FAILURE'; payload: { messageId: string; error: string } }
   | { type: 'RETRY_MESSAGE'; payload: { messageId: string } }
+  | { type: 'SET_LOADING_STATE'; payload: { key: keyof MessageState['loadingStates']; value: boolean } }
   | { type: 'CLEAR_ERROR'; payload: null }
   | { type: 'CLEAR_MESSAGES'; payload: null };
 
@@ -35,4 +41,5 @@ export interface MessageContextType extends MessageState {
   retryMessage: (messageId: string) => void;
   clearMessages: () => void;
   retryLoading: () => void;
+  setLoadingState: (key: keyof MessageState['loadingStates'], value: boolean) => void;
 }

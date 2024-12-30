@@ -7,82 +7,51 @@ export const initialState: MessageState = {
   pendingMessages: [],
   isProcessing: false,
   error: null,
-  editingMessageId: null
+  editingMessageId: null,
+  loadingStates: {
+    isSubmitting: false,
+    isFetching: false,
+    isProcessingOptimistic: false
+  }
 };
 
 export const messageReducer = (state: MessageState, action: MessageAction): MessageState => {
   logger.debug(LogCategory.STATE, 'MessageReducer', 'Processing action:', { 
     type: action.type,
-    currentMessageCount: state.messages.length
+    currentMessageCount: state.messages.length,
+    loadingStates: state.loadingStates
   });
 
   switch (action.type) {
-    case 'UPDATE_MESSAGE_STATUS': {
-      const { messageId, status } = action.payload;
-      const message = state.messages.find(msg => msg.id === messageId);
-      
-      if (!message) {
-        logger.error(LogCategory.STATE, 'MessageReducer', 'Message not found for status update:', {
-          messageId,
-          status,
-          timestamp: new Date().toISOString()
-        });
-        return state;
-      }
-
-      const isValidTransition = validateStateTransition(message.status, status, messageId);
-      
-      if (!isValidTransition) {
-        logger.error(LogCategory.STATE, 'MessageReducer', 'Invalid state transition rejected:', {
-          messageId,
-          currentStatus: message.status,
-          attemptedStatus: status,
-          timestamp: new Date().toISOString()
-        });
-        return {
-          ...state,
-          error: `Invalid state transition from ${message.status} to ${status}`
-        };
-      }
+    case 'SET_LOADING_STATE': {
+      const { key, value } = action.payload;
+      logger.debug(LogCategory.STATE, 'MessageReducer', 'Updating loading state:', {
+        key,
+        value,
+        previousState: state.loadingStates[key]
+      });
 
       return {
         ...state,
-        messages: state.messages.map(msg =>
-          msg.id === messageId ? { ...msg, status } : msg
-        ),
-        error: null
+        loadingStates: {
+          ...state.loadingStates,
+          [key]: value
+        }
       };
     }
 
     case 'SET_MESSAGES': {
-      logger.debug(LogCategory.STATE, 'MessageReducer', 'Current local messages before SET_MESSAGES:', {
-        messages: state.messages.map(m => ({
-          id: m.id,
-          status: m.status,
-          isOptimistic: m.isOptimistic
-        })),
-        pendingMessages: state.pendingMessages.map(m => m.id)
+      logger.debug(LogCategory.STATE, 'MessageReducer', 'Setting messages:', {
+        messageCount: action.payload.length
       });
 
-      const newMessages = action.payload.filter(msg => 
-        !state.pendingMessages.some(pending => pending.id === msg.id)
-      );
-      
-      const updatedState = {
+      return {
         ...state,
-        messages: [...newMessages, ...state.pendingMessages],
-        isProcessing: state.pendingMessages.length > 0,
+        messages: action.payload,
+        pendingMessages: [],
+        isProcessing: false,
         error: null
       };
-
-      logger.debug(LogCategory.STATE, 'MessageReducer', 'Final state after SET_MESSAGES:', {
-        messageCount: updatedState.messages.length,
-        messageIds: updatedState.messages.map(m => m.id),
-        pendingCount: updatedState.pendingMessages.length,
-        isProcessing: updatedState.isProcessing
-      });
-
-      return updatedState;
     }
 
     case 'ADD_MESSAGE': {
@@ -94,6 +63,17 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
           ? [...state.pendingMessages, newMessage]
           : state.pendingMessages,
         isProcessing: true,
+        error: null
+      };
+    }
+
+    case 'UPDATE_MESSAGE_STATUS': {
+      const { messageId, status } = action.payload;
+      return {
+        ...state,
+        messages: state.messages.map(msg =>
+          msg.id === messageId ? { ...msg, status } : msg
+        ),
         error: null
       };
     }
