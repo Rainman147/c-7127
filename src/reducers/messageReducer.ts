@@ -4,171 +4,131 @@ import { logger, LogCategory } from '@/utils/logging';
 export const initialState: MessageState = {
   messages: [],
   pendingMessages: [],
-  confirmedMessages: [],
-  failedMessages: [],
   isProcessing: false,
-  editingMessageId: null,
-  error: null
+  error: null,
+  editingMessageId: null
 };
 
 export const messageReducer = (state: MessageState, action: MessageAction): MessageState => {
-  logger.debug(LogCategory.STATE, 'MessageContext', 'Reducer action:', { 
+  logger.debug(LogCategory.STATE, 'MessageReducer', 'Processing action:', { 
     type: action.type,
     currentMessageCount: state.messages.length
   });
 
   switch (action.type) {
-    case 'SET_MESSAGES':
-      logger.info(LogCategory.STATE, 'MessageContext', 'Setting messages:', {
-        messageCount: action.payload.length,
-        messageIds: action.payload.map(m => m.id)
-      });
-
+    case 'SET_MESSAGES': {
+      // Preserve pending messages when setting new messages
+      const newMessages = action.payload.filter(msg => 
+        !state.pendingMessages.some(pending => pending.id === msg.id)
+      );
+      
       return {
         ...state,
-        messages: action.payload,
-        confirmedMessages: action.payload,
-        pendingMessages: [],
-        failedMessages: [],
-        isProcessing: false,
+        messages: [...newMessages, ...state.pendingMessages],
+        isProcessing: state.pendingMessages.length > 0,
         error: null
       };
+    }
 
-    case 'ADD_MESSAGE':
-      logger.debug(LogCategory.STATE, 'MessageContext', 'Adding message:', {
-        messageId: action.payload.id,
-        isOptimistic: action.payload.isOptimistic
-      });
+    case 'ADD_MESSAGE': {
+      const newMessage = action.payload;
       return {
         ...state,
-        messages: [...state.messages, action.payload],
-        pendingMessages: action.payload.isOptimistic 
-          ? [...state.pendingMessages, action.payload]
+        messages: [...state.messages, newMessage],
+        pendingMessages: newMessage.isOptimistic 
+          ? [...state.pendingMessages, newMessage]
           : state.pendingMessages,
-        isProcessing: true,
-        error: null
-      };
-
-    case 'UPDATE_MESSAGE_STATUS':
-      return {
-        ...state,
-        messages: state.messages.map(msg =>
-          msg.id === action.payload.messageId
-            ? { ...msg, status: action.payload.status }
-            : msg
-        ),
-        error: null
-      };
-
-    case 'UPDATE_MESSAGE_CONTENT':
-      return {
-        ...state,
-        messages: state.messages.map(msg =>
-          msg.id === action.payload.messageId
-            ? { ...msg, content: action.payload.content }
-            : msg
-        ),
-        error: null
-      };
-
-    case 'START_MESSAGE_EDIT':
-      return {
-        ...state,
-        messages: state.messages.map(msg =>
-          msg.id === action.payload.messageId
-            ? { ...msg, isEditing: true }
-            : msg
-        ),
-        error: null
-      };
-
-    case 'SAVE_MESSAGE_EDIT':
-      return {
-        ...state,
-        messages: state.messages.map(msg =>
-          msg.id === action.payload.messageId
-            ? { 
-                ...msg, 
-                content: action.payload.content,
-                isEditing: false,
-                wasEdited: true
-              }
-            : msg
-        ),
-        error: null
-      };
-
-    case 'CANCEL_MESSAGE_EDIT':
-      return {
-        ...state,
-        messages: state.messages.map(msg =>
-          msg.id === action.payload.messageId
-            ? { ...msg, isEditing: false }
-            : msg
-        ),
-        error: null
-      };
-
-    case 'CONFIRM_MESSAGE':
-      logger.info(LogCategory.STATE, 'MessageContext', 'Confirming message:', {
-        tempId: action.payload.tempId,
-        confirmedId: action.payload.confirmedMessage.id
-      });
-      return {
-        ...state,
-        messages: state.messages.map(msg =>
-          msg.id === action.payload.tempId ? action.payload.confirmedMessage : msg
-        ),
-        pendingMessages: state.pendingMessages.filter(msg => msg.id !== action.payload.tempId),
-        confirmedMessages: [...state.confirmedMessages, action.payload.confirmedMessage],
-        isProcessing: state.pendingMessages.length > 1,
-        error: null
-      };
-
-    case 'HANDLE_MESSAGE_FAILURE':
-      const failedMessage = state.pendingMessages.find(msg => msg.id === action.payload.messageId);
-      if (!failedMessage) return state;
-
-      logger.error(LogCategory.ERROR, 'MessageContext', 'Message failed:', {
-        messageId: action.payload.messageId,
-        error: action.payload.error
-      });
-
-      return {
-        ...state,
-        pendingMessages: state.pendingMessages.filter(msg => msg.id !== action.payload.messageId),
-        failedMessages: [...state.failedMessages, { ...failedMessage, error: action.payload.error }],
-        isProcessing: state.pendingMessages.length > 1,
-        error: action.payload.error
-      };
-
-    case 'RETRY_MESSAGE': {
-      const failedMessage = state.failedMessages.find(msg => msg.id === action.payload.messageId);
-      if (!failedMessage) return state;
-
-      logger.info(LogCategory.STATE, 'MessageContext', 'Retrying message:', {
-        messageId: action.payload.messageId
-      });
-
-      return {
-        ...state,
-        failedMessages: state.failedMessages.filter(msg => msg.id !== action.payload.messageId),
-        pendingMessages: [...state.pendingMessages, { ...failedMessage, status: 'sending' }],
-        messages: state.messages.map(msg => 
-          msg.id === action.payload.messageId 
-            ? { ...msg, status: 'sending' } 
-            : msg
-        ),
         isProcessing: true,
         error: null
       };
     }
 
-    case 'SET_ERROR':
+    case 'UPDATE_MESSAGE_STATUS': {
+      const { messageId, status } = action.payload;
       return {
         ...state,
-        error: action.payload
+        messages: state.messages.map(msg =>
+          msg.id === messageId ? { ...msg, status } : msg
+        ),
+        error: null
       };
+    }
+
+    case 'UPDATE_MESSAGE_CONTENT': {
+      const { messageId, content } = action.payload;
+      return {
+        ...state,
+        messages: state.messages.map(msg =>
+          msg.id === messageId ? { ...msg, content } : msg
+        ),
+        error: null
+      };
+    }
+
+    case 'START_MESSAGE_EDIT': {
+      return {
+        ...state,
+        editingMessageId: action.payload.messageId,
+        error: null
+      };
+    }
+
+    case 'SAVE_MESSAGE_EDIT': {
+      const { messageId, content } = action.payload;
+      return {
+        ...state,
+        messages: state.messages.map(msg =>
+          msg.id === messageId 
+            ? { ...msg, content, isEditing: false, wasEdited: true }
+            : msg
+        ),
+        editingMessageId: null,
+        error: null
+      };
+    }
+
+    case 'CANCEL_MESSAGE_EDIT': {
+      return {
+        ...state,
+        editingMessageId: null,
+        error: null
+      };
+    }
+
+    case 'CONFIRM_MESSAGE': {
+      const { tempId, confirmedMessage } = action.payload;
+      return {
+        ...state,
+        messages: state.messages.map(msg =>
+          msg.id === tempId ? confirmedMessage : msg
+        ),
+        pendingMessages: state.pendingMessages.filter(msg => msg.id !== tempId),
+        isProcessing: state.pendingMessages.length > 1,
+        error: null
+      };
+    }
+
+    case 'HANDLE_MESSAGE_FAILURE': {
+      const { messageId, error } = action.payload;
+      return {
+        ...state,
+        pendingMessages: state.pendingMessages.filter(msg => msg.id !== messageId),
+        isProcessing: state.pendingMessages.length > 1,
+        error
+      };
+    }
+
+    case 'RETRY_MESSAGE': {
+      const { messageId } = action.payload;
+      return {
+        ...state,
+        messages: state.messages.map(msg =>
+          msg.id === messageId ? { ...msg, status: 'sending' } : msg
+        ),
+        isProcessing: true,
+        error: null
+      };
+    }
 
     case 'CLEAR_ERROR':
       return {
@@ -177,7 +137,6 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
       };
 
     case 'CLEAR_MESSAGES':
-      logger.info(LogCategory.STATE, 'MessageContext', 'Clearing all messages');
       return initialState;
 
     default:
