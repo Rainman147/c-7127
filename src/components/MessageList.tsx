@@ -1,11 +1,11 @@
 import { MessageLoadingState } from './message/MessageLoadingState';
 import { MessageEmptyState } from './message/MessageEmptyState';
 import MessageListContainer from './message/MessageListContainer';
-import { useMessageState } from '@/hooks/chat/useMessageState';
+import { useMessages } from '@/contexts/MessageContext';
 import { logger, LogCategory } from '@/utils/logging';
 
 const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
-  const { messages } = useMessageState();
+  const { messages } = useMessages();
 
   logger.debug(LogCategory.RENDER, 'MessageList', 'Rendering message list:', {
     isLoading,
@@ -19,8 +19,6 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
       created_at: m.created_at,
       isOptimistic: m.isOptimistic
     })),
-    renderStack: new Error().stack,
-    renderTime: performance.now(),
     renderContext: {
       hasMessages: messages?.length > 0,
       loadingState: isLoading ? 'loading' : messages?.length === 0 ? 'empty' : 'loaded'

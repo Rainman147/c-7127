@@ -3,6 +3,7 @@ import MessageContainer from './message/MessageContainer';
 import { useMessageState } from './message/useMessageState';
 import { useMessageRealtime } from './message/useMessageRealtime';
 import { useTypingEffect } from './message/useTypingEffect';
+import { useMessages } from '@/contexts/MessageContext';
 import type { MessageProps } from '@/types/chat';
 import { logger, LogCategory } from '@/utils/logging';
 
@@ -23,6 +24,7 @@ const Message = memo(({
   isFailed?: boolean;
   onRetry?: () => void;
 }) => {
+  const { updateMessageStatus } = useMessages();
   const {
     editedContent,
     setEditedContent,
@@ -48,8 +50,6 @@ const Message = memo(({
     isTyping,
     created_at,
     status,
-    renderStack: new Error().stack,
-    renderTime: performance.now(),
     messageState: {
       editedContent: editedContent?.substring(0, 50),
       isEditing,
