@@ -12,7 +12,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     console.log('[ProtectedRoute] Validating session...');
     
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('[ProtectedRoute] Session error:', sessionError);
+        navigate('/auth');
+        return;
+      }
       
       if (!session) {
         console.log('[ProtectedRoute] No active session found');
@@ -55,7 +61,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[ProtectedRoute] Auth state changed:', {
         event,
         sessionExists: !!session,
@@ -72,7 +78,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         console.log('[ProtectedRoute] User signed out or session expired, redirecting to auth');
         navigate('/auth');
       } else if (event === 'TOKEN_REFRESHED') {
-        console.log('[ProtectedRoute] Token refreshed successfully');
+        console.log('[ProtectedRoute] Token refreshed, validating session');
+        await validateSession();
       }
     });
 
