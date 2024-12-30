@@ -13,6 +13,22 @@ export const useChat = (activeSessionId: string | null) => {
   const { loadMessages } = useMessageLoading();
   const { toast } = useToast();
   const prevSessionIdRef = useRef<string | null>(null);
+  const messageCountRef = useRef(0);
+
+  // Track message count changes
+  useEffect(() => {
+    if (messages.length !== messageCountRef.current) {
+      logger.info(LogCategory.STATE, 'useChat', 'Message count changed:', {
+        previousCount: messageCountRef.current,
+        newCount: messages.length,
+        messageIds: messages.map(m => m.id),
+        processingState: isProcessing,
+        sessionId: activeSessionId,
+        timestamp: new Date().toISOString()
+      });
+      messageCountRef.current = messages.length;
+    }
+  }, [messages.length, isProcessing, activeSessionId]);
 
   useEffect(() => {
     if (activeSessionId === prevSessionIdRef.current) {
