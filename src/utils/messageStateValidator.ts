@@ -1,4 +1,4 @@
-import { MessageStatus } from '@/types/chat';
+import { Message, MessageStatus } from '@/types/chat';
 import { logger, LogCategory } from '@/utils/logging';
 
 type StateTransition = {
@@ -6,44 +6,32 @@ type StateTransition = {
   to: MessageStatus;
 };
 
-const validTransitions = new Map<MessageStatus, MessageStatus[]>([
-  ['queued', ['sending', 'failed']],
-  ['sending', ['delivered', 'failed']],
-  ['delivered', ['seen', 'failed']],
-  ['failed', ['sending']],
-  ['seen', []],
-]);
+const validTransitions: StateTransition[] = [
+  { from: 'queued', to: 'sending' },
+  { from: 'sending', to: 'delivered' },
+  { from: 'sending', to: 'failed' },
+  { from: 'failed', to: 'sending' },
+];
 
 export const validateStateTransition = (
-  currentState: MessageStatus,
-  nextState: MessageStatus,
-  messageId: string
+  message: Message,
+  newStatus: MessageStatus
 ): boolean => {
-  const validNextStates = validTransitions.get(currentState) || [];
-  const isValid = validNextStates.includes(nextState);
-
-  logger.debug(LogCategory.STATE, 'MessageStateValidator', 'Validating state transition:', {
-    messageId,
-    currentState,
-    nextState,
-    isValid,
-    validTransitions: validNextStates,
-    timestamp: new Date().toISOString()
-  });
+  const currentStatus = message.status || 'queued';
+  const isValid = validTransitions.some(
+    transition => 
+      transition.from === currentStatus && 
+      transition.to === newStatus
+  );
 
   if (!isValid) {
-    logger.error(LogCategory.STATE, 'MessageStateValidator', 'Invalid state transition:', {
-      messageId,
-      currentState,
-      nextState,
-      allowedTransitions: validNextStates,
+    logger.warn(LogCategory.STATE, 'MessageStateValidator', 'Invalid state transition:', {
+      messageId: message.id,
+      from: currentStatus,
+      to: newStatus,
       timestamp: new Date().toISOString()
     });
   }
 
   return isValid;
-};
-
-export const getValidNextStates = (currentState: MessageStatus): MessageStatus[] => {
-  return validTransitions.get(currentState) || [];
 };

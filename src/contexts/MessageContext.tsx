@@ -1,5 +1,6 @@
 import { createContext, useContext, useReducer, useCallback, useRef } from 'react';
 import { messageReducer, initialState } from './message/messageReducer';
+import { messageQueueManager } from '@/utils/messageQueueManager';
 import type { Message, MessageStatus } from '@/types/chat';
 import type { MessageContextType, MessageState } from '@/types/messageContext';
 import { logger, LogCategory } from '@/utils/logging';
@@ -45,73 +46,64 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
     });
   }, []);
 
-  const setLoadingState = useCallback((key: keyof MessageState['loadingStates'], value: boolean) => {
-    dispatchWithLogging({ type: 'SET_LOADING_STATE', payload: { key, value } });
-  }, [dispatchWithLogging]);
+  const messageOperations = {
+    setLoadingState: useCallback((key: keyof MessageState['loadingStates'], value: boolean) => {
+      dispatchWithLogging({ type: 'SET_LOADING_STATE', payload: { key, value } });
+    }, [dispatchWithLogging]),
 
-  const setMessages = useCallback((messages: Message[]) => {
-    dispatchWithLogging({ type: 'SET_MESSAGES', payload: messages });
-  }, [dispatchWithLogging]);
-  
-  const addMessage = useCallback((message: Message) => {
-    dispatchWithLogging({ type: 'ADD_MESSAGE', payload: message });
-  }, [dispatchWithLogging]);
-  
-  const updateMessageStatus = useCallback((messageId: string, status: MessageStatus) => {
-    dispatchWithLogging({ type: 'UPDATE_MESSAGE_STATUS', payload: { messageId, status } });
-  }, [dispatchWithLogging]);
-  
-  const updateMessageContent = useCallback((messageId: string, content: string) => {
-    dispatchWithLogging({ type: 'UPDATE_MESSAGE_CONTENT', payload: { messageId, content } });
-  }, [dispatchWithLogging]);
-  
-  const handleMessageEdit = useCallback((messageId: string) => {
-    dispatchWithLogging({ type: 'START_MESSAGE_EDIT', payload: { messageId } });
-  }, [dispatchWithLogging]);
-  
-  const handleMessageSave = useCallback((messageId: string, content: string) => {
-    dispatchWithLogging({ type: 'SAVE_MESSAGE_EDIT', payload: { messageId, content } });
-  }, [dispatchWithLogging]);
-  
-  const handleMessageCancel = useCallback((messageId: string) => {
-    dispatchWithLogging({ type: 'CANCEL_MESSAGE_EDIT', payload: { messageId } });
-  }, [dispatchWithLogging]);
-  
-  const confirmMessage = useCallback((tempId: string, confirmedMessage: Message) => {
-    dispatchWithLogging({ type: 'CONFIRM_MESSAGE', payload: { tempId, confirmedMessage } });
-  }, [dispatchWithLogging]);
-  
-  const handleMessageFailure = useCallback((messageId: string, error: string) => {
-    dispatchWithLogging({ type: 'HANDLE_MESSAGE_FAILURE', payload: { messageId, error } });
-  }, [dispatchWithLogging]);
-  
-  const retryMessage = useCallback((messageId: string) => {
-    dispatchWithLogging({ type: 'RETRY_MESSAGE', payload: { messageId } });
-  }, [dispatchWithLogging]);
-  
-  const clearMessages = useCallback(() => {
-    dispatchWithLogging({ type: 'CLEAR_MESSAGES', payload: null });
-  }, [dispatchWithLogging]);
-  
-  const retryLoading = useCallback(() => {
-    dispatchWithLogging({ type: 'CLEAR_ERROR', payload: null });
-  }, [dispatchWithLogging]);
+    addMessage: useCallback((message: Message) => {
+      dispatchWithLogging({ type: 'ADD_MESSAGE', payload: message });
+      messageQueueManager.enqueue(message);
+    }, [dispatchWithLogging]),
+
+    setMessages: useCallback((messages: Message[]) => {
+      dispatchWithLogging({ type: 'SET_MESSAGES', payload: messages });
+    }, [dispatchWithLogging]),
+
+    updateMessageStatus: useCallback((messageId: string, status: MessageStatus) => {
+      dispatchWithLogging({ type: 'UPDATE_MESSAGE_STATUS', payload: { messageId, status } });
+    }, [dispatchWithLogging]),
+
+    updateMessageContent: useCallback((messageId: string, content: string) => {
+      dispatchWithLogging({ type: 'UPDATE_MESSAGE_CONTENT', payload: { messageId, content } });
+    }, [dispatchWithLogging]),
+
+    handleMessageEdit: useCallback((messageId: string) => {
+      dispatchWithLogging({ type: 'START_MESSAGE_EDIT', payload: { messageId } });
+    }, [dispatchWithLogging]),
+
+    handleMessageSave: useCallback((messageId: string, content: string) => {
+      dispatchWithLogging({ type: 'SAVE_MESSAGE_EDIT', payload: { messageId, content } });
+    }, [dispatchWithLogging]),
+
+    handleMessageCancel: useCallback((messageId: string) => {
+      dispatchWithLogging({ type: 'CANCEL_MESSAGE_EDIT', payload: { messageId } });
+    }, [dispatchWithLogging]),
+
+    confirmMessage: useCallback((tempId: string, confirmedMessage: Message) => {
+      dispatchWithLogging({ type: 'CONFIRM_MESSAGE', payload: { tempId, confirmedMessage } });
+    }, [dispatchWithLogging]),
+
+    handleMessageFailure: useCallback((messageId: string, error: string) => {
+      dispatchWithLogging({ type: 'HANDLE_MESSAGE_FAILURE', payload: { messageId, error } });
+    }, [dispatchWithLogging]),
+
+    retryMessage: useCallback((messageId: string) => {
+      dispatchWithLogging({ type: 'RETRY_MESSAGE', payload: { messageId } });
+    }, [dispatchWithLogging]),
+
+    clearMessages: useCallback(() => {
+      dispatchWithLogging({ type: 'CLEAR_MESSAGES', payload: null });
+    }, [dispatchWithLogging]),
+
+    retryLoading: useCallback(() => {
+      dispatchWithLogging({ type: 'CLEAR_ERROR', payload: null });
+    }, [dispatchWithLogging]),
+  };
 
   const value: MessageContextType = {
     ...state,
-    setMessages,
-    addMessage,
-    updateMessageStatus,
-    updateMessageContent,
-    handleMessageEdit,
-    handleMessageSave,
-    handleMessageCancel,
-    confirmMessage,
-    handleMessageFailure,
-    retryMessage,
-    clearMessages,
-    retryLoading,
-    setLoadingState
+    ...messageOperations
   };
 
   return (
