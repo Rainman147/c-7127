@@ -70,6 +70,18 @@ const Message = memo(({
     }
   };
 
+  const handleEdit = () => {
+    if (id) {
+      handleMessageEdit(id);
+    }
+  };
+
+  const handleCancel = () => {
+    if (id) {
+      handleMessageCancel(id);
+    }
+  };
+
   return (
     <MessageContainer
       role={role}
@@ -88,8 +100,8 @@ const Message = memo(({
       created_at={created_at}
       status={status}
       onSave={handleSave}
-      onCancel={handleMessageCancel}
-      onEdit={handleMessageEdit}
+      onCancel={handleCancel}
+      onEdit={handleEdit}
       onRetry={onRetry}
     />
   );
