@@ -1,14 +1,14 @@
-import { type Message } from '@/types/chat';
+import type { Message } from '@/types/chat';
 
-// Consider a message historical if it's older than 5 seconds
-const HISTORICAL_THRESHOLD_MS = 5000;
+const HISTORICAL_THRESHOLD_MS = 5000; // 5 seconds
 
-export const isMessageHistorical = (message: Message): boolean => {
-  if (!message.created_at) return false;
+export const isMessageHistorical = (message: Pick<Message, 'id' | 'created_at'>) => {
+  if (!message.created_at) {
+    return false;
+  }
+
+  const createdAt = new Date(message.created_at).getTime();
+  const now = Date.now();
   
-  const messageDate = new Date(message.created_at);
-  const now = new Date();
-  
-  // If message is older than threshold, consider it historical
-  return now.getTime() - messageDate.getTime() > HISTORICAL_THRESHOLD_MS;
+  return (now - createdAt) > HISTORICAL_THRESHOLD_MS;
 };

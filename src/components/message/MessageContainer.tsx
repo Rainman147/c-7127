@@ -19,6 +19,8 @@ const MessageContainer = memo(({
   isTyping,
   isOptimistic,
   isFailed,
+  created_at,
+  status,
   onSave,
   onCancel,
   onEdit,
@@ -47,7 +49,9 @@ const MessageContainer = memo(({
       isSaving,
       isTyping,
       isOptimistic,
-      isFailed
+      isFailed,
+      created_at,
+      status
     },
     renderStack: new Error().stack,
     renderTime: performance.now()
@@ -72,6 +76,8 @@ const MessageContainer = memo(({
             isTyping={isTyping}
             isOptimistic={isOptimistic}
             isFailed={isFailed}
+            created_at={created_at}
+            status={status}
             onSave={onSave}
             onCancel={onCancel}
             onRetry={onRetry}

@@ -16,6 +16,7 @@ const Message = memo(({
   isOptimistic,
   isFailed,
   created_at,
+  status,
   onRetry 
 }: MessageProps & {
   isOptimistic?: boolean;
@@ -46,6 +47,7 @@ const Message = memo(({
     isEditing,
     isTyping,
     created_at,
+    status,
     renderStack: new Error().stack,
     renderTime: performance.now(),
     messageState: {
@@ -72,6 +74,7 @@ const Message = memo(({
       isOptimistic={isOptimistic}
       isFailed={isFailed}
       created_at={created_at}
+      status={status}
       onSave={handleSave}
       onCancel={handleCancel}
       onEdit={handleEdit}
