@@ -116,6 +116,12 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     dispatch({ type: 'CLEAR_MESSAGES' });
   }, []);
 
+  const retryLoading = useCallback(() => {
+    logger.info(LogCategory.STATE, 'MessageContext', 'Retrying message loading');
+    dispatch({ type: 'CLEAR_ERROR' });
+    // Additional retry logic can be added here if needed
+  }, []);
+
   const value = {
     ...state,
     setMessages,
@@ -127,7 +133,8 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     handleMessageCancel,
     confirmMessage,
     handleMessageFailure,
-    clearMessages
+    clearMessages,
+    retryLoading
   };
 
   return (

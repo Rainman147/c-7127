@@ -6,7 +6,8 @@ export const initialState: MessageState = {
   pendingMessages: [],
   confirmedMessages: [],
   failedMessages: [],
-  isProcessing: false
+  isProcessing: false,
+  error: null
 };
 
 export const messageReducer = (state: MessageState, action: MessageAction): MessageState => {
@@ -28,7 +29,8 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
         confirmedMessages: action.payload,
         pendingMessages: [],
         failedMessages: [],
-        isProcessing: false
+        isProcessing: false,
+        error: null
       };
 
     case 'ADD_MESSAGE':
@@ -42,7 +44,8 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
         pendingMessages: action.payload.isOptimistic 
           ? [...state.pendingMessages, action.payload]
           : state.pendingMessages,
-        isProcessing: true
+        isProcessing: true,
+        error: null
       };
 
     case 'UPDATE_MESSAGE_STATUS':
@@ -52,7 +55,8 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
           msg.id === action.payload.messageId
             ? { ...msg, status: action.payload.status }
             : msg
-        )
+        ),
+        error: null
       };
 
     case 'UPDATE_MESSAGE_CONTENT':
@@ -62,7 +66,8 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
           msg.id === action.payload.messageId
             ? { ...msg, content: action.payload.content }
             : msg
-        )
+        ),
+        error: null
       };
 
     case 'START_MESSAGE_EDIT':
@@ -72,7 +77,8 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
           msg.id === action.payload.messageId
             ? { ...msg, isEditing: true }
             : msg
-        )
+        ),
+        error: null
       };
 
     case 'SAVE_MESSAGE_EDIT':
@@ -87,7 +93,8 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
                 wasEdited: true
               }
             : msg
-        )
+        ),
+        error: null
       };
 
     case 'CANCEL_MESSAGE_EDIT':
@@ -97,7 +104,8 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
           msg.id === action.payload.messageId
             ? { ...msg, isEditing: false }
             : msg
-        )
+        ),
+        error: null
       };
 
     case 'CONFIRM_MESSAGE':
@@ -112,7 +120,8 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
         ),
         pendingMessages: state.pendingMessages.filter(msg => msg.id !== action.payload.tempId),
         confirmedMessages: [...state.confirmedMessages, action.payload.confirmedMessage],
-        isProcessing: state.pendingMessages.length > 1
+        isProcessing: state.pendingMessages.length > 1,
+        error: null
       };
 
     case 'HANDLE_MESSAGE_FAILURE':
@@ -128,7 +137,20 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
         ...state,
         pendingMessages: state.pendingMessages.filter(msg => msg.id !== action.payload.messageId),
         failedMessages: [...state.failedMessages, { ...failedMessage, error: action.payload.error }],
-        isProcessing: state.pendingMessages.length > 1
+        isProcessing: state.pendingMessages.length > 1,
+        error: action.payload.error
+      };
+
+    case 'SET_ERROR':
+      return {
+        ...state,
+        error: action.payload
+      };
+
+    case 'CLEAR_ERROR':
+      return {
+        ...state,
+        error: null
       };
 
     case 'CLEAR_MESSAGES':
