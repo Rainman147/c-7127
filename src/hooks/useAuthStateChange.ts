@@ -6,28 +6,36 @@ export const useAuthStateChange = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log('[useAuthStateChange] Initializing auth state listener');
-    
     const handleAuthStateChange = (event: string) => {
-      console.log('[useAuthStateChange] Auth event:', event, 'at:', new Date().toISOString());
+      console.log('Auth event:', event);
       
       switch (event) {
+        case 'SIGNED_IN':
+          toast({
+            title: "Welcome back!",
+            description: "Successfully signed in.",
+          });
+          break;
+        case 'SIGNED_OUT':
+          toast({
+            title: "Signed out",
+            description: "Successfully signed out.",
+          });
+          break;
         case 'USER_UPDATED':
-          console.log('[useAuthStateChange] User profile updated');
           toast({
             title: "Profile updated",
             description: "Your profile has been updated.",
           });
           break;
         case 'PASSWORD_RECOVERY':
-          console.log('[useAuthStateChange] Password recovery initiated');
           toast({
             title: "Password recovery",
             description: "Check your email for password reset instructions.",
           });
           break;
         case 'TOKEN_REFRESHED':
-          console.log('[useAuthStateChange] Auth token refreshed successfully');
+          console.log('Auth token refreshed successfully');
           break;
       }
     };
@@ -37,7 +45,6 @@ export const useAuthStateChange = () => {
     });
 
     return () => {
-      console.log('[useAuthStateChange] Cleaning up auth state listener');
       subscription.unsubscribe();
     };
   }, [toast]);

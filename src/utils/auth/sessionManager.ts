@@ -15,23 +15,8 @@ export const checkSession = async () => {
     
     if (error) {
       console.error('Session error:', error);
-      if (error.message?.includes('refresh_token_not_found')) {
-        console.log('Invalid refresh token, clearing session');
-        await clearSession();
-        return { 
-          session: null, 
-          error: {
-            message: 'Your session has expired. Please sign in again.',
-            isRefreshTokenError: true
-          }
-        };
-      }
+      await clearSession();
       throw error;
-    }
-
-    if (!session) {
-      console.log('No active session found');
-      return { session: null, error: null };
     }
 
     return { session, error: null };
@@ -40,7 +25,7 @@ export const checkSession = async () => {
     return { 
       session: null, 
       error: {
-        message: error.message || 'Authentication error occurred',
+        message: error.message,
         isRefreshTokenError: error.message?.includes('refresh_token_not_found')
       }
     };

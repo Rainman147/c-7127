@@ -94,65 +94,6 @@ export type Database = {
           },
         ]
       }
-      doctors: {
-        Row: {
-          address: string
-          business_hours: Json
-          clinic_name: string
-          created_at: string
-          email: string | null
-          full_name: string | null
-          id: string
-          license_number: string
-          phone: string
-          profile_photo_url: string | null
-          specialty: string
-          title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          address: string
-          business_hours?: Json
-          clinic_name: string
-          created_at?: string
-          email?: string | null
-          full_name?: string | null
-          id?: string
-          license_number: string
-          phone: string
-          profile_photo_url?: string | null
-          specialty: string
-          title: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          address?: string
-          business_hours?: Json
-          clinic_name?: string
-          created_at?: string
-          email?: string | null
-          full_name?: string | null
-          id?: string
-          license_number?: string
-          phone?: string
-          profile_photo_url?: string | null
-          specialty?: string
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "doctors_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       edited_messages: {
         Row: {
           created_at: string
@@ -185,67 +126,6 @@ export type Database = {
           },
           {
             foreignKeyName: "edited_messages_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ehr_exports: {
-        Row: {
-          chat_id: string | null
-          created_at: string
-          ehr_system: string
-          error_message: string | null
-          export_data: Json
-          id: string
-          patient_id: string | null
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          chat_id?: string | null
-          created_at?: string
-          ehr_system: string
-          error_message?: string | null
-          export_data: Json
-          id?: string
-          patient_id?: string | null
-          status?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          chat_id?: string | null
-          created_at?: string
-          ehr_system?: string
-          error_message?: string | null
-          export_data?: Json
-          id?: string
-          patient_id?: string | null
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ehr_exports_chat_id_fkey"
-            columns: ["chat_id"]
-            isOneToOne: false
-            referencedRelation: "chats"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ehr_exports_patient_id_fkey"
-            columns: ["patient_id"]
-            isOneToOne: false
-            referencedRelation: "patients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ehr_exports_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -347,36 +227,24 @@ export type Database = {
           chat_id: string
           content: string
           created_at: string
-          delivered_at: string | null
           id: string
-          seen_at: string | null
           sender: string
-          sequence: number | null
-          status: string | null
           type: string
         }
         Insert: {
           chat_id: string
           content: string
           created_at?: string
-          delivered_at?: string | null
           id?: string
-          seen_at?: string | null
           sender: string
-          sequence?: number | null
-          status?: string | null
           type?: string
         }
         Update: {
           chat_id?: string
           content?: string
           created_at?: string
-          delivered_at?: string | null
           id?: string
-          seen_at?: string | null
           sender?: string
-          sequence?: number | null
-          status?: string | null
           type?: string
         }
         Relationships: [
@@ -385,100 +253,6 @@ export type Database = {
             columns: ["chat_id"]
             isOneToOne: false
             referencedRelation: "chats"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      patients: {
-        Row: {
-          address: string | null
-          contact_info: Json | null
-          created_at: string
-          current_medications: Json | null
-          dob: string
-          id: string
-          medical_history: string | null
-          name: string
-          recent_tests: Json | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          address?: string | null
-          contact_info?: Json | null
-          created_at?: string
-          current_medications?: Json | null
-          dob: string
-          id?: string
-          medical_history?: string | null
-          name: string
-          recent_tests?: Json | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          address?: string | null
-          contact_info?: Json | null
-          created_at?: string
-          current_medications?: Json | null
-          dob?: string
-          id?: string
-          medical_history?: string | null
-          name?: string
-          recent_tests?: Json | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "patients_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      templates: {
-        Row: {
-          content: string
-          created_at: string
-          id: string
-          instructions: Json | null
-          name: string
-          priority_rules: Json | null
-          schema: Json | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          id?: string
-          instructions?: Json | null
-          name: string
-          priority_rules?: Json | null
-          schema?: Json | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          id?: string
-          instructions?: Json | null
-          name?: string
-          priority_rules?: Json | null
-          schema?: Json | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "templates_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]

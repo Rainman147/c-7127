@@ -1,61 +1,99 @@
-import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
-import { logger, LogCategory } from '@/utils/logging';
-import { usePerformanceTracking } from './usePerformanceTracking';
 
-export const useMessagePersistence = (sessionId: string | null) => {
-  const { trackMessageProcessing } = usePerformanceTracking();
+export const useMessagePersistence = () => {
+  const { toast } = useToast();
 
-  const saveMessage = useCallback(async (
-    content: string,
-    type: 'text' | 'audio' = 'text',
-    sequence: number
-  ): Promise<Message> => {
-    if (!sessionId) {
-      throw new Error('No active session');
-    }
-
-    const perfTracker = trackMessageProcessing('save_message', {
-      contentLength: content.length,
-      type
-    });
-
+  const saveMessageToSupabase = async (message: Message, chatId?: string) => {
     try {
-      const { data: message, error } = await supabase
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('You must be logged in to send messages');
+      }
+
+      if (!chatId) {
+        const { data: chatData, error: chatError } = await supabase
+          .from('chats')
+          .insert({
+            title: message.content.substring(0, 50),
+            user_id: user.id
+          })
+          .select()
+          .single();
+
+        if (chatError) throw chatError;
+        chatId = chatData.id;
+      }
+
+      const { data: messageData, error: messageError } = await supabase
         .from('messages')
         .insert({
-          chat_id: sessionId,
-          content,
-          type,
-          sender: 'user',
-          sequence,
-          status: 'delivered'
+          chat_id: chatId,
+          content: message.content,
+          sender: message.role,
+          type: message.type || 'text'
         })
         .select()
         .single();
 
-      if (error) throw error;
-
-      logger.info(LogCategory.STATE, 'MessagePersistence', 'Message saved successfully:', {
-        messageId: message.id,
-        chatId: sessionId,
-        type
-      });
-
-      perfTracker.complete({ success: true });
-
-      return {
-        ...message,
-        role: message.sender as 'user' | 'assistant',
-        status: message.status as Message['status'],
-        type: message.type as 'text' | 'audio'
-      };
-    } catch (error) {
-      perfTracker.complete({ success: false, error });
+      if (messageError) throw messageError;
+      return { chatId, messageId: messageData.id };
+    } catch (error: any) {
+      console.error('Error saving message:', error);
       throw error;
     }
-  }, [sessionId, trackMessageProcessing]);
+  };
 
-  return { saveMessage };
+  const loadChatMessages = async (chatId: string) => {
+    try {
+      console.log('[useMessagePersistence] Loading messages for chat:', chatId);
+      
+      const { data: messages, error: messagesError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_id', chatId)
+        .order('created_at', { ascending: true });
+
+      if (messagesError) throw messagesError;
+
+      const messageIds = messages.map(m => m.id);
+      const { data: editedMessages, error: editsError } = await supabase
+        .from('edited_messages')
+        .select('*')
+        .in('message_id', messageIds)
+        .order('created_at', { ascending: false });
+
+      if (editsError) throw editsError;
+
+      const editedContentMap = editedMessages.reduce((acc: Record<string, string>, edit) => {
+        if (!acc[edit.message_id]) {
+          acc[edit.message_id] = edit.edited_content;
+        }
+        return acc;
+      }, {});
+
+      return messages.map(msg => ({
+        role: msg.sender as 'user' | 'assistant',
+        content: editedContentMap[msg.id] || msg.content,
+        type: msg.type as 'text' | 'audio',
+        id: msg.id
+      }));
+
+    } catch (error: any) {
+      console.error('[useMessagePersistence] Error loading chat messages:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load chat messages",
+        variant: "destructive"
+      });
+      return [];
+    }
+  };
+
+  return {
+    saveMessageToSupabase,
+    loadChatMessages
+  };
 };

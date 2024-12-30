@@ -1,5 +1,4 @@
-import React, { useEffect, useRef, memo } from "react";
-import { logger, LogCategory } from "@/utils/logging";
+import React, { useEffect, useRef } from "react";
 
 interface ChatInputFieldProps {
   message: string;
@@ -8,30 +7,25 @@ interface ChatInputFieldProps {
   isLoading: boolean;
 }
 
-const ChatInputField = memo(({ 
+const ChatInputField = ({ 
   message, 
   setMessage, 
   handleKeyDown,
   isLoading 
 }: ChatInputFieldProps) => {
-  logger.debug(LogCategory.RENDER, 'ChatInputField', 'Rendering with:', 
-    { messageLength: message.length, isLoading }
-  );
-  
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = 'auto';
-      const newHeight = Math.min(textarea.scrollHeight, 200);
+      const newHeight = Math.min(textarea.scrollHeight, 200); // Max height of 200px
       textarea.style.height = `${newHeight}px`;
-      logger.debug(LogCategory.STATE, 'ChatInputField', 'Adjusted height:', { newHeight });
     }
   };
 
+  // Adjust height when message changes
   useEffect(() => {
-    logger.debug(LogCategory.STATE, 'ChatInputField', 'Message changed, adjusting height');
     adjustTextareaHeight();
   }, [message]);
 
@@ -52,8 +46,6 @@ const ChatInputField = memo(({
       />
     </div>
   );
-});
-
-ChatInputField.displayName = 'ChatInputField';
+};
 
 export default ChatInputField;

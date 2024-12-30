@@ -1,72 +1,98 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import Sidebar from '@/components/Sidebar';
+import ChatContainer from '@/components/chat/ChatContainer';
 import { useChat } from '@/hooks/useChat';
-import { ChatHeader } from '@/components/ChatHeader';
-import MessageList from '@/components/MessageList';
-import ChatInput from '@/components/ChatInput';
-import { useSidebar } from '@/contexts/SidebarContext';
-import { SidebarToggle } from '@/components/SidebarToggle';
-import { useSessionParams } from '@/hooks/routing/useSessionParams';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-import { PostMessageErrorBoundary } from '@/components/error-boundaries/PostMessageErrorBoundary';
-import { logger, LogCategory } from '@/utils/logging';
-
-const ChatContent = () => {
-  const { isOpen } = useSidebar();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { 
-    sessionId, 
-    templateId,
-    isNewSession,
-    isValidSessionId
-  } = useSessionParams();
-  
-  const { isLoading, handleSendMessage } = useChat(isValidSessionId ? sessionId : null);
-
-  // Handle invalid routes
-  useEffect(() => {
-    if (!isNewSession && !isValidSessionId) {
-      logger.warn(LogCategory.STATE, 'Index', 'Invalid session ID, redirecting to new chat');
-      toast({
-        title: "Invalid Session",
-        description: "The requested chat session could not be found.",
-        variant: "destructive"
-      });
-      navigate('/');
-    }
-  }, [isNewSession, isValidSessionId, navigate, toast]);
-
-  return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] relative">
-      <SidebarToggle />
-      <ChatHeader isSidebarOpen={isOpen} />
-      
-      <div className="flex-1 overflow-hidden mt-[60px] relative">
-        <div className="max-w-3xl mx-auto px-4 h-full">
-          <PostMessageErrorBoundary>
-            <MessageList isLoading={isLoading} />
-          </PostMessageErrorBoundary>
-        </div>
-      </div>
-      
-      <div className="w-full pb-4 pt-2 fixed bottom-0 left-0 right-0 bg-chatgpt-main/95 backdrop-blur">
-        <div className="max-w-3xl mx-auto px-4">
-          <PostMessageErrorBoundary>
-            <ChatInput 
-              onSend={handleSendMessage}
-              onTranscriptionComplete={(text) => handleSendMessage(text, 'audio')}
-              isLoading={isLoading}
-            />
-          </PostMessageErrorBoundary>
-        </div>
-      </div>
-    </div>
-  );
-};
+import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
+import { useSessionManagement } from '@/hooks/useSessionManagement';
+import { useChatSessions } from '@/hooks/useChatSessions';
+import { getDefaultTemplate } from '@/utils/template/templateStateManager';
+import type { Template } from '@/components/template/types';
 
 const Index = () => {
-  return <ChatContent />;
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [currentTemplate, setCurrentTemplate] = useState<Template | null>(() => {
+    const defaultTemplate = getDefaultTemplate();
+    console.log('[Index] Initializing with default template:', defaultTemplate.name);
+    return defaultTemplate;
+  });
+  
+  const { session } = useSessionManagement();
+  const { createSession } = useChatSessions();
+  
+  const { 
+    messages, 
+    isLoading, 
+    handleSendMessage,
+    loadChatMessages,
+    currentChatId,
+    setCurrentChatId
+  } = useChat();
+
+  // Initialize audio recovery
+  useAudioRecovery();
+
+  const handleSessionSelect = async (chatId: string) => {
+    console.log('[Index] Selecting session:', chatId);
+    await loadChatMessages(chatId);
+  };
+
+  const handleTemplateChange = (template: Template) => {
+    console.log('[Index] Template changed to:', template.name);
+    setCurrentTemplate(template);
+  };
+
+  const handleTranscriptionComplete = async (text: string) => {
+    console.log('[Index] Transcription complete, ready for user to edit:', text);
+    if (text) {
+      const chatInput = document.querySelector('textarea');
+      if (chatInput) {
+        (chatInput as HTMLTextAreaElement).value = text;
+        const event = new Event('input', { bubbles: true });
+        chatInput.dispatchEvent(event);
+      }
+    }
+  };
+
+  const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
+    // Only create a new session when sending the first message
+    if (!currentChatId) {
+      console.log('[Index] Creating new session for first message with template:', currentTemplate?.name);
+      const sessionId = await createSession('New Chat');
+      if (sessionId) {
+        console.log('Created new session:', sessionId);
+        setCurrentChatId(sessionId);
+        // Wait a brief moment for the session to be properly created
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    await handleSendMessage(
+      message, 
+      type, 
+      currentTemplate?.systemInstructions
+    );
+  };
+
+  return (
+    <div className="flex h-screen">
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+        onApiKeyChange={() => {}} 
+        onSessionSelect={handleSessionSelect}
+      />
+      
+      <ChatContainer 
+        messages={messages}
+        isLoading={isLoading}
+        currentChatId={currentChatId}
+        onMessageSend={handleMessageSend}
+        onTemplateChange={handleTemplateChange}
+        onTranscriptionComplete={handleTranscriptionComplete}
+        isSidebarOpen={isSidebarOpen}
+      />
+    </div>
+  );
 };
 
 export default Index;

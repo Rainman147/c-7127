@@ -1,40 +1,96 @@
-import type { Template } from "@/components/template/templateTypes";
-import { useTemplateState } from "@/hooks/template/useTemplateState";
-import { useTemplateLoading } from "@/hooks/template/useTemplateLoading";
-import { useTemplateUpdates } from "@/hooks/template/useTemplateUpdates";
+import { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { loadTemplateFromDb, saveTemplateToDb } from "@/utils/template/templateDbOperations";
+import { getDefaultTemplate, findTemplateById, isTemplateChange } from "@/utils/template/templateStateManager";
+import type { Template } from "./types";
 
 export const useTemplateSelection = (
-  onTemplateChange: (template: Template) => void,
-  globalTemplate: Template
+  currentChatId: string | null,
+  onTemplateChange: (template: Template) => void
 ) => {
-  console.log('[useTemplateSelection] Hook initialized');
+  console.log('[useTemplateSelection] Hook initialized with chatId:', currentChatId);
   
-  const {
-    selectedTemplate,
-    setSelectedTemplate,
-    isLoading,
-    setIsLoading,
-    globalTemplateRef
-  } = useTemplateState(globalTemplate);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template>(getDefaultTemplate());
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
-  const { availableTemplates } = useTemplateLoading(
-    onTemplateChange,
-    selectedTemplate,
-    setSelectedTemplate,
-    setIsLoading,
-    globalTemplateRef
-  );
+  useEffect(() => {
+    const loadTemplateForChat = async () => {
+      if (!currentChatId) {
+        console.log('[useTemplateSelection] No chat ID provided, using default template');
+        const defaultTemplate = getDefaultTemplate();
+        setSelectedTemplate(defaultTemplate);
+        onTemplateChange(defaultTemplate);
+        return;
+      }
 
-  const { handleTemplateChange } = useTemplateUpdates(
-    selectedTemplate,
-    setSelectedTemplate,
-    setIsLoading,
-    onTemplateChange
-  );
+      try {
+        setIsLoading(true);
+        const templateType = await loadTemplateFromDb(currentChatId);
+        
+        if (templateType) {
+          const template = findTemplateById(templateType);
+          if (template) {
+            console.log('[useTemplateSelection] Found template in database:', template.name);
+            setSelectedTemplate(template);
+            onTemplateChange(template);
+          }
+        }
+      } catch (error) {
+        console.error('[useTemplateSelection] Failed to load template:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load template settings",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+        console.log('[useTemplateSelection] Template loading completed');
+      }
+    };
+
+    loadTemplateForChat();
+  }, [currentChatId, onTemplateChange, toast]);
+
+  const handleTemplateChange = useCallback(async (template: Template) => {
+    console.log('[useTemplateSelection] Template change requested:', template.name);
+    
+    if (!isTemplateChange(selectedTemplate.id, template)) {
+      console.log('[useTemplateSelection] Same template selected, no changes needed');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      setSelectedTemplate(template);
+      onTemplateChange(template);
+
+      // Only save to database if we have a chat ID
+      if (currentChatId) {
+        await saveTemplateToDb(currentChatId, template.id);
+      }
+
+      toast({
+        title: "Template Changed",
+        description: `Now using: ${template.name}`,
+        duration: 3000,
+      });
+      
+      console.log('[useTemplateSelection] Template change completed successfully');
+    } catch (error) {
+      console.error('[useTemplateSelection] Failed to update template:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update template",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentChatId, selectedTemplate.id, onTemplateChange, toast]);
 
   return {
     selectedTemplate,
-    availableTemplates,
     isLoading,
     handleTemplateChange
   };

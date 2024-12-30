@@ -1,80 +1,72 @@
-import React, { useEffect } from 'react';
-import { TemplateSelector } from '../TemplateSelector';
-import { TemplateManager } from '../template/TemplateManager';
-import { useSessionParams } from '@/hooks/routing/useSessionParams';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-import { logger, LogCategory } from '@/utils/logging';
-import type { Template } from '@/components/template/templateTypes';
-import { useSessionManagement } from '@/hooks/useSessionManagement';
+import { useState } from 'react';
+import { ChatHeader } from '@/components/ChatHeader';
+import ChatInput from '@/components/ChatInput';
+import MessageList from '@/components/MessageList';
+import type { Template } from '@/components/template/types';
 
-const ChatContainer = () => {
-  const { sessionId, templateId } = useSessionParams();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { ensureActiveSession, isCreatingSession } = useSessionManagement();
+interface ChatContainerProps {
+  messages: Array<{ 
+    role: 'user' | 'assistant'; 
+    content: string; 
+    type?: 'text' | 'audio';
+    id?: string;
+  }>;
+  isLoading: boolean;
+  currentChatId: string | null;
+  onMessageSend: (message: string, type?: 'text' | 'audio') => Promise<void>;
+  onTemplateChange: (template: Template) => void;
+  onTranscriptionComplete: (text: string) => void;
+  isSidebarOpen: boolean;
+}
 
-  useEffect(() => {
-    const initializeSession = async () => {
-      logger.debug(LogCategory.RENDER, 'ChatContainer', 'Component mounted/updated:', {
-        sessionId,
-        templateId,
-        isCreatingSession,
-        timestamp: new Date().toISOString()
-      });
-
-      if (!sessionId && !isCreatingSession) {
-        await ensureActiveSession();
-      }
-    };
-
-    initializeSession();
-
-    return () => {
-      logger.debug(LogCategory.RENDER, 'ChatContainer', 'Component cleanup for session:', {
-        sessionId,
-        timestamp: new Date().toISOString()
-      });
-    };
-  }, [sessionId, templateId, ensureActiveSession, isCreatingSession]);
-
-  const handleTemplateChange = async (template: Template) => {
-    logger.info(LogCategory.STATE, 'ChatContainer', 'Template change requested:', {
-      sessionId,
-      templateId: template.id,
-      templateName: template.name,
-      timestamp: new Date().toISOString()
-    });
-
-    try {
-      // Update URL with new template while preserving other params
-      const searchParams = new URLSearchParams(window.location.search);
-      searchParams.set('template', template.id);
-      
-      navigate({
-        pathname: sessionId ? `/c/${sessionId}` : '/c/new',
-        search: searchParams.toString()
-      });
-
-      logger.info(LogCategory.STATE, 'ChatContainer', 'Template changed successfully');
-    } catch (error) {
-      logger.error(LogCategory.ERROR, 'ChatContainer', 'Error changing template:', {
-        error,
-        stack: error instanceof Error ? error.stack : undefined
-      });
-      toast({
-        title: "Error",
-        description: "Failed to update template. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
+const ChatContainer = ({
+  messages,
+  isLoading,
+  currentChatId,
+  onMessageSend,
+  onTemplateChange,
+  onTranscriptionComplete,
+  isSidebarOpen
+}: ChatContainerProps) => {
+  console.log('[ChatContainer] Rendering with messages:', messages);
+  
   return (
-    <div className="chat-container">
-      <TemplateSelector onTemplateChange={handleTemplateChange} />
-      <TemplateManager />
-    </div>
+    <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+      <ChatHeader 
+        isSidebarOpen={isSidebarOpen}
+        currentChatId={currentChatId}
+        onTemplateChange={onTemplateChange}
+      />
+      
+      <div className={`flex h-full flex-col ${messages.length === 0 ? 'items-center justify-center' : 'justify-between'} pt-[60px] pb-4`}>
+        {messages.length === 0 ? (
+          <div className="w-full max-w-3xl px-4 space-y-4">
+            <div>
+              <h1 className="mb-8 text-4xl font-semibold text-center">What can I help with?</h1>
+              <ChatInput 
+                onSend={onMessageSend}
+                onTranscriptionComplete={onTranscriptionComplete}
+                isLoading={isLoading} 
+              />
+            </div>
+          </div>
+        ) : (
+          <>
+            <MessageList messages={messages} />
+            <div className="w-full max-w-3xl mx-auto px-4 py-2">
+              <ChatInput 
+                onSend={onMessageSend}
+                onTranscriptionComplete={onTranscriptionComplete}
+                isLoading={isLoading} 
+              />
+            </div>
+            <div className="text-xs text-center text-gray-500 py-2">
+              ChatGPT can make mistakes. Check important info.
+            </div>
+          </>
+        )}
+      </div>
+    </main>
   );
 };
 

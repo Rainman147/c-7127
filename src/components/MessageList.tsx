@@ -1,84 +1,28 @@
-import { MessageLoadingState } from './message/MessageLoadingState';
-import { MessageEmptyState } from './message/MessageEmptyState';
-import { MessageErrorState } from './message/MessageErrorState';
-import MessageListContainer from './message/MessageListContainer';
-import { useMessages } from '@/contexts/MessageContext';
-import { logger, LogCategory } from '@/utils/logging';
+import Message from './Message';
 
-interface MessageListProps {
-  isLoading?: boolean;
-  loadingMessage?: string;
-  loadingProgress?: number;
-  currentOperation?: string;
-}
+type Message = {
+  role: 'user' | 'assistant';
+  content: string;
+  id?: string;
+  type?: 'text' | 'audio';
+};
 
-const MessageList = ({ 
-  isLoading, 
-  loadingMessage,
-  loadingProgress,
-  currentOperation
-}: MessageListProps) => {
-  const { messages, error, retryLoading } = useMessages();
-
-  logger.debug(LogCategory.RENDER, 'MessageList', 'Rendering message list:', {
-    isLoading,
-    messageCount: messages?.length || 0,
-    error,
-    loadingProgress,
-    currentOperation,
-    messageDetails: messages?.map(m => ({
-      id: m.id,
-      role: m.role,
-      contentPreview: m.content?.substring(0, 50),
-      sequence: m.sequence,
-      status: m.status,
-      created_at: m.created_at,
-      isOptimistic: m.isOptimistic
-    })),
-    renderContext: {
-      hasMessages: messages?.length > 0,
-      loadingState: isLoading ? 'loading' : messages?.length === 0 ? 'empty' : 'loaded'
-    }
-  });
-
-  if (error) {
-    logger.error(LogCategory.STATE, 'MessageList', 'Error state:', { error });
-    return (
-      <MessageErrorState 
-        error={error} 
-        onRetry={retryLoading}
-        errorDetails="There was a problem loading your messages. Please try again."
-      />
-    );
-  }
-
-  if (isLoading) {
-    logger.info(LogCategory.STATE, 'MessageList', 'Showing loading state');
-    return (
-      <MessageLoadingState 
-        message={loadingMessage} 
-        progress={loadingProgress}
-        currentOperation={currentOperation}
-      />
-    );
-  }
-
-  if (!messages || messages.length === 0) {
-    logger.info(LogCategory.STATE, 'MessageList', 'Showing empty state', {
-      messages,
-      isArray: Array.isArray(messages),
-      isLoading
-    });
-    return <MessageEmptyState />;
-  }
-
-  logger.info(LogCategory.STATE, 'MessageList', 'Rendering messages', {
-    messageCount: messages.length,
-    firstMessageId: messages[0]?.id,
-    lastMessageId: messages[messages.length - 1]?.id
-  });
-
-  return <MessageListContainer />;
+const MessageList = ({ messages }: { messages: Message[] }) => {
+  console.log('[MessageList] Rendering messages:', messages.map(m => ({
+    role: m.role,
+    id: m.id,
+    contentPreview: m.content.substring(0, 50) + '...'
+  })));
+  
+  return (
+    <div className="flex-1 overflow-y-auto chat-scrollbar">
+      <div className="w-full max-w-3xl mx-auto px-4">
+        {messages.map((message, index) => (
+          <Message key={message.id || index} {...message} />
+        ))}
+      </div>
+    </div>
+  );
 };
 
 export default MessageList;

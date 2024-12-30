@@ -5,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import EditorToolbar from './EditorToolbar';
 import EditorActions from './EditorActions';
-import { logger, LogCategory } from '@/utils/logging';
 
 interface TiptapEditorProps {
   content: string;
@@ -51,11 +50,6 @@ const TiptapEditor = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      logger.info(LogCategory.STATE, 'TiptapEditor', 'Saving edited message:', {
-        messageId,
-        contentLength: newContent.length
-      });
-
       const { error } = await supabase
         .from('edited_messages')
         .upsert({
@@ -75,11 +69,8 @@ const TiptapEditor = ({
         duration: 2000,
         className: "bg-[#10A37F] text-white",
       });
-
-      logger.info(LogCategory.STATE, 'TiptapEditor', 'Message saved successfully');
     } catch (error: any) {
-      logger.error(LogCategory.ERROR, 'TiptapEditor', 'Error saving message:', error);
-      
+      console.error('Error saving edit:', error);
       toast({
         title: "Error saving changes",
         description: error.message,
@@ -90,9 +81,6 @@ const TiptapEditor = ({
 
   const handleRevertToOriginal = () => {
     if (!editor) return;
-    
-    logger.info(LogCategory.STATE, 'TiptapEditor', 'Reverting content to original');
-    
     editor.commands.setContent(originalContent);
     toast({
       description: "Reverted to original content",

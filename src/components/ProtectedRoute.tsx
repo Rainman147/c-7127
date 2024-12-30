@@ -1,96 +1,47 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { checkSession } from '@/utils/auth/sessionManager';
+import { supabase } from '@/integrations/supabase/client';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const validateSession = useCallback(async () => {
-    console.log('[ProtectedRoute] Validating session...');
-    
-    try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error('[ProtectedRoute] Session error:', sessionError);
-        navigate('/auth');
-        return;
-      }
-      
-      if (!session) {
-        console.log('[ProtectedRoute] No active session found');
-        navigate('/auth');
-        return;
-      }
-
-      // Only validate if we have a session
-      const { error } = await checkSession();
-      if (error) {
-        console.log('[ProtectedRoute] Session validation failed:', {
-          error: error.message,
-          timestamp: new Date().toISOString()
-        });
-        
-        if (!error.isRefreshTokenError) {
-          toast({
-            title: "Authentication Error",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
-        
-        await supabase.auth.signOut();
-        navigate('/auth');
-        return;
-      }
-
-      console.log('[ProtectedRoute] Session validated successfully');
-    } catch (error) {
-      console.error('[ProtectedRoute] Unexpected error during session validation:', error);
-      navigate('/auth');
-    }
-  }, [navigate, toast]);
-
   useEffect(() => {
-    console.log('[ProtectedRoute] Setting up auth state listener');
-    
-    let isInitialCheck = true;
-    
+    const validateSession = async () => {
+      console.log('Validating session...');
+      const { session, error } = await checkSession();
+
+      if (error || !session) {
+        console.log('Session validation failed:', error?.message || 'No session found');
+        toast({
+          title: error ? "Authentication Error" : "Session Expired",
+          description: error?.message || "Please sign in to continue",
+          variant: "destructive",
+        });
+        navigate('/auth');
+      }
+    };
+
+    validateSession();
+
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[ProtectedRoute] Auth state changed:', {
-        event,
-        sessionExists: !!session,
-        timestamp: new Date().toISOString()
-      });
-
-      // Skip validation on initial mount to prevent double-checking
-      if (isInitialCheck) {
-        isInitialCheck = false;
-        return;
-      }
-
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed in protected route:', event);
+      
       if (event === 'SIGNED_OUT' || !session) {
-        console.log('[ProtectedRoute] User signed out or session expired, redirecting to auth');
+        console.log('User signed out or session expired, redirecting to auth');
         navigate('/auth');
-      } else if (event === 'TOKEN_REFRESHED') {
-        console.log('[ProtectedRoute] Token refreshed, validating session');
-        await validateSession();
       }
     });
 
-    // Initial session check
-    validateSession();
-
     return () => {
-      console.log('[ProtectedRoute] Cleaning up auth state listener');
+      console.log('Cleaning up protected route subscription');
       subscription.unsubscribe();
     };
-  }, [validateSession, navigate]);
+  }, [navigate, toast]);
 
   return <>{children}</>;
 };

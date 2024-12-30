@@ -1,40 +1,21 @@
-let deviceChecked = false;
-let deviceInfo = { isIOS: false };
-
 export const getDeviceType = () => {
-  // Only perform check once per session
-  if (!deviceChecked) {
-    const userAgent = navigator.userAgent;
-    deviceInfo.isIOS = /iPad|iPhone|iPod/.test(userAgent) || 
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[DeviceDetection] Initial device check:', { 
-        userAgent: userAgent.substring(0, 50) + '...',
-        isIOS: deviceInfo.isIOS 
-      });
-    }
-    deviceChecked = true;
-  }
+  const userAgent = navigator.userAgent;
+  console.log('[DeviceDetection] User Agent:', userAgent);
   
-  return deviceInfo;
+  const isIOS = /iPad|iPhone|iPod/.test(userAgent) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  
+  console.log('[DeviceDetection] Device type:', { isIOS });
+  return { isIOS };
 };
 
-let browserChecked = false;
-let browserInfo = { isSafari: false, isChrome: false };
-
 export const getBrowserType = () => {
-  // Only perform check once per session
-  if (!browserChecked) {
-    const userAgent = navigator.userAgent.toLowerCase();
-    browserInfo.isSafari = /^((?!chrome|android).)*safari/i.test(userAgent);
-    browserInfo.isChrome = /chrome/.test(userAgent) && /google inc/.test(navigator.vendor.toLowerCase());
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[BrowserDetection] Initial browser check:', browserInfo);
-    }
-    browserChecked = true;
-  }
+  const userAgent = navigator.userAgent.toLowerCase();
+  console.log('[BrowserDetection] User Agent:', userAgent);
   
-  return browserInfo;
+  const isSafari = /^((?!chrome|android).)*safari/i.test(userAgent);
+  const isChrome = /chrome/.test(userAgent) && /google inc/.test(navigator.vendor.toLowerCase());
+  
+  console.log('[BrowserDetection] Browser type:', { isSafari, isChrome });
+  return { isSafari, isChrome };
 };

@@ -1,112 +1,77 @@
-import { memo } from 'react';
-import MessageContainer from './message/MessageContainer';
-import { useMessageRealtime } from './message/useMessageRealtime';
-import { useTypingEffect } from './message/useTypingEffect';
-import { useMessages } from '@/contexts/MessageContext';
-import { useMessageOperations } from '@/hooks/message/useMessageOperations';
-import type { MessageProps } from '@/types/chat';
-import { logger, LogCategory } from '@/utils/logging';
+import { useState } from 'react';
+import MessageAvatar from './MessageAvatar';
+import MessageActions from './MessageActions';
+import MessageContent from './message/MessageContent';
 
-const Message = memo(({ 
-  role, 
-  content, 
-  isStreaming, 
-  type, 
-  id,
-  chat_id,
-  showAvatar = true,
-  isOptimistic,
-  isFailed,
-  created_at,
-  status,
-  onRetry 
-}: MessageProps & {
-  isOptimistic?: boolean;
-  isFailed?: boolean;
-  onRetry?: () => void;
-}) => {
-  const { 
-    updateMessageStatus,
-    updateMessageContent,
-    handleMessageEdit,
-    handleMessageSave,
-    handleMessageCancel
-  } = useMessages();
+type MessageProps = {
+  role: 'user' | 'assistant';
+  content: string;
+  isStreaming?: boolean;
+  type?: 'text' | 'audio';
+  id?: string;
+};
 
-  const { handleMessageEdit: editMessage } = useMessageOperations();
+const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
+  const [editedContent, setEditedContent] = useState(content);
+  const [isEditing, setIsEditing] = useState(false);
+  const [wasEdited, setWasEdited] = useState(false);
 
-  const {
-    editedContent,
-    setEditedContent,
-    isEditing,
-    wasEdited,
-    isSaving,
-    setIsSaving
-  } = useMessageRealtime(id, content, updateMessageContent);
-
-  const { isTyping } = useTypingEffect(role, isStreaming, content);
-
-  logger.debug(LogCategory.RENDER, 'Message', 'Rendering message:', {
-    id,
-    role,
-    contentPreview: content?.substring(0, 50),
-    isOptimistic,
-    isFailed,
-    wasEdited,
-    isEditing,
-    isTyping
+  console.log('[Message] Rendering message:', { 
+    role, 
+    id, 
+    isEditing, 
+    content: content.substring(0, 50) + '...',
+    hasId: !!id 
   });
 
-  const handleSave = async (newContent: string) => {
-    setIsSaving(true);
-    try {
-      if (id) {
-        await editMessage(id, newContent);
-        await handleMessageSave(id, newContent);
-      }
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleEdit = () => {
-    if (id) {
-      handleMessageEdit(id);
-    }
+  const handleSave = (newContent: string) => {
+    console.log('[Message] Saving edited content:', newContent.substring(0, 50) + '...');
+    setEditedContent(newContent);
+    setIsEditing(false);
+    setWasEdited(true);
   };
 
   const handleCancel = () => {
-    if (id) {
-      handleMessageCancel(id);
+    console.log('[Message] Canceling edit');
+    setEditedContent(content);
+    setIsEditing(false);
+  };
+
+  const handleEdit = () => {
+    console.log('[Message] Starting edit for message:', id);
+    if (!id) {
+      console.error('[Message] Cannot edit message without ID');
+      return;
     }
+    setIsEditing(true);
   };
 
   return (
-    <MessageContainer
-      role={role}
-      content={content}
-      isStreaming={isStreaming}
-      type={type}
-      id={id}
-      chat_id={chat_id}
-      showAvatar={showAvatar}
-      editedContent={editedContent}
-      isEditing={isEditing}
-      wasEdited={wasEdited}
-      isSaving={isSaving}
-      isTyping={isTyping}
-      isOptimistic={isOptimistic}
-      isFailed={isFailed}
-      created_at={created_at}
-      status={status}
-      onSave={handleSave}
-      onCancel={handleCancel}
-      onEdit={handleEdit}
-      onRetry={onRetry}
-    />
+    <div className="py-6">
+      <div className={`flex gap-4 ${role === 'user' ? 'flex-row-reverse' : ''}`}>
+        <MessageAvatar isAssistant={role === 'assistant'} />
+        <div className={`flex-1 space-y-2 ${role === 'user' ? 'flex justify-end' : ''}`}>
+          <MessageContent 
+            role={role}
+            content={editedContent}
+            type={type}
+            isStreaming={isStreaming}
+            isEditing={isEditing}
+            id={id}
+            wasEdited={wasEdited}
+            onSave={handleSave}
+            onCancel={handleCancel}
+          />
+          {role === 'assistant' && id && (
+            <MessageActions 
+              content={editedContent} 
+              onEdit={handleEdit}
+            />
+          )}
+        </div>
+      </div>
+    </div>
   );
-});
-
-Message.displayName = 'Message';
+};
 
 export default Message;

@@ -6,33 +6,25 @@ body {
   @apply bg-chatgpt-main text-white;
 }
 
-/* Global menu styling */
-.menu-box {
-  @apply rounded-xl bg-[#2F2F2F] border border-white/[0.05] shadow-[0_0_0_1px_rgba(0,0,0,0.3)] backdrop-blur-sm;
+.sidebar-item {
+  @apply flex items-center gap-3 rounded-md px-3 py-3 text-sm transition-colors duration-200 hover:bg-chatgpt-hover cursor-pointer;
 }
 
-.menu-dialog {
-  @apply bg-[#2F2F2F] border border-white/[0.05] shadow-[0_0_0_1px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden backdrop-blur-sm;
+.action-button {
+  @apply flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-chatgpt-hover/50 border border-transparent hover:border-chatgpt-border transition-all duration-200;
 }
 
-/* Sidebar transitions */
-.sidebar-transition {
-  @apply transition-all duration-300 ease-in-out transform will-change-transform;
-}
-
-/* Enhanced scrollbar styling */
+/* Sidebar scrollbar */
 .sidebar-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-sidebar;
 }
 
+/* Main chat area scrollbar */
 .chat-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-main;
 }
 
+/* Chat input area scrollbar */
 .chat-input-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-[#2F2F2F];
-}
-
-.dialog-scrollbar {
-  @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-main;
 }

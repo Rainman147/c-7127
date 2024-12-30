@@ -1,111 +1,96 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useMessageDatabase } from './useMessageDatabase';
-import { useMessageTransform } from './useMessageTransform';
-import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
+import { useMessagePersistence } from './useMessagePersistence';
 
 export const useMessageHandling = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const { saveMessage } = useMessageDatabase();
-  const { transformMessage } = useMessageTransform();
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const { saveMessageToSupabase } = useMessagePersistence();
 
   const handleSendMessage = async (
-    content: string,
+    content: string, 
     type: 'text' | 'audio' = 'text',
-    chatId: string,
-    messages: Message[],
-    systemInstructions?: string
+    systemInstructions?: string,
+    currentMessages: Message[] = [],
+    currentChatId?: string
   ) => {
-    logger.info(LogCategory.COMMUNICATION, 'useMessageHandling', 'Starting message handling:', {
-      contentLength: content.length,
-      type,
-      chatId,
-      hasSystemInstructions: !!systemInstructions,
-      existingMessages: messages.length
-    });
+    if (!content.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a message",
+        variant: "destructive"
+      });
+      return null;
+    }
+
+    setIsLoading(true);
 
     try {
-      setIsLoading(true);
+      const userMessage: Message = { role: 'user', content, type };
+      const newMessages = [...currentMessages, userMessage];
 
-      // Save user message
-      const userMessage = await saveMessage({
-        content,
-        type,
-        chatId,
-        role: 'user',
-        sequence: messages.length
-      });
+      // Save message to Supabase
+      const { chatId, messageId } = await saveMessageToSupabase(userMessage, currentChatId);
+      userMessage.id = messageId;
 
-      logger.debug(LogCategory.STATE, 'useMessageHandling', 'User message saved:', {
-        messageId: userMessage.id,
-        sequence: userMessage.sequence
-      });
+      // Cancel any ongoing stream
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
 
-      const updatedMessages = [...messages, userMessage];
+      // Create new abort controller for this stream
+      abortControllerRef.current = new AbortController();
 
-      // Call Edge Function for AI response
-      logger.debug(LogCategory.COMMUNICATION, 'useMessageHandling', 'Invoking chat function with:', {
-        messageLength: content.length,
-        historyLength: messages.slice(-5).length,
-        chatId
-      });
-      
-      const { data: aiResponse, error: functionError } = await supabase.functions.invoke('chat', {
-        body: {
-          message: content,
-          chatId,
-          systemInstructions,
-          messageHistory: messages.slice(-5).map(m => ({
-            role: m.role,
-            content: m.content
-          }))
+      // Call Gemini function with system instructions
+      const { data, error } = await supabase.functions.invoke('gemini', {
+        body: { 
+          messages: newMessages,
+          systemInstructions: systemInstructions 
         }
       });
 
-      if (functionError) {
-        logger.error(LogCategory.ERROR, 'useMessageHandling', 'Edge function error:', {
-          error: functionError,
-          statusCode: functionError.status,
-          statusText: functionError.statusText,
-          message: functionError.message
-        });
-        throw new Error('Failed to get AI response');
+      if (error) throw error;
+      if (!data) throw new Error('No response from Gemini API');
+
+      // Create and save assistant message
+      if (data.content) {
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: data.content,
+          isStreaming: false
+        };
+        
+        const { messageId: assistantMessageId } = await saveMessageToSupabase(assistantMessage, chatId);
+        assistantMessage.id = assistantMessageId;
+        
+        return {
+          messages: [...newMessages, assistantMessage],
+          chatId
+        };
       }
 
-      logger.debug(LogCategory.COMMUNICATION, 'useMessageHandling', 'Received AI response:', {
-        responseLength: aiResponse?.content?.length,
-        hasContent: !!aiResponse?.content
-      });
-
-      // Save AI response
-      const assistantMessage = await saveMessage({
-        content: aiResponse.content,
-        type: 'text',
-        chatId,
-        role: 'assistant',
-        sequence: updatedMessages.length
-      });
-
-      logger.info(LogCategory.STATE, 'useMessageHandling', 'AI response saved:', {
-        messageId: assistantMessage.id,
-        sequence: assistantMessage.sequence
-      });
-
       return {
-        messages: [...updatedMessages, assistantMessage]
+        messages: newMessages,
+        chatId
       };
 
-    } catch (error) {
-      logger.error(LogCategory.ERROR, 'useMessageHandling', 'Error handling message:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+      return null;
     } finally {
       setIsLoading(false);
     }
   };
 
   return {
-    handleSendMessage,
-    isLoading
+    isLoading,
+    handleSendMessage
   };
 };
