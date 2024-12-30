@@ -2,8 +2,10 @@ import { useState, useRef } from "react";
 import { ThumbsUp, ThumbsDown, RotateCcw, MoreHorizontal, Pencil } from "lucide-react";
 import { AudioButton } from "./message-actions/AudioButton";
 import { CopyButton } from "./message-actions/CopyButton";
+import MessageActionButton from "./message/actions/MessageActionButton";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { logger, LogCategory } from '@/utils/logging';
 
 type MessageActionsProps = {
   content: string;
@@ -20,7 +22,12 @@ const MessageActions = ({
   onRetry,
   isFailed 
 }: MessageActionsProps) => {
-  console.log('[MessageActions] Rendering actions');
+  logger.debug(LogCategory.RENDER, 'MessageActions', 'Rendering actions:', {
+    messageId,
+    isFailed,
+    hasEdit: !!onEdit,
+    hasRetry: !!onRetry
+  });
   
   const { toast } = useToast();
   const [isPlaying, setIsPlaying] = useState(false);
@@ -29,14 +36,14 @@ const MessageActions = ({
   
   const handleFeedback = async (type: 'like' | 'dislike') => {
     if (!messageId) {
-      console.warn('[MessageActions] Cannot submit feedback without messageId');
+      logger.warn(LogCategory.STATE, 'MessageActions', 'Cannot submit feedback without messageId');
       return;
     }
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.error('[MessageActions] User not authenticated');
+        logger.error(LogCategory.ERROR, 'MessageActions', 'User not authenticated');
         toast({
           title: "Error",
           description: "You must be logged in to submit feedback",
@@ -62,7 +69,7 @@ const MessageActions = ({
       });
 
     } catch (error) {
-      console.error('[MessageActions] Error submitting feedback:', error);
+      logger.error(LogCategory.ERROR, 'MessageActions', 'Error submitting feedback:', error);
       toast({
         title: "Error",
         description: "Failed to submit feedback",
@@ -79,46 +86,44 @@ const MessageActions = ({
         setIsPlaying={setIsPlaying}
         audioRef={audioRef}
       />
-      <button 
-        className={`p-1 hover:text-white transition-colors ${feedbackState === 'liked' ? 'text-green-500' : ''}`}
+      <MessageActionButton 
+        icon={ThumbsUp}
         onClick={() => handleFeedback('like')}
         disabled={feedbackState !== 'none'}
-      >
-        <ThumbsUp className="h-4 w-4" />
-      </button>
-      <button 
-        className={`p-1 hover:text-white transition-colors ${feedbackState === 'disliked' ? 'text-red-500' : ''}`}
+        active={feedbackState === 'liked'}
+        activeClassName="text-green-500"
+      />
+      <MessageActionButton 
+        icon={ThumbsDown}
         onClick={() => handleFeedback('dislike')}
         disabled={feedbackState !== 'none'}
-      >
-        <ThumbsDown className="h-4 w-4" />
-      </button>
+        active={feedbackState === 'disliked'}
+        activeClassName="text-red-500"
+      />
       <CopyButton content={content} />
       {onEdit && (
-        <button 
-          className="p-1 hover:text-white transition-colors"
+        <MessageActionButton 
+          icon={Pencil}
           onClick={() => {
-            console.log('[MessageActions] Edit button clicked');
+            logger.debug(LogCategory.STATE, 'MessageActions', 'Edit button clicked');
             onEdit();
           }}
-        >
-          <Pencil className="h-4 w-4" />
-        </button>
+        />
       )}
       {isFailed && onRetry && (
-        <button 
-          className="p-1 hover:text-white transition-colors text-red-400 hover:text-red-300"
+        <MessageActionButton 
+          icon={RotateCcw}
           onClick={() => {
-            console.log('[MessageActions] Retry button clicked');
+            logger.debug(LogCategory.STATE, 'MessageActions', 'Retry button clicked');
             onRetry();
           }}
-        >
-          <RotateCcw className="h-4 w-4" />
-        </button>
+          className="text-red-400 hover:text-red-300"
+        />
       )}
-      <button className="p-1 hover:text-white transition-colors">
-        <MoreHorizontal className="h-4 w-4" />
-      </button>
+      <MessageActionButton 
+        icon={MoreHorizontal}
+        onClick={() => {}}
+      />
     </div>
   );
 };
