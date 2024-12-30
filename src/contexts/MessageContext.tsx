@@ -1,7 +1,7 @@
 import { createContext, useContext, useReducer, useCallback, useRef } from 'react';
 import { messageReducer, initialState } from './message/messageReducer';
 import type { Message, MessageStatus } from '@/types/chat';
-import type { MessageContextType } from '@/types/messageContext';
+import type { MessageContextType, MessageState } from '@/types/messageContext';
 import { logger, LogCategory } from '@/utils/logging';
 
 const MessageContext = createContext<MessageContextType | null>(null);

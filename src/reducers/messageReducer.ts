@@ -6,7 +6,12 @@ export const initialState: MessageState = {
   pendingMessages: [],
   isProcessing: false,
   error: null,
-  editingMessageId: null
+  editingMessageId: null,
+  loadingStates: {
+    isSubmitting: false,
+    isFetching: false,
+    isProcessingOptimistic: false
+  }
 };
 
 export const messageReducer = (state: MessageState, action: MessageAction): MessageState => {
