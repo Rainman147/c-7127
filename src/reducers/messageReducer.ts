@@ -7,6 +7,7 @@ export const initialState: MessageState = {
   confirmedMessages: [],
   failedMessages: [],
   isProcessing: false,
+  editingMessageId: null,
   error: null
 };
 
