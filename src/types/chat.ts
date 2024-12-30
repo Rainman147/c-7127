@@ -15,6 +15,7 @@ export interface Message {
 }
 
 export interface MessageGroup {
+  id: string;
   label: string;
   timestamp: string;
   messages: Message[];
