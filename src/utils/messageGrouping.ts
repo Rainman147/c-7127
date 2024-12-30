@@ -1,92 +1,36 @@
-import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns';
-import { logger, LogCategory } from './logging';
+import { format } from 'date-fns';
 import type { Message, MessageGroup } from '@/types/chat';
 
-const TIME_THRESHOLD_MINUTES = 5;
-
-// Format the timestamp for display
-const formatMessageTime = (date: Date): string => {
-  if (isToday(date)) {
-    return `Today at ${format(date, 'h:mm a')}`;
-  }
-  if (isYesterday(date)) {
-    return `Yesterday at ${format(date, 'h:mm a')}`;
-  }
-  return format(date, 'MMM d, yyyy h:mm a');
-};
-
-// Get time label with error handling
-const getTimeLabel = (dateStr: string): string => {
-  try {
-    const date = new Date(dateStr);
-    return formatMessageTime(date);
-  } catch (error) {
-    logger.error(LogCategory.STATE, 'messageGrouping', 'Error formatting date:', { 
-      dateStr, 
-      error 
-    });
-    return 'Unknown time';
-  }
-};
-
-// Check if a new group should be started
-const shouldStartNewGroup = (
-  currentMessage: Message,
-  previousMessage: Message | undefined,
-  currentRole: string | null
-): boolean => {
-  if (!previousMessage) return false;
-  
-  const currentTime = new Date(currentMessage.created_at || '');
-  const previousTime = new Date(previousMessage.created_at || '');
-  
-  return currentMessage.role !== currentRole || 
-         differenceInMinutes(currentTime, previousTime) > TIME_THRESHOLD_MINUTES;
-};
-
-// Create a message group object
-const createMessageGroup = (
-  messages: Message[],
-  firstMessage: Message
-): MessageGroup => {
-  const timestamp = firstMessage.created_at || new Date().toISOString();
-  
-  return {
-    id: `group-${firstMessage.id}`,
-    label: getTimeLabel(timestamp),
-    timestamp,
-    messages
-  };
-};
-
-// Main grouping function
 export const groupMessages = (messages: Message[]): MessageGroup[] => {
-  logger.debug(LogCategory.STATE, 'messageGrouping', 'Starting message grouping:', { 
-    messageCount: messages.length 
-  });
+  if (!messages || messages.length === 0) return [];
 
   const groups: MessageGroup[] = [];
-  let currentGroup: Message[] = [];
-  let currentRole: string | null = null;
+  let currentGroup: MessageGroup | null = null;
 
-  messages.forEach((message, index) => {
-    if (shouldStartNewGroup(message, messages[index - 1], currentRole) && currentGroup.length > 0) {
-      groups.push(createMessageGroup(currentGroup, currentGroup[0]));
-      currentGroup = [];
+  messages.forEach((message) => {
+    const messageDate = message.created_at ? new Date(message.created_at) : new Date();
+    const dateStr = format(messageDate, 'MMMM d, yyyy');
+    
+    if (!currentGroup || currentGroup.label !== dateStr) {
+      if (currentGroup) {
+        groups.push(currentGroup);
+      }
+      currentGroup = {
+        id: `group-${dateStr}`,
+        label: dateStr,
+        timestamp: messageDate.toISOString(),
+        messages: []
+      };
     }
-
-    currentGroup.push(message);
-    currentRole = message.role;
+    
+    if (currentGroup) {
+      currentGroup.messages.push(message);
+    }
   });
 
-  // Add the last group if there are remaining messages
-  if (currentGroup.length > 0) {
-    groups.push(createMessageGroup(currentGroup, currentGroup[0]));
+  if (currentGroup) {
+    groups.push(currentGroup);
   }
-
-  logger.debug(LogCategory.STATE, 'messageGrouping', 'Grouping complete:', { 
-    groupCount: groups.length 
-  });
 
   return groups;
 };

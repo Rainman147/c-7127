@@ -3,7 +3,7 @@ import MessageContainer from './message/MessageContainer';
 import { useMessageState } from './message/useMessageState';
 import { useMessageRealtime } from './message/useMessageRealtime';
 import { useTypingEffect } from './message/useTypingEffect';
-import type { MessageProps } from './message/types';
+import type { MessageProps } from '@/types/chat';
 import { logger, LogCategory } from '@/utils/logging';
 
 const Message = memo(({ 

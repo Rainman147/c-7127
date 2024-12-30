@@ -1,26 +1,7 @@
 import { Loader2, AlertCircle, Check, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { MessageStatus } from '@/types/chat';
+import type { MessageContentProps } from '@/types/chat';
 import { isMessageHistorical } from '@/utils/messageUtils';
-
-type MessageContentProps = {
-  role: 'user' | 'assistant';
-  content: string;
-  type?: 'text' | 'audio';
-  isStreaming?: boolean;
-  isEditing: boolean;
-  id?: string;
-  wasEdited: boolean;
-  isSaving: boolean;
-  isTyping: boolean;
-  isOptimistic?: boolean;
-  isFailed?: boolean;
-  status?: MessageStatus;
-  created_at?: string;
-  onSave: (newContent: string) => void;
-  onCancel: () => void;
-  onRetry?: () => void;
-};
 
 const MessageContent = ({ 
   role, 

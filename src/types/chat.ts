@@ -20,3 +20,27 @@ export interface MessageGroup {
   timestamp: string;
   messages: Message[];
 }
+
+export interface MessageContentProps {
+  role: 'user' | 'assistant';
+  content: string;
+  type?: 'text' | 'audio';
+  isStreaming?: boolean;
+  isEditing: boolean;
+  id?: string;
+  wasEdited: boolean;
+  isSaving: boolean;
+  isTyping: boolean;
+  isOptimistic?: boolean;
+  isFailed?: boolean;
+  created_at?: string;
+  status?: MessageStatus;
+  onSave: (newContent: string) => void;
+  onCancel: () => void;
+  onRetry?: () => void;
+}
+
+export interface MessageProps extends Message {
+  isStreaming?: boolean;
+  showAvatar?: boolean;
+}
