@@ -6,6 +6,7 @@ export interface MessageState {
   confirmedMessages: Message[];
   failedMessages: Message[];
   isProcessing: boolean;
+  editingMessageId: string | null;
   error: string | null;
 }
 

@@ -1,19 +1,26 @@
-import { createContext, useContext, useReducer } from 'react';
+import { createContext, useContext, useReducer, Dispatch } from 'react';
 import { messageReducer } from './message/messageReducer';
 import type { Message, MessageStatus } from '@/types/chat';
-import type { MessageContextType } from '@/types/messageContext';
+import type { MessageContextType, MessageState, MessageAction } from '@/types/messageContext';
 import { logger, LogCategory } from '@/utils/logging';
 
 const MessageContext = createContext<MessageContextType | null>(null);
 
-const initialState = {
+const initialState: MessageState = {
   messages: [],
+  pendingMessages: [],
+  confirmedMessages: [],
+  failedMessages: [],
+  isProcessing: false,
   editingMessageId: null,
   error: null,
 };
 
 export const MessageProvider = ({ children }: { children: React.ReactNode }) => {
-  const [state, dispatch] = useReducer(messageReducer, initialState);
+  const [state, dispatch] = useReducer<(state: MessageState, action: MessageAction) => MessageState>(
+    messageReducer,
+    initialState
+  );
 
   const setMessages = (messages: Message[]) => {
     dispatch({ type: 'SET_MESSAGES', payload: messages });
@@ -63,7 +70,7 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
     dispatch({ type: 'HANDLE_MESSAGE_FAILURE', payload: { messageId, error } });
   };
 
-  const value = {
+  const value: MessageContextType = {
     ...state,
     setMessages,
     addMessage,

@@ -11,6 +11,10 @@ export const messageReducer = (
       return {
         ...state,
         messages: action.payload,
+        pendingMessages: [],
+        confirmedMessages: action.payload,
+        failedMessages: [],
+        isProcessing: false,
         error: null
       };
 
@@ -18,6 +22,10 @@ export const messageReducer = (
       return {
         ...state,
         messages: [...state.messages, action.payload],
+        pendingMessages: action.payload.isOptimistic 
+          ? [...state.pendingMessages, action.payload]
+          : state.pendingMessages,
+        isProcessing: true,
         error: null
       };
 
@@ -72,15 +80,19 @@ export const messageReducer = (
     case 'CONFIRM_MESSAGE':
       return {
         ...state,
-        messages: state.messages.map(message =>
-          message.id === action.payload.tempId
-            ? { ...action.payload.confirmedMessage }
-            : message
+        messages: state.messages.map(msg =>
+          msg.id === action.payload.tempId ? action.payload.confirmedMessage : msg
         ),
+        pendingMessages: state.pendingMessages.filter(msg => msg.id !== action.payload.tempId),
+        confirmedMessages: [...state.confirmedMessages, action.payload.confirmedMessage],
+        isProcessing: state.pendingMessages.length > 1,
         error: null
       };
 
     case 'HANDLE_MESSAGE_FAILURE':
+      const failedMessage = state.pendingMessages.find(msg => msg.id === action.payload.messageId);
+      if (!failedMessage) return state;
+
       return {
         ...state,
         messages: state.messages.map(message =>
@@ -88,6 +100,9 @@ export const messageReducer = (
             ? { ...message, status: 'error' as MessageStatus }
             : message
         ),
+        pendingMessages: state.pendingMessages.filter(msg => msg.id !== action.payload.messageId),
+        failedMessages: [...state.failedMessages, { ...failedMessage, error: action.payload.error }],
+        isProcessing: state.pendingMessages.length > 1,
         error: action.payload.error
       };
 
@@ -118,6 +133,10 @@ export const messageReducer = (
       return {
         ...state,
         messages: [],
+        pendingMessages: [],
+        confirmedMessages: [],
+        failedMessages: [],
+        isProcessing: false,
         editingMessageId: null,
         error: null
       };
