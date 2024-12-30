@@ -1,6 +1,7 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMemo } from 'react';
 import { defaultTemplates } from '@/types/templates/defaults';
+import { logger, LogCategory } from '@/utils/logging';
 
 export const useSessionParams = () => {
   const { sessionId } = useParams();
@@ -16,7 +17,8 @@ export const useSessionParams = () => {
     matchingTemplate
   } = useMemo(() => {
     const isNewSession = !sessionId;
-    const isValidSessionId = sessionId ? /^[0-9a-fA-F-]+$/.test(sessionId) : false;
+    // Only validate session if one is provided
+    const isValidSessionId = sessionId ? /^[0-9a-fA-F-]+$/.test(sessionId) : true;
     
     const matchingTemplate = defaultTemplates.find(t => t.id === templateId);
     const isValidTemplateId = templateId ? (
@@ -37,7 +39,7 @@ export const useSessionParams = () => {
     const currentTemplate = currentSearchParams.get('template');
     
     if (id !== sessionId || targetTemplateId !== currentTemplate) {
-      console.log('[useSessionParams] Redirecting to session:', { 
+      logger.info(LogCategory.ROUTING, 'useSessionParams', 'Redirecting to session', { 
         id, 
         params,
         currentTemplate: templateId,
@@ -45,10 +47,8 @@ export const useSessionParams = () => {
       });
       
       const newSearchParams = new URLSearchParams();
-      if (!params?.template && templateId) {
-        newSearchParams.set('template', templateId);
-      } else if (params?.template) {
-        newSearchParams.set('template', params.template);
+      if (targetTemplateId && targetTemplateId !== 'live-session') {
+        newSearchParams.set('template', targetTemplateId);
       }
 
       const queryString = newSearchParams.toString();
@@ -59,17 +59,15 @@ export const useSessionParams = () => {
 
   const redirectToNew = (params?: { template?: string }) => {
     const targetTemplateId = params?.template || templateId;
-    console.log('[useSessionParams] Redirecting to new session with params:', {
+    logger.info(LogCategory.ROUTING, 'useSessionParams', 'Redirecting to new session', {
       params,
       currentTemplate: templateId,
       targetTemplate: targetTemplateId
     });
     
     const newSearchParams = new URLSearchParams();
-    if (!params?.template && templateId) {
-      newSearchParams.set('template', templateId);
-    } else if (params?.template) {
-      newSearchParams.set('template', params.template);
+    if (targetTemplateId && targetTemplateId !== 'live-session') {
+      newSearchParams.set('template', targetTemplateId);
     }
 
     const queryString = newSearchParams.toString();

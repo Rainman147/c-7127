@@ -24,11 +24,12 @@ const ChatContent = () => {
     isValidSessionId
   } = useSessionParams();
   
-  const { isLoading, handleSendMessage } = useChat(isValidSessionId ? sessionId : null);
+  // Only initialize chat if we have a valid session
+  const { isLoading, handleSendMessage } = useChat(sessionId);
 
-  // Handle invalid routes
+  // Only handle invalid routes when a session ID is present
   useEffect(() => {
-    if (!isNewSession && !isValidSessionId) {
+    if (sessionId && !isValidSessionId) {
       logger.warn(LogCategory.STATE, 'Index', 'Invalid session ID, redirecting to new chat');
       toast({
         title: "Invalid Session",
@@ -37,11 +38,10 @@ const ChatContent = () => {
       });
       navigate('/');
     }
-  }, [isNewSession, isValidSessionId, navigate, toast]);
+  }, [sessionId, isValidSessionId, navigate, toast]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] relative">
-      {/* Create a placeholder for the toggle button */}
       <div className="fixed top-4 left-4 w-10 h-10 z-50">
         <SidebarToggle />
       </div>
