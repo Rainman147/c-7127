@@ -3,6 +3,7 @@ import TiptapEditor from '../message-editor/TiptapEditor';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { MessageContentProps } from '@/types/chat';
+import { logger, LogCategory } from '@/utils/logging';
 
 const MessageContent = ({ 
   role, 
@@ -22,17 +23,15 @@ const MessageContent = ({
   onCancel,
   onRetry
 }: MessageContentProps) => {
-  console.log('[MessageContent] Rendering with:', { 
-    role, 
-    id, 
+  logger.debug(LogCategory.RENDER, 'MessageContent', 'Rendering with props:', {
+    role,
+    id,
     isEditing,
     isTyping,
     isOptimistic,
     isFailed,
-    created_at,
     status,
-    hasContent: !!content,
-    contentPreview: content?.substring(0, 50) + '...'
+    contentPreview: content?.substring(0, 50)
   });
   
   return (
