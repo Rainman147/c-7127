@@ -141,6 +141,28 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
         error: action.payload.error
       };
 
+    case 'RETRY_MESSAGE': {
+      const failedMessage = state.failedMessages.find(msg => msg.id === action.payload.messageId);
+      if (!failedMessage) return state;
+
+      logger.info(LogCategory.STATE, 'MessageContext', 'Retrying message:', {
+        messageId: action.payload.messageId
+      });
+
+      return {
+        ...state,
+        failedMessages: state.failedMessages.filter(msg => msg.id !== action.payload.messageId),
+        pendingMessages: [...state.pendingMessages, { ...failedMessage, status: 'sending' }],
+        messages: state.messages.map(msg => 
+          msg.id === action.payload.messageId 
+            ? { ...msg, status: 'sending' } 
+            : msg
+        ),
+        isProcessing: true,
+        error: null
+      };
+    }
+
     case 'SET_ERROR':
       return {
         ...state,

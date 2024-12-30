@@ -19,6 +19,7 @@ export type MessageAction =
   | { type: 'CANCEL_MESSAGE_EDIT'; payload: { messageId: string } }
   | { type: 'CONFIRM_MESSAGE'; payload: { tempId: string; confirmedMessage: Message } }
   | { type: 'HANDLE_MESSAGE_FAILURE'; payload: { messageId: string; error: string } }
+  | { type: 'RETRY_MESSAGE'; payload: { messageId: string } }
   | { type: 'SET_ERROR'; payload: string }
   | { type: 'CLEAR_ERROR' }
   | { type: 'CLEAR_MESSAGES' };
@@ -26,6 +27,9 @@ export type MessageAction =
 export interface MessageContextType extends MessageState {
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
+  sendMessage: (content: string, chatId: string, type?: 'text' | 'audio') => Promise<any>;
+  editMessage: (messageId: string, content: string) => Promise<any>;
+  retryMessage: (messageId: string) => Promise<void>;
   updateMessageStatus: (messageId: string, status: MessageStatus) => void;
   updateMessageContent: (messageId: string, content: string) => void;
   handleMessageEdit: (messageId: string) => void;
