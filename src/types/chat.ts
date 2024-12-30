@@ -1,5 +1,3 @@
-import type { MessageStatus } from '@/types/chat';
-
 export type MessageRole = 'user' | 'assistant';
 export type MessageStatus = 'queued' | 'sending' | 'delivered' | 'seen' | 'failed' | 'error';
 
@@ -17,8 +15,20 @@ export interface Message {
   error?: string;
   chat_id: string;
   transactionId?: string;
-  isEditing?: boolean;  // Added this
-  wasEdited?: boolean;  // Added this
+  isEditing?: boolean;
+  wasEdited?: boolean;
+}
+
+export interface MessageGroup {
+  id: string;
+  label: string;
+  timestamp: string;
+  messages: Message[];
+}
+
+export interface MessageProps extends Message {
+  isStreaming?: boolean;
+  showAvatar?: boolean;
 }
 
 export interface MessageContentProps {
