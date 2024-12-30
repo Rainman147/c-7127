@@ -6,7 +6,10 @@ export enum LogCategory {
   DATABASE = 'DATABASE',
   NETWORK = 'NETWORK',
   COMMUNICATION = 'COMMUNICATION',
-  HOOKS = 'HOOKS'
+  HOOKS = 'HOOKS',
+  VALIDATION = 'VALIDATION',
+  SESSION = 'SESSION',
+  API = 'API'
 }
 
 export const logger = {

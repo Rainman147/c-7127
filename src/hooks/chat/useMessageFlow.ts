@@ -30,7 +30,7 @@ export const useMessageFlow = (activeSessionId: string | null) => {
     });
 
     if (!content.trim()) {
-      logger.debug(LogCategory.VALIDATION, 'MessageFlow', 'Empty message, ignoring');
+      logger.debug(LogCategory.STATE, 'MessageFlow', 'Empty message, ignoring');
       return;
     }
 
@@ -47,7 +47,7 @@ export const useMessageFlow = (activeSessionId: string | null) => {
     try {
       let sessionId = activeSessionId;
       if (!sessionId) {
-        logger.info(LogCategory.SESSION, 'MessageFlow', 'No active session, creating one', {
+        logger.info(LogCategory.STATE, 'MessageFlow', 'No active session, creating one', {
           flowId,
           flowDuration: performance.now() - flowStartTime
         });
@@ -58,14 +58,14 @@ export const useMessageFlow = (activeSessionId: string | null) => {
           throw new Error('Failed to create session');
         }
         
-        logger.info(LogCategory.SESSION, 'MessageFlow', 'Session created:', { 
+        logger.info(LogCategory.STATE, 'MessageFlow', 'Session created:', { 
           flowId,
           sessionId,
           flowDuration: performance.now() - flowStartTime
         });
       }
 
-      logger.debug(LogCategory.API, 'MessageFlow', 'Invoking messages function:', {
+      logger.debug(LogCategory.STATE, 'MessageFlow', 'Invoking messages function:', {
         flowId,
         sessionId,
         messageId: optimisticMessage.id,
@@ -81,7 +81,7 @@ export const useMessageFlow = (activeSessionId: string | null) => {
         }
       });
 
-      logger.info(LogCategory.API, 'MessageFlow', 'API response received:', {
+      logger.info(LogCategory.STATE, 'MessageFlow', 'API response received:', {
         flowId,
         apiDuration: performance.now() - apiStartTime,
         success: !error,
@@ -99,7 +99,6 @@ export const useMessageFlow = (activeSessionId: string | null) => {
         totalDuration: performance.now() - flowStartTime
       });
 
-      // Replace optimistic message with confirmed message
       setMessages(prevMessages => {
         const updatedMessages = prevMessages.map(msg => 
           msg.id === optimisticMessage.id ? data : msg

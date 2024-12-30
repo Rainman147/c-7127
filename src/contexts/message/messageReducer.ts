@@ -1,11 +1,23 @@
-import type { Message, MessageStatus } from '@/types/chat';
-import type { MessageState, MessageAction } from '@/types/messageContext';
+import { MessageState, MessageAction } from '@/types/messageContext';
 import { logger, LogCategory } from '@/utils/logging';
 
-export const messageReducer = (
-  state: MessageState,
-  action: MessageAction
-): MessageState => {
+export const initialState: MessageState = {
+  messages: [],
+  pendingMessages: [],
+  confirmedMessages: [],
+  failedMessages: [],
+  isProcessing: false,
+  editingMessageId: null,
+  error: null
+};
+
+export const messageReducer = (state: MessageState, action: MessageAction): MessageState => {
+  logger.debug(LogCategory.STATE, 'MessageContext', 'Reducer action:', { 
+    type: action.type,
+    currentMessageCount: state.messages.length,
+    timestamp: new Date().toISOString()
+  });
+
   switch (action.type) {
     case 'SET_MESSAGES':
       return {
@@ -124,22 +136,15 @@ export const messageReducer = (
       };
 
     case 'CLEAR_ERROR':
+      logger.info(LogCategory.STATE, 'MessageContext', 'Clearing error state');
       return {
         ...state,
         error: null
       };
 
     case 'CLEAR_MESSAGES':
-      return {
-        ...state,
-        messages: [],
-        pendingMessages: [],
-        confirmedMessages: [],
-        failedMessages: [],
-        isProcessing: false,
-        editingMessageId: null,
-        error: null
-      };
+      logger.info(LogCategory.STATE, 'MessageContext', 'Clearing all messages');
+      return initialState;
 
     default:
       return state;
