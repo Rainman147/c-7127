@@ -59,6 +59,51 @@ export const messageReducer = (state: MessageState, action: MessageAction): Mess
         )
       };
 
+    case 'UPDATE_MESSAGE_CONTENT':
+      return {
+        ...state,
+        messages: state.messages.map(msg =>
+          msg.id === action.payload.messageId
+            ? { ...msg, content: action.payload.content }
+            : msg
+        )
+      };
+
+    case 'START_MESSAGE_EDIT':
+      return {
+        ...state,
+        messages: state.messages.map(msg =>
+          msg.id === action.payload.messageId
+            ? { ...msg, isEditing: true }
+            : msg
+        )
+      };
+
+    case 'SAVE_MESSAGE_EDIT':
+      return {
+        ...state,
+        messages: state.messages.map(msg =>
+          msg.id === action.payload.messageId
+            ? { 
+                ...msg, 
+                content: action.payload.content,
+                isEditing: false,
+                wasEdited: true
+              }
+            : msg
+        )
+      };
+
+    case 'CANCEL_MESSAGE_EDIT':
+      return {
+        ...state,
+        messages: state.messages.map(msg =>
+          msg.id === action.payload.messageId
+            ? { ...msg, isEditing: false }
+            : msg
+        )
+      };
+
     case 'CONFIRM_MESSAGE':
       logger.info(LogCategory.STATE, 'MessageContext', 'Confirming message:', {
         tempId: action.payload.tempId,

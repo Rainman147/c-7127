@@ -1,6 +1,5 @@
 import { memo } from 'react';
 import MessageContainer from './message/MessageContainer';
-import { useMessageState } from './message/useMessageState';
 import { useMessageRealtime } from './message/useMessageRealtime';
 import { useTypingEffect } from './message/useTypingEffect';
 import { useMessages } from '@/contexts/MessageContext';
@@ -24,19 +23,22 @@ const Message = memo(({
   isFailed?: boolean;
   onRetry?: () => void;
 }) => {
-  const { updateMessageStatus } = useMessages();
+  const { 
+    updateMessageStatus,
+    updateMessageContent,
+    handleMessageEdit,
+    handleMessageSave,
+    handleMessageCancel
+  } = useMessages();
+
   const {
     editedContent,
     setEditedContent,
     isEditing,
     wasEdited,
-    isSaving,
-    handleSave,
-    handleCancel,
-    handleEdit
-  } = useMessageState(content, id);
+    isSaving
+  } = useMessageRealtime(id, content, updateMessageContent);
 
-  useMessageRealtime(id, editedContent, setEditedContent);
   const { isTyping } = useTypingEffect(role, isStreaming, content);
 
   logger.debug(LogCategory.RENDER, 'Message', 'Rendering message:', {
@@ -75,9 +77,9 @@ const Message = memo(({
       isFailed={isFailed}
       created_at={created_at}
       status={status}
-      onSave={handleSave}
-      onCancel={handleCancel}
-      onEdit={handleEdit}
+      onSave={handleMessageSave}
+      onCancel={handleMessageCancel}
+      onEdit={handleMessageEdit}
       onRetry={onRetry}
     />
   );

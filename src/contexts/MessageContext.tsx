@@ -49,6 +49,52 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     dispatch({ type: 'UPDATE_MESSAGE_STATUS', payload: { messageId, status } });
   }, []);
 
+  const updateMessageContent = useCallback((messageId: string, content: string) => {
+    logger.info(LogCategory.STATE, 'MessageContext', 'Updating message content:', {
+      messageId,
+      contentPreview: content.substring(0, 50)
+    });
+    dispatch({ type: 'UPDATE_MESSAGE_CONTENT', payload: { messageId, content } });
+  }, []);
+
+  const handleMessageEdit = useCallback((messageId: string) => {
+    logger.info(LogCategory.STATE, 'MessageContext', 'Starting message edit:', {
+      messageId
+    });
+    dispatch({ type: 'START_MESSAGE_EDIT', payload: { messageId } });
+  }, []);
+
+  const handleMessageSave = useCallback(async (messageId: string, content: string) => {
+    logger.info(LogCategory.STATE, 'MessageContext', 'Saving message edit:', {
+      messageId,
+      contentPreview: content.substring(0, 50)
+    });
+    
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ content })
+        .eq('id', messageId);
+
+      if (error) throw error;
+      
+      dispatch({ type: 'SAVE_MESSAGE_EDIT', payload: { messageId, content } });
+    } catch (error) {
+      logger.error(LogCategory.ERROR, 'MessageContext', 'Failed to save message edit:', {
+        messageId,
+        error
+      });
+      throw error;
+    }
+  }, []);
+
+  const handleMessageCancel = useCallback((messageId: string) => {
+    logger.info(LogCategory.STATE, 'MessageContext', 'Canceling message edit:', {
+      messageId
+    });
+    dispatch({ type: 'CANCEL_MESSAGE_EDIT', payload: { messageId } });
+  }, []);
+
   const confirmMessage = useCallback((tempId: string, confirmedMessage: Message) => {
     logger.info(LogCategory.STATE, 'MessageContext', 'Confirming message:', {
       tempId,
@@ -75,6 +121,10 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     setMessages,
     addMessage,
     updateMessageStatus,
+    updateMessageContent,
+    handleMessageEdit,
+    handleMessageSave,
+    handleMessageCancel,
     confirmMessage,
     handleMessageFailure,
     clearMessages
