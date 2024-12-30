@@ -30,18 +30,26 @@ export const mergeMessages = (
       messageMap.set(msg.id, {
         ...msg,
         status: existingMsg.status === 'error' ? 'error' : msg.status,
-        isEditing: existingMsg.isEditing,
-        wasEdited: existingMsg.wasEdited
+        isEditing: existingMsg.isEditing || false,
+        wasEdited: existingMsg.wasEdited || false
       });
     } else {
-      messageMap.set(msg.id, msg);
+      messageMap.set(msg.id, {
+        ...msg,
+        isEditing: false,
+        wasEdited: false
+      });
     }
   });
 
   // Add optimistic messages that haven't been confirmed yet
   optimisticMessages.forEach(msg => {
     if (!messageMap.has(msg.id)) {
-      messageMap.set(msg.id, msg);
+      messageMap.set(msg.id, {
+        ...msg,
+        isEditing: false,
+        wasEdited: false
+      });
     }
   });
 
@@ -50,7 +58,7 @@ export const mergeMessages = (
     if (a.sequence !== b.sequence) {
       return (a.sequence || 0) - (b.sequence || 0);
     }
-    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    return new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime();
   });
 
   logger.debug(LogCategory.STATE, 'messageUtils', 'Merge complete:', {

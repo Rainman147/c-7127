@@ -12,7 +12,8 @@ export enum LogCategory {
   API = 'API',
   LIFECYCLE = 'LIFECYCLE',
   PERFORMANCE = 'PERFORMANCE',
-  MERGE = 'MERGE'
+  MERGE = 'MERGE',
+  QUEUE = 'QUEUE'  // Added this
 }
 
 export const logger = {
