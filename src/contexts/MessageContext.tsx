@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, Dispatch } from 'react';
+import { createContext, useContext, useReducer, useCallback, useRef } from 'react';
 import { messageReducer } from './message/messageReducer';
 import type { Message, MessageStatus } from '@/types/chat';
 import type { MessageContextType, MessageState, MessageAction } from '@/types/messageContext';
@@ -21,142 +21,150 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
     messageReducer,
     initialState
   );
+  
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
-  logger.debug(LogCategory.STATE, 'MessageContext', 'Context state update:', {
-    messageCount: state.messages.length,
-    pendingCount: state.pendingMessages.length,
-    confirmedCount: state.confirmedMessages.length,
-    failedCount: state.failedMessages.length,
-    isProcessing: state.isProcessing,
-    editingMessageId: state.editingMessageId,
-    error: state.error,
-    timestamp: new Date().toISOString(),
-    contextId: `ctx-${Date.now()}`
-  });
-
-  const setMessages = (messages: Message[]) => {
-    const setStartTime = performance.now();
-    logger.info(LogCategory.STATE, 'MessageContext', 'Setting messages:', {
-      messageCount: messages.length,
-      messageIds: messages.map(m => m.id),
-      operation: 'setMessages',
-      timestamp: new Date().toISOString(),
-      flowId: `set-${Date.now()}`
-    });
-    dispatch({ type: 'SET_MESSAGES', payload: messages });
-    logger.debug(LogCategory.STATE, 'MessageContext', 'Messages set complete:', {
-      duration: `${(performance.now() - setStartTime).toFixed(2)}ms`,
+  const dispatchWithLogging = useCallback((action: MessageAction) => {
+    const startTime = performance.now();
+    const prevState = stateRef.current;
+    
+    logger.info(LogCategory.STATE, 'MessageContext', 'Dispatching action:', {
+      type: action.type,
+      payload: action.type === 'SET_MESSAGES' 
+        ? `Setting ${action.payload.length} messages` 
+        : action.payload,
+      currentState: {
+        messageCount: prevState.messages.length,
+        pendingCount: prevState.pendingMessages.length,
+        confirmedCount: prevState.confirmedMessages.length,
+        failedCount: prevState.failedMessages.length,
+        isProcessing: prevState.isProcessing,
+        editingMessageId: prevState.editingMessageId,
+        error: prevState.error
+      },
       timestamp: new Date().toISOString()
     });
-  };
 
-  const addMessage = (message: Message) => {
-    const addStartTime = performance.now();
-    logger.info(LogCategory.STATE, 'MessageContext', 'Adding message:', {
-      messageId: message.id,
-      isOptimistic: message.isOptimistic,
-      operation: 'addMessage',
-      timestamp: new Date().toISOString(),
-      flowId: `add-${Date.now()}`
+    dispatch(action);
+    
+    logger.debug(LogCategory.STATE, 'MessageContext', 'Action completed:', {
+      type: action.type,
+      duration: performance.now() - startTime,
+      stateChanges: {
+        messageCountDiff: state.messages.length - prevState.messages.length,
+        pendingCountDiff: state.pendingMessages.length - prevState.pendingMessages.length,
+        confirmedCountDiff: state.confirmedMessages.length - prevState.confirmedMessages.length,
+        failedCountDiff: state.failedMessages.length - prevState.failedMessages.length,
+        processingChanged: state.isProcessing !== prevState.isProcessing,
+        editingChanged: state.editingMessageId !== prevState.editingMessageId,
+        errorChanged: state.error !== prevState.error
+      }
     });
-    dispatch({ type: 'ADD_MESSAGE', payload: message });
-    logger.debug(LogCategory.STATE, 'MessageContext', 'Message add complete:', {
-      duration: `${(performance.now() - addStartTime).toFixed(2)}ms`,
-      timestamp: new Date().toISOString()
-    });
-  };
-
-  const updateMessageStatus = (messageId: string, status: MessageStatus) => {
-    logger.info(LogCategory.STATE, 'MessageContext', 'Updating message status:', {
-      messageId,
-      status,
-      operation: 'updateMessageStatus',
-      timestamp: new Date().toISOString()
-    });
-    dispatch({ type: 'UPDATE_MESSAGE_STATUS', payload: { messageId, status } });
-  };
-
-  const updateMessageContent = (messageId: string, content: string) => {
-    logger.info(LogCategory.STATE, 'MessageContext', 'Updating message content:', {
-      messageId,
-      contentLength: content.length,
-      operation: 'updateMessageContent',
-      timestamp: new Date().toISOString()
-    });
-    dispatch({ type: 'UPDATE_MESSAGE_CONTENT', payload: { messageId, content } });
-  };
+  }, []);
 
   const value: MessageContextType = {
     ...state,
-    setMessages,
-    addMessage,
-    updateMessageStatus,
-    updateMessageContent,
-    handleMessageEdit: (messageId: string) => {
-      logger.info(LogCategory.STATE, 'MessageContext', 'Starting message edit:', {
-        messageId,
-        operation: 'handleMessageEdit',
+    setMessages: useCallback((messages: Message[]) => {
+      logger.info(LogCategory.STATE, 'MessageContext', 'Setting messages:', {
+        messageCount: messages.length,
+        messageIds: messages.map(m => m.id),
         timestamp: new Date().toISOString()
       });
-      dispatch({ type: 'START_MESSAGE_EDIT', payload: { messageId } });
-    },
-    handleMessageSave: (messageId: string, content: string) => {
-      logger.info(LogCategory.STATE, 'MessageContext', 'Saving message edit:', {
+      dispatchWithLogging({ type: 'SET_MESSAGES', payload: messages });
+    }, [dispatchWithLogging]),
+    
+    addMessage: useCallback((message: Message) => {
+      logger.info(LogCategory.STATE, 'MessageContext', 'Adding message:', {
+        messageId: message.id,
+        isOptimistic: message.isOptimistic,
+        timestamp: new Date().toISOString()
+      });
+      dispatchWithLogging({ type: 'ADD_MESSAGE', payload: message });
+    }, [dispatchWithLogging]),
+    
+    updateMessageStatus: useCallback((messageId: string, status: MessageStatus) => {
+      logger.debug(LogCategory.STATE, 'MessageContext', 'Updating message status:', {
+        messageId,
+        status,
+        timestamp: new Date().toISOString()
+      });
+      dispatchWithLogging({ type: 'UPDATE_MESSAGE_STATUS', payload: { messageId, status } });
+    }, [dispatchWithLogging]),
+    
+    updateMessageContent: useCallback((messageId: string, content: string) => {
+      logger.debug(LogCategory.STATE, 'MessageContext', 'Updating message content:', {
         messageId,
         contentLength: content.length,
-        operation: 'handleMessageSave',
         timestamp: new Date().toISOString()
       });
-      dispatch({ type: 'SAVE_MESSAGE_EDIT', payload: { messageId, content } });
-    },
-    handleMessageCancel: (messageId: string) => {
-      logger.info(LogCategory.STATE, 'MessageContext', 'Canceling message edit:', {
+      dispatchWithLogging({ type: 'UPDATE_MESSAGE_CONTENT', payload: { messageId, content } });
+    }, [dispatchWithLogging]),
+
+    handleMessageEdit: useCallback((messageId: string) => {
+      logger.debug(LogCategory.STATE, 'MessageContext', 'Editing message:', {
         messageId,
-        operation: 'handleMessageCancel',
         timestamp: new Date().toISOString()
       });
-      dispatch({ type: 'CANCEL_MESSAGE_EDIT', payload: { messageId } });
-    },
-    retryMessage: (messageId: string) => {
-      logger.info(LogCategory.STATE, 'MessageContext', 'Retrying message:', {
+      dispatchWithLogging({ type: 'START_MESSAGE_EDIT', payload: { messageId } });
+    }, [dispatchWithLogging]),
+
+    handleMessageSave: useCallback((messageId: string, content: string) => {
+      logger.debug(LogCategory.STATE, 'MessageContext', 'Saving message:', {
         messageId,
-        operation: 'retryMessage',
+        contentLength: content.length,
         timestamp: new Date().toISOString()
       });
-      dispatch({ type: 'RETRY_MESSAGE', payload: { messageId } });
-    },
-    clearMessages: () => {
-      logger.info(LogCategory.STATE, 'MessageContext', 'Clearing all messages', {
-        operation: 'clearMessages',
+      dispatchWithLogging({ type: 'SAVE_MESSAGE_EDIT', payload: { messageId, content } });
+    }, [dispatchWithLogging]),
+
+    handleMessageCancel: useCallback((messageId: string) => {
+      logger.debug(LogCategory.STATE, 'MessageContext', 'Canceling message edit:', {
+        messageId,
         timestamp: new Date().toISOString()
       });
-      dispatch({ type: 'CLEAR_MESSAGES' });
-    },
-    retryLoading: () => {
-      logger.info(LogCategory.STATE, 'MessageContext', 'Retrying loading', {
-        operation: 'retryLoading',
+      dispatchWithLogging({ type: 'CANCEL_MESSAGE_EDIT', payload: { messageId } });
+    }, [dispatchWithLogging]),
+
+    retryMessage: useCallback((messageId: string) => {
+      logger.debug(LogCategory.STATE, 'MessageContext', 'Retrying message:', {
+        messageId,
         timestamp: new Date().toISOString()
       });
-      dispatch({ type: 'CLEAR_ERROR' });
-    },
-    confirmMessage: (tempId: string, confirmedMessage: Message) => {
-      logger.info(LogCategory.STATE, 'MessageContext', 'Confirming message:', {
+      dispatchWithLogging({ type: 'RETRY_MESSAGE', payload: { messageId } });
+    }, [dispatchWithLogging]),
+
+    clearMessages: useCallback(() => {
+      logger.debug(LogCategory.STATE, 'MessageContext', 'Clearing all messages', {
+        timestamp: new Date().toISOString()
+      });
+      dispatchWithLogging({ type: 'CLEAR_MESSAGES' });
+    }, [dispatchWithLogging]),
+
+    retryLoading: useCallback(() => {
+      logger.debug(LogCategory.STATE, 'MessageContext', 'Retrying loading', {
+        timestamp: new Date().toISOString()
+      });
+      dispatchWithLogging({ type: 'CLEAR_ERROR' });
+    }, [dispatchWithLogging]),
+
+    confirmMessage: useCallback((tempId: string, confirmedMessage: Message) => {
+      logger.debug(LogCategory.STATE, 'MessageContext', 'Confirming message:', {
         tempId,
         confirmedId: confirmedMessage.id,
-        operation: 'confirmMessage',
         timestamp: new Date().toISOString()
       });
-      dispatch({ type: 'CONFIRM_MESSAGE', payload: { tempId, confirmedMessage } });
-    },
-    handleMessageFailure: (messageId: string, error: string) => {
+      dispatchWithLogging({ type: 'CONFIRM_MESSAGE', payload: { tempId, confirmedMessage } });
+    }, [dispatchWithLogging]),
+
+    handleMessageFailure: useCallback((messageId: string, error: string) => {
       logger.error(LogCategory.STATE, 'MessageContext', 'Message failed:', {
         messageId,
         error,
-        operation: 'handleMessageFailure',
         timestamp: new Date().toISOString()
       });
-      dispatch({ type: 'HANDLE_MESSAGE_FAILURE', payload: { messageId, error } });
-    }
+      dispatchWithLogging({ type: 'HANDLE_MESSAGE_FAILURE', payload: { messageId, error } });
+    }, [dispatchWithLogging]),
   };
 
   return (

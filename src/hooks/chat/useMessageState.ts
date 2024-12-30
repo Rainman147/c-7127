@@ -18,7 +18,7 @@ export const useMessageState = () => {
     clearMessages
   } = useMessages();
 
-  logger.debug(LogCategory.HOOKS, 'useMessageState', 'Hook state:', {
+  logger.debug(LogCategory.STATE, 'MessageState', 'Hook state:', {
     messageCount: messages.length,
     pendingCount: pendingMessages.length,
     confirmedCount: confirmedMessages.length,
@@ -30,7 +30,8 @@ export const useMessageState = () => {
       contentPreview: m.content?.substring(0, 50),
       sequence: m.sequence,
       status: m.status,
-      isOptimistic: m.isOptimistic
+      isOptimistic: m.isOptimistic,
+      created_at: m.created_at
     })),
     hookStack: new Error().stack,
     hookTime: performance.now(),
@@ -38,7 +39,9 @@ export const useMessageState = () => {
   });
 
   const addOptimisticMessage = useCallback((content: string, type: 'text' | 'audio' = 'text') => {
-    logger.debug(LogCategory.STATE, 'useMessageState', 'Adding optimistic message:', {
+    const messageId = `temp-${Date.now()}`;
+    logger.debug(LogCategory.STATE, 'MessageState', 'Adding optimistic message:', {
+      messageId,
       contentPreview: content?.substring(0, 50),
       type,
       currentMessageCount: messages.length,
@@ -46,7 +49,7 @@ export const useMessageState = () => {
     });
 
     const optimisticMessage: Message = {
-      id: `temp-${Date.now()}`,
+      id: messageId,
       role: 'user',
       content,
       type,
@@ -56,7 +59,7 @@ export const useMessageState = () => {
       status: 'sending'
     };
 
-    logger.info(LogCategory.STATE, 'useMessageState', 'Created optimistic message:', {
+    logger.info(LogCategory.STATE, 'MessageState', 'Created optimistic message:', {
       messageId: optimisticMessage.id,
       sequence: optimisticMessage.sequence,
       timestamp: new Date().toISOString()
@@ -67,22 +70,38 @@ export const useMessageState = () => {
   }, [messages.length, addMessage]);
 
   const setMessagesWithLogging = useCallback((newMessages: Message[] | ((prev: Message[]) => Message[])) => {
-    logger.info(LogCategory.STATE, 'useMessageState', 'Setting messages:', {
+    const startTime = performance.now();
+    
+    logger.info(LogCategory.STATE, 'MessageState', 'Setting messages:', {
       messageCount: typeof newMessages === 'function' ? 'using updater function' : newMessages.length,
       messageDetails: (typeof newMessages === 'function' ? messages : newMessages).map(m => ({
         id: m.id,
         role: m.role,
         contentPreview: m.content?.substring(0, 50),
         sequence: m.sequence,
-        status: m.status
+        status: m.status,
+        created_at: m.created_at
       })),
-      timestamp: new Date().toISOString()
+      startTime: new Date().toISOString()
     });
     
     if (typeof newMessages === 'function') {
-      contextSetMessages(newMessages(messages));
+      const updatedMessages = newMessages(messages);
+      contextSetMessages(updatedMessages);
+      
+      logger.debug(LogCategory.STATE, 'MessageState', 'Messages updated with function:', {
+        previousCount: messages.length,
+        newCount: updatedMessages.length,
+        duration: performance.now() - startTime
+      });
     } else {
       contextSetMessages(newMessages);
+      
+      logger.debug(LogCategory.STATE, 'MessageState', 'Messages set directly:', {
+        previousCount: messages.length,
+        newCount: newMessages.length,
+        duration: performance.now() - startTime
+      });
     }
   }, [messages, contextSetMessages]);
 
