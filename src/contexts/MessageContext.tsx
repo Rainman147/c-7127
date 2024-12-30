@@ -3,6 +3,7 @@ import { useToast } from '@/hooks/use-toast';
 import { logger, LogCategory } from '@/utils/logging';
 import { messageReducer, initialState } from './message/messageReducer';
 import { sendMessage, editMessage } from './message/messageOperations';
+import { supabase } from '@/integrations/supabase/client';
 import type { MessageContextType } from '@/types/messageContext';
 import type { Message, MessageStatus, MessageRole } from '@/types/chat';
 
@@ -20,14 +21,14 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     dispatch({ type: 'ADD_MESSAGE', payload: message });
   }, []);
 
-  const handleMessageSend = useCallback(async (content: string, chatId: string, type: 'text' | 'audio' = 'text') => {
+  const handleMessageSend = useCallback(async (content: string, chatId: string, type: 'text' | 'audio' = 'text', sequence: number) => {
     const optimisticMessage: Message = {
       id: `temp-${Date.now()}`,
       content,
       type,
-      role: 'user',
+      role: 'user' as MessageRole,
       sequence: state.messages.length,
-      status: 'sending',
+      status: 'sending' as MessageStatus,
       created_at: new Date().toISOString(),
       isOptimistic: true
     };
@@ -35,7 +36,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     addMessage(optimisticMessage);
 
     try {
-      const message = await sendMessage(content, chatId, type, state.messages.length);
+      const message = await sendMessage(content, chatId, type, sequence);
       
       dispatch({ 
         type: 'CONFIRM_MESSAGE', 
@@ -53,7 +54,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [state.messages.length, addMessage]);
 
-  const editMessage = useCallback(async (messageId: string, content: string) => {
+  const handleMessageEdit = useCallback(async (messageId: string, content: string) => {
     logger.info(LogCategory.STATE, 'MessageContext', 'Editing message:', {
       messageId,
       contentLength: content.length
@@ -123,13 +124,9 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     dispatch({ type: 'UPDATE_MESSAGE_CONTENT', payload: { messageId, content } });
   }, []);
 
-  const handleMessageEdit = useCallback((messageId: string) => {
-    dispatch({ type: 'START_MESSAGE_EDIT', payload: { messageId } });
-  }, []);
-
   const handleMessageSave = useCallback(async (messageId: string, content: string) => {
     await editMessage(messageId, content);
-  }, [editMessage]);
+  }, []);
 
   const handleMessageCancel = useCallback((messageId: string) => {
     dispatch({ type: 'CANCEL_MESSAGE_EDIT', payload: { messageId } });
@@ -156,7 +153,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     setMessages,
     addMessage,
     sendMessage: handleMessageSend,
-    editMessage,
+    editMessage: handleMessageEdit,
     retryMessage,
     updateMessageStatus,
     updateMessageContent,

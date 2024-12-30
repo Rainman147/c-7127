@@ -32,7 +32,8 @@ export const sendMessage = async (
   return {
     ...message,
     role: message.sender as 'user' | 'assistant',
-    status: message.status as MessageStatus || 'delivered'
+    status: message.status as MessageStatus,
+    type: message.type as 'text' | 'audio'
   };
 };
 
