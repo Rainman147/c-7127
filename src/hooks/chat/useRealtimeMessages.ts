@@ -11,7 +11,10 @@ const validateAndMergeMessages = (localMessages: Message[], newMessage: Message)
     return localMessages;
   }
 
-  return [...localMessages, newMessage].sort((a, b) => {
+  return [...localMessages, {
+    ...newMessage,
+    chat_id: newMessage.chat_id
+  }].sort((a, b) => {
     if (a.sequence !== b.sequence) {
       return (a.sequence || 0) - (b.sequence || 0);
     }

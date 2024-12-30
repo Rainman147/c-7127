@@ -36,6 +36,7 @@ export const useMessageOrchestrator = (chatId: string | null): MessageOrchestrat
       content,
       type,
       role: 'user',
+      chat_id: chatId,
       sequence: messages.length,
       isOptimistic: true,
       created_at: new Date().toISOString()
@@ -78,7 +79,8 @@ export const useMessageOrchestrator = (chatId: string | null): MessageOrchestrat
         type: savedMessage.type as 'text' | 'audio',
         role: 'user',
         sequence: savedMessage.sequence || messages.length,
-        created_at: savedMessage.created_at
+        created_at: savedMessage.created_at,
+        chat_id: chatId
       };
 
       setMessages(prev => 

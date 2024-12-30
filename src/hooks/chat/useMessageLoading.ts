@@ -60,6 +60,7 @@ export const useMessageLoading = () => {
           type: msg.type as 'text' | 'audio',
           sequence: msg.sequence ?? index,
           created_at: msg.created_at,
+          chat_id: msg.chat_id,
           status
         };
       });

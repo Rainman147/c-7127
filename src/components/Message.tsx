@@ -12,6 +12,7 @@ const Message = memo(({
   isStreaming, 
   type, 
   id,
+  chat_id,
   showAvatar = true,
   isOptimistic,
   isFailed,

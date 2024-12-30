@@ -13,7 +13,8 @@ export const useMessageTransform = () => {
       role: message.sender as 'user' | 'assistant',
       type: message.type as 'text' | 'audio',
       sequence: message.sequence,
-      created_at: message.created_at
+      created_at: message.created_at,
+      chat_id: message.chat_id
     };
   };
 

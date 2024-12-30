@@ -32,16 +32,21 @@ export const useMessageFlow = (activeSessionId: string | null) => {
       return;
     }
 
+    if (!activeSessionId) {
+      logger.error(LogCategory.STATE, 'MessageFlow', 'No active session');
+      throw new Error('No active session');
+    }
+
     const flowStartTime = performance.now();
     const optimisticMessage: Message = {
       id: `temp-${Date.now()}`,
       content,
       type,
       role: 'user',
+      chat_id: activeSessionId,
       isOptimistic: true,
       status: 'sending',
       created_at: new Date().toISOString(),
-      chat_id: activeSessionId || '',
       sequence: messages?.length || 0
     };
 
@@ -60,13 +65,8 @@ export const useMessageFlow = (activeSessionId: string | null) => {
     });
 
     try {
-      let sessionId = activeSessionId;
-      if (!sessionId) {
-        throw new Error('No active session');
-      }
-
       const { data, error } = await supabase.functions.invoke('messages', {
-        body: { content, type, sessionId }
+        body: { content, type, sessionId: activeSessionId }
       });
 
       if (error) throw error;

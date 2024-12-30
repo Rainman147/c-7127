@@ -50,7 +50,8 @@ export const useMessageDatabase = () => {
       content: message.content,
       role: message.sender as 'user' | 'assistant',
       type: message.type as 'text' | 'audio',
-      sequence: message.sequence
+      sequence: message.sequence,
+      chat_id: message.chat_id
     };
   };
 
