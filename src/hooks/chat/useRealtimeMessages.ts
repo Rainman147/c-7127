@@ -28,7 +28,8 @@ const isDatabaseMessage = (obj: any): obj is DatabaseMessage => {
     'id' in obj && 
     'content' in obj && 
     'sender' in obj &&
-    'type' in obj;
+    'type' in obj &&
+    'chat_id' in obj;
 };
 
 export const useRealtimeMessages = (
@@ -79,6 +80,7 @@ export const useRealtimeMessages = (
                 content: newData.content,
                 type: newData.type as 'text' | 'audio',
                 id: newData.id,
+                chat_id: newData.chat_id,
                 sequence: newData.sequence || messages.length + 1,
                 created_at: newData.created_at
               };
@@ -96,7 +98,8 @@ export const useRealtimeMessages = (
                   content: newData.content,
                   type: newData.type as 'text' | 'audio',
                   sequence: newData.sequence || msg.sequence,
-                  created_at: newData.created_at
+                  created_at: newData.created_at,
+                  chat_id: newData.chat_id
                 } : msg
               );
               setMessages(updatedMessages);

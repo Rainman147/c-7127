@@ -50,19 +50,14 @@ export const useMessageFlow = (activeSessionId: string | null) => {
       sequence: messages?.length || 0
     };
 
-    const addedMessage = addMessage(optimisticMessage);
-    
-    if (!addedMessage) {
-      logger.error(LogCategory.STATE, 'MessageFlow', 'Failed to add optimistic message');
-      return;
-    }
-    
     logger.debug(LogCategory.STATE, 'MessageFlow', 'Created optimistic message:', {
       flowId,
-      messageId: addedMessage.id,
+      messageId: optimisticMessage.id,
       messageCount: messages?.length || 0,
       flowDuration: performance.now() - flowStartTime
     });
+
+    addMessage(optimisticMessage);
 
     try {
       const { data, error } = await supabase.functions.invoke('messages', {
@@ -72,21 +67,20 @@ export const useMessageFlow = (activeSessionId: string | null) => {
       if (error) throw error;
 
       if (setMessages && messages) {
-        setMessages(messages.map(msg => 
-          msg.id === addedMessage.id ? data : msg
-        ));
+        const updatedMessages = messages.map(msg => 
+          msg.id === optimisticMessage.id ? { ...data, chat_id: activeSessionId } : msg
+        );
+        setMessages(updatedMessages);
       }
 
     } catch (error) {
       logger.error(LogCategory.ERROR, 'MessageFlow', 'Message failed:', {
         flowId,
-        messageId: addedMessage.id,
+        messageId: optimisticMessage.id,
         error,
         flowDuration: performance.now() - flowStartTime
       });
-      if (handleMessageFailure) {
-        handleMessageFailure(addedMessage.id, error as string);
-      }
+      handleMessageFailure(optimisticMessage.id, error as string);
     }
   }, [activeSessionId, addMessage, handleMessageFailure, setMessages, messages]);
 

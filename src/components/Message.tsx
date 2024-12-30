@@ -90,6 +90,7 @@ const Message = memo(({
       isStreaming={isStreaming}
       type={type}
       id={id}
+      chat_id={chat_id}
       showAvatar={showAvatar}
       editedContent={editedContent}
       isEditing={isEditing}
