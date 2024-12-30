@@ -2,6 +2,7 @@ import MessageContentDisplay from './content/MessageContentDisplay';
 import MessageEditor from './content/MessageEditor';
 import type { MessageContentProps } from '@/types/chat';
 import { logger, LogCategory } from '@/utils/logging';
+import { cn } from '@/lib/utils';
 
 const MessageContent = ({ 
   role, 
