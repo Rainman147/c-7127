@@ -1,4 +1,5 @@
 import { MessageState, MessageAction } from '@/types/messageContext';
+import { MessageStatus } from '@/types/chat';
 import { logger, LogCategory } from '@/utils/logging';
 
 export const initialState: MessageState = {
