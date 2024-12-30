@@ -138,14 +138,14 @@ export const MessageProvider = ({ children }: { children: React.ReactNode }) => 
       logger.debug(LogCategory.STATE, 'MessageContext', 'Clearing all messages', {
         timestamp: new Date().toISOString()
       });
-      dispatchWithLogging({ type: 'CLEAR_MESSAGES' });
+      dispatchWithLogging({ type: 'CLEAR_MESSAGES', payload: null });
     }, [dispatchWithLogging]),
 
     retryLoading: useCallback(() => {
       logger.debug(LogCategory.STATE, 'MessageContext', 'Retrying loading', {
         timestamp: new Date().toISOString()
       });
-      dispatchWithLogging({ type: 'CLEAR_ERROR' });
+      dispatchWithLogging({ type: 'CLEAR_ERROR', payload: null });
     }, [dispatchWithLogging]),
 
     confirmMessage: useCallback((tempId: string, confirmedMessage: Message) => {
