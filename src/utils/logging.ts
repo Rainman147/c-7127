@@ -4,7 +4,9 @@ export enum LogCategory {
   RENDER = 'RENDER',
   ROUTING = 'ROUTING',
   DATABASE = 'DATABASE',
-  NETWORK = 'NETWORK'
+  NETWORK = 'NETWORK',
+  COMMUNICATION = 'COMMUNICATION',
+  HOOKS = 'HOOKS'
 }
 
 export const logger = {
