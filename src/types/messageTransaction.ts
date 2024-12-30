@@ -1,5 +1,3 @@
-import type { MessageStatus } from './chat';
-
 export type TransactionState = 
   | 'initiated'    // Message creation started
   | 'pending'      // Optimistic update applied
