@@ -1,15 +1,28 @@
 import { MessageLoadingState } from './message/MessageLoadingState';
 import { MessageEmptyState } from './message/MessageEmptyState';
+import { MessageErrorState } from './message/MessageErrorState';
 import MessageListContainer from './message/MessageListContainer';
 import { useMessages } from '@/contexts/MessageContext';
 import { logger, LogCategory } from '@/utils/logging';
 
-const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
-  const { messages } = useMessages();
+interface MessageListProps {
+  isLoading?: boolean;
+  loadingMessage?: string;
+  loadingProgress?: number;
+}
+
+const MessageList = ({ 
+  isLoading, 
+  loadingMessage,
+  loadingProgress 
+}: MessageListProps) => {
+  const { messages, error, retryLoading } = useMessages();
 
   logger.debug(LogCategory.RENDER, 'MessageList', 'Rendering message list:', {
     isLoading,
     messageCount: messages?.length || 0,
+    error,
+    loadingProgress,
     messageDetails: messages?.map(m => ({
       id: m.id,
       role: m.role,
@@ -25,9 +38,19 @@ const MessageList = ({ isLoading }: { isLoading?: boolean }) => {
     }
   });
 
+  if (error) {
+    logger.error(LogCategory.STATE, 'MessageList', 'Error state:', { error });
+    return <MessageErrorState error={error} onRetry={retryLoading} />;
+  }
+
   if (isLoading) {
     logger.info(LogCategory.STATE, 'MessageList', 'Showing loading state');
-    return <MessageLoadingState />;
+    return (
+      <MessageLoadingState 
+        message={loadingMessage} 
+        progress={loadingProgress} 
+      />
+    );
   }
 
   if (!messages || messages.length === 0) {

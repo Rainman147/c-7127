@@ -6,6 +6,7 @@ export interface MessageState {
   confirmedMessages: Message[];
   failedMessages: Message[];
   isProcessing: boolean;
+  error: string | null;
 }
 
 export type MessageAction = 
@@ -18,6 +19,8 @@ export type MessageAction =
   | { type: 'CANCEL_MESSAGE_EDIT'; payload: { messageId: string } }
   | { type: 'CONFIRM_MESSAGE'; payload: { tempId: string; confirmedMessage: Message } }
   | { type: 'HANDLE_MESSAGE_FAILURE'; payload: { messageId: string; error: string } }
+  | { type: 'SET_ERROR'; payload: string }
+  | { type: 'CLEAR_ERROR' }
   | { type: 'CLEAR_MESSAGES' };
 
 export interface MessageContextType extends MessageState {
@@ -31,4 +34,5 @@ export interface MessageContextType extends MessageState {
   confirmMessage: (tempId: string, confirmedMessage: Message) => void;
   handleMessageFailure: (messageId: string, error: string) => void;
   clearMessages: () => void;
+  retryLoading: () => void;
 }
