@@ -1,3 +1,5 @@
+import type { MessageStatus } from '@/types/chat';
+
 export interface MessageProps {
   role: 'user' | 'assistant';
   content: string;
@@ -6,5 +8,5 @@ export interface MessageProps {
   id?: string;
   showAvatar?: boolean;
   created_at?: string;
-  status?: 'queued' | 'sending' | 'delivered' | 'seen' | 'failed';
+  status?: MessageStatus;
 }

@@ -41,7 +41,6 @@ const MessageRow = memo(({ style, group, onHeightChange, isScrolling }: MessageR
             ? Date.now() - measurementStartTime.current 
             : 0;
           
-          // Only log if height actually changed
           if (height !== lastMeasuredHeight.current) {
             logger.debug(LogCategory.STATE, 'MessageRow', 'Height changed:', {
               previousHeight: lastMeasuredHeight.current,
@@ -75,8 +74,8 @@ const MessageRow = memo(({ style, group, onHeightChange, isScrolling }: MessageR
       <div className="space-y-2">
         {group.messages.map((message, idx) => (
           <Message 
-            key={message.id || idx} 
-            {...message} 
+            key={message.id || idx}
+            {...message}
             showAvatar={idx === 0 || message.role !== group.messages[idx - 1].role}
           />
         ))}
