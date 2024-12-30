@@ -27,14 +27,12 @@ export const useMessageFlow = (activeSessionId: string | null) => {
       timestamp: new Date().toISOString()
     });
 
-    if (!content.trim()) {
-      logger.debug(LogCategory.STATE, 'MessageFlow', 'Empty message, ignoring');
+    if (!content.trim() || !activeSessionId) {
+      logger.error(LogCategory.STATE, 'MessageFlow', 'Invalid message or session:', {
+        hasContent: !!content.trim(),
+        activeSessionId
+      });
       return;
-    }
-
-    if (!activeSessionId) {
-      logger.error(LogCategory.STATE, 'MessageFlow', 'No active session');
-      throw new Error('No active session');
     }
 
     const flowStartTime = performance.now();
@@ -67,9 +65,20 @@ export const useMessageFlow = (activeSessionId: string | null) => {
       if (error) throw error;
 
       if (setMessages && messages) {
+        // Preserve optimistic messages that aren't this one
         const updatedMessages = messages.map(msg => 
-          msg.id === optimisticMessage.id ? { ...data, chat_id: activeSessionId } : msg
+          msg.id === optimisticMessage.id 
+            ? { ...data, chat_id: activeSessionId } 
+            : msg
         );
+        
+        logger.debug(LogCategory.STATE, 'MessageFlow', 'Updating messages after server response:', {
+          flowId,
+          optimisticId: optimisticMessage.id,
+          confirmedId: data.id,
+          messageCount: updatedMessages.length
+        });
+        
         setMessages(updatedMessages);
       }
 

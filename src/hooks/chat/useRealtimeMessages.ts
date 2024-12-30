@@ -11,7 +11,9 @@ const validateAndMergeMessages = (localMessages: Message[], newMessage: Message)
     return localMessages;
   }
 
-  return [...localMessages, {
+  // Preserve optimistic messages while adding new ones
+  const nonOptimisticMessages = localMessages.filter(msg => !msg.isOptimistic);
+  return [...nonOptimisticMessages, {
     ...newMessage,
     chat_id: newMessage.chat_id
   }].sort((a, b) => {
