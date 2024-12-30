@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useMessageState } from './useMessageState';
+import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { logger, LogCategory } from '@/utils/logging';
 import type { Message } from '@/types/chat';
 
@@ -10,6 +11,7 @@ export const useMessageFlow = (activeSessionId: string | null) => {
     handleMessageFailure,
     setMessages 
   } = useMessageState();
+  const { ensureActiveSession } = useSessionManagement();
 
   const handleSendMessage = useCallback(async (
     content: string,
@@ -20,22 +22,32 @@ export const useMessageFlow = (activeSessionId: string | null) => {
       return;
     }
 
-    if (!activeSessionId) {
-      logger.error(LogCategory.ERROR, 'useMessageFlow', 'No active session');
-      throw new Error('No active session');
-    }
-
-    logger.info(LogCategory.COMMUNICATION, 'useMessageFlow', 'Sending message:', {
+    logger.info(LogCategory.COMMUNICATION, 'useMessageFlow', 'Processing message:', {
       contentLength: content.length,
       type,
-      activeSessionId
+      activeSessionId,
+      timestamp: new Date().toISOString()
     });
 
+    // Create optimistic message
     const optimisticMessage = addOptimisticMessage(content, type);
 
     try {
+      // Ensure we have an active session before sending
+      let sessionId = activeSessionId;
+      if (!sessionId) {
+        logger.info(LogCategory.STATE, 'useMessageFlow', 'No active session, creating one');
+        sessionId = await ensureActiveSession();
+        
+        if (!sessionId) {
+          throw new Error('Failed to create session');
+        }
+        
+        logger.info(LogCategory.STATE, 'useMessageFlow', 'Session created:', { sessionId });
+      }
+
       logger.debug(LogCategory.COMMUNICATION, 'useMessageFlow', 'Invoking messages function:', {
-        sessionId: activeSessionId,
+        sessionId,
         messageId: optimisticMessage.id
       });
 
@@ -43,7 +55,7 @@ export const useMessageFlow = (activeSessionId: string | null) => {
         body: {
           content,
           type,
-          sessionId: activeSessionId
+          sessionId
         }
       });
 
@@ -52,7 +64,7 @@ export const useMessageFlow = (activeSessionId: string | null) => {
       logger.info(LogCategory.STATE, 'useMessageFlow', 'Message confirmed:', {
         tempId: optimisticMessage.id,
         confirmedId: data.id,
-        sessionId: activeSessionId
+        sessionId
       });
 
       // Replace optimistic message with confirmed message
@@ -69,7 +81,7 @@ export const useMessageFlow = (activeSessionId: string | null) => {
       });
       handleMessageFailure(optimisticMessage.id, error as string);
     }
-  }, [activeSessionId, addOptimisticMessage, handleMessageFailure, setMessages]);
+  }, [activeSessionId, addOptimisticMessage, handleMessageFailure, setMessages, ensureActiveSession]);
 
   return {
     handleSendMessage

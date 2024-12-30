@@ -12,6 +12,8 @@ export const useSessionManagement = () => {
   const { activeSessionId, createSession } = useChatSessions();
 
   const ensureActiveSession = useCallback(async () => {
+    const startTime = performance.now();
+    
     logger.info(LogCategory.STATE, 'useSessionManagement', 'Checking active session:', { 
       activeSessionId, 
       isCreatingSession,
@@ -24,14 +26,15 @@ export const useSessionManagement = () => {
       
       try {
         const templateType = searchParams.get('template') || 'live-patient-session';
-        const startTime = performance.now();
         const sessionId = await createSession('New Chat', templateType);
         
         if (sessionId) {
+          const duration = performance.now() - startTime;
           logger.info(LogCategory.STATE, 'useSessionManagement', 'Session created successfully:', { 
             sessionId, 
             templateType,
-            duration: performance.now() - startTime
+            duration: `${duration.toFixed(2)}ms`,
+            timestamp: new Date().toISOString()
           });
           
           const queryParams = new URLSearchParams();
@@ -46,24 +49,25 @@ export const useSessionManagement = () => {
             timestamp: new Date().toISOString()
           });
           navigate(newPath);
-          return true;
+          return sessionId;
         }
       } catch (error) {
         logger.error(LogCategory.ERROR, 'useSessionManagement', 'Failed to create session:', {
           error,
-          stack: error instanceof Error ? error.stack : undefined
+          stack: error instanceof Error ? error.stack : undefined,
+          duration: `${(performance.now() - startTime).toFixed(2)}ms`
         });
         toast({
           title: "Error",
           description: "Failed to create new chat session",
           variant: "destructive"
         });
-        return false;
+        return null;
       } finally {
         setIsCreatingSession(false);
       }
     }
-    return true;
+    return activeSessionId;
   }, [activeSessionId, isCreatingSession, createSession, navigate, searchParams, toast]);
 
   return {
