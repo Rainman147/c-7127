@@ -1,4 +1,4 @@
-import Message from '../Message';
+import Message from '@/features/chat/components/Message';
 import type { Message as MessageType } from '@/types/chat';
 
 interface MessageListProps {

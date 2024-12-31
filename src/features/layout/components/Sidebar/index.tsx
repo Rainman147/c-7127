@@ -5,7 +5,7 @@ import SidebarHeader from './SidebarHeader';
 import SidebarContent from './SidebarContent';
 import SidebarFooter from './SidebarFooter';
 
-interface SidebarProps {
+export interface SidebarProps {
   onApiKeyChange?: (apiKey: string) => void;
   onSessionSelect?: (sessionId: string) => void;
 }

@@ -12,13 +12,13 @@ interface MessageProps extends MessageType {
 
 const MessageComponent = ({ 
   content, 
-  sender,
+  role,
   wasEdited = false,
   isEditing = false,
   onSave,
   onCancel
 }: MessageProps) => {
-  const isUser = sender === 'user';
+  const isUser = role === 'user';
   
   return (
     <div className={`py-8 px-4 ${isUser ? 'bg-transparent' : 'bg-chatgpt-secondary'}`}>

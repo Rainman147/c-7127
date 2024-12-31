@@ -3,17 +3,12 @@ import Sidebar from './Sidebar';
 
 interface MainLayoutProps {
   children: ReactNode;
-  isSidebarOpen: boolean;
-  onSidebarToggle: () => void;
 }
 
-const MainLayout = ({ children, isSidebarOpen, onSidebarToggle }: MainLayoutProps) => {
+const MainLayout = ({ children }: MainLayoutProps) => {
   return (
     <div className="flex h-screen bg-chatgpt-main">
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        onToggle={onSidebarToggle}
-      />
+      <Sidebar />
       {children}
     </div>
   );
