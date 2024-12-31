@@ -5,7 +5,7 @@ import PatientsListPage from '@/pages/Patients/PatientsListPage';
 import PatientDetailPage from '@/pages/Patients/PatientDetailPage';
 import TemplatesListPage from '@/pages/Templates/TemplatesListPage';
 import TemplateDetailPage from '@/pages/Templates/TemplateDetailPage';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import ProtectedLayout from '@/features/layout/components/ProtectedLayout';
 
 const Router = () => {
   return (
@@ -13,29 +13,29 @@ const Router = () => {
       <Routes>
         <Route path="/auth" element={<Auth />} />
         <Route path="/" element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <ChatPage />
-          </ProtectedRoute>
+          </ProtectedLayout>
         } />
         <Route path="/patients" element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <PatientsListPage />
-          </ProtectedRoute>
+          </ProtectedLayout>
         } />
         <Route path="/patients/:patientId" element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <PatientDetailPage />
-          </ProtectedRoute>
+          </ProtectedLayout>
         } />
         <Route path="/templates" element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <TemplatesListPage />
-          </ProtectedRoute>
+          </ProtectedLayout>
         } />
         <Route path="/templates/:templateId" element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <TemplateDetailPage />
-          </ProtectedRoute>
+          </ProtectedLayout>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
