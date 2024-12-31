@@ -34,7 +34,7 @@ const SessionItem = memo(({
   return (
     <div
       className={cn(
-        "group flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-[#2F2F2F] cursor-pointer",
+        "group flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-[#2F2F2F] cursor-pointer transition-all duration-200",
         isActive && "bg-[#2F2F2F]"
       )}
     >
@@ -44,11 +44,11 @@ const SessionItem = memo(({
       >
         {title}
       </div>
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6"
+          className="h-6 w-6 hover:bg-[#404040]"
           onClick={onEdit}
         >
           <Pencil className="h-3 w-3" />
@@ -58,7 +58,7 @@ const SessionItem = memo(({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-6 w-6 hover:bg-[#404040]"
             >
               <Trash2 className="h-3 w-3" />
             </Button>
