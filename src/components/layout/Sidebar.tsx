@@ -4,9 +4,11 @@ import { Home, MessageSquare, Users, FileText, Settings } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
+  onToggle: () => void;
+  onSessionSelect: (sessionId: string) => void;
 }
 
-const Sidebar = ({ isOpen }: SidebarProps) => {
+const Sidebar = ({ isOpen, onToggle, onSessionSelect }: SidebarProps) => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => {
     const path = location.pathname;
