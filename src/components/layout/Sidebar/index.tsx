@@ -8,16 +8,10 @@ import { cn } from '@/lib/utils';
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
-  onApiKeyChange?: (apiKey: string) => void;
-  onSessionSelect?: (sessionId: string) => void;
+  onSessionSelect: (sessionId: string) => void;
 }
 
-const Sidebar = ({ 
-  isOpen, 
-  onToggle, 
-  onApiKeyChange = () => {}, 
-  onSessionSelect = () => {} 
-}: SidebarProps) => {
+const Sidebar = ({ isOpen, onToggle, onSessionSelect }: SidebarProps) => {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -46,7 +40,6 @@ const Sidebar = ({
                 if (isMobile) onToggle();
               }}
             />
-            <SidebarFooter onApiKeyChange={onApiKeyChange} />
           </>
         )}
       </nav>
