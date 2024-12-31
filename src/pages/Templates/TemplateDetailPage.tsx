@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '@/features/layout/components/MainLayout';
-import type { Template } from '@/types';
+import { Template, parseSupabaseJson } from '@/types';
 
 const TemplateDetailPage = () => {
   const [template, setTemplate] = useState<Template | null>(null);
@@ -26,9 +26,9 @@ const TemplateDetailPage = () => {
         id: '',
         name: '',
         content: '',
-        instructions: {},
-        schema: {},
-        priority_rules: {},
+        instructions: null,
+        schema: null,
+        priority_rules: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         user_id: ''
@@ -46,7 +46,16 @@ const TemplateDetailPage = () => {
         .single();
 
       if (error) throw error;
-      setTemplate(data);
+
+      // Parse JSON fields
+      const parsedTemplate: Template = {
+        ...data,
+        instructions: parseSupabaseJson(data.instructions),
+        schema: parseSupabaseJson(data.schema),
+        priority_rules: parseSupabaseJson(data.priority_rules),
+      };
+
+      setTemplate(parsedTemplate);
     } catch (error: any) {
       console.error('Error fetching template:', error);
       toast({

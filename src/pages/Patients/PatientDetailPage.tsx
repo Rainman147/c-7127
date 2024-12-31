@@ -5,31 +5,21 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '@/features/layout/components/MainLayout';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-
-interface Patient {
-  id: string;
-  name: string;
-  dob: string;
-  medical_history?: string;
-  contact_info?: {
-    phone?: string;
-    email?: string;
-  };
-  address?: string;
-  current_medications?: string[];
-}
-
-interface Chat {
-  id: string;
-  title: string;
-  created_at: string;
-}
+import { Patient, parseSupabaseJson } from '@/types';
+import { PatientInfo } from './components/PatientInfo';
+import { PatientMedicalInfo } from './components/PatientMedicalInfo';
+import { PatientChatHistory } from './components/PatientChatHistory';
 
 const PatientDetailPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [patient, setPatient] = useState<Patient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [recentChats, setRecentChats] = useState<Chat[]>([]);
+  const [recentChats, setRecentChats] = useState<Array<{
+    id: string;
+    title: string;
+    created_at: string;
+  }>>([]);
+  
   const { patientId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -50,7 +40,16 @@ const PatientDetailPage = () => {
         .single();
 
       if (error) throw error;
-      setPatient(data);
+
+      // Parse JSON fields
+      const parsedPatient: Patient = {
+        ...data,
+        contact_info: parseSupabaseJson(data.contact_info),
+        current_medications: parseSupabaseJson(data.current_medications),
+        recent_tests: parseSupabaseJson(data.recent_tests),
+      };
+
+      setPatient(parsedPatient);
     } catch (error: any) {
       console.error('Error fetching patient details:', error);
       toast({
@@ -77,10 +76,6 @@ const PatientDetailPage = () => {
     } catch (error) {
       console.error('Error fetching patient chats:', error);
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
   };
 
   if (isLoading) {
@@ -133,67 +128,11 @@ const PatientDetailPage = () => {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Personal Information</h2>
-            <div className="p-4 border rounded-lg bg-white/5">
-              <p><strong>Date of Birth:</strong> {formatDate(patient.dob)}</p>
-              {patient.contact_info?.phone && (
-                <p><strong>Phone:</strong> {patient.contact_info.phone}</p>
-              )}
-              {patient.contact_info?.email && (
-                <p><strong>Email:</strong> {patient.contact_info.email}</p>
-              )}
-              {patient.address && (
-                <p><strong>Address:</strong> {patient.address}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Medical Information</h2>
-            <div className="p-4 border rounded-lg bg-white/5">
-              {patient.medical_history && (
-                <div className="mb-4">
-                  <h3 className="font-semibold mb-2">Medical History</h3>
-                  <p>{patient.medical_history}</p>
-                </div>
-              )}
-              {patient.current_medications && patient.current_medications.length > 0 && (
-                <div>
-                  <h3 className="font-semibold mb-2">Current Medications</h3>
-                  <ul className="list-disc pl-4">
-                    {patient.current_medications.map((med, index) => (
-                      <li key={index}>{med}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
+          <PatientInfo patient={patient} />
+          <PatientMedicalInfo patient={patient} />
         </div>
 
-        <div className="mt-6">
-          <h2 className="text-xl font-semibold mb-4">Recent Chat Sessions</h2>
-          <div className="space-y-2">
-            {recentChats.map((chat) => (
-              <div 
-                key={chat.id}
-                className="p-4 border rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition-colors"
-                onClick={() => navigate(`/chat/${chat.id}`)}
-              >
-                <p className="font-medium">{chat.title}</p>
-                <p className="text-sm text-gray-400">
-                  {new Date(chat.created_at).toLocaleDateString()}
-                </p>
-              </div>
-            ))}
-            {recentChats.length === 0 && (
-              <div className="text-center py-4 text-gray-400">
-                No chat sessions found
-              </div>
-            )}
-          </div>
-        </div>
+        <PatientChatHistory chats={recentChats} />
       </div>
     </MainLayout>
   );

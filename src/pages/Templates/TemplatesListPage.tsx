@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '@/features/layout/components/MainLayout';
-import type { Template } from '@/types';
+import { Template, parseSupabaseJson } from '@/types';
 
 const TemplatesListPage = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -28,7 +28,16 @@ const TemplatesListPage = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTemplates(data || []);
+
+      // Parse JSON fields for each template
+      const parsedTemplates: Template[] = (data || []).map(template => ({
+        ...template,
+        instructions: parseSupabaseJson(template.instructions),
+        schema: parseSupabaseJson(template.schema),
+        priority_rules: parseSupabaseJson(template.priority_rules),
+      }));
+
+      setTemplates(parsedTemplates);
     } catch (error: any) {
       console.error('Error fetching templates:', error);
       toast({
