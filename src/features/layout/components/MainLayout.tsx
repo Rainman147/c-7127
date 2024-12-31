@@ -10,7 +10,10 @@ interface MainLayoutProps {
 const MainLayout = ({ children, isSidebarOpen, onSidebarToggle }: MainLayoutProps) => {
   return (
     <div className="flex h-screen bg-chatgpt-main">
-      <Sidebar isOpen={isSidebarOpen} onToggle={onSidebarToggle} />
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        onToggle={onSidebarToggle}
+      />
       {children}
     </div>
   );
