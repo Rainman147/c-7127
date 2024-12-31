@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Home, Chat, Settings } from 'lucide-react';
+import { Home, MessageSquare, Settings } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -33,7 +33,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
                 className={`flex items-center p-4 text-white hover:bg-chatgpt-hover ${activeTab === 'chat' ? 'bg-chatgpt-hover' : ''}`}
                 onClick={() => setActiveTab('chat')}
               >
-                <Chat className="mr-2" />
+                <MessageSquare className="mr-2" />
                 Chat
               </Link>
             </li>

@@ -17,6 +17,7 @@ interface ChatContainerProps {
   onTemplateChange: (template: Template) => void;
   onTranscriptionComplete: (text: string) => void;
   isSidebarOpen: boolean;
+  onSidebarOpenChange?: (isOpen: boolean) => void;
 }
 
 const ChatContainer = ({
@@ -26,7 +27,8 @@ const ChatContainer = ({
   onMessageSend,
   onTemplateChange,
   onTranscriptionComplete,
-  isSidebarOpen
+  isSidebarOpen,
+  onSidebarOpenChange
 }: ChatContainerProps) => {
   console.log('[ChatContainer] Rendering with messages:', messages);
   

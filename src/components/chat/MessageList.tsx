@@ -4,7 +4,7 @@ import MessageItem from './MessageItem';
 
 interface MessageListProps {
   messages: Message[];
-  onMessageClick: (message: Message) => void;
+  onMessageClick?: (message: Message) => void;
 }
 
 const MessageList = ({ messages, onMessageClick }: MessageListProps) => {
@@ -21,8 +21,15 @@ const MessageList = ({ messages, onMessageClick }: MessageListProps) => {
       {messages.map((message) => (
         <MessageItem
           key={message.id}
-          message={message}
-          onClick={() => onMessageClick(message)}
+          role={message.role}
+          content={message.content}
+          type={message.type}
+          id={message.id}
+          wasEdited={false}
+          isEditing={false}
+          onSave={() => {}}
+          onCancel={() => {}}
+          onClick={() => onMessageClick?.(message)}
         />
       ))}
     </div>
