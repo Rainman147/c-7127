@@ -12,7 +12,6 @@ const TemplatesListPage = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -55,10 +54,7 @@ const TemplatesListPage = () => {
   );
 
   return (
-    <MainLayout 
-      isSidebarOpen={isSidebarOpen} 
-      onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-    >
+    <MainLayout>
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Templates</h1>
