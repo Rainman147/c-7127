@@ -1,13 +1,20 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Home, MessageSquare, Settings } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Home, MessageSquare, Users, FileText, Settings } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
 }
 
 const Sidebar = ({ isOpen }: SidebarProps) => {
-  const [activeTab, setActiveTab] = useState('home');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(() => {
+    const path = location.pathname;
+    if (path.startsWith('/patients')) return 'patients';
+    if (path.startsWith('/templates')) return 'templates';
+    if (path.startsWith('/chat')) return 'chat';
+    return 'home';
+  });
 
   return (
     <aside className={`fixed inset-y-0 left-0 z-30 w-64 bg-chatgpt-sidebar transition-transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} shadow-lg`}>
@@ -35,6 +42,26 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
               >
                 <MessageSquare className="mr-2" />
                 Chat
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/patients"
+                className={`flex items-center p-4 text-white hover:bg-chatgpt-hover ${activeTab === 'patients' ? 'bg-chatgpt-hover' : ''}`}
+                onClick={() => setActiveTab('patients')}
+              >
+                <Users className="mr-2" />
+                Patients
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/templates"
+                className={`flex items-center p-4 text-white hover:bg-chatgpt-hover ${activeTab === 'templates' ? 'bg-chatgpt-hover' : ''}`}
+                onClick={() => setActiveTab('templates')}
+              >
+                <FileText className="mr-2" />
+                Templates
               </Link>
             </li>
             <li>

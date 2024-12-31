@@ -1,6 +1,10 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Auth from '@/pages/Auth/LoginPage';
 import ChatPage from '@/pages/Chat/ChatPage';
+import PatientsListPage from '@/pages/Patients/PatientsListPage';
+import PatientDetailPage from '@/pages/Patients/PatientDetailPage';
+import TemplatesListPage from '@/pages/Templates/TemplatesListPage';
+import TemplateDetailPage from '@/pages/Templates/TemplateDetailPage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 const Router = () => {
@@ -13,6 +17,38 @@ const Router = () => {
           element={
             <ProtectedRoute>
               <ChatPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/patients"
+          element={
+            <ProtectedRoute>
+              <PatientsListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/patients/:patientId"
+          element={
+            <ProtectedRoute>
+              <PatientDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/templates"
+          element={
+            <ProtectedRoute>
+              <TemplatesListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/templates/:templateId"
+          element={
+            <ProtectedRoute>
+              <TemplateDetailPage />
             </ProtectedRoute>
           }
         />

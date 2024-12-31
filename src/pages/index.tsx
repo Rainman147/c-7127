@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import MainLayout from '@/features/layout/components/MainLayout';
-import ChatContainer from '@/features/chat/components/ChatContainer';
+import { useState, useEffect } from 'react';
+import Sidebar from '@/components/Sidebar';
+import ChatContainer from '@/components/chat/ChatContainer';
 import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
@@ -9,7 +9,7 @@ import { getDefaultTemplate } from '@/utils/template/templateStateManager';
 import type { Template } from '@/components/template/types';
 
 const Index = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(() => {
     const defaultTemplate = getDefaultTemplate();
     console.log('[Index] Initializing with default template:', defaultTemplate.name);
@@ -54,12 +54,14 @@ const Index = () => {
   };
 
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
+    // Only create a new session when sending the first message
     if (!currentChatId) {
       console.log('[Index] Creating new session for first message with template:', currentTemplate?.name);
       const sessionId = await createSession('New Chat');
       if (sessionId) {
         console.log('Created new session:', sessionId);
         setCurrentChatId(sessionId);
+        // Wait a brief moment for the session to be properly created
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
@@ -72,10 +74,14 @@ const Index = () => {
   };
 
   return (
-    <MainLayout 
-      isSidebarOpen={isSidebarOpen} 
-      onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-    >
+    <div className="flex h-screen">
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+        onApiKeyChange={() => {}} 
+        onSessionSelect={handleSessionSelect}
+      />
+      
       <ChatContainer 
         messages={messages}
         isLoading={isLoading}
@@ -84,9 +90,8 @@ const Index = () => {
         onTemplateChange={handleTemplateChange}
         onTranscriptionComplete={handleTranscriptionComplete}
         isSidebarOpen={isSidebarOpen}
-        onSidebarOpenChange={setIsSidebarOpen}
       />
-    </MainLayout>
+    </div>
   );
 };
 
