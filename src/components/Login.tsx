@@ -4,14 +4,43 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuthStateChange } from '@/hooks/useAuthStateChange';
 import { clearSession } from '@/utils/auth/sessionManager';
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
+  const navigate = useNavigate();
   useAuthStateChange();
 
   useEffect(() => {
     clearSession();
     console.log('Session cleared on Login component mount');
-  }, []);
+
+    // Check if user is already authenticated
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        console.log('User already authenticated, redirecting to home');
+        navigate('/');
+      }
+    };
+
+    checkSession();
+
+    // Listen for auth state changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed:', _event);
+      if (session) {
+        console.log('User authenticated, redirecting to home');
+        navigate('/');
+      }
+    });
+
+    return () => {
+      console.log('Cleaning up auth subscriptions');
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">

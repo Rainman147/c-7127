@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Auth from '@/pages/Auth/LoginPage';
 import ChatPage from '@/pages/Chat/ChatPage';
 import PatientsListPage from '@/pages/Patients/PatientsListPage';
@@ -12,46 +12,32 @@ const Router = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/auth" element={<Auth />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <ChatPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/patients"
-          element={
-            <ProtectedRoute>
-              <PatientsListPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/patients/:patientId"
-          element={
-            <ProtectedRoute>
-              <PatientDetailPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/templates"
-          element={
-            <ProtectedRoute>
-              <TemplatesListPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/templates/:templateId"
-          element={
-            <ProtectedRoute>
-              <TemplateDetailPage />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/" element={
+          <ProtectedRoute>
+            <ChatPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/patients" element={
+          <ProtectedRoute>
+            <PatientsListPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/patients/:patientId" element={
+          <ProtectedRoute>
+            <PatientDetailPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/templates" element={
+          <ProtectedRoute>
+            <TemplatesListPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/templates/:templateId" element={
+          <ProtectedRoute>
+            <TemplateDetailPage />
+          </ProtectedRoute>
+        } />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
