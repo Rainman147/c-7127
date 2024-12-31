@@ -47,6 +47,11 @@ const ProtectedLayout = () => {
     };
   }, [navigate, toast]);
 
+  const handleSessionSelect = (sessionId: string) => {
+    console.log('Session selected:', sessionId);
+    // Handle session selection if needed
+  };
+
   return (
     <div className="flex h-screen">
       {!isSidebarOpen && (
@@ -60,6 +65,7 @@ const ProtectedLayout = () => {
       <Sidebar 
         isOpen={isSidebarOpen}
         onToggle={toggleSidebar}
+        onSessionSelect={handleSessionSelect}
       />
       <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
         <Outlet />

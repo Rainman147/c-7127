@@ -1,20 +1,25 @@
+import { Link } from 'react-router-dom';
+import { Home, MessageSquare, Users, FileText, Settings } from 'lucide-react';
 import SidebarHeader from './Sidebar/SidebarHeader';
 import { cn } from '@/lib/utils';
+import { useState } from 'react';
 
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
-  onSessionSelect: (sessionId: string) => void;
+  onSessionSelect?: (sessionId: string) => void;
 }
 
-const Sidebar = ({ isOpen, onToggle, onSessionSelect }: SidebarProps) => {
+const Sidebar = ({ isOpen, onToggle, onSessionSelect = () => {} }: SidebarProps) => {
+  const [activeTab, setActiveTab] = useState<string>('home');
+
   return (
     <div className={cn(
       "fixed top-0 left-0 z-40 h-screen bg-chatgpt-sidebar transition-all duration-300",
       isOpen ? "w-64" : "w-0"
     )}>
       <nav className="flex h-full w-full flex-col px-3" aria-label="Chat history">
-        <SidebarHeader />
+        <SidebarHeader onToggle={onToggle} />
         {isOpen && (
           <>
             <ul className="space-y-2">
