@@ -8,7 +8,6 @@ interface SidebarHeaderProps {
 const SidebarHeader = ({ onToggle }: SidebarHeaderProps) => {
   return (
     <div className="flex items-center justify-between p-4">
-      <h2 className="text-xl font-bold text-white">Menu</h2>
       <Button
         variant="ghost"
         size="icon"
