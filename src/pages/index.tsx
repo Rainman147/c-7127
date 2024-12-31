@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import ChatContainer from '@/components/chat/ChatContainer';
 import { useChat } from '@/hooks/useChat';
@@ -6,16 +6,11 @@ import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { getDefaultTemplate } from '@/utils/template/templateStateManager';
+import { useUI } from '@/contexts/UIContext';
 import type { Template } from '@/components/template/types';
 
 const Index = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [currentTemplate, setCurrentTemplate] = useState<Template | null>(() => {
-    const defaultTemplate = getDefaultTemplate();
-    console.log('[Index] Initializing with default template:', defaultTemplate.name);
-    return defaultTemplate;
-  });
-  
+  const { isSidebarOpen, toggleSidebar } = useUI();
   const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
   
@@ -38,7 +33,6 @@ const Index = () => {
 
   const handleTemplateChange = (template: Template) => {
     console.log('[Index] Template changed to:', template.name);
-    setCurrentTemplate(template);
   };
 
   const handleTranscriptionComplete = async (text: string) => {
@@ -56,7 +50,7 @@ const Index = () => {
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
     // Only create a new session when sending the first message
     if (!currentChatId) {
-      console.log('[Index] Creating new session for first message with template:', currentTemplate?.name);
+      console.log('[Index] Creating new session for first message');
       const sessionId = await createSession('New Chat');
       if (sessionId) {
         console.log('Created new session:', sessionId);
@@ -66,19 +60,14 @@ const Index = () => {
       }
     }
 
-    await handleSendMessage(
-      message, 
-      type, 
-      currentTemplate?.systemInstructions
-    );
+    await handleSendMessage(message, type);
   };
 
   return (
     <div className="flex h-screen">
       <Sidebar 
-        isOpen={isSidebarOpen} 
-        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-        onApiKeyChange={() => {}} 
+        isOpen={isSidebarOpen}
+        onToggle={toggleSidebar}
         onSessionSelect={handleSessionSelect}
       />
       
