@@ -1,16 +1,13 @@
 import { useEffect } from 'react';
-import Sidebar from '@/components/layout/Sidebar';
 import ChatContainer from '@/components/chat/ChatContainer';
 import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { getDefaultTemplate } from '@/utils/template/templateStateManager';
-import { useUI } from '@/contexts/UIContext';
 import type { Template } from '@/components/template/types';
 
 const Index = () => {
-  const { isSidebarOpen, toggleSidebar } = useUI();
   const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
   
@@ -65,12 +62,6 @@ const Index = () => {
 
   return (
     <div className="flex h-screen">
-      <Sidebar 
-        isOpen={isSidebarOpen}
-        onToggle={toggleSidebar}
-        onSessionSelect={handleSessionSelect}
-      />
-      
       <ChatContainer 
         messages={messages}
         isLoading={isLoading}
@@ -78,7 +69,7 @@ const Index = () => {
         onMessageSend={handleMessageSend}
         onTemplateChange={handleTemplateChange}
         onTranscriptionComplete={handleTranscriptionComplete}
-        isSidebarOpen={isSidebarOpen}
+        isSidebarOpen={true}
       />
     </div>
   );
