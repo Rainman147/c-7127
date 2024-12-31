@@ -1,17 +1,16 @@
 import { useState, useEffect } from 'react';
 import SidebarHeader from './SidebarHeader';
 import SidebarNav from './SidebarNav';
-import SidebarChatList from './SidebarChatList';
-import SidebarFooter from './SidebarFooter';
+import SidebarSessions from './SidebarSessions';
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
-  onSessionSelect: (sessionId: string) => void;
+  onSessionSelect?: (sessionId: string) => void;
 }
 
-const Sidebar = ({ isOpen, onToggle, onSessionSelect }: SidebarProps) => {
+const Sidebar = ({ isOpen, onToggle, onSessionSelect = () => {} }: SidebarProps) => {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -34,12 +33,9 @@ const Sidebar = ({ isOpen, onToggle, onSessionSelect }: SidebarProps) => {
         {isOpen && (
           <>
             <SidebarNav />
-            <SidebarChatList 
-              onSessionSelect={(sessionId) => {
-                onSessionSelect(sessionId);
-                if (isMobile) onToggle();
-              }}
-            />
+            <div className="mt-4">
+              <SidebarSessions />
+            </div>
           </>
         )}
       </nav>
