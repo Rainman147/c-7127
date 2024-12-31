@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import Sidebar from '@/components/layout/Sidebar';
+import Sidebar from '@/features/layout/components/Sidebar';
 import ChatContainer from '@/features/chat/components/ChatContainer';
 import { useChat } from '@/hooks/useChat';
 
@@ -13,9 +13,16 @@ const ChatPage = () => {
     loadChatMessages
   } = useChat();
 
+  const handleSidebarToggle = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   return (
     <div className="flex h-screen bg-chatgpt-main">
-      <Sidebar isOpen={isSidebarOpen} />
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        onToggle={handleSidebarToggle}
+      />
       <ChatContainer 
         messages={messages}
         isLoading={isLoading}
