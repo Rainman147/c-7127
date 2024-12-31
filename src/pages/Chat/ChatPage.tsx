@@ -1,17 +1,27 @@
 import ChatContainer from '@/features/chat/components/ChatContainer';
 import { useChat } from '@/hooks/useChat';
-import { useUI } from '@/contexts/UIContext';
+import { useState } from 'react';
+import { getDefaultTemplate } from '@/utils/template/templateStateManager';
+import type { Template } from '@/components/template/types';
 
 const ChatPage = () => {
+  const [currentTemplate, setCurrentTemplate] = useState<Template | null>(() => {
+    const defaultTemplate = getDefaultTemplate();
+    console.log('[ChatPage] Initializing with default template:', defaultTemplate.name);
+    return defaultTemplate;
+  });
+
   const { 
     messages, 
     isLoading, 
     currentChatId, 
     handleSendMessage,
-    loadChatMessages
   } = useChat();
 
-  const { isSidebarOpen } = useUI();
+  const handleTemplateChange = (template: Template) => {
+    console.log('[ChatPage] Template changed to:', template.name);
+    setCurrentTemplate(template);
+  };
 
   return (
     <ChatContainer 
@@ -19,8 +29,8 @@ const ChatPage = () => {
       isLoading={isLoading}
       currentChatId={currentChatId}
       onMessageSend={handleSendMessage}
+      onTemplateChange={handleTemplateChange}
       onTranscriptionComplete={(text) => handleSendMessage(text, 'audio')}
-      isSidebarOpen={isSidebarOpen}
     />
   );
 };

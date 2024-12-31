@@ -19,12 +19,11 @@ const ChatInputField = ({
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = 'auto';
-      const newHeight = Math.min(textarea.scrollHeight, 200); // Max height of 200px
+      const newHeight = Math.min(textarea.scrollHeight, 200);
       textarea.style.height = `${newHeight}px`;
     }
   };
 
-  // Adjust height when message changes
   useEffect(() => {
     adjustTextareaHeight();
   }, [message]);
