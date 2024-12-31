@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Key } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -7,14 +6,6 @@ interface SidebarFooterProps {
 }
 
 const SidebarFooter = ({ onApiKeyChange }: SidebarFooterProps) => {
-  const [apiKey, setApiKey] = useState("");
-
-  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newApiKey = e.target.value;
-    setApiKey(newApiKey);
-    onApiKeyChange(newApiKey);
-  };
-
   return (
     <div className="mt-auto border-t border-chatgpt-border pt-4 pb-4">
       <div className="space-y-2">
@@ -25,8 +16,7 @@ const SidebarFooter = ({ onApiKeyChange }: SidebarFooterProps) => {
         <Input
           type="password"
           placeholder="Enter your API key"
-          value={apiKey}
-          onChange={handleApiKeyChange}
+          onChange={(e) => onApiKeyChange(e.target.value)}
           className="bg-[#2F2F2F] border-none rounded-xl"
         />
       </div>
