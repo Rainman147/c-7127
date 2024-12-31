@@ -1,23 +1,16 @@
 import { useState } from 'react';
-import { ChatHeader } from './ChatHeader';
-import ChatInput from './ChatInput';
-import MessageList from './MessageList';
+import MessageList from '@/components/chat/MessageList';
+import ChatInput from '@/components/ChatInput';
 import type { Template } from '@/components/template/types';
+import type { Message } from '@/types/chat';
 
 interface ChatContainerProps {
-  messages: Array<{ 
-    role: 'user' | 'assistant'; 
-    content: string; 
-    type?: 'text' | 'audio';
-    id?: string;
-  }>;
+  messages: Message[];
   isLoading: boolean;
   currentChatId: string | null;
   onMessageSend: (message: string, type?: 'text' | 'audio') => Promise<void>;
-  onTemplateChange: (template: Template) => void;
   onTranscriptionComplete: (text: string) => void;
   isSidebarOpen: boolean;
-  onSidebarOpenChange: (isOpen: boolean) => void;
 }
 
 const ChatContainer = ({
@@ -25,21 +18,13 @@ const ChatContainer = ({
   isLoading,
   currentChatId,
   onMessageSend,
-  onTemplateChange,
   onTranscriptionComplete,
   isSidebarOpen,
-  onSidebarOpenChange
 }: ChatContainerProps) => {
   console.log('[ChatContainer] Rendering with messages:', messages);
   
   return (
-    <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
-      <ChatHeader 
-        isSidebarOpen={isSidebarOpen}
-        currentChatId={currentChatId}
-        onTemplateChange={onTemplateChange}
-      />
-      
+    <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>      
       <div className={`flex h-full flex-col ${messages.length === 0 ? 'items-center justify-center' : 'justify-between'} pt-[60px] pb-4`}>
         {messages.length === 0 ? (
           <div className="w-full max-w-3xl px-4 space-y-4">

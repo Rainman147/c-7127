@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
-import ChatContainer from '@/components/chat/ChatContainer';
+import ChatContainer from '@/features/chat/components/ChatContainer';
 import { useChat } from '@/hooks/useChat';
 
 const ChatPage = () => {
@@ -9,9 +9,8 @@ const ChatPage = () => {
     messages, 
     isLoading, 
     currentChatId, 
-    handleSendMessage, 
-    loadChatMessages,
-    handleTemplateChange 
+    handleSendMessage,
+    loadChatMessages
   } = useChat();
 
   return (
@@ -22,10 +21,8 @@ const ChatPage = () => {
         isLoading={isLoading}
         currentChatId={currentChatId}
         onMessageSend={handleSendMessage}
-        onTemplateChange={handleTemplateChange}
         onTranscriptionComplete={(text) => handleSendMessage(text, 'audio')}
         isSidebarOpen={isSidebarOpen}
-        onSidebarOpenChange={setIsSidebarOpen}
       />
     </div>
   );

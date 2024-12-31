@@ -1,13 +1,11 @@
-import Message from './Message';
+import Message from '../Message';
+import type { Message as MessageType } from '@/types/chat';
 
-type Message = {
-  role: 'user' | 'assistant';
-  content: string;
-  id?: string;
-  type?: 'text' | 'audio';
-};
+interface MessageListProps {
+  messages: MessageType[];
+}
 
-const MessageList = ({ messages }: { messages: Message[] }) => {
+const MessageList = ({ messages }: MessageListProps) => {
   console.log('[MessageList] Rendering messages:', messages.map(m => ({
     role: m.role,
     id: m.id,
@@ -21,10 +19,6 @@ const MessageList = ({ messages }: { messages: Message[] }) => {
           <Message 
             key={message.id || index} 
             {...message} 
-            wasEdited={false}
-            isEditing={false}
-            onSave={() => {}}
-            onCancel={() => {}}
           />
         ))}
       </div>

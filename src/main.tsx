@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import App from './App.tsx';
 import Auth from './pages/Auth.tsx';
-import Index from './pages/Index.tsx';
+import ChatPage from './pages/Chat/ChatPage.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
 import './index.css';
 
@@ -14,7 +14,7 @@ createRoot(document.getElementById("root")!).render(
         path="/"
         element={
           <ProtectedRoute>
-            <Index />
+            <ChatPage />
           </ProtectedRoute>
         }
       />
