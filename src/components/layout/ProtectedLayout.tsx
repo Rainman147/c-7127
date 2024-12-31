@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { checkSession } from '@/utils/auth/sessionManager';
 import { supabase } from '@/integrations/supabase/client';
 import Sidebar from './Sidebar';
+import SidebarToggleButton from './SidebarToggleButton';
 import { useUI } from '@/contexts/UIContext';
 
 const ProtectedLayout = () => {
@@ -46,17 +47,19 @@ const ProtectedLayout = () => {
     };
   }, [navigate, toast]);
 
-  const handleSessionSelect = (sessionId: string) => {
-    console.log('Session selected in ProtectedLayout:', sessionId);
-    navigate(`/chat/${sessionId}`);
-  };
-
   return (
     <div className="flex h-screen">
+      {!isSidebarOpen && (
+        <div className="fixed left-0 top-4 z-40 transition-opacity duration-300">
+          <SidebarToggleButton 
+            onClick={toggleSidebar}
+            className="ml-4 bg-gray-800 hover:bg-gray-700"
+          />
+        </div>
+      )}
       <Sidebar 
         isOpen={isSidebarOpen}
         onToggle={toggleSidebar}
-        onSessionSelect={handleSessionSelect}
       />
       <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
         <Outlet />

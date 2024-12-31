@@ -1,18 +1,12 @@
-import { Menu } from 'lucide-react';
+import { useUI } from '@/contexts/UIContext';
+import SidebarToggleButton from '../SidebarToggleButton';
 
-interface SidebarHeaderProps {
-  onToggle: () => void;
-}
+const SidebarHeader = () => {
+  const { toggleSidebar } = useUI();
 
-const SidebarHeader = ({ onToggle }: SidebarHeaderProps) => {
   return (
-    <div className="flex justify-between flex h-[60px] items-center">
-      <button 
-        onClick={onToggle} 
-        className="h-10 rounded-lg px-2 text-token-text-secondary hover:bg-token-sidebar-surface-secondary"
-      >
-        <Menu className="h-5 w-5" />
-      </button>
+    <div className="flex justify-between h-[60px] items-center px-2">
+      <SidebarToggleButton onClick={toggleSidebar} />
     </div>
   );
 };
