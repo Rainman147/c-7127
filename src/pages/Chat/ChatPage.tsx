@@ -13,18 +13,9 @@ const ChatPage = () => {
     loadChatMessages
   } = useChat();
 
-  const handleSessionSelect = async (sessionId: string) => {
-    console.log('[ChatPage] Session selected:', sessionId);
-    await loadChatMessages(sessionId);
-  };
-
   return (
     <div className="flex h-screen bg-chatgpt-main">
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-        onSessionSelect={handleSessionSelect}
-      />
+      <Sidebar isOpen={isSidebarOpen} />
       <ChatContainer 
         messages={messages}
         isLoading={isLoading}
