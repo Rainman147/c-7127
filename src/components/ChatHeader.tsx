@@ -11,19 +11,20 @@ import {
 import { Settings, LogOut, User2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useUI } from "@/contexts/UIContext";
 
 interface ChatHeaderProps {
-  isSidebarOpen?: boolean;
   currentChatId: string | null;
   onTemplateChange: (template: any) => void;
 }
 
 const ChatHeaderComponent = ({ 
-  isSidebarOpen = true, 
   currentChatId,
   onTemplateChange 
 }: ChatHeaderProps) => {
   const { toast } = useToast();
+  const { isSidebarOpen } = useUI();
+  
   console.log('[ChatHeader] Rendering with:', { 
     isSidebarOpen, 
     currentChatId,
@@ -53,7 +54,6 @@ const ChatHeaderComponent = ({
   };
 
   const handleAccountSettings = () => {
-    // Implement account settings navigation here
     console.log('Navigate to account settings');
   };
 
