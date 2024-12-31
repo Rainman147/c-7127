@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import MessageList from '@/components/chat/MessageList';
 import ChatInput from '@/components/ChatInput';
-import type { Template } from '@/components/template/types';
+import { useUI } from '@/contexts/UIContext';
 import type { Message } from '@/types/chat';
 
 interface ChatContainerProps {
@@ -10,7 +10,6 @@ interface ChatContainerProps {
   currentChatId: string | null;
   onMessageSend: (message: string, type?: 'text' | 'audio') => Promise<void>;
   onTranscriptionComplete: (text: string) => void;
-  isSidebarOpen: boolean;
 }
 
 const ChatContainer = ({
@@ -19,9 +18,9 @@ const ChatContainer = ({
   currentChatId,
   onMessageSend,
   onTranscriptionComplete,
-  isSidebarOpen,
 }: ChatContainerProps) => {
   console.log('[ChatContainer] Rendering with messages:', messages);
+  const { isSidebarOpen } = useUI();
   
   return (
     <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>      
