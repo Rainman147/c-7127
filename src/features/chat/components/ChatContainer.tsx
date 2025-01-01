@@ -1,71 +1,54 @@
 import { useState } from 'react';
-import { ChatHeader } from '@/components/ChatHeader';
-import ChatInput from '@/components/ChatInput';
-import MessageList from '@/components/MessageList';
 import { useUI } from '@/contexts/UIContext';
-import type { Template } from '@/components/template/types';
+import ChatHeader from '@/components/ChatHeader';
+import MessageList from './MessageList';
+import ChatInput from '@/components/ChatInput';
+import type { Message } from '@/types/chat';
 
 interface ChatContainerProps {
-  messages: Array<{ 
-    role: 'user' | 'assistant'; 
-    content: string; 
-    type?: 'text' | 'audio';
-    id?: string;
-  }>;
+  messages: Message[];
   isLoading: boolean;
-  currentChatId: string | null;
-  onMessageSend: (message: string, type?: 'text' | 'audio') => Promise<void>;
-  onTemplateChange: (template: Template) => void;
-  onTranscriptionComplete: (text: string) => void;
+  currentChatId: string;
+  onMessageSend: (content: string, type?: 'text' | 'audio', systemInstructions?: string) => Promise<void>;
+  onTranscriptionComplete: (text: string) => Promise<void>;
+  onTemplateChange: (template: any) => void;
 }
 
-const ChatContainer = ({
-  messages,
+const ChatContainer = ({ 
+  messages, 
   isLoading,
   currentChatId,
   onMessageSend,
-  onTemplateChange,
   onTranscriptionComplete,
+  onTemplateChange
 }: ChatContainerProps) => {
   console.log('[ChatContainer] Rendering with messages:', messages);
   const { isSidebarOpen } = useUI();
-  
+  const [transcriptionText, setTranscriptionText] = useState('');
+
+  const handleTranscriptionUpdate = (text: string) => {
+    console.log('[ChatContainer] Transcription update:', text);
+    setTranscriptionText(text);
+  };
+
   return (
-    <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+    <div className="relative flex h-full w-full flex-1 flex-col items-center justify-between bg-chatgpt-main">
       <ChatHeader 
-        currentChatId={currentChatId}
+        currentChatId={currentChatId} 
         onTemplateChange={onTemplateChange}
       />
-      
-      <div className={`flex h-full flex-col ${messages.length === 0 ? 'items-center justify-center' : 'justify-between'} pt-[60px] pb-4`}>
-        {messages.length === 0 ? (
-          <div className="w-full max-w-3xl px-4 space-y-4">
-            <div>
-              <h1 className="mb-8 text-4xl font-semibold text-center">What can I help with?</h1>
-              <ChatInput 
-                onSend={onMessageSend}
-                onTranscriptionComplete={onTranscriptionComplete}
-                isLoading={isLoading} 
-              />
-            </div>
-          </div>
-        ) : (
-          <>
-            <MessageList messages={messages} />
-            <div className="w-full max-w-3xl mx-auto px-4 py-2">
-              <ChatInput 
-                onSend={onMessageSend}
-                onTranscriptionComplete={onTranscriptionComplete}
-                isLoading={isLoading} 
-              />
-            </div>
-            <div className="text-xs text-center text-gray-500 py-2">
-              ChatGPT can make mistakes. Check important info.
-            </div>
-          </>
-        )}
+      <div className="flex-1 w-full overflow-hidden pt-[60px] pb-[100px]">
+        <MessageList messages={messages} />
       </div>
-    </main>
+      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-chatgpt-main via-chatgpt-main to-transparent pb-3 pt-6">
+        <ChatInput
+          onSend={onMessageSend}
+          onTranscriptionComplete={onTranscriptionComplete}
+          onTranscriptionUpdate={handleTranscriptionUpdate}
+          isLoading={isLoading}
+        />
+      </div>
+    </div>
   );
 };
 
