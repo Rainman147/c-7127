@@ -5,3 +5,14 @@ export type Message = {
   type?: 'text' | 'audio';
   id?: string;
 };
+
+export interface MessageProps {
+  content: string;
+  sender: 'user' | 'ai';
+  type?: 'text' | 'audio';
+}
+
+export interface MessageActionsProps {
+  content: string;
+  isAIMessage: boolean;
+}

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Copy, Volume2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { copyToClipboard } from "@/utils/clipboard";
