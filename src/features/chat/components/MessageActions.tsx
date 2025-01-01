@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { ThumbsUp, ThumbsDown, RotateCcw, MoreHorizontal, Pencil } from "lucide-react";
-import { AudioButton } from "./message-actions/AudioButton";
-import { CopyButton } from "./message-actions/CopyButton";
+import { AudioButton } from "@/components/message-actions/AudioButton";
+import { CopyButton } from "@/components/message-actions/CopyButton";
 
 type MessageActionsProps = {
   content: string;
