@@ -26,7 +26,7 @@ const ChatInputActions = ({
   };
 
   return (
-    <div className="relative flex items-center justify-between px-4 py-2 bg-transparent">
+    <div className="relative flex items-center justify-between px-4 py-2 bg-chatgpt-main">
       {/* Left side icons */}
       <div className="flex items-center space-x-2">
         <FileUploadModal 
@@ -44,12 +44,12 @@ const ChatInputActions = ({
         <button 
           onClick={handleSubmit}
           disabled={isLoading || !message.trim()}
-          className="p-2 bg-white rounded-full hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+          className="p-2 bg-chatgpt-hover rounded-full hover:bg-chatgpt-selected disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
         >
           {isLoading ? (
-            <Loader2 className="h-5 w-5 text-black animate-spin" />
+            <Loader2 className="h-5 w-5 text-white animate-spin" />
           ) : (
-            <ArrowUp className="h-5 w-5 text-black" />
+            <ArrowUp className="h-5 w-5 text-white" />
           )}
         </button>
       </div>
