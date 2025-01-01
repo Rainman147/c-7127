@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import ChatInputField from "./chat/ChatInputField";
-import ChatInputActions from "./chat/ChatInputActions";
+import ChatInputField from "./ChatInputField";
+import ChatInputActions from "./ChatInputActions";
 
 interface ChatInputProps {
   onSend: (message: string, type?: 'text' | 'audio') => void;
@@ -70,5 +70,4 @@ const ChatInputComponent = ({
   );
 };
 
-const ChatInput = ChatInputComponent;
-export default ChatInput;
+export default ChatInputComponent;

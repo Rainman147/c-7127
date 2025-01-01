@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useUI } from '@/contexts/UIContext';
 import { ChatHeader } from '@/components/ChatHeader';
 import MessageList from './MessageList';
-import ChatInput from '@/components/ChatInput';
+import ChatInput from './input/ChatInput';
 import type { Message } from '@/types/chat';
 
 interface ChatContainerProps {

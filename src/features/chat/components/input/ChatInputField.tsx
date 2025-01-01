@@ -24,7 +24,6 @@ const ChatInputField = ({
     }
   };
 
-  // Adjust height when message changes
   useEffect(() => {
     adjustTextareaHeight();
   }, [message]);
