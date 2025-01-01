@@ -11,8 +11,6 @@ const ChatPage = () => {
     loadChatMessages
   } = useChat();
 
-  const { isSidebarOpen } = useUI();
-
   return (
     <ChatContainer 
       messages={messages}
@@ -20,7 +18,7 @@ const ChatPage = () => {
       currentChatId={currentChatId}
       onMessageSend={handleSendMessage}
       onTranscriptionComplete={(text) => handleSendMessage(text, 'audio')}
-      isSidebarOpen={isSidebarOpen}
+      onTemplateChange={() => {}} // Adding missing required prop
     />
   );
 };
