@@ -13,6 +13,7 @@ const TemplateDetailPage = () => {
   const [template, setTemplate] = useState<Template | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { templateId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -111,7 +112,10 @@ const TemplateDetailPage = () => {
 
   if (isLoading) {
     return (
-      <MainLayout>
+      <MainLayout 
+        isSidebarOpen={isSidebarOpen} 
+        onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+      >
         <div className="flex justify-center items-center h-screen">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
@@ -120,7 +124,10 @@ const TemplateDetailPage = () => {
   }
 
   return (
-    <MainLayout>
+    <MainLayout 
+      isSidebarOpen={isSidebarOpen} 
+      onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+    >
       <div className="p-6">
         <div className="flex items-center gap-4 mb-6">
           <Button 

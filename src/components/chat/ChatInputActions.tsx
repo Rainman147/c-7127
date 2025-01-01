@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Loader2, ArrowUp } from "lucide-react";
-import AudioRecorder from "@/components/AudioRecorder";
-import FileUploadModal from "@/components/FileUploadModal";
+import AudioRecorder from "../AudioRecorder";
+import FileUploadModal from "../FileUploadModal";
 
 interface ChatInputActionsProps {
   isLoading: boolean;
@@ -27,6 +27,7 @@ const ChatInputActions = ({
 
   return (
     <div className="relative flex items-center justify-between px-4 py-2 bg-transparent">
+      {/* Left side icons */}
       <div className="flex items-center space-x-2">
         <FileUploadModal 
           onFileSelected={handleFileUpload}
@@ -34,6 +35,7 @@ const ChatInputActions = ({
         />
       </div>
       
+      {/* Right side icons */}
       <div className="flex items-center space-x-2">
         <AudioRecorder 
           onTranscriptionComplete={onTranscriptionComplete}

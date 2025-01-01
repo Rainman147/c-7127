@@ -15,6 +15,7 @@ interface Patient {
 }
 
 const PatientsListPage = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,7 +57,10 @@ const PatientsListPage = () => {
   };
 
   return (
-    <MainLayout>
+    <MainLayout 
+      isSidebarOpen={isSidebarOpen} 
+      onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+    >
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Patients</h1>

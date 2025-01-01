@@ -13,7 +13,7 @@ interface ProtectedLayoutProps {
 const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isSidebarOpen } = useUI();
+  const { isSidebarOpen, toggleSidebar } = useUI();
 
   useEffect(() => {
     const validateSession = async () => {
@@ -52,7 +52,10 @@ const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
 
   return (
     <div className="flex h-screen bg-chatgpt-main">
-      <Sidebar />
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        onToggle={toggleSidebar}
+      />
       <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
         {children}
       </main>

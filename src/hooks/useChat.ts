@@ -18,7 +18,6 @@ export const useChat = () => {
   }, []);
 
   const handleLoadChatMessages = async (chatId: string) => {
-    console.log('[useChat] Loading messages for chat:', chatId);
     const loadedMessages = await loadChatMessages(chatId);
     setMessages(loadedMessages);
     setCurrentChatId(chatId);
@@ -29,7 +28,6 @@ export const useChat = () => {
     type: 'text' | 'audio' = 'text',
     systemInstructions?: string
   ) => {
-    console.log('[useChat] Sending message:', { content, type, systemInstructions });
     const result = await sendMessage(
       content,
       type,

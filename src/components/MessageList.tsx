@@ -1,11 +1,13 @@
-import Message from '../Message';
-import type { Message as MessageType } from '@/types/chat';
+import Message from './Message';
 
-interface MessageListProps {
-  messages: MessageType[];
-}
+type Message = {
+  role: 'user' | 'assistant';
+  content: string;
+  id?: string;
+  type?: 'text' | 'audio';
+};
 
-const MessageList = ({ messages }: MessageListProps) => {
+const MessageList = ({ messages }: { messages: Message[] }) => {
   console.log('[MessageList] Rendering messages:', messages.map(m => ({
     role: m.role,
     id: m.id,
@@ -16,10 +18,7 @@ const MessageList = ({ messages }: MessageListProps) => {
     <div className="flex-1 overflow-y-auto chat-scrollbar">
       <div className="w-full max-w-3xl mx-auto px-4">
         {messages.map((message, index) => (
-          <Message 
-            key={message.id || index} 
-            {...message} 
-          />
+          <Message key={message.id || index} {...message} />
         ))}
       </div>
     </div>

@@ -11,6 +11,7 @@ import { PatientMedicalInfo } from './components/PatientMedicalInfo';
 import { PatientChatHistory } from './components/PatientChatHistory';
 
 const PatientDetailPage = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [patient, setPatient] = useState<Patient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [recentChats, setRecentChats] = useState<Array<{
@@ -79,7 +80,10 @@ const PatientDetailPage = () => {
 
   if (isLoading) {
     return (
-      <MainLayout>
+      <MainLayout 
+        isSidebarOpen={isSidebarOpen} 
+        onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+      >
         <div className="flex justify-center items-center h-screen">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
@@ -89,7 +93,10 @@ const PatientDetailPage = () => {
 
   if (!patient) {
     return (
-      <MainLayout>
+      <MainLayout 
+        isSidebarOpen={isSidebarOpen} 
+        onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+      >
         <div className="p-6">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Patient Not Found</h2>
@@ -103,7 +110,10 @@ const PatientDetailPage = () => {
   }
 
   return (
-    <MainLayout>
+    <MainLayout 
+      isSidebarOpen={isSidebarOpen} 
+      onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+    >
       <div className="p-6">
         <div className="flex items-center gap-4 mb-6">
           <Button 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import ChatContainer from '@/features/chat/components/ChatContainer';
+import ChatContainer from '@/components/chat/ChatContainer';
 import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
