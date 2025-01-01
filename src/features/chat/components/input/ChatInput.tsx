@@ -4,11 +4,18 @@ import ChatInputActions from "./ChatInputActions";
 import ChatInputField from "./ChatInputField";
 
 interface ChatInputProps {
-  onMessageSubmit: (message: string) => void;
+  onSend: (message: string, type?: 'text' | 'audio') => void;
+  onTranscriptionComplete: (text: string) => void;
+  onTranscriptionUpdate?: (text: string) => void;
   isLoading?: boolean;
 }
 
-const ChatInput = ({ onMessageSubmit, isLoading = false }: ChatInputProps) => {
+const ChatInput = ({ 
+  onSend, 
+  onTranscriptionComplete,
+  onTranscriptionUpdate,
+  isLoading = false 
+}: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const { toast } = useToast();
 
@@ -16,9 +23,9 @@ const ChatInput = ({ onMessageSubmit, isLoading = false }: ChatInputProps) => {
     console.log('[ChatInput] Submitting message:', message);
     if (!message.trim()) return;
     
-    onMessageSubmit(message);
+    onSend(message);
     setMessage("");
-  }, [message, onMessageSubmit]);
+  }, [message, onSend]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -33,7 +40,8 @@ const ChatInput = ({ onMessageSubmit, isLoading = false }: ChatInputProps) => {
   const handleTranscriptionComplete = useCallback((text: string) => {
     console.log('[ChatInput] Transcription completed:', text);
     setMessage((prev) => prev + (prev ? "\n" : "") + text);
-  }, []);
+    onTranscriptionComplete(text);
+  }, [onTranscriptionComplete]);
 
   const handleFileUpload = useCallback((file: File) => {
     console.log('[ChatInput] File uploaded:', file.name);
