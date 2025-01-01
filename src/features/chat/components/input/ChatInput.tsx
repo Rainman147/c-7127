@@ -1,57 +1,51 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import ChatInputField from "./ChatInputField";
 import ChatInputActions from "./ChatInputActions";
+import ChatInputField from "./ChatInputField";
 
 interface ChatInputProps {
-  onSend: (message: string, type?: 'text' | 'audio') => void;
-  onTranscriptionComplete: (text: string) => void;
-  onTranscriptionUpdate?: (text: string) => void;
+  onMessageSubmit: (message: string) => void;
   isLoading?: boolean;
 }
 
-const ChatInputComponent = ({ 
-  onSend, 
-  onTranscriptionComplete,
-  onTranscriptionUpdate,
-  isLoading = false 
-}: ChatInputProps) => {
+const ChatInput = ({ onMessageSubmit, isLoading = false }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const { toast } = useToast();
 
-  const handleSubmit = () => {
-    if (message.trim() && !isLoading) {
-      onSend(message);
-      setMessage("");
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
-
-  const handleTranscriptionComplete = (transcription: string) => {
-    console.log('Transcription complete in ChatInput:', transcription);
-    setMessage(transcription);
-    onTranscriptionComplete(transcription);
+  const handleSubmit = useCallback(() => {
+    console.log('[ChatInput] Submitting message:', message);
+    if (!message.trim()) return;
     
-    toast({
-      title: "Transcription complete",
-      description: "Your audio has been transcribed. Review and edit before sending.",
-      duration: 3000,
-    });
-  };
+    onMessageSubmit(message);
+    setMessage("");
+  }, [message, onMessageSubmit]);
 
-  const handleFileUpload = async (file: File) => {
-    console.log('File uploaded:', file);
-  };
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSubmit();
+      }
+    },
+    [handleSubmit]
+  );
+
+  const handleTranscriptionComplete = useCallback((text: string) => {
+    console.log('[ChatInput] Transcription completed:', text);
+    setMessage((prev) => prev + (prev ? "\n" : "") + text);
+  }, []);
+
+  const handleFileUpload = useCallback((file: File) => {
+    console.log('[ChatInput] File uploaded:', file.name);
+    toast({
+      title: "Processing file",
+      description: "Your file is being processed...",
+    });
+  }, [toast]);
 
   return (
-    <div className="relative flex w-full flex-col items-center">
-      <div className="w-full max-w-4xl rounded-3xl overflow-hidden bg-[#2F2F2F]">
+    <div className="border-t border-gray-300 bg-white">
+      <div className="max-w-3xl mx-auto">
         <ChatInputField
           message={message}
           setMessage={setMessage}
@@ -70,4 +64,4 @@ const ChatInputComponent = ({
   );
 };
 
-export default ChatInputComponent;
+export default ChatInput;

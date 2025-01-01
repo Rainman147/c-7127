@@ -21,7 +21,7 @@ const ChatInputActions = ({
   const [isRecording, setIsRecording] = useState(false);
 
   const handleRecordingStateChange = (recording: boolean) => {
-    console.log('Recording state changed:', recording);
+    console.log('[ChatInputActions] Recording state changed:', recording);
     setIsRecording(recording);
   };
 
