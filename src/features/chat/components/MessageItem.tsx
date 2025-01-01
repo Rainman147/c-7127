@@ -1,5 +1,5 @@
 import { Loader2, Mic } from 'lucide-react';
-import TiptapEditor from '../editor/TiptapEditor';
+import TiptapEditor from '@/features/chat/components/editor/TiptapEditor';
 
 type MessageItemProps = {
   role: 'user' | 'assistant';
