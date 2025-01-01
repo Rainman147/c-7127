@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react';
-import { Progress } from './ui/progress';
+import { Progress } from '@/components/ui/progress';
 
 interface ProcessingIndicatorProps {
   progress: number;
@@ -14,6 +14,13 @@ const ProcessingIndicator = ({
   currentChunk,
   totalChunks
 }: ProcessingIndicatorProps) => {
+  console.log('[ProcessingIndicator] Rendering with:', {
+    progress,
+    status,
+    currentChunk,
+    totalChunks
+  });
+
   return (
     <div className="flex items-center gap-4">
       <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
