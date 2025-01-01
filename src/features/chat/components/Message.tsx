@@ -49,7 +49,7 @@ const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
   return (
     <div className="py-6">
       <div className={`flex gap-4 ${role === 'user' ? 'flex-row-reverse' : ''}`}>
-        <MessageAvatar isAssistant={role === 'assistant'} />
+        <MessageAvatar role={role} />
         <div className={`flex-1 space-y-2 ${role === 'user' ? 'flex justify-end' : ''}`}>
           <MessageContent 
             role={role}
