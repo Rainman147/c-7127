@@ -54,7 +54,7 @@ const MessageItem = ({
                 messageId={id}
                 onSave={onSave}
                 onCancel={onCancel}
-                editable={true}
+                isEditable={true}
               />
             </div>
           ) : (
