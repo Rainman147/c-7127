@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import MessageActions from './MessageActions';
-import MessageAvatar from '../MessageAvatar';
+import MessageAvatar from './MessageAvatar';
 import { cn } from '@/lib/utils';
 import type { MessageProps } from '@/types/chat';
 
