@@ -21,12 +21,12 @@ const ChatInputActions = ({
   const [isRecording, setIsRecording] = useState(false);
 
   const handleRecordingStateChange = (recording: boolean) => {
-    console.log('[ChatInputActions] Recording state changed:', recording);
+    console.log('Recording state changed:', recording);
     setIsRecording(recording);
   };
 
   return (
-    <div className="relative flex items-center justify-between px-4 py-2 bg-chatgpt-main">
+    <div className="relative flex items-center justify-between px-4 py-2 bg-transparent">
       {/* Left side icons */}
       <div className="flex items-center space-x-2">
         <FileUploadModal 
@@ -44,12 +44,12 @@ const ChatInputActions = ({
         <button 
           onClick={handleSubmit}
           disabled={isLoading || !message.trim()}
-          className="p-2 bg-chatgpt-hover rounded-full hover:bg-chatgpt-selected disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+          className="p-2 bg-white rounded-full hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
         >
           {isLoading ? (
-            <Loader2 className="h-5 w-5 text-white animate-spin" />
+            <Loader2 className="h-5 w-5 text-black animate-spin" />
           ) : (
-            <ArrowUp className="h-5 w-5 text-white" />
+            <ArrowUp className="h-5 w-5 text-black" />
           )}
         </button>
       </div>

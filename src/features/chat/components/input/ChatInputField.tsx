@@ -18,7 +18,6 @@ const ChatInputField = ({
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
     if (textarea) {
-      console.log('[ChatInputField] Adjusting textarea height');
       textarea.style.height = 'auto';
       const newHeight = Math.min(textarea.scrollHeight, 200); // Max height of 200px
       textarea.style.height = `${newHeight}px`;
@@ -26,7 +25,6 @@ const ChatInputField = ({
   };
 
   useEffect(() => {
-    console.log('[ChatInputField] Message changed, adjusting height');
     adjustTextareaHeight();
   }, [message]);
 
@@ -42,7 +40,7 @@ const ChatInputField = ({
         }}
         onKeyDown={handleKeyDown}
         placeholder="Message DocTation"
-        className="w-full min-h-[40px] max-h-[200px] resize-none bg-chatgpt-main px-4 py-3 focus:outline-none overflow-y-auto transition-all duration-150 ease-in-out chat-input-scrollbar text-white"
+        className="w-full min-h-[40px] max-h-[200px] resize-none bg-transparent px-4 py-3 focus:outline-none overflow-y-auto transition-all duration-150 ease-in-out chat-input-scrollbar"
         disabled={isLoading}
       />
     </div>
