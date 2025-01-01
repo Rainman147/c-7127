@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { Loader2, Mic } from 'lucide-react';
-import TiptapEditor from '@/components/message-editor/TiptapEditor';
+import TiptapEditor from '../editor/TiptapEditor';
 
-interface MessageItemProps {
+type MessageItemProps = {
   role: 'user' | 'assistant';
   content: string;
   type?: 'text' | 'audio';
@@ -12,7 +11,7 @@ interface MessageItemProps {
   wasEdited: boolean;
   onSave: (newContent: string) => void;
   onCancel: () => void;
-}
+};
 
 const MessageItem = ({ 
   role, 
