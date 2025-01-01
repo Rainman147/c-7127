@@ -1,6 +1,5 @@
 import ChatContainer from '@/features/chat/components/ChatContainer';
 import { useChat } from '@/hooks/useChat';
-import { useUI } from '@/contexts/UIContext';
 
 const ChatPage = () => {
   const { 
