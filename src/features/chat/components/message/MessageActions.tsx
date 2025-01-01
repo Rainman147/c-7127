@@ -5,10 +5,11 @@ import { CopyButton } from "@/components/message-actions/CopyButton";
 
 type MessageActionsProps = {
   content: string;
+  isAIMessage: boolean;  // Added isAIMessage prop
   onEdit?: () => void;
 };
 
-const MessageActions = ({ content, onEdit }: MessageActionsProps) => {
+const MessageActions = ({ content, isAIMessage, onEdit }: MessageActionsProps) => {
   console.log('[MessageActions] Rendering actions');
   
   // Add state and ref for audio playback
@@ -17,12 +18,14 @@ const MessageActions = ({ content, onEdit }: MessageActionsProps) => {
   
   return (
     <div className="flex items-center gap-2 text-gray-400">
-      <AudioButton 
-        content={content}
-        isPlaying={isPlaying}
-        setIsPlaying={setIsPlaying}
-        audioRef={audioRef}
-      />
+      {isAIMessage && (
+        <AudioButton 
+          content={content}
+          isPlaying={isPlaying}
+          setIsPlaying={setIsPlaying}
+          audioRef={audioRef}
+        />
+      )}
       <button className="p-1 hover:text-white transition-colors">
         <ThumbsUp className="h-4 w-4" />
       </button>

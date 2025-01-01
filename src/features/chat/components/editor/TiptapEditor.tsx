@@ -5,6 +5,7 @@ import EditorActions from './EditorActions';
 
 interface TiptapEditorProps {
   content: string;
+  messageId?: string;  // Added messageId as optional prop
   isEditable?: boolean;
   onSave?: (content: string) => void;
   onCancel?: () => void;
@@ -12,11 +13,12 @@ interface TiptapEditorProps {
 
 const TiptapEditor = ({ 
   content, 
+  messageId,  // Added messageId to props
   isEditable = false, 
   onSave, 
   onCancel 
 }: TiptapEditorProps) => {
-  console.log('[TiptapEditor] Rendering with:', { content, isEditable });
+  console.log('[TiptapEditor] Rendering with:', { content, messageId, isEditable });
   
   const editor = useEditor({
     extensions: [StarterKit],
