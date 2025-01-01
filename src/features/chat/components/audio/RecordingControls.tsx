@@ -1,7 +1,7 @@
 import { memo } from 'react';
-import RecordButton from './RecordButton';
-import RecordingIndicator from './RecordingIndicator';
-import ProcessingStatus from './ProcessingStatus';
+import RecordButton from '@/components/audio/RecordButton';
+import RecordingIndicator from '@/components/audio/RecordingIndicator';
+import ProcessingStatus from '@/components/audio/ProcessingStatus';
 
 interface RecordingControlsProps {
   isRecording: boolean;
