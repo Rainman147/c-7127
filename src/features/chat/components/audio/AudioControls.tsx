@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { useAudioRecordingState } from '@/hooks/audio/useAudioRecordingState';
 import { useRecordingHandler } from '@/hooks/audio/useRecordingHandler';
-import RecordingControls from './audio/RecordingControls';
+import RecordingControls from './RecordingControls';
 
 interface AudioControlsProps {
   onTranscriptionComplete: (text: string) => void;
@@ -30,6 +30,14 @@ const AudioControls = memo(({
   onStopRecording,
   onFileUpload
 }: AudioControlsProps) => {
+  console.log('[AudioControls] Rendering with:', {
+    isRecording,
+    isProcessing,
+    progress,
+    currentChunk,
+    totalChunks
+  });
+
   const {
     isRecording: internalIsRecording,
     isProcessing: internalIsProcessing,
