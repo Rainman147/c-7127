@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import ProcessingIndicator from '../../ProcessingIndicator';
+import ProcessingIndicator from '@/features/chat/components/audio/ProcessingIndicator';
 
 interface AudioProgressTrackerProps {
   isProcessing: boolean;

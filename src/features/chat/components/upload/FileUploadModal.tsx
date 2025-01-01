@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Upload, FileAudio, FileText, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { validateAudioFile } from '@/utils/audioUtils';
 import { useToast } from '@/hooks/use-toast';
-import FileProcessor from './audio/FileProcessor';
+import FileProcessor from '@/components/audio/FileProcessor';
 
 interface FileUploadModalProps {
   onFileSelected: (file: File) => void;
@@ -17,6 +17,8 @@ const FileUploadModal = ({ onFileSelected, onTranscriptionComplete }: FileUpload
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  console.log('[FileUploadModal] Rendering with processing state:', isProcessing);
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     setError(null);
@@ -27,7 +29,7 @@ const FileUploadModal = ({ onFileSelected, onTranscriptionComplete }: FileUpload
       // Validate the audio file
       validateAudioFile(file);
       
-      console.log('Processing uploaded audio file:', { 
+      console.log('[FileUploadModal] Processing uploaded audio file:', { 
         type: file.type,
         size: file.size
       });
@@ -35,9 +37,9 @@ const FileUploadModal = ({ onFileSelected, onTranscriptionComplete }: FileUpload
       // Create FileProcessor instance
       const processor = new FileProcessor({
         onProcessingComplete: (text) => {
-          console.log('Transcription complete in FileUploadModal:', text);
+          console.log('[FileUploadModal] Transcription complete:', text);
           onFileSelected(file);
-          onTranscriptionComplete(text); // Pass the transcription text up
+          onTranscriptionComplete(text);
           setIsOpen(false);
           setIsProcessing(false);
           
@@ -55,7 +57,7 @@ const FileUploadModal = ({ onFileSelected, onTranscriptionComplete }: FileUpload
       
     } catch (error: any) {
       setError(error.message);
-      console.error('File processing error:', error);
+      console.error('[FileUploadModal] File processing error:', error);
       
       toast({
         title: "Error",
