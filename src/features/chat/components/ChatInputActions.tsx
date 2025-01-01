@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Loader2, ArrowUp } from "lucide-react";
 import AudioRecorder from "@/components/AudioRecorder";
-import FileUploadModal from "@/components/FileUploadModal";
+import FileUploadModal from "@/features/chat/components/upload/FileUploadModal";
 
 interface ChatInputActionsProps {
   isLoading: boolean;
