@@ -1,77 +1,33 @@
-import { useState } from 'react';
+import { memo } from 'react';
+import MessageActions from './message/MessageActions';
 import MessageAvatar from './MessageAvatar';
-import MessageActions from './MessageActions';
-import MessageContent from './message/MessageContent';
+import { cn } from '@/lib/utils';
+import type { MessageProps } from '@/types/chat';
 
-type MessageProps = {
-  role: 'user' | 'assistant';
-  content: string;
-  isStreaming?: boolean;
-  type?: 'text' | 'audio';
-  id?: string;
-};
-
-const Message = ({ role, content, isStreaming, type, id }: MessageProps) => {
-  const [editedContent, setEditedContent] = useState(content);
-  const [isEditing, setIsEditing] = useState(false);
-  const [wasEdited, setWasEdited] = useState(false);
-
-  console.log('[Message] Rendering message:', { 
-    role, 
-    id, 
-    isEditing, 
-    content: content.substring(0, 50) + '...',
-    hasId: !!id 
-  });
-
-  const handleSave = (newContent: string) => {
-    console.log('[Message] Saving edited content:', newContent.substring(0, 50) + '...');
-    setEditedContent(newContent);
-    setIsEditing(false);
-    setWasEdited(true);
-  };
-
-  const handleCancel = () => {
-    console.log('[Message] Canceling edit');
-    setEditedContent(content);
-    setIsEditing(false);
-  };
-
-  const handleEdit = () => {
-    console.log('[Message] Starting edit for message:', id);
-    if (!id) {
-      console.error('[Message] Cannot edit message without ID');
-      return;
-    }
-    setIsEditing(true);
-  };
+const Message = memo(({ content, sender, type = 'text' }: MessageProps) => {
+  const isAIMessage = sender === 'ai';
 
   return (
-    <div className="py-6">
-      <div className={`flex gap-4 ${role === 'user' ? 'flex-row-reverse' : ''}`}>
-        <MessageAvatar role={role} />
-        <div className={`flex-1 space-y-2 ${role === 'user' ? 'flex justify-end' : ''}`}>
-          <MessageContent 
-            role={role}
-            content={editedContent}
-            type={type}
-            isStreaming={isStreaming}
-            isEditing={isEditing}
-            id={id}
-            wasEdited={wasEdited}
-            onSave={handleSave}
-            onCancel={handleCancel}
-          />
-          {role === 'assistant' && id && (
-            <MessageActions 
-              content={editedContent} 
-              onEdit={handleEdit}
-            />
-          )}
+    <div className={cn(
+      "py-3 px-4 w-full flex gap-4 text-gray-100",
+      isAIMessage ? "bg-chatgpt-hover" : ""
+    )}>
+      <MessageAvatar isAIMessage={isAIMessage} />
+      <div className="flex-1 space-y-2 overflow-hidden">
+        <div className="flex justify-between gap-2">
+          <span className="font-semibold">
+            {isAIMessage ? 'Assistant' : 'You'}
+          </span>
+          <MessageActions content={content} isAIMessage={isAIMessage} />
+        </div>
+        <div className="prose prose-invert max-w-none">
+          {content}
         </div>
       </div>
     </div>
   );
-};
+});
+
+Message.displayName = 'Message';
 
 export default Message;
