@@ -21,12 +21,12 @@ const ChatInputActions = ({
   const [isRecording, setIsRecording] = useState(false);
 
   const handleRecordingStateChange = (recording: boolean) => {
-    console.log('Recording state changed:', recording);
+    console.log('[ChatInputActions] Recording state changed:', recording);
     setIsRecording(recording);
   };
 
   return (
-    <div className="relative flex items-center justify-between px-4 py-2 bg-transparent">
+    <div className="relative flex items-center justify-between px-4 py-2 bg-[#2F2F2F]">
       {/* Left side icons */}
       <div className="flex items-center space-x-2">
         <FileUploadModal 
