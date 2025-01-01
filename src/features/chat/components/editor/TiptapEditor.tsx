@@ -1,109 +1,46 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import EditorToolbar from './EditorToolbar';
 import EditorActions from './EditorActions';
 
 interface TiptapEditorProps {
   content: string;
-  messageId: string;
+  isEditable?: boolean;
   onSave?: (content: string) => void;
   onCancel?: () => void;
-  editable?: boolean;
 }
 
 const TiptapEditor = ({ 
   content, 
-  messageId, 
+  isEditable = false, 
   onSave, 
-  onCancel, 
-  editable = true 
+  onCancel 
 }: TiptapEditorProps) => {
-  const { toast } = useToast();
-  const [originalContent, setOriginalContent] = useState(content);
+  console.log('[TiptapEditor] Rendering with:', { content, isEditable });
   
   const editor = useEditor({
     extensions: [StarterKit],
-    content: content,
-    editable,
-    editorProps: {
-      attributes: {
-        class: 'prose prose-invert max-w-none focus:outline-none min-h-[100px] cursor-text touch-manipulation',
-      },
-    },
+    content,
+    editable: isEditable,
   });
-
-  useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content);
-    }
-  }, [content, editor]);
-
-  const handleSave = async () => {
-    if (!editor) return;
-    
-    const newContent = editor.getHTML();
-    
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { error } = await supabase
-        .from('edited_messages')
-        .upsert({
-          message_id: messageId,
-          user_id: user.id,
-          edited_content: newContent,
-        }, {
-          onConflict: 'message_id,user_id'
-        });
-
-      if (error) throw error;
-      
-      if (onSave) onSave(newContent);
-      
-      toast({
-        description: "Changes saved successfully",
-        duration: 2000,
-        className: "bg-[#10A37F] text-white",
-      });
-    } catch (error: any) {
-      console.error('Error saving edit:', error);
-      toast({
-        title: "Error saving changes",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRevertToOriginal = () => {
-    if (!editor) return;
-    editor.commands.setContent(originalContent);
-    toast({
-      description: "Reverted to original content",
-      duration: 2000,
-    });
-  };
 
   if (!editor) {
     return null;
   }
 
   return (
-    <div className="space-y-4">
-      <EditorToolbar editor={editor} />
-      <EditorContent 
-        editor={editor} 
-        className="prose-headings:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2"
-      />
-      <EditorActions
-        onSave={handleSave}
-        onCancel={onCancel || (() => {})}
-        onRevert={handleRevertToOriginal}
-      />
+    <div className="prose prose-invert max-w-none">
+      {isEditable && (
+        <EditorToolbar editor={editor} />
+      )}
+      <EditorContent editor={editor} />
+      {isEditable && (
+        <EditorActions 
+          editor={editor}
+          onSave={() => onSave?.(editor.getHTML())}
+          onCancel={onCancel}
+        />
+      )}
     </div>
   );
 };

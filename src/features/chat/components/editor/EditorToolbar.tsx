@@ -1,60 +1,65 @@
-import { Bold, Italic, List, Copy } from 'lucide-react';
 import { Editor } from '@tiptap/react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { 
+  Bold, 
+  Italic, 
+  List, 
+  ListOrdered,
+  Code,
+  Heading1,
+  Heading2
+} from 'lucide-react';
 
 interface EditorToolbarProps {
-  editor: Editor | null;
+  editor: Editor;
 }
 
 const EditorToolbar = ({ editor }: EditorToolbarProps) => {
-  const { toast } = useToast();
-
-  if (!editor) {
-    return null;
-  }
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(editor.getText());
-    toast({
-      description: "Content copied to clipboard",
-      duration: 2000,
-    });
-  };
-
+  console.log('[EditorToolbar] Rendering toolbar');
+  
   return (
-    <div className="flex items-center gap-2 bg-[#2A2A2A] p-2 rounded-md">
-      <Button
-        variant="ghost"
-        size="sm"
+    <div className="border-b border-gray-600 mb-4 pb-2 flex gap-2">
+      <button
         onClick={() => editor.chain().focus().toggleBold().run()}
-        className={editor.isActive('bold') ? 'bg-[#10A37F]' : ''}
+        className={`p-2 hover:bg-gray-700 rounded ${editor.isActive('bold') ? 'bg-gray-700' : ''}`}
       >
         <Bold className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
+      </button>
+      <button
         onClick={() => editor.chain().focus().toggleItalic().run()}
-        className={editor.isActive('italic') ? 'bg-[#10A37F]' : ''}
+        className={`p-2 hover:bg-gray-700 rounded ${editor.isActive('italic') ? 'bg-gray-700' : ''}`}
       >
         <Italic className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
+      </button>
+      <button
         onClick={() => editor.chain().focus().toggleBulletList().run()}
-        className={editor.isActive('bulletList') ? 'bg-[#10A37F]' : ''}
+        className={`p-2 hover:bg-gray-700 rounded ${editor.isActive('bulletList') ? 'bg-gray-700' : ''}`}
       >
         <List className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleCopy}
+      </button>
+      <button
+        onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        className={`p-2 hover:bg-gray-700 rounded ${editor.isActive('orderedList') ? 'bg-gray-700' : ''}`}
       >
-        <Copy className="h-4 w-4" />
-      </Button>
+        <ListOrdered className="h-4 w-4" />
+      </button>
+      <button
+        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+        className={`p-2 hover:bg-gray-700 rounded ${editor.isActive('codeBlock') ? 'bg-gray-700' : ''}`}
+      >
+        <Code className="h-4 w-4" />
+      </button>
+      <button
+        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+        className={`p-2 hover:bg-gray-700 rounded ${editor.isActive('heading', { level: 1 }) ? 'bg-gray-700' : ''}`}
+      >
+        <Heading1 className="h-4 w-4" />
+      </button>
+      <button
+        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+        className={`p-2 hover:bg-gray-700 rounded ${editor.isActive('heading', { level: 2 }) ? 'bg-gray-700' : ''}`}
+      >
+        <Heading2 className="h-4 w-4" />
+      </button>
     </div>
   );
 };
