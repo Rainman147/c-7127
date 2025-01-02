@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useUI } from '@/contexts/UIContext';
 import { ChatHeader } from '@/features/chat/components/header/ChatHeader';
-import MessageList from '../message/MessageList';
+import MessageList from '@/features/chat/components/message/MessageList';
 import ChatInput from '../input/ChatInput';
 import type { Message } from '@/types/chat';
 

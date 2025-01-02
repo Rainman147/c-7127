@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import Message from './Message';
 import type { Message as MessageType } from '@/types/chat';
 
@@ -6,20 +7,16 @@ interface MessageListProps {
 }
 
 const MessageList = ({ messages }: MessageListProps) => {
-  console.log('[MessageList] Rendering messages:', messages.map(m => ({
-    role: m.role,
-    id: m.id,
-    contentPreview: m.content.substring(0, 50) + '...'
-  })));
-  
+  console.log('[MessageList] Rendering messages:', messages);
+
   return (
-    <div className="flex-1 overflow-y-auto chat-scrollbar">
-      <div className="w-full max-w-3xl mx-auto px-4">
-        {messages.map((message, index) => (
-          <Message 
-            key={message.id || index} 
+    <div className="flex-1 overflow-y-auto px-4">
+      <div className="flex flex-col gap-4 py-4">
+        {messages.map((message) => (
+          <Message
+            key={message.id || `${message.role}-${message.content}`}
             content={message.content}
-            sender={message.role === 'assistant' ? 'ai' : 'user'}
+            sender={message.role === 'user' ? 'user' : 'ai'}
             type={message.type}
           />
         ))}
@@ -28,4 +25,4 @@ const MessageList = ({ messages }: MessageListProps) => {
   );
 };
 
-export default MessageList;
+export default memo(MessageList);
