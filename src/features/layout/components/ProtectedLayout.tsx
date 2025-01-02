@@ -13,10 +13,10 @@ interface ProtectedLayoutProps {
 const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isSidebarOpen, toggleSidebar } = useUI();
+  const { isSidebarOpen } = useUI();
 
   useEffect(() => {
-    console.log('[ProtectedLayout] Initializing with sidebar state:', isSidebarOpen);
+    console.log('[ProtectedLayout] Initializing');
     
     const validateSession = async () => {
       console.log('[ProtectedLayout] Validating session...');
@@ -50,14 +50,11 @@ const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
       console.log('[ProtectedLayout] Cleaning up auth subscription');
       subscription.unsubscribe();
     };
-  }, [navigate, toast, isSidebarOpen]);
+  }, [navigate, toast]);
 
   return (
     <div className="flex h-screen bg-chatgpt-main">
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        onToggle={toggleSidebar}
-      />
+      <Sidebar />
       <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
         {children}
       </main>

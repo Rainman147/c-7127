@@ -1,26 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useChatSessions } from '@/hooks/useChatSessions';
+import { useUI } from '@/contexts/UIContext';
 import SidebarHeader from './SidebarHeader';
 import SidebarContent from './SidebarContent';
 import SidebarFooter from './SidebarFooter';
 
 interface SidebarProps {
-  isOpen: boolean;
-  onToggle: () => void;
   onApiKeyChange?: (apiKey: string) => void;
   onSessionSelect?: (sessionId: string) => void;
 }
 
 const Sidebar = ({ 
-  isOpen, 
-  onToggle, 
   onApiKeyChange = () => {}, 
   onSessionSelect = () => {} 
 }: SidebarProps) => {
+  console.log('[Sidebar] Rendering');
+  const { isSidebarOpen } = useUI();
   const [apiKey, setApiKey] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [isMobile, setIsMobile] = useState(false);
   
   const {
     sessions,
@@ -31,23 +29,14 @@ const Sidebar = ({
     renameSession,
   } = useChatSessions();
 
-  useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkIfMobile();
-    window.addEventListener('resize', checkIfMobile);
-
-    return () => window.removeEventListener('resize', checkIfMobile);
-  }, []);
-
   const handleApiKeyChange = (newApiKey: string) => {
+    console.log('[Sidebar] API key changed');
     setApiKey(newApiKey);
     onApiKeyChange(newApiKey);
   };
 
   const handleNewChat = async () => {
+    console.log('[Sidebar] Creating new chat');
     const sessionId = await createSession();
     if (sessionId) {
       setActiveSessionId(sessionId);
@@ -56,11 +45,9 @@ const Sidebar = ({
   };
 
   const handleSessionClick = (sessionId: string) => {
+    console.log('[Sidebar] Session selected:', sessionId);
     setActiveSessionId(sessionId);
     onSessionSelect(sessionId);
-    if (isMobile) {
-      onToggle();
-    }
   };
 
   const handleSessionEdit = (session: { id: string; title: string }) => {
@@ -74,12 +61,12 @@ const Sidebar = ({
 
   return (
     <div className={`fixed top-0 left-0 z-40 h-screen bg-chatgpt-sidebar transition-all duration-300 ${
-      isOpen ? "w-64" : "w-0"
+      isSidebarOpen ? "w-64" : "w-0"
     }`}>
       <nav className="flex h-full w-full flex-col px-3" aria-label="Chat history">
-        <SidebarHeader onToggle={onToggle} />
+        <SidebarHeader />
         
-        {isOpen && (
+        {isSidebarOpen && (
           <>
             <SidebarContent
               onNewChat={handleNewChat}
