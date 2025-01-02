@@ -1,13 +1,13 @@
 import { User, Bot } from 'lucide-react';
 
 interface MessageAvatarProps {
-  isAIMessage: boolean;
+  sender: 'user' | 'ai';
 }
 
-const MessageAvatar = ({ isAIMessage }: MessageAvatarProps) => {
+const MessageAvatar = ({ sender }: MessageAvatarProps) => {
   return (
     <div className="w-8 h-8 rounded flex items-center justify-center">
-      {isAIMessage ? (
+      {sender === 'ai' ? (
         <Bot className="h-6 w-6 text-blue-500" />
       ) : (
         <User className="h-6 w-6 text-gray-400" />

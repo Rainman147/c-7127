@@ -12,6 +12,11 @@ export interface MessageProps {
   type?: 'text' | 'audio';
 }
 
+export interface MessageContentProps {
+  content: string;
+  type?: 'text' | 'audio';
+}
+
 export interface MessageActionsProps {
   content: string;
   isAIMessage: boolean;
