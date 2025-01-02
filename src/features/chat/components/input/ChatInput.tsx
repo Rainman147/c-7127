@@ -10,7 +10,7 @@ interface ChatInputProps {
   isLoading?: boolean;
 }
 
-const ChatInputComponent = ({ 
+const ChatInput = ({ 
   onSend, 
   onTranscriptionComplete,
   onTranscriptionUpdate,
@@ -70,4 +70,4 @@ const ChatInputComponent = ({
   );
 };
 
-export default ChatInputComponent;
+export default ChatInput;
