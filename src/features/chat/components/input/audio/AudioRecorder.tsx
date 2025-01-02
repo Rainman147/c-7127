@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import AudioControls from '@/features/chat/components/audio/AudioControls';
+import AudioControls from './AudioControls';
 import { useRecordingControls } from '@/hooks/audio/useRecordingControls';
 
 interface AudioRecorderProps {

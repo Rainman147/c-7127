@@ -3,7 +3,7 @@ import { Volume2, Loader2 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
 import { getDeviceType } from '@/utils/deviceDetection';
-import type { AudioButtonProps } from './types';
+import type { AudioButtonProps } from '../types';
 
 export const AudioButton = ({ content, isPlaying, setIsPlaying, audioRef }: AudioButtonProps) => {
   const [isLoading, setIsLoading] = useState(false);
