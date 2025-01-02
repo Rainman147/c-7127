@@ -3,15 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import MainLayout from '@/features/layout/components/MainLayout';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Patient, parseSupabaseJson } from '@/types';
 import { PatientInfo } from './components/PatientInfo';
 import { PatientMedicalInfo } from './components/PatientMedicalInfo';
 import { PatientChatHistory } from './components/PatientChatHistory';
+import { useUI } from '@/contexts/UIContext';
 
 const PatientDetailPage = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [patient, setPatient] = useState<Patient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [recentChats, setRecentChats] = useState<Array<{
@@ -80,61 +79,46 @@ const PatientDetailPage = () => {
 
   if (isLoading) {
     return (
-      <MainLayout 
-        isSidebarOpen={isSidebarOpen} 
-        onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-      >
-        <div className="flex justify-center items-center h-screen">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      </MainLayout>
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
     );
   }
 
   if (!patient) {
     return (
-      <MainLayout 
-        isSidebarOpen={isSidebarOpen} 
-        onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-      >
-        <div className="p-6">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2">Patient Not Found</h2>
-            <Button onClick={() => navigate('/patients')}>
-              Return to Patients List
-            </Button>
-          </div>
+      <div className="p-6">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Patient Not Found</h2>
+          <Button onClick={() => navigate('/patients')}>
+            Return to Patients List
+          </Button>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
   return (
-    <MainLayout 
-      isSidebarOpen={isSidebarOpen} 
-      onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-    >
-      <div className="p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <Button 
-            variant="outline"
-            onClick={() => navigate('/patients')}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">{patient.name}</h1>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <PatientInfo patient={patient} />
-          <PatientMedicalInfo patient={patient} />
-        </div>
-
-        <PatientChatHistory chats={recentChats} />
+    <div className="p-6">
+      <div className="flex items-center gap-4 mb-6">
+        <Button 
+          variant="outline"
+          onClick={() => navigate('/patients')}
+          className="gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+        <h1 className="text-2xl font-bold">{patient.name}</h1>
       </div>
-    </MainLayout>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <PatientInfo patient={patient} />
+        <PatientMedicalInfo patient={patient} />
+      </div>
+
+      <PatientChatHistory chats={recentChats} />
+    </div>
   );
 };
 
