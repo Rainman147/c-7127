@@ -1,57 +1,41 @@
-import { useState } from "react";
-import { ThumbsUp, ThumbsDown, RotateCcw, MoreHorizontal, Pencil } from "lucide-react";
-import { AudioButton } from "@/components/message-actions/AudioButton";
-import { CopyButton } from "@/components/message-actions/CopyButton";
+import { memo } from 'react';
+import { Copy } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import type { MessageActionsProps } from '@/types/chat';
 
-type MessageActionsProps = {
-  content: string;
-  isAIMessage: boolean;  // Added isAIMessage prop
-  onEdit?: () => void;
-};
+const MessageActions = ({ content, isAIMessage }: MessageActionsProps) => {
+  const { toast } = useToast();
 
-const MessageActions = ({ content, isAIMessage, onEdit }: MessageActionsProps) => {
-  console.log('[MessageActions] Rendering actions');
-  
-  // Add state and ref for audio playback
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useState<HTMLAudioElement | null>(null);
-  
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      toast({
+        title: "Copied to clipboard",
+        description: "Message content has been copied to your clipboard",
+      });
+    } catch (err) {
+      console.error('Failed to copy message:', err);
+      toast({
+        title: "Failed to copy",
+        description: "Could not copy message to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (!isAIMessage) return null;
+
   return (
-    <div className="flex items-center gap-2 text-gray-400">
-      {isAIMessage && (
-        <AudioButton 
-          content={content}
-          isPlaying={isPlaying}
-          setIsPlaying={setIsPlaying}
-          audioRef={audioRef}
-        />
-      )}
-      <button className="p-1 hover:text-white transition-colors">
-        <ThumbsUp className="h-4 w-4" />
-      </button>
-      <button className="p-1 hover:text-white transition-colors">
-        <ThumbsDown className="h-4 w-4" />
-      </button>
-      <CopyButton content={content} />
-      {onEdit && (
-        <button 
-          className="p-1 hover:text-white transition-colors"
-          onClick={() => {
-            console.log('[MessageActions] Edit button clicked');
-            onEdit();
-          }}
-        >
-          <Pencil className="h-4 w-4" />
-        </button>
-      )}
-      <button className="p-1 hover:text-white transition-colors">
-        <RotateCcw className="h-4 w-4" />
-      </button>
-      <button className="p-1 hover:text-white transition-colors">
-        <MoreHorizontal className="h-4 w-4" />
+    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <button
+        onClick={handleCopy}
+        className="p-1 hover:bg-gray-700 rounded-md transition-colors"
+        aria-label="Copy message"
+      >
+        <Copy className="h-4 w-4 text-gray-400" />
       </button>
     </div>
   );
 };
 
-export default MessageActions;
+export default memo(MessageActions);
