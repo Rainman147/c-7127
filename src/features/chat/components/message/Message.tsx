@@ -1,33 +1,30 @@
 import { memo } from 'react';
-import MessageActions from './MessageActions';
-import MessageAvatar from './MessageAvatar';
 import { cn } from '@/lib/utils';
+import MessageAvatar from './MessageAvatar';
+import MessageContent from './MessageContent';
+import MessageActions from './MessageActions';
 import type { MessageProps } from '@/types/chat';
 
-const Message = memo(({ content, sender, type = 'text' }: MessageProps) => {
+const Message = ({ content, sender, type = 'text' }: MessageProps) => {
+  console.log('[Message] Rendering message from:', sender);
+  
   const isAIMessage = sender === 'ai';
 
   return (
     <div className={cn(
-      "py-3 px-4 w-full flex gap-4 text-gray-100",
-      isAIMessage ? "bg-chatgpt-hover" : ""
+      "group relative px-4 py-6 text-gray-100",
+      "hover:bg-gray-800/50 transition-colors",
+      isAIMessage ? "bg-gray-800/30" : ""
     )}>
-      <MessageAvatar isAIMessage={isAIMessage} />
-      <div className="flex-1 space-y-2 overflow-hidden">
-        <div className="flex justify-between gap-2">
-          <span className="font-semibold">
-            {isAIMessage ? 'Assistant' : 'You'}
-          </span>
-          <MessageActions content={content} isAIMessage={isAIMessage} />
+      <div className="relative m-auto flex max-w-3xl gap-4 px-4">
+        <MessageAvatar sender={sender} />
+        <div className="flex-1 space-y-4">
+          <MessageContent content={content} type={type} />
         </div>
-        <div className="prose prose-invert max-w-none">
-          {content}
-        </div>
+        <MessageActions content={content} isAIMessage={isAIMessage} />
       </div>
     </div>
   );
-});
+};
 
-Message.displayName = 'Message';
-
-export default Message;
+export default memo(Message);
