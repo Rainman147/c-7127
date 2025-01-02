@@ -18,7 +18,7 @@ const MessageActions = ({ content, isAIMessage }: MessageActionsProps) => {
           content={content} 
           isPlaying={isPlaying} 
           setIsPlaying={setIsPlaying} 
-          audioRef={audioRef} 
+          audioRef={[audioRef.current, (audio) => { audioRef.current = audio }]} 
         />
       )}
       <CopyButton content={content} />
