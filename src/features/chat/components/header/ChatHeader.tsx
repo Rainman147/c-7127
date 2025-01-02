@@ -1,13 +1,13 @@
 import { memo } from "react";
-import { TemplateSelector } from "./TemplateSelector";
-import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
+import { TemplateSelector } from "@/components/TemplateSelector";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu";
 import { Settings, LogOut, User2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
