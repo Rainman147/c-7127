@@ -5,12 +5,18 @@ interface MessageAvatarProps {
 }
 
 const MessageAvatar = ({ sender }: MessageAvatarProps) => {
+  console.log('[MessageAvatar] Rendering for role:', sender);
+  
   return (
-    <div className="w-8 h-8 rounded flex items-center justify-center">
-      {sender === 'ai' ? (
-        <Bot className="h-6 w-6 text-blue-500" />
+    <div className="flex-shrink-0">
+      {sender === 'user' ? (
+        <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+          <User className="w-5 h-5 text-white" />
+        </div>
       ) : (
-        <User className="h-6 w-6 text-gray-400" />
+        <div className="w-8 h-8 bg-[#10A37F] rounded-full flex items-center justify-center">
+          <Bot className="w-5 h-5 text-white" />
+        </div>
       )}
     </div>
   );
