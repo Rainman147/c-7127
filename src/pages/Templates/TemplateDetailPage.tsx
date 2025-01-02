@@ -6,14 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import MainLayout from '@/features/layout/components/MainLayout';
 import { Template, parseSupabaseJson } from '@/types';
 
 const TemplateDetailPage = () => {
   const [template, setTemplate] = useState<Template | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { templateId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -47,7 +45,6 @@ const TemplateDetailPage = () => {
 
       if (error) throw error;
 
-      // Parse JSON fields
       const parsedTemplate: Template = {
         ...data,
         instructions: parseSupabaseJson(data.instructions),
@@ -112,73 +109,63 @@ const TemplateDetailPage = () => {
 
   if (isLoading) {
     return (
-      <MainLayout 
-        isSidebarOpen={isSidebarOpen} 
-        onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-      >
-        <div className="flex justify-center items-center h-screen">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      </MainLayout>
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
     );
   }
 
   return (
-    <MainLayout 
-      isSidebarOpen={isSidebarOpen} 
-      onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-    >
-      <div className="p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <Button 
-            variant="outline"
-            onClick={() => navigate('/templates')}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">
-            {templateId === 'new' ? 'New Template' : 'Edit Template'}
-          </h1>
-        </div>
-
-        <div className="max-w-2xl space-y-6">
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Template Name
-            </label>
-            <Input
-              value={template?.name || ''}
-              onChange={(e) => setTemplate(prev => prev ? { ...prev, name: e.target.value } : null)}
-              placeholder="Enter template name"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Content
-            </label>
-            <Textarea
-              value={template?.content || ''}
-              onChange={(e) => setTemplate(prev => prev ? { ...prev, content: e.target.value } : null)}
-              placeholder="Enter template content..."
-              className="min-h-[200px]"
-            />
-          </div>
-
-          <Button 
-            onClick={handleSave} 
-            disabled={isSaving}
-            className="gap-2"
-          >
-            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-            <Save className="h-4 w-4" />
-            Save Template
-          </Button>
-        </div>
+    <div className="p-6">
+      <div className="flex items-center gap-4 mb-6">
+        <Button 
+          variant="outline"
+          onClick={() => navigate('/templates')}
+          className="gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+        <h1 className="text-2xl font-bold">
+          {templateId === 'new' ? 'New Template' : 'Edit Template'}
+        </h1>
       </div>
-    </MainLayout>
+
+      <div className="max-w-2xl space-y-6">
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Template Name
+          </label>
+          <Input
+            value={template?.name || ''}
+            onChange={(e) => setTemplate(prev => prev ? { ...prev, name: e.target.value } : null)}
+            placeholder="Enter template name"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Content
+          </label>
+          <Textarea
+            value={template?.content || ''}
+            onChange={(e) => setTemplate(prev => prev ? { ...prev, content: e.target.value } : null)}
+            placeholder="Enter template content..."
+            className="min-h-[200px]"
+          />
+        </div>
+
+        <Button 
+          onClick={handleSave} 
+          disabled={isSaving}
+          className="gap-2"
+        >
+          {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+          <Save className="h-4 w-4" />
+          Save Template
+        </Button>
+      </div>
+    </div>
   );
 };
 
