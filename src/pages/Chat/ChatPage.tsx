@@ -1,4 +1,4 @@
-import ChatContainer from '@/features/chat/components/ChatContainer';
+import ChatContainer from '@/features/chat/components/container/ChatContainer';
 import { useChat } from '@/hooks/useChat';
 
 const ChatPage = () => {
@@ -17,7 +17,7 @@ const ChatPage = () => {
       currentChatId={currentChatId}
       onMessageSend={handleSendMessage}
       onTranscriptionComplete={(text) => handleSendMessage(text, 'audio')}
-      onTemplateChange={() => {}} // Adding missing required prop
+      onTemplateChange={() => {}}
     />
   );
 };
