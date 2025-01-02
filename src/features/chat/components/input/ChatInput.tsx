@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import AudioControls from "../audio/AudioControls";
 import ChatInputField from "./ChatInputField";
 import ChatInputActions from "./ChatInputActions";
 
