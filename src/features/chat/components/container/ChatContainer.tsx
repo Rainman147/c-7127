@@ -33,7 +33,7 @@ const ChatContainer = ({
 
   return (
     <div className={`relative flex h-full w-full flex-1 flex-col items-center justify-between bg-chatgpt-main transition-all duration-300 ${
-      isSidebarOpen ? 'ml-0' : 'ml-0'
+      isSidebarOpen ? 'ml-64' : 'ml-0'
     }`}>
       <ChatHeader 
         currentChatId={currentChatId} 
