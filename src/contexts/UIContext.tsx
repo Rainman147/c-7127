@@ -1,48 +1,84 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-interface UIContextType {
+// Define explicit types for our context
+interface UIState {
   isSidebarOpen: boolean;
+  isDesktop: boolean;
+}
+
+interface UIContextType extends UIState {
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
-  isDesktop: boolean;
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined);
 
+const DESKTOP_BREAKPOINT = 768; // Matches the existing breakpoint
+
 export function UIProvider({ children }: { children: React.ReactNode }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+  console.log('[UIProvider] Initializing');
+  
+  // Combine related state
+  const [state, setState] = useState<UIState>(() => {
+    const isDesktop = window.innerWidth >= DESKTOP_BREAKPOINT;
+    return {
+      isSidebarOpen: isDesktop, // Default open on desktop, closed on mobile
+      isDesktop,
+    };
+  });
 
   useEffect(() => {
+    console.log('[UIProvider] Setting up resize listener');
+    
     const handleResize = () => {
-      const desktop = window.innerWidth >= 768;
-      setIsDesktop(desktop);
+      const isDesktop = window.innerWidth >= DESKTOP_BREAKPOINT;
+      console.log('[UIProvider] Window resized, isDesktop:', isDesktop);
       
-      // Auto-close sidebar on mobile, auto-open on desktop
-      if (!desktop && isSidebarOpen) {
-        setIsSidebarOpen(false);
-      } else if (desktop && !isSidebarOpen) {
-        setIsSidebarOpen(true);
-      }
+      setState(prevState => {
+        // Only update if there's a change in device type
+        if (prevState.isDesktop !== isDesktop) {
+          console.log('[UIProvider] Device type changed, updating sidebar state');
+          return {
+            isDesktop,
+            // Auto-close on mobile, auto-open on desktop
+            isSidebarOpen: isDesktop,
+          };
+        }
+        return prevState;
+      });
     };
 
     window.addEventListener('resize', handleResize);
-    handleResize(); // Initial check
+    return () => {
+      console.log('[UIProvider] Cleaning up resize listener');
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isSidebarOpen]);
+  const toggleSidebar = () => {
+    console.log('[UIProvider] Toggling sidebar');
+    setState(prev => ({
+      ...prev,
+      isSidebarOpen: !prev.isSidebarOpen,
+    }));
+  };
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const setSidebarOpen = (open: boolean) => {
+    console.log('[UIProvider] Setting sidebar open:', open);
+    setState(prev => ({
+      ...prev,
+      isSidebarOpen: open,
+    }));
+  };
+
+  const value = {
+    ...state,
+    toggleSidebar,
+    setSidebarOpen,
+  };
 
   return (
-    <UIContext.Provider 
-      value={{ 
-        isSidebarOpen, 
-        toggleSidebar, 
-        setSidebarOpen: setIsSidebarOpen,
-        isDesktop 
-      }}
-    >
+    <UIContext.Provider value={value}>
       {children}
     </UIContext.Provider>
   );
