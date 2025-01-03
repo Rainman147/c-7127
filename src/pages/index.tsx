@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
 import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
@@ -8,6 +9,8 @@ import { getDefaultTemplate } from '@/utils/template/templateStateManager';
 import type { Template } from '@/components/template/types';
 
 const Index = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(() => {
     const defaultTemplate = getDefaultTemplate();
     console.log('[Index] Initializing with default template:', defaultTemplate.name);
@@ -29,14 +32,35 @@ const Index = () => {
   // Initialize audio recovery
   useAudioRecovery();
 
+  // Handle URL parameters for chat sessions
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const chatId = params.get('chatId');
+    const templateId = params.get('templateId');
+    
+    if (chatId) {
+      console.log('[Index] Loading chat from URL parameter:', chatId);
+      loadChatMessages(chatId);
+    }
+    
+    // Handle template from URL if needed
+    if (templateId) {
+      // Implementation for loading template by ID
+      console.log('[Index] Template ID from URL:', templateId);
+    }
+  }, [location.search]);
+
   const handleSessionSelect = async (chatId: string) => {
     console.log('[Index] Selecting session:', chatId);
+    navigate(`/?chatId=${chatId}`);
     await loadChatMessages(chatId);
   };
 
   const handleTemplateChange = (template: Template) => {
     console.log('[Index] Template changed to:', template.name);
     setCurrentTemplate(template);
+    // Update URL with template ID if needed
+    navigate(`${location.pathname}?templateId=${template.id}`);
   };
 
   const handleTranscriptionComplete = async (text: string) => {
@@ -58,6 +82,7 @@ const Index = () => {
       if (sessionId) {
         console.log('Created new session:', sessionId);
         setCurrentChatId(sessionId);
+        navigate(`/?chatId=${sessionId}`);
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
