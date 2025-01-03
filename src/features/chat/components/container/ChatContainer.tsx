@@ -12,6 +12,8 @@ interface ChatContainerProps {
   onMessageSend: (content: string, type?: 'text' | 'audio', systemInstructions?: string) => Promise<void>;
   onTranscriptionComplete: (text: string) => Promise<void>;
   onTemplateChange: (template: any) => void;
+  onPatientSelect: (patientId: string | null) => Promise<void>;
+  selectedPatientId: string | null;
 }
 
 const ChatContainer = ({ 
@@ -20,7 +22,9 @@ const ChatContainer = ({
   currentChatId,
   onMessageSend,
   onTranscriptionComplete,
-  onTemplateChange
+  onTemplateChange,
+  onPatientSelect,
+  selectedPatientId
 }: ChatContainerProps) => {
   console.log('[ChatContainer] Rendering with messages:', messages);
   const { isSidebarOpen } = useUI();
@@ -38,6 +42,8 @@ const ChatContainer = ({
       <ChatHeader 
         currentChatId={currentChatId} 
         onTemplateChange={onTemplateChange}
+        onPatientSelect={onPatientSelect}
+        selectedPatientId={selectedPatientId}
       />
       <div className="flex-1 w-full overflow-hidden pt-[60px] pb-[100px]">
         <MessageList messages={messages} />
