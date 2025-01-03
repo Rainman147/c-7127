@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
 import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
-import { getDefaultTemplate } from '@/utils/template/templateStateManager';
+import { getDefaultTemplate, findTemplateById } from '@/utils/template/templateStateManager';
 import type { Template } from '@/components/template/types';
 
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { sessionId } = useParams();
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(() => {
     const defaultTemplate = getDefaultTemplate();
     console.log('[Index] Initializing with default template:', defaultTemplate.name);
@@ -32,35 +33,55 @@ const Index = () => {
   // Initialize audio recovery
   useAudioRecovery();
 
-  // Handle URL parameters for chat sessions
+  // Handle URL parameters and routing
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const chatId = params.get('chatId');
     const templateId = params.get('templateId');
+    const patientId = params.get('patientId');
     
-    if (chatId) {
-      console.log('[Index] Loading chat from URL parameter:', chatId);
-      loadChatMessages(chatId);
+    // If we're on the root path with no session, ensure default template
+    if (!sessionId && !currentChatId) {
+      const defaultTemplate = getDefaultTemplate();
+      setCurrentTemplate(defaultTemplate);
+      navigate(`/?templateId=${defaultTemplate.id}`, { replace: true });
+      return;
+    }
+
+    // If we have a session ID from the URL, load that chat
+    if (sessionId && sessionId !== currentChatId) {
+      console.log('[Index] Loading chat from URL session:', sessionId);
+      loadChatMessages(sessionId);
+      setCurrentChatId(sessionId);
     }
     
-    // Handle template from URL if needed
+    // Handle template from URL
     if (templateId) {
-      // Implementation for loading template by ID
-      console.log('[Index] Template ID from URL:', templateId);
+      const template = findTemplateById(templateId);
+      if (template && template.id !== currentTemplate?.id) {
+        console.log('[Index] Loading template from URL:', template.name);
+        setCurrentTemplate(template);
+      }
     }
-  }, [location.search]);
+  }, [location.search, sessionId]);
 
   const handleSessionSelect = async (chatId: string) => {
     console.log('[Index] Selecting session:', chatId);
-    navigate(`/?chatId=${chatId}`);
+    const currentParams = new URLSearchParams(location.search);
+    navigate(`/c/${chatId}?${currentParams.toString()}`);
     await loadChatMessages(chatId);
   };
 
   const handleTemplateChange = (template: Template) => {
     console.log('[Index] Template changed to:', template.name);
     setCurrentTemplate(template);
-    // Update URL with template ID if needed
-    navigate(`${location.pathname}?templateId=${template.id}`);
+    
+    // Update URL while preserving other parameters
+    const params = new URLSearchParams(location.search);
+    params.set('templateId', template.id);
+    
+    // Update URL based on whether we're in a chat session or not
+    const baseUrl = sessionId ? `/c/${sessionId}` : '/';
+    navigate(`${baseUrl}?${params.toString()}`);
   };
 
   const handleTranscriptionComplete = async (text: string) => {
@@ -82,7 +103,10 @@ const Index = () => {
       if (sessionId) {
         console.log('Created new session:', sessionId);
         setCurrentChatId(sessionId);
-        navigate(`/?chatId=${sessionId}`);
+        
+        // Update URL with new session ID while preserving other parameters
+        const params = new URLSearchParams(location.search);
+        navigate(`/c/${sessionId}?${params.toString()}`);
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }

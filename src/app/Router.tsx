@@ -17,6 +17,11 @@ const Router = () => {
             <ChatPage />
           </ProtectedLayout>
         } />
+        <Route path="/c/:sessionId" element={
+          <ProtectedLayout>
+            <ChatPage />
+          </ProtectedLayout>
+        } />
         <Route path="/patients" element={
           <ProtectedLayout>
             <PatientsListPage />
