@@ -63,6 +63,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          patient_id: string | null
           template_type: string | null
           title: string
           updated_at: string
@@ -71,6 +72,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          patient_id?: string | null
           template_type?: string | null
           title: string
           updated_at?: string
@@ -79,12 +81,20 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          patient_id?: string | null
           template_type?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "chats_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "chats_user_id_fkey"
             columns: ["user_id"]
