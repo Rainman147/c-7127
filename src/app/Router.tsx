@@ -35,9 +35,14 @@ const Router = () => {
             <PatientsListPage />
           </ProtectedLayout>
         } />
+        <Route path="/patients/new" element={
+          <ProtectedLayout>
+            <PatientDetailPage isNew={true} />
+          </ProtectedLayout>
+        } />
         <Route path="/patients/:patientId" element={
           <ProtectedLayout>
-            <PatientDetailPage />
+            <PatientDetailPage isNew={false} />
           </ProtectedLayout>
         } />
         
