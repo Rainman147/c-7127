@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { Template } from '@/components/template/types';
+import { parseJsonField } from '@/components/template/types';
 
 const TemplateDetailPage = () => {
   const { templateId } = useParams();
@@ -17,26 +18,28 @@ const TemplateDetailPage = () => {
           .from('templates')
           .select('*')
           .eq('id', templateId)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
 
-        // Convert database template to UI template format
-        const uiTemplate: Template = {
-          id: data.id,
-          name: data.name,
-          description: data.name, // Use name as description for now
-          systemInstructions: data.content || '',
-          content: data.content,
-          instructions: data.instructions,
-          schema: data.schema,
-          priority_rules: data.priority_rules,
-          created_at: data.created_at,
-          updated_at: data.updated_at,
-          user_id: data.user_id
-        };
+        if (data) {
+          // Convert database template to UI template format
+          const uiTemplate: Template = {
+            id: data.id,
+            name: data.name,
+            description: data.name, // Use name as description for now
+            systemInstructions: data.content || '',
+            content: data.content,
+            instructions: parseJsonField(data.instructions),
+            schema: parseJsonField(data.schema),
+            priority_rules: parseJsonField(data.priority_rules),
+            created_at: data.created_at,
+            updated_at: data.updated_at,
+            user_id: data.user_id
+          };
 
-        setTemplate(uiTemplate);
+          setTemplate(uiTemplate);
+        }
       } catch (error) {
         console.error('Error loading template:', error);
       } finally {
