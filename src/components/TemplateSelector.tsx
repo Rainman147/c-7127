@@ -10,6 +10,7 @@ import { TemplateItem } from "./template/TemplateItem";
 import { useTemplateSelection } from "./template/useTemplateSelection";
 import { templates } from "./template/types";
 import { validateTemplateId, sanitizeUrlParams } from "@/utils/template/urlParamValidation";
+import { getDefaultTemplate } from "@/utils/template/templateStateManager";
 import type { Template } from "./template/types";
 
 interface TemplateSelectorProps {
@@ -41,6 +42,9 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     }
     
     const templateId = sanitizedParams.get('templateId');
+    const patientId = sanitizedParams.get('patientId');
+    
+    // Only load template from URL if it's non-default or we have a patient
     if (templateId && (!selectedTemplate || selectedTemplate.id !== templateId)) {
       const template = templates.find(t => t.id === templateId);
       if (template) {
@@ -54,23 +58,20 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     console.log('[TemplateSelector] Template selection triggered:', template.name);
     
     if (validateTemplateId(template.id)) {
-      // Update URL parameters
-      setSearchParams(prev => {
-        const newParams = new URLSearchParams(prev);
-        newParams.set('templateId', template.id);
-        return newParams;
-      }, { replace: true });
-      
+      // Let parent component handle URL updates
       handleTemplateChange(template);
     } else {
       console.error('[TemplateSelector] Invalid template ID:', template.id);
     }
-  }, [handleTemplateChange, setSearchParams]);
+  }, [handleTemplateChange]);
 
   const handleTooltipChange = useCallback((templateId: string | null) => {
     console.log('[TemplateSelector] Tooltip state changed for template:', templateId);
     setOpenTooltipId(templateId);
   }, []);
+
+  // Get the display template - either selected or default
+  const displayTemplate = selectedTemplate || getDefaultTemplate();
 
   return (
     <DropdownMenu>
@@ -79,7 +80,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         disabled={isLoading}
         onClick={() => console.log('[TemplateSelector] Dropdown trigger clicked')}
       >
-        <span className="whitespace-nowrap">{selectedTemplate?.name || 'Live Patient Session'}</span>
+        <span className="whitespace-nowrap">{displayTemplate.name}</span>
         <ChevronDown className="h-4 w-4 opacity-70" />
       </DropdownMenuTrigger>
       <DropdownMenuContent 
@@ -91,7 +92,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
           <TemplateItem
             key={template.id}
             template={template}
-            isSelected={selectedTemplate?.id === template.id}
+            isSelected={displayTemplate.id === template.id}
             onSelect={handleTemplateSelect}
             isLoading={isLoading}
             isTooltipOpen={openTooltipId === template.id}

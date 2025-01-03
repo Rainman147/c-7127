@@ -9,12 +9,13 @@ import { getDefaultTemplate, findTemplateById } from '@/utils/template/templateS
 import type { Template } from '@/components/template/types';
 
 const Index = () => {
+  console.log('[Index] Component initializing');
   const navigate = useNavigate();
   const location = useLocation();
   const { sessionId } = useParams();
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(() => {
     const defaultTemplate = getDefaultTemplate();
-    console.log('[Index] Initializing with default template:', defaultTemplate.name);
+    console.log('[Index] Setting default template:', defaultTemplate.name);
     return defaultTemplate;
   });
   
@@ -39,22 +40,9 @@ const Index = () => {
     const templateId = params.get('templateId');
     const patientId = params.get('patientId');
     
-    // If we're on the root path with no session, ensure default template
-    if (!sessionId && !currentChatId) {
-      const defaultTemplate = getDefaultTemplate();
-      setCurrentTemplate(defaultTemplate);
-      navigate(`/?templateId=${defaultTemplate.id}`, { replace: true });
-      return;
-    }
+    console.log('[Index] Processing URL parameters:', { templateId, patientId });
 
-    // If we have a session ID from the URL, load that chat
-    if (sessionId && sessionId !== currentChatId) {
-      console.log('[Index] Loading chat from URL session:', sessionId);
-      loadChatMessages(sessionId);
-      setCurrentChatId(sessionId);
-    }
-    
-    // Handle template from URL
+    // If we have a template ID in the URL, validate and load it
     if (templateId) {
       const template = findTemplateById(templateId);
       if (template && template.id !== currentTemplate?.id) {
@@ -62,7 +50,16 @@ const Index = () => {
         setCurrentTemplate(template);
       }
     }
-  }, [location.search, sessionId]);
+
+    // If we have a session ID but no template in URL, add default template
+    if (sessionId && patientId && !templateId) {
+      const defaultTemplate = getDefaultTemplate();
+      const newParams = new URLSearchParams(params);
+      newParams.set('templateId', defaultTemplate.id);
+      console.log('[Index] Adding default template to URL for session');
+      navigate(`/c/${sessionId}?${newParams.toString()}`, { replace: true });
+    }
+  }, [location.search, sessionId, currentTemplate?.id, navigate]);
 
   const handleSessionSelect = async (chatId: string) => {
     console.log('[Index] Selecting session:', chatId);
@@ -75,25 +72,25 @@ const Index = () => {
     console.log('[Index] Template changed to:', template.name);
     setCurrentTemplate(template);
     
-    // Update URL while preserving other parameters
+    // Update URL based on current state
     const params = new URLSearchParams(location.search);
-    params.set('templateId', template.id);
+    
+    if (template.id === getDefaultTemplate().id && !params.get('patientId')) {
+      // If switching to default template and no patient, remove template from URL
+      params.delete('templateId');
+      console.log('[Index] Removing template from URL (default template)');
+    } else {
+      // Otherwise, update template in URL
+      params.set('templateId', template.id);
+      console.log('[Index] Updating template in URL:', template.id);
+    }
     
     // Update URL based on whether we're in a chat session or not
     const baseUrl = sessionId ? `/c/${sessionId}` : '/';
-    navigate(`${baseUrl}?${params.toString()}`);
-  };
-
-  const handleTranscriptionComplete = async (text: string) => {
-    console.log('[Index] Transcription complete, ready for user to edit:', text);
-    if (text) {
-      const chatInput = document.querySelector('textarea');
-      if (chatInput) {
-        (chatInput as HTMLTextAreaElement).value = text;
-        const event = new Event('input', { bubbles: true });
-        chatInput.dispatchEvent(event);
-      }
-    }
+    const search = params.toString();
+    const newUrl = search ? `${baseUrl}?${search}` : baseUrl;
+    
+    navigate(newUrl, { replace: true });
   };
 
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
@@ -101,7 +98,7 @@ const Index = () => {
       console.log('[Index] Creating new session for first message with template:', currentTemplate?.name);
       const sessionId = await createSession('New Chat');
       if (sessionId) {
-        console.log('Created new session:', sessionId);
+        console.log('[Index] Created new session:', sessionId);
         setCurrentChatId(sessionId);
         
         // Update URL with new session ID while preserving other parameters
@@ -126,7 +123,17 @@ const Index = () => {
         currentChatId={currentChatId}
         onMessageSend={handleMessageSend}
         onTemplateChange={handleTemplateChange}
-        onTranscriptionComplete={handleTranscriptionComplete}
+        onTranscriptionComplete={(text) => {
+          console.log('[Index] Transcription complete, ready for user to edit:', text);
+          if (text) {
+            const chatInput = document.querySelector('textarea');
+            if (chatInput) {
+              (chatInput as HTMLTextAreaElement).value = text;
+              const event = new Event('input', { bubbles: true });
+              chatInput.dispatchEvent(event);
+            }
+          }
+        }}
       />
     </div>
   );
