@@ -1,6 +1,7 @@
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ChatList from './ChatList';
+import { Link } from 'react-router-dom'; // Import React Router Link
 
 interface SidebarContentProps {
   onNewChat: () => void;
@@ -30,6 +31,22 @@ const SidebarContent = ({
           New Chat
         </Button>
       </div>
+
+      {/* Navigation Links */}
+      <nav className="mb-4">
+        <Link
+          to="/patients"
+          className="block py-2 px-4 mb-2 text-white bg-[#2F2F2F] hover:bg-[#404040] rounded-xl"
+        >
+          Patients
+        </Link>
+        <Link
+          to="/templates"
+          className="block py-2 px-4 text-white bg-[#2F2F2F] hover:bg-[#404040] rounded-xl"
+        >
+          Templates
+        </Link>
+      </nav>
 
       <ChatList
         sessions={sessions}
