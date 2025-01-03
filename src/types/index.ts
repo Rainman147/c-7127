@@ -1,4 +1,5 @@
 import { Json } from '@/integrations/supabase/types';
+import { Template } from '@/components/template/types';
 
 export interface Message {
   id?: string;
@@ -6,18 +7,6 @@ export interface Message {
   content: string;
   type?: 'text' | 'audio';
   isStreaming?: boolean;
-}
-
-export interface Template {
-  id: string;
-  name: string;
-  content: string;
-  instructions: Record<string, any> | null;
-  schema: Record<string, any> | null;
-  priority_rules: Record<string, any> | null;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
 }
 
 export interface Patient {
@@ -33,6 +22,9 @@ export interface Patient {
   updated_at: string;
   user_id: string;
 }
+
+// Re-export Template type
+export type { Template };
 
 // Helper function to parse JSON fields from Supabase
 export const parseSupabaseJson = <T>(json: Json | null): T | null => {
