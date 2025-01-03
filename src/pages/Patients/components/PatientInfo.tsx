@@ -5,25 +5,27 @@ interface PatientInfoProps {
   patient: Patient;
 }
 
+interface ContactInfo {
+  phone?: string;
+  email?: string;
+}
+
 export const PatientInfo = ({ patient }: PatientInfoProps) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const contactInfo = parseSupabaseJson<{
-    phone?: string;
-    email?: string;
-  }>(patient.contact_info);
+  const contactInfo = parseSupabaseJson<ContactInfo>(patient.contact_info) || {};
 
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold">Personal Information</h2>
       <div className="p-4 border rounded-lg bg-white/5">
         <p><strong>Date of Birth:</strong> {formatDate(patient.dob)}</p>
-        {contactInfo?.phone && (
+        {contactInfo.phone && (
           <p><strong>Phone:</strong> {contactInfo.phone}</p>
         )}
-        {contactInfo?.email && (
+        {contactInfo.email && (
           <p><strong>Email:</strong> {contactInfo.email}</p>
         )}
         {patient.address && (

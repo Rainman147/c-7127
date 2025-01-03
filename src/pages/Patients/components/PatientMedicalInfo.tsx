@@ -7,6 +7,7 @@ interface PatientMedicalInfoProps {
 
 export const PatientMedicalInfo = ({ patient }: PatientMedicalInfoProps) => {
   const medications = parseSupabaseJson<string[]>(patient.current_medications) || [];
+  console.log('[PatientMedicalInfo] Parsed medications:', medications);
 
   return (
     <div className="space-y-4">
@@ -18,7 +19,7 @@ export const PatientMedicalInfo = ({ patient }: PatientMedicalInfoProps) => {
             <p>{patient.medical_history}</p>
           </div>
         )}
-        {medications.length > 0 && (
+        {medications && medications.length > 0 && (
           <div>
             <h3 className="font-semibold mb-2">Current Medications</h3>
             <ul className="list-disc pl-4">

@@ -1,103 +1,60 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Loader2 } from 'lucide-react';
-import { Template, parseSupabaseJson } from '@/types';
+import type { Template } from '@/components/template/types';
 
 const TemplatesListPage = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
-    fetchTemplates();
+    const loadTemplates = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('templates')
+          .select('*');
+
+        if (error) throw error;
+
+        // Convert database templates to UI template format
+        const uiTemplates: Template[] = data.map(dbTemplate => ({
+          id: dbTemplate.id,
+          name: dbTemplate.name,
+          description: dbTemplate.name, // Use name as description for now
+          systemInstructions: dbTemplate.content || '',
+          content: dbTemplate.content,
+          instructions: dbTemplate.instructions,
+          schema: dbTemplate.schema,
+          priority_rules: dbTemplate.priority_rules,
+          created_at: dbTemplate.created_at,
+          updated_at: dbTemplate.updated_at,
+          user_id: dbTemplate.user_id
+        }));
+
+        setTemplates(uiTemplates);
+      } catch (error) {
+        console.error('Error loading templates:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTemplates();
   }, []);
 
-  const fetchTemplates = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('templates')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const parsedTemplates: Template[] = (data || []).map(template => ({
-        ...template,
-        description: template.description || '',
-        systemInstructions: template.systemInstructions || '',
-        instructions: parseSupabaseJson(template.instructions),
-        schema: parseSupabaseJson(template.schema),
-        priority_rules: parseSupabaseJson(template.priority_rules),
-      }));
-
-      setTemplates(parsedTemplates);
-    } catch (error: any) {
-      console.error('Error fetching templates:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load templates",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const filteredTemplates = templates.filter(template =>
-    template.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Templates</h1>
-        <Button onClick={() => navigate('/templates/new')} className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Template
-        </Button>
-      </div>
-
-      <Input
-        type="search"
-        placeholder="Search templates..."
-        className="max-w-md mb-6"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-      />
-
+    <div>
+      <h1 className="text-2xl font-bold">Templates</h1>
       {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
+        <p>Loading templates...</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredTemplates.map((template) => (
-            <div
-              key={template.id}
-              className="p-4 border rounded-lg hover:bg-white/5 cursor-pointer transition-colors"
-              onClick={() => navigate(`/templates/${template.id}`)}
-            >
-              <h3 className="font-semibold mb-2">{template.name}</h3>
-              <p className="text-sm text-gray-400 mb-4">
-                {template.content.substring(0, 100)}...
-              </p>
-              <p className="text-xs text-gray-500">
-                Last updated: {new Date(template.updated_at).toLocaleDateString()}
-              </p>
-            </div>
+        <ul>
+          {templates.map(template => (
+            <li key={template.id} className="border-b py-2">
+              <h2 className="text-lg">{template.name}</h2>
+              <p>{template.description}</p>
+            </li>
           ))}
-          {filteredTemplates.length === 0 && (
-            <div className="col-span-full text-center py-12 text-gray-400">
-              No templates found
-            </div>
-          )}
-        </div>
+        </ul>
       )}
     </div>
   );

@@ -14,6 +14,7 @@ const ChatPage = () => {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
   const handlePatientSelect = async (patientId: string | null) => {
+    console.log('[ChatPage] Patient selection changed:', patientId);
     setSelectedPatientId(patientId);
   };
 

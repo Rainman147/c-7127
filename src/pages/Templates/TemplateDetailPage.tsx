@@ -1,174 +1,65 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Save } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
+import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Template, parseSupabaseJson } from '@/types';
+import type { Template } from '@/components/template/types';
 
 const TemplateDetailPage = () => {
+  const { templateId } = useParams();
   const [template, setTemplate] = useState<Template | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const { templateId } = useParams();
-  const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
-    if (templateId && templateId !== 'new') {
-      fetchTemplate();
-    } else {
-      setTemplate({
-        id: '',
-        name: '',
-        description: '',
-        systemInstructions: '',
-        content: '',
-        instructions: null,
-        schema: null,
-        priority_rules: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_id: ''
-      });
-      setIsLoading(false);
-    }
+    const loadTemplate = async () => {
+      if (!templateId) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('templates')
+          .select('*')
+          .eq('id', templateId)
+          .single();
+
+        if (error) throw error;
+
+        // Convert database template to UI template format
+        const uiTemplate: Template = {
+          id: data.id,
+          name: data.name,
+          description: data.name, // Use name as description for now
+          systemInstructions: data.content || '',
+          content: data.content,
+          instructions: data.instructions,
+          schema: data.schema,
+          priority_rules: data.priority_rules,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          user_id: data.user_id
+        };
+
+        setTemplate(uiTemplate);
+      } catch (error) {
+        console.error('Error loading template:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTemplate();
   }, [templateId]);
 
-  const fetchTemplate = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('templates')
-        .select('*')
-        .eq('id', templateId)
-        .single();
-
-      if (error) throw error;
-
-      const parsedTemplate: Template = {
-        ...data,
-        description: data.description || '',
-        systemInstructions: data.systemInstructions || '',
-        instructions: parseSupabaseJson(data.instructions),
-        schema: parseSupabaseJson(data.schema),
-        priority_rules: parseSupabaseJson(data.priority_rules),
-      };
-
-      setTemplate(parsedTemplate);
-    } catch (error: any) {
-      console.error('Error fetching template:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load template",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!template?.name || !template?.content) {
-      toast({
-        title: "Validation Error",
-        description: "Name and content are required",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const { error } = await supabase
-        .from('templates')
-        .upsert({
-          ...template,
-          id: templateId === 'new' ? undefined : template.id,
-          user_id: (await supabase.auth.getUser()).data.user?.id
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: `Template ${templateId === 'new' ? 'created' : 'updated'} successfully`,
-      });
-
-      if (templateId === 'new') {
-        navigate('/templates');
-      }
-    } catch (error: any) {
-      console.error('Error saving template:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save template",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <div>Loading...</div>;
+  }
+
+  if (!template) {
+    return <div>Template not found</div>;
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-4 mb-6">
-        <Button 
-          variant="outline"
-          onClick={() => navigate('/templates')}
-          className="gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
-        <h1 className="text-2xl font-bold">
-          {templateId === 'new' ? 'New Template' : 'Edit Template'}
-        </h1>
-      </div>
-
-      <div className="max-w-2xl space-y-6">
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Template Name
-          </label>
-          <Input
-            value={template?.name || ''}
-            onChange={(e) => setTemplate(prev => prev ? { ...prev, name: e.target.value } : null)}
-            placeholder="Enter template name"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Content
-          </label>
-          <Textarea
-            value={template?.content || ''}
-            onChange={(e) => setTemplate(prev => prev ? { ...prev, content: e.target.value } : null)}
-            placeholder="Enter template content..."
-            className="min-h-[200px]"
-          />
-        </div>
-
-        <Button 
-          onClick={handleSave} 
-          disabled={isSaving}
-          className="gap-2"
-        >
-          {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-          <Save className="h-4 w-4" />
-          Save Template
-        </Button>
-      </div>
+    <div>
+      <h1>{template.name}</h1>
+      <p>{template.description}</p>
+      <pre>{template.systemInstructions}</pre>
     </div>
   );
 };
