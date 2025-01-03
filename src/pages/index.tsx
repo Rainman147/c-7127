@@ -123,7 +123,7 @@ const Index = () => {
         currentChatId={currentChatId}
         onMessageSend={handleMessageSend}
         onTemplateChange={handleTemplateChange}
-        onTranscriptionComplete={(text) => {
+        onTranscriptionComplete={async (text: string) => {
           console.log('[Index] Transcription complete, ready for user to edit:', text);
           if (text) {
             const chatInput = document.querySelector('textarea');
