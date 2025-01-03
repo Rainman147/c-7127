@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,30 +17,42 @@ interface TemplateSelectorProps {
 }
 
 export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
+  const [searchParams, setSearchParams] = useSearchParams();
   console.log('[TemplateSelector] Initializing with currentChatId:', currentChatId);
+  console.log('[TemplateSelector] URL template parameter:', searchParams.get('templateId'));
   
   const { selectedTemplate, isLoading, handleTemplateChange } = useTemplateSelection(
     currentChatId,
     onTemplateChange
   );
 
-  // Add state to track which tooltip is currently open
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
+  // Sync URL parameters with template selection
   useEffect(() => {
-    console.log('[TemplateSelector] Selected template updated:', selectedTemplate?.name);
-  }, [selectedTemplate]);
-
-  useEffect(() => {
-    console.log('[TemplateSelector] Loading state changed:', isLoading);
-  }, [isLoading]);
+    const templateId = searchParams.get('templateId');
+    if (templateId && (!selectedTemplate || selectedTemplate.id !== templateId)) {
+      const template = templates.find(t => t.id === templateId);
+      if (template) {
+        console.log('[TemplateSelector] Loading template from URL:', template.name);
+        handleTemplateChange(template);
+      }
+    }
+  }, [searchParams, selectedTemplate, handleTemplateChange]);
 
   const handleTemplateSelect = useCallback((template: Template) => {
     console.log('[TemplateSelector] Template selection triggered:', template.name);
+    
+    // Update URL parameters
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('templateId', template.id);
+      return newParams;
+    }, { replace: true });
+    
     handleTemplateChange(template);
-  }, [handleTemplateChange]);
+  }, [handleTemplateChange, setSearchParams]);
 
-  // Handler for tooltip state changes
   const handleTooltipChange = useCallback((templateId: string | null) => {
     console.log('[TemplateSelector] Tooltip state changed for template:', templateId);
     setOpenTooltipId(templateId);

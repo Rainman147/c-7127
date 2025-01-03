@@ -8,20 +8,28 @@ import TemplateDetailPage from '@/pages/Templates/TemplateDetailPage';
 import ProtectedLayout from '@/features/layout/components/ProtectedLayout';
 
 const Router = () => {
+  console.log('[Router] Initializing router');
+  
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/auth" element={<Auth />} />
+        
+        {/* Root route with optional template and patient params */}
         <Route path="/" element={
           <ProtectedLayout>
             <ChatPage />
           </ProtectedLayout>
         } />
+        
+        {/* Chat session route with optional template and patient params */}
         <Route path="/c/:sessionId" element={
           <ProtectedLayout>
             <ChatPage />
           </ProtectedLayout>
         } />
+        
+        {/* Patient routes */}
         <Route path="/patients" element={
           <ProtectedLayout>
             <PatientsListPage />
@@ -32,6 +40,8 @@ const Router = () => {
             <PatientDetailPage />
           </ProtectedLayout>
         } />
+        
+        {/* Template routes */}
         <Route path="/templates" element={
           <ProtectedLayout>
             <TemplatesListPage />
@@ -42,6 +52,8 @@ const Router = () => {
             <TemplateDetailPage />
           </ProtectedLayout>
         } />
+        
+        {/* Catch all redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
