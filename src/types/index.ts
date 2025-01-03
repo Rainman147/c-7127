@@ -25,17 +25,10 @@ export interface Patient {
   name: string;
   dob: string;
   medical_history?: string | null;
-  contact_info?: {
-    phone?: string;
-    email?: string;
-  } | null;
+  contact_info?: Json;
   address?: string | null;
-  current_medications?: string[] | null;
-  recent_tests?: Array<{
-    name: string;
-    date: string;
-    result: string;
-  }> | null;
+  current_medications?: Json;
+  recent_tests?: Json;
   created_at: string;
   updated_at: string;
   user_id: string;

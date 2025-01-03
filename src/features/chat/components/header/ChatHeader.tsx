@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { TemplateSelector } from "@/components/TemplateSelector";
+import { PatientSelector } from "@/components/patients/PatientSelector";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -12,15 +13,20 @@ import { Settings, LogOut, User2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useUI } from "@/contexts/UIContext";
+import type { Template } from "@/types";
 
 interface ChatHeaderProps {
   currentChatId: string | null;
-  onTemplateChange: (template: any) => void;
+  onTemplateChange: (template: Template) => void;
+  onPatientSelect: (patientId: string | null) => Promise<void>;
+  selectedPatientId: string | null;
 }
 
 const ChatHeaderComponent = ({ 
   currentChatId,
-  onTemplateChange 
+  onTemplateChange,
+  onPatientSelect,
+  selectedPatientId
 }: ChatHeaderProps) => {
   const { toast } = useToast();
   const { isSidebarOpen } = useUI();
@@ -28,12 +34,19 @@ const ChatHeaderComponent = ({
   console.log('[ChatHeader] Rendering with:', { 
     isSidebarOpen, 
     currentChatId,
-    hasTemplateChangeHandler: !!onTemplateChange 
+    selectedPatientId,
+    hasTemplateChangeHandler: !!onTemplateChange,
+    hasPatientSelectHandler: !!onPatientSelect
   });
   
-  const handleTemplateChange = (template: any) => {
+  const handleTemplateChange = (template: Template) => {
     console.log('[ChatHeader] Template change requested:', template);
     onTemplateChange(template);
+  };
+
+  const handlePatientSelect = async (patientId: string | null) => {
+    console.log('[ChatHeader] Patient selection changed:', patientId);
+    await onPatientSelect(patientId);
   };
 
   const handleLogout = async () => {
@@ -60,7 +73,7 @@ const ChatHeaderComponent = ({
   return (
     <div className="fixed top-0 z-30 w-full border-b border-white/20 bg-chatgpt-main/95 backdrop-blur">
       <div className="flex h-[60px] items-center justify-between px-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
           <span className={`${!isSidebarOpen ? 'ml-24' : ''}`}>
             <TemplateSelector 
               key={currentChatId || 'default'}
@@ -68,6 +81,7 @@ const ChatHeaderComponent = ({
               onTemplateChange={handleTemplateChange}
             />
           </span>
+          <PatientSelector onPatientSelect={handlePatientSelect} />
         </div>
         
         <DropdownMenu>

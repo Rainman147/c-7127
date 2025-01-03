@@ -3,7 +3,7 @@ import { useUI } from '@/contexts/UIContext';
 import { ChatHeader } from '@/features/chat/components/header/ChatHeader';
 import MessageList from '@/features/chat/components/message/MessageList';
 import ChatInput from '@/features/chat/components/input/ChatInput';
-import type { Message } from '@/types/chat';
+import type { Message, Template } from '@/types';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -11,7 +11,7 @@ interface ChatContainerProps {
   currentChatId: string;
   onMessageSend: (content: string, type?: 'text' | 'audio', systemInstructions?: string) => Promise<void>;
   onTranscriptionComplete: (text: string) => Promise<void>;
-  onTemplateChange: (template: any) => void;
+  onTemplateChange: (template: Template) => void;
   onPatientSelect: (patientId: string | null) => Promise<void>;
   selectedPatientId: string | null;
 }
