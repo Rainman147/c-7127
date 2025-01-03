@@ -9,6 +9,7 @@ import {
 import { TemplateItem } from "./template/TemplateItem";
 import { useTemplateSelection } from "./template/useTemplateSelection";
 import { templates } from "./template/types";
+import { validateTemplateId, sanitizeUrlParams } from "@/utils/template/urlParamValidation";
 import type { Template } from "./template/types";
 
 interface TemplateSelectorProps {
@@ -28,9 +29,18 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
 
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
-  // Sync URL parameters with template selection
+  // Validate URL parameters on mount and parameter changes
   useEffect(() => {
-    const templateId = searchParams.get('templateId');
+    const sanitizedParams = sanitizeUrlParams(searchParams);
+    const currentParams = new URLSearchParams(searchParams);
+    
+    // Only update if parameters changed during sanitization
+    if (sanitizedParams.toString() !== currentParams.toString()) {
+      console.log('[TemplateSelector] Sanitizing invalid URL parameters');
+      setSearchParams(sanitizedParams, { replace: true });
+    }
+    
+    const templateId = sanitizedParams.get('templateId');
     if (templateId && (!selectedTemplate || selectedTemplate.id !== templateId)) {
       const template = templates.find(t => t.id === templateId);
       if (template) {
@@ -38,19 +48,23 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         handleTemplateChange(template);
       }
     }
-  }, [searchParams, selectedTemplate, handleTemplateChange]);
+  }, [searchParams, selectedTemplate, handleTemplateChange, setSearchParams]);
 
   const handleTemplateSelect = useCallback((template: Template) => {
     console.log('[TemplateSelector] Template selection triggered:', template.name);
     
-    // Update URL parameters
-    setSearchParams(prev => {
-      const newParams = new URLSearchParams(prev);
-      newParams.set('templateId', template.id);
-      return newParams;
-    }, { replace: true });
-    
-    handleTemplateChange(template);
+    if (validateTemplateId(template.id)) {
+      // Update URL parameters
+      setSearchParams(prev => {
+        const newParams = new URLSearchParams(prev);
+        newParams.set('templateId', template.id);
+        return newParams;
+      }, { replace: true });
+      
+      handleTemplateChange(template);
+    } else {
+      console.error('[TemplateSelector] Invalid template ID:', template.id);
+    }
   }, [handleTemplateChange, setSearchParams]);
 
   const handleTooltipChange = useCallback((templateId: string | null) => {
