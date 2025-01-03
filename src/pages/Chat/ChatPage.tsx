@@ -1,5 +1,6 @@
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
 import { useChat } from '@/hooks/useChat';
+import { useState } from 'react';
 
 const ChatPage = () => {
   const { 
@@ -10,6 +11,12 @@ const ChatPage = () => {
     loadChatMessages
   } = useChat();
 
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+
+  const handlePatientSelect = async (patientId: string | null) => {
+    setSelectedPatientId(patientId);
+  };
+
   return (
     <ChatContainer 
       messages={messages}
@@ -18,6 +25,8 @@ const ChatPage = () => {
       onMessageSend={handleSendMessage}
       onTranscriptionComplete={(text) => handleSendMessage(text, 'audio')}
       onTemplateChange={() => {}}
+      onPatientSelect={handlePatientSelect}
+      selectedPatientId={selectedPatientId}
     />
   );
 };

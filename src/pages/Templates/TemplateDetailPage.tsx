@@ -23,6 +23,8 @@ const TemplateDetailPage = () => {
       setTemplate({
         id: '',
         name: '',
+        description: '',
+        systemInstructions: '',
         content: '',
         instructions: null,
         schema: null,
@@ -47,6 +49,8 @@ const TemplateDetailPage = () => {
 
       const parsedTemplate: Template = {
         ...data,
+        description: data.description || '',
+        systemInstructions: data.systemInstructions || '',
         instructions: parseSupabaseJson(data.instructions),
         schema: parseSupabaseJson(data.schema),
         priority_rules: parseSupabaseJson(data.priority_rules),
@@ -77,22 +81,22 @@ const TemplateDetailPage = () => {
 
     setIsSaving(true);
     try {
-      const isNew = templateId === 'new';
-      const { error } = isNew
-        ? await supabase.from('templates').insert([template])
-        : await supabase
-            .from('templates')
-            .update(template)
-            .eq('id', templateId);
+      const { error } = await supabase
+        .from('templates')
+        .upsert({
+          ...template,
+          id: templateId === 'new' ? undefined : template.id,
+          user_id: (await supabase.auth.getUser()).data.user?.id
+        });
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: `Template ${isNew ? 'created' : 'updated'} successfully`,
+        description: `Template ${templateId === 'new' ? 'created' : 'updated'} successfully`,
       });
 
-      if (isNew) {
+      if (templateId === 'new') {
         navigate('/templates');
       }
     } catch (error: any) {

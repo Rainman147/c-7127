@@ -29,6 +29,8 @@ const TemplatesListPage = () => {
 
       const parsedTemplates: Template[] = (data || []).map(template => ({
         ...template,
+        description: template.description || '',
+        systemInstructions: template.systemInstructions || '',
         instructions: parseSupabaseJson(template.instructions),
         schema: parseSupabaseJson(template.schema),
         priority_rules: parseSupabaseJson(template.priority_rules),
