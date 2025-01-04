@@ -40,13 +40,16 @@ export const dialogDescriptionStyles = cn(
   "text-sm text-muted-foreground"
 );
 
-// Input field styles for modals
+// Input field styles for modals with modern, rounded design
 export const dialogInputStyles = cn(
   "w-full bg-transparent",
   "border border-gray-700 border-opacity-50",
-  "rounded-md px-3 py-2",
+  "rounded-lg px-4 py-2.5", // Enhanced padding and more rounded corners
+  "transition-all duration-200", // Smooth transitions
   "focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-opacity-50",
-  "placeholder:text-gray-400"
+  "focus:border-opacity-75", // Increased border opacity on focus
+  "placeholder:text-gray-400",
+  "text-base" // Slightly larger text for better readability
 );
 
 export const getSizeClass = (size: "sm" | "md" | "lg" = "md") => {
