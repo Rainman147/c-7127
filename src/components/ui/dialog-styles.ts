@@ -12,7 +12,8 @@ export const dialogContentStyles = cn(
   // Width and padding
   "w-full px-6 sm:px-6",
   // Colors and borders
-  "bg-chatgpt-main border border-chatgpt-border/20 rounded-xl",
+  "bg-chatgpt-main text-gray-100",
+  "border border-chatgpt-border/20 rounded-xl",
   // Scrollbar styling
   "scrollbar-thin",
   "scrollbar-track-chatgpt-main",
@@ -29,12 +30,14 @@ export const dialogContentStyles = cn(
 );
 
 export const dialogHeaderStyles = cn(
-  "flex flex-col space-y-1.5 border-b border-chatgpt-border/20",
+  "flex flex-col space-y-1.5",
+  "border-b border-chatgpt-border/20",
   "pt-6 px-6 pb-4 mb-4"
 );
 
 export const dialogFooterStyles = cn(
-  "flex justify-end gap-2 mt-4 border-t border-chatgpt-border/20",
+  "flex justify-end gap-2",
+  "mt-4 border-t border-chatgpt-border/20",
   "px-6 pt-4 pb-6"
 );
 
