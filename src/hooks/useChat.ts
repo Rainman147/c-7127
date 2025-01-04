@@ -10,7 +10,7 @@ export const useChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const { isLoading, handleSendMessage: sendMessage } = useMessageHandling();
-  const { loadChatMessages } = useMessagePersistence();
+  const { loadChatMessages: loadMessages } = useMessagePersistence();
   const { createSession } = useChatSessions();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -28,7 +28,7 @@ export const useChat = () => {
   const handleLoadChatMessages = useCallback(async (chatId: string) => {
     console.log('[useChat] Loading messages for chat:', chatId);
     try {
-      const loadedMessages = await loadChatMessages(chatId);
+      const loadedMessages = await loadMessages(chatId);
       console.log('[useChat] Successfully loaded messages:', loadedMessages.length);
       setMessages(loadedMessages);
       setCurrentChatId(chatId);
@@ -39,8 +39,9 @@ export const useChat = () => {
         description: "Failed to load chat messages. Please try again.",
         variant: "destructive",
       });
+      throw error; // Re-throw to allow handling by the component
     }
-  }, [loadChatMessages, toast]);
+  }, [loadMessages, toast]);
 
   const handleSendMessage = useCallback(async (
     content: string,
