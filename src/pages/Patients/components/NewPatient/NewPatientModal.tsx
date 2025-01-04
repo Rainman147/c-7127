@@ -1,13 +1,4 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { PatientFormFields } from "./PatientFormFields";
-import { usePatientForm } from "./usePatientForm";
+import { PatientModal } from "../Modals/PatientModal";
 
 interface NewPatientModalProps {
   isOpen: boolean;
@@ -16,45 +7,11 @@ interface NewPatientModalProps {
 }
 
 export const NewPatientModal = ({ isOpen, onClose, onSuccess }: NewPatientModalProps) => {
-  const {
-    formData,
-    isLoading,
-    handleInputChange,
-    handleSubmit,
-  } = usePatientForm(onSuccess, onClose);
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-2xl bg-chatgpt-main text-gray-100">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>New Patient</DialogTitle>
-          </DialogHeader>
-
-          <PatientFormFields
-            formData={formData}
-            handleInputChange={handleInputChange}
-          />
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="modalCancel"
-              onClick={onClose}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              variant="modalConfirm"
-              disabled={isLoading}
-            >
-              {isLoading ? "Creating..." : "Create Patient"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <PatientModal
+      isOpen={isOpen}
+      onClose={onClose}
+      onSuccess={onSuccess}
+    />
   );
 };
