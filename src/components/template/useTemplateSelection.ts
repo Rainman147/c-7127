@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { loadTemplateFromDb, saveTemplateToDb } from "@/utils/template/templateDbOperations";
 import { getDefaultTemplate, findTemplateById, isTemplateChange } from "@/utils/template/templateStateManager";
+import { useUrlStateManager } from "@/hooks/useUrlStateManager";
 import type { Template } from "./types";
 
 export const useTemplateSelection = (
@@ -13,6 +14,7 @@ export const useTemplateSelection = (
   const [selectedTemplate, setSelectedTemplate] = useState<Template>(getDefaultTemplate());
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { templateId } = useUrlStateManager(currentChatId);
 
   useEffect(() => {
     const loadTemplateForChat = async () => {
@@ -52,6 +54,18 @@ export const useTemplateSelection = (
     loadTemplateForChat();
   }, [currentChatId, onTemplateChange, toast]);
 
+  // Load template from URL if available
+  useEffect(() => {
+    if (templateId && (!selectedTemplate || selectedTemplate.id !== templateId)) {
+      const template = findTemplateById(templateId);
+      if (template) {
+        console.log('[useTemplateSelection] Loading template from URL:', template.name);
+        setSelectedTemplate(template);
+        onTemplateChange(template);
+      }
+    }
+  }, [templateId, selectedTemplate, onTemplateChange]);
+
   const handleTemplateChange = useCallback(async (template: Template) => {
     console.log('[useTemplateSelection] Template change requested:', template.name);
     
@@ -65,7 +79,6 @@ export const useTemplateSelection = (
       setSelectedTemplate(template);
       onTemplateChange(template);
 
-      // Only save to database if we have a chat ID
       if (currentChatId) {
         await saveTemplateToDb(currentChatId, template.id);
       }

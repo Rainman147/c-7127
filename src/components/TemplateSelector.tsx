@@ -1,6 +1,5 @@
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,8 +8,8 @@ import {
 import { TemplateItem } from "./template/TemplateItem";
 import { useTemplateSelection } from "./template/useTemplateSelection";
 import { templates } from "./template/types";
-import { validateTemplateId, sanitizeUrlParams } from "@/utils/template/urlParamValidation";
 import { getDefaultTemplate } from "@/utils/template/templateStateManager";
+import { useUrlStateManager } from "@/hooks/useUrlStateManager";
 import type { Template } from "./template/types";
 
 interface TemplateSelectorProps {
@@ -19,51 +18,21 @@ interface TemplateSelectorProps {
 }
 
 export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
-  const [searchParams, setSearchParams] = useSearchParams();
   console.log('[TemplateSelector] Initializing with currentChatId:', currentChatId);
-  console.log('[TemplateSelector] URL template parameter:', searchParams.get('templateId'));
   
   const { selectedTemplate, isLoading, handleTemplateChange } = useTemplateSelection(
     currentChatId,
     onTemplateChange
   );
 
+  const { handleTemplateChange: updateUrlTemplate } = useUrlStateManager(currentChatId);
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
-
-  // Validate URL parameters on mount and parameter changes
-  useEffect(() => {
-    const sanitizedParams = sanitizeUrlParams(searchParams);
-    const currentParams = new URLSearchParams(searchParams);
-    
-    // Only update if parameters changed during sanitization
-    if (sanitizedParams.toString() !== currentParams.toString()) {
-      console.log('[TemplateSelector] Sanitizing invalid URL parameters');
-      setSearchParams(sanitizedParams, { replace: true });
-    }
-    
-    const templateId = sanitizedParams.get('templateId');
-    const patientId = sanitizedParams.get('patientId');
-    
-    // Only load template from URL if it's non-default or we have a patient
-    if (templateId && (!selectedTemplate || selectedTemplate.id !== templateId)) {
-      const template = templates.find(t => t.id === templateId);
-      if (template) {
-        console.log('[TemplateSelector] Loading template from URL:', template.name);
-        handleTemplateChange(template);
-      }
-    }
-  }, [searchParams, selectedTemplate, handleTemplateChange, setSearchParams]);
 
   const handleTemplateSelect = useCallback((template: Template) => {
     console.log('[TemplateSelector] Template selection triggered:', template.name);
-    
-    if (validateTemplateId(template.id)) {
-      // Let parent component handle URL updates
-      handleTemplateChange(template);
-    } else {
-      console.error('[TemplateSelector] Invalid template ID:', template.id);
-    }
-  }, [handleTemplateChange]);
+    handleTemplateChange(template);
+    updateUrlTemplate(template);
+  }, [handleTemplateChange, updateUrlTemplate]);
 
   const handleTooltipChange = useCallback((templateId: string | null) => {
     console.log('[TemplateSelector] Tooltip state changed for template:', templateId);
