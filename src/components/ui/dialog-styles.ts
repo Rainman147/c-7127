@@ -37,8 +37,9 @@ export const dialogHeaderStyles = cn(
 
 export const dialogFooterStyles = cn(
   "flex justify-end gap-2",
-  "mt-4 border-t border-chatgpt-border/20",
-  "px-6 pt-4 pb-6"
+  "border-t border-chatgpt-border/20",
+  "px-6 pt-4 pb-6",
+  "mt-6"
 );
 
 export const dialogTitleStyles = cn(
