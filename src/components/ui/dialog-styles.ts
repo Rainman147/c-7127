@@ -13,6 +13,12 @@ export const dialogContentStyles = cn(
   "w-full px-6 sm:px-6",
   // Colors and borders
   "bg-chatgpt-main border border-chatgpt-border/20 rounded-xl",
+  // Scrollbar styling
+  "scrollbar-thin",
+  "scrollbar-track-chatgpt-main",
+  "scrollbar-thumb-gray-500/50",
+  "hover:scrollbar-thumb-gray-400/50",
+  "scrollbar-thumb-rounded",
   // Animations
   "duration-300",
   "data-[state=open]:animate-in data-[state=closed]:animate-out",
