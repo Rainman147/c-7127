@@ -28,3 +28,11 @@ body {
 .chat-input-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-main;
 }
+
+/* Modal content scrollbar - Use this class for any scrollable content within modals
+ * Example usage: <div className="modal-content-scrollbar overflow-y-auto max-h-[60vh]">
+ * This ensures consistent floating scrollbar styling across all modal content
+ */
+.modal-content-scrollbar {
+  @apply scrollbar-thin scrollbar-thumb-gray-500/50 hover:scrollbar-thumb-gray-400/50 scrollbar-track-chatgpt-main scrollbar-thumb-rounded;
+}
