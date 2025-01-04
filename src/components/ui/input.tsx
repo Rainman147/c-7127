@@ -12,12 +12,13 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         className={cn(
           "w-full bg-transparent",
           "border border-gray-700 border-opacity-50",
-          "rounded-lg px-4 py-2.5", // Enhanced padding and more rounded corners
-          "transition-all duration-200", // Smooth transitions
-          "focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-opacity-50",
-          "focus:border-opacity-75", // Increased border opacity on focus
+          "rounded-md px-4 py-2.5",
+          "transition-all duration-200",
+          "focus:outline-none focus:bg-chatgpt-hover",
+          "focus:border-chatgpt-border/50 focus:border-opacity-75",
+          "hover:border-chatgpt-border/30",
           "placeholder:text-gray-400",
-          "text-base", // Slightly larger text for better readability
+          "text-base",
           className
         )}
         ref={ref}
