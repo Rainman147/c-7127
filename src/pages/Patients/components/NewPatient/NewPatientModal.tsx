@@ -5,7 +5,7 @@ import {
   StyledDialogTitle,
 } from "@/components/ui/styled-dialog";
 import { PatientForm } from "../Forms/PatientForm";
-import { usePatientForm } from "../../NewPatient/usePatientForm";
+import { usePatientForm } from "./usePatientForm";
 
 interface PatientModalProps {
   isOpen: boolean;
