@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
 import { useChat } from '@/hooks/useChat';
 import { useURLStateService } from '@/features/routing/services/urlStateService';
 import { useTemplateStateService } from '@/features/templates/services/templateStateService';
+import { useChatSessions } from '@/hooks/useChatSessions';
 import type { Template } from '@/components/template/types';
 
 interface ChatViewProps {
@@ -26,6 +27,7 @@ const ChatView = ({ sessionId }: ChatViewProps) => {
     setCurrentChatId
   } = useChat();
 
+  const { createSession } = useChatSessions();
   const { urlState, handleTemplateChange: updateUrlTemplate } = useURLStateService(currentChatId);
   
   const { selectedTemplate, handleTemplateChange: updateTemplateState } = useTemplateStateService({
@@ -47,17 +49,30 @@ const ChatView = ({ sessionId }: ChatViewProps) => {
     setSelectedPatientId(patientId);
   };
 
-  const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
+  const handleTranscriptionComplete = async (text: string) => {
+    console.log('[ChatView] Transcription complete:', text);
+    if (text) {
+      const chatInput = document.querySelector('textarea');
+      if (chatInput) {
+        (chatInput as HTMLTextAreaElement).value = text;
+        const event = new Event('input', { bubbles: true });
+        chatInput.dispatchEvent(event);
+      }
+    }
+    return Promise.resolve();
+  };
+
+  const handleMessageSend = useCallback(async (message: string, type: 'text' | 'audio' = 'text') => {
     if (!currentChatId) {
       console.log('[ChatView] Creating new session for first message');
-      const sessionId = await createSession('New Chat');
-      if (sessionId) {
-        console.log('[ChatView] Created new session:', sessionId);
-        setCurrentChatId(sessionId);
+      const newSession = await createSession('New Chat');
+      if (newSession) {
+        console.log('[ChatView] Created new session:', newSession);
+        setCurrentChatId(newSession);
         
         // Update URL with new session ID while preserving other parameters
         const params = new URLSearchParams(location.search);
-        navigate(`/c/${sessionId}?${params.toString()}`);
+        navigate(`/c/${newSession}?${params.toString()}`);
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
@@ -67,7 +82,7 @@ const ChatView = ({ sessionId }: ChatViewProps) => {
       type, 
       selectedTemplate?.systemInstructions
     );
-  };
+  }, [currentChatId, createSession, handleSendMessage, location.search, navigate, selectedTemplate?.systemInstructions, setCurrentChatId]);
 
   return (
     <div className="flex h-screen">
@@ -79,17 +94,7 @@ const ChatView = ({ sessionId }: ChatViewProps) => {
         onTemplateChange={handleTemplateChange}
         onPatientSelect={handlePatientSelect}
         selectedPatientId={selectedPatientId}
-        onTranscriptionComplete={(text: string) => {
-          console.log('[ChatView] Transcription complete:', text);
-          if (text) {
-            const chatInput = document.querySelector('textarea');
-            if (chatInput) {
-              (chatInput as HTMLTextAreaElement).value = text;
-              const event = new Event('input', { bubbles: true });
-              chatInput.dispatchEvent(event);
-            }
-          }
-        }}
+        onTranscriptionComplete={handleTranscriptionComplete}
       />
     </div>
   );
