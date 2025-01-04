@@ -7,7 +7,7 @@ interface FormActionsProps {
 
 export const FormActions = ({ onCancel, isLoading }: FormActionsProps) => {
   return (
-    <div className="flex justify-end gap-3">
+    <>
       <Button
         type="button"
         variant="modalCancel"
@@ -23,6 +23,6 @@ export const FormActions = ({ onCancel, isLoading }: FormActionsProps) => {
       >
         {isLoading ? "Creating..." : "Create Patient"}
       </Button>
-    </div>
+    </>
   );
 };

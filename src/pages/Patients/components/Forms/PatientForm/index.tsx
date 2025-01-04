@@ -1,5 +1,4 @@
 import { FormSection } from "../components/FormSection";
-import { FormActions } from "../components/FormActions";
 import { PersonalInfoFields } from "../../NewPatient/FormSections/PersonalInfoFields";
 import { ContactFields } from "../../NewPatient/FormSections/ContactFields";
 import { MedicalHistoryField } from "../../NewPatient/FormSections/MedicalHistoryField";
@@ -10,7 +9,6 @@ export const PatientForm = ({
   isLoading, 
   onSubmit, 
   handleInputChange,
-  onCancel 
 }: PatientFormProps) => {
   return (
     <form onSubmit={onSubmit} className="space-y-6">
@@ -39,11 +37,6 @@ export const PatientForm = ({
           />
         </FormSection>
       </div>
-      
-      <FormActions 
-        onCancel={onCancel}
-        isLoading={isLoading}
-      />
     </form>
   );
 };
