@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { useUI } from '@/contexts/UIContext';
 import SidebarHeader from './SidebarHeader';
@@ -15,6 +16,7 @@ const Sidebar = ({
   onSessionSelect = () => {} 
 }: SidebarProps) => {
   console.log('[Sidebar] Rendering');
+  const navigate = useNavigate();
   const { isSidebarOpen } = useUI();
   const [apiKey, setApiKey] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -24,7 +26,6 @@ const Sidebar = ({
     sessions,
     activeSessionId,
     setActiveSessionId,
-    createSession,
     deleteSession,
     renameSession,
   } = useChatSessions();
@@ -35,18 +36,15 @@ const Sidebar = ({
     onApiKeyChange(newApiKey);
   };
 
-  const handleNewChat = async () => {
-    console.log('[Sidebar] Creating new chat');
-    const sessionId = await createSession();
-    if (sessionId) {
-      setActiveSessionId(sessionId);
-      onSessionSelect(sessionId);
-    }
+  const handleNewChat = () => {
+    console.log('[Sidebar] Navigating to new chat');
+    navigate('/');
   };
 
   const handleSessionClick = (sessionId: string) => {
     console.log('[Sidebar] Session selected:', sessionId);
     setActiveSessionId(sessionId);
+    navigate(`/c/${sessionId}`);
     onSessionSelect(sessionId);
   };
 
