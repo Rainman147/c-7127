@@ -9,7 +9,8 @@ export const PatientForm = ({
   formData, 
   isLoading, 
   onSubmit, 
-  handleInputChange 
+  handleInputChange,
+  onCancel 
 }: PatientFormProps) => {
   return (
     <form onSubmit={onSubmit} className="space-y-6">
@@ -38,6 +39,11 @@ export const PatientForm = ({
           />
         </FormSection>
       </div>
+      
+      <FormActions 
+        onCancel={onCancel}
+        isLoading={isLoading}
+      />
     </form>
   );
 };

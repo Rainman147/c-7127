@@ -12,4 +12,5 @@ export interface PatientFormProps {
   isLoading?: boolean;
   onSubmit: (e: React.FormEvent) => void;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onCancel: () => void;
 }
