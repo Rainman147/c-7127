@@ -1,12 +1,14 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useURLStateService } from '@/features/routing/services/urlStateService';
 import type { Patient } from '@/types';
 
 export const usePatientSelection = (onPatientSelect: (patientId: string | null) => void) => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { handlePatientChange } = useURLStateService(null);
 
   // Load patient details when patientId is in URL
   const loadPatientDetails = useCallback(async (patientId: string) => {
@@ -36,19 +38,9 @@ export const usePatientSelection = (onPatientSelect: (patientId: string | null) 
   const handlePatientSelect = useCallback((patient: Patient | null) => {
     console.log('[PatientSelection] Patient selected:', patient);
     setSelectedPatient(patient);
-    
-    // Update URL parameters while maintaining existing ones
-    const newParams = new URLSearchParams(searchParams);
-    if (patient) {
-      newParams.set('patientId', patient.id);
-    } else {
-      newParams.delete('patientId');
-    }
-    setSearchParams(newParams);
-    
-    // Notify parent component
+    handlePatientChange(patient);
     onPatientSelect(patient?.id || null);
-  }, [searchParams, setSearchParams, onPatientSelect]);
+  }, [handlePatientChange, onPatientSelect]);
 
   // Initialize from URL params
   useEffect(() => {
