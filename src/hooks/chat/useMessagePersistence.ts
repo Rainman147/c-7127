@@ -7,9 +7,18 @@ export const useMessagePersistence = () => {
 
   const saveMessageToSupabase = async (message: Message, chatId?: string) => {
     try {
+      // First verify authentication
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.error('Authentication error:', sessionError);
+        throw new Error('You must be logged in to send messages');
+      }
+
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
+        console.error('User fetch error:', userError);
         throw new Error('You must be logged in to send messages');
       }
 
@@ -23,7 +32,10 @@ export const useMessagePersistence = () => {
           .select()
           .single();
 
-        if (chatError) throw chatError;
+        if (chatError) {
+          console.error('Chat creation error:', chatError);
+          throw chatError;
+        }
         chatId = chatData.id;
       }
 
@@ -38,7 +50,11 @@ export const useMessagePersistence = () => {
         .select()
         .single();
 
-      if (messageError) throw messageError;
+      if (messageError) {
+        console.error('Message save error:', messageError);
+        throw messageError;
+      }
+      
       return { chatId, messageId: messageData.id };
     } catch (error: any) {
       console.error('Error saving message:', error);
@@ -50,31 +66,57 @@ export const useMessagePersistence = () => {
     try {
       console.log('[useMessagePersistence] Loading messages for chat:', chatId);
       
+      // Verify authentication first
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.error('Authentication error:', sessionError);
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again to continue",
+          variant: "destructive"
+        });
+        throw new Error('Authentication required');
+      }
+
       const { data: messages, error: messagesError } = await supabase
         .from('messages')
         .select('*')
         .eq('chat_id', chatId)
         .order('created_at', { ascending: true });
 
-      if (messagesError) throw messagesError;
+      if (messagesError) {
+        console.error('[useMessagePersistence] Messages fetch error:', messagesError);
+        throw messagesError;
+      }
 
-      const messageIds = messages.map(m => m.id);
+      console.log('[useMessagePersistence] Successfully fetched messages:', messages?.length);
+
+      const messageIds = messages?.map(m => m.id) || [];
+      
+      if (messageIds.length === 0) {
+        return [];
+      }
+
       const { data: editedMessages, error: editsError } = await supabase
         .from('edited_messages')
         .select('*')
         .in('message_id', messageIds)
         .order('created_at', { ascending: false });
 
-      if (editsError) throw editsError;
+      if (editsError) {
+        console.error('[useMessagePersistence] Edits fetch error:', editsError);
+        throw editsError;
+      }
 
-      const editedContentMap = editedMessages.reduce((acc: Record<string, string>, edit) => {
+      const editedContentMap = (editedMessages || []).reduce((acc: Record<string, string>, edit) => {
         if (!acc[edit.message_id]) {
           acc[edit.message_id] = edit.edited_content;
         }
         return acc;
       }, {});
 
-      return messages.map(msg => ({
+      return (messages || []).map(msg => ({
         role: msg.sender as 'user' | 'assistant',
         content: editedContentMap[msg.id] || msg.content,
         type: msg.type as 'text' | 'audio',
@@ -85,10 +127,10 @@ export const useMessagePersistence = () => {
       console.error('[useMessagePersistence] Error loading chat messages:', error);
       toast({
         title: "Error",
-        description: "Failed to load chat messages",
+        description: error.message || "Failed to load chat messages",
         variant: "destructive"
       });
-      return [];
+      throw error;
     }
   };
 
