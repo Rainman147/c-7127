@@ -33,7 +33,6 @@ export const PatientModal = ({ isOpen, onClose, onSuccess }: PatientModalProps) 
           isLoading={isLoading}
           onSubmit={handleSubmit}
           handleInputChange={handleInputChange}
-          onCancel={onClose}
         />
       </DialogContent>
     </Dialog>
