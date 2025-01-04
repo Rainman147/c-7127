@@ -1,10 +1,12 @@
+import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import PatientInfo from './components/PatientInfo';
-import PatientMedicalInfo from './components/PatientMedicalInfo';
-import PatientChatHistory from './components/PatientChatHistory';
+import { PatientInfo } from './components/PatientInfo';
+import { PatientMedicalInfo } from './components/PatientMedicalInfo';
+import { PatientChatHistory } from './components/PatientChatHistory';
+import { Patient } from '@/types';
+import { Loader2 } from 'lucide-react';
 
 interface PatientDetailPageProps {
   isNew?: boolean;

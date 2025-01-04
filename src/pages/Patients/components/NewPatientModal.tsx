@@ -40,6 +40,10 @@ export const NewPatientModal = ({ isOpen, onClose, onSuccess }: NewPatientModalP
     setIsLoading(true);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) throw new Error('No authenticated user found');
+
       console.log('[NewPatientModal] Submitting new patient:', formData);
       
       const { data, error } = await supabase
@@ -47,6 +51,7 @@ export const NewPatientModal = ({ isOpen, onClose, onSuccess }: NewPatientModalP
         .insert({
           name: formData.name,
           dob: formData.dob,
+          user_id: user.id,
           contact_info: {
             email: formData.email,
             phone: formData.phone,

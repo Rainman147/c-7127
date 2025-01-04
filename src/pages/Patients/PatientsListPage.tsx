@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Search, UserPlus } from 'lucide-react';
+import { NewPatientModal } from './components/NewPatientModal';
 
 interface Patient {
   id: string;
@@ -17,6 +18,7 @@ const PatientsListPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -46,6 +48,10 @@ const PatientsListPage = () => {
     }
   };
 
+  const handleModalSuccess = () => {
+    fetchPatients();
+  };
+
   const filteredPatients = patients.filter(patient =>
     patient.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -59,7 +65,7 @@ const PatientsListPage = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Patients</h1>
         <Button 
-          onClick={() => navigate('/patients/new')}
+          onClick={() => setIsModalOpen(true)}
           className="bg-blue-600 hover:bg-blue-700"
         >
           <UserPlus className="h-4 w-4 mr-2" />
@@ -113,6 +119,12 @@ const PatientsListPage = () => {
           )}
         </div>
       )}
+
+      <NewPatientModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handleModalSuccess}
+      />
     </div>
   );
 };
