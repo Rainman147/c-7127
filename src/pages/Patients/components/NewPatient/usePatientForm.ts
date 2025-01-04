@@ -2,19 +2,10 @@ import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 
-interface PatientFormData {
-  name: string;
-  dob: string;
-  email: string;
-  phone: string;
-  address: string;
-  medicalHistory: string;
-}
-
 export const usePatientForm = (onSuccess?: () => void, onClose?: () => void) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState<PatientFormData>({
+  const [formData, setFormData] = useState({
     name: '',
     dob: '',
     email: '',

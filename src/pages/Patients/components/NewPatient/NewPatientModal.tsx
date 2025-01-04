@@ -25,7 +25,7 @@ export const NewPatientModal = ({ isOpen, onClose, onSuccess }: NewPatientModalP
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-2xl bg-gray-900 text-gray-100">
+      <DialogContent className="w-full max-w-2xl bg-chatgpt-main text-gray-100">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>New Patient</DialogTitle>
@@ -42,10 +42,15 @@ export const NewPatientModal = ({ isOpen, onClose, onSuccess }: NewPatientModalP
               variant="outline"
               onClick={onClose}
               disabled={isLoading}
+              className="text-sm text-white/70 border-chatgpt-border/20 hover:bg-chatgpt-hover/50"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              disabled={isLoading}
+              className="text-sm text-chatgpt-main bg-white hover:bg-gray-100"
+            >
               {isLoading ? "Creating..." : "Create Patient"}
             </Button>
           </DialogFooter>
