@@ -40,6 +40,15 @@ export const dialogDescriptionStyles = cn(
   "text-sm text-muted-foreground"
 );
 
+// Input field styles for modals
+export const dialogInputStyles = cn(
+  "w-full bg-transparent",
+  "border border-gray-700 border-opacity-50",
+  "rounded-md px-3 py-2",
+  "focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-opacity-50",
+  "placeholder:text-gray-400"
+);
+
 export const getSizeClass = (size: "sm" | "md" | "lg" = "md") => {
   const sizeClasses = {
     sm: "max-w-md",
