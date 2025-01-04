@@ -2,7 +2,8 @@ import { Patient } from '@/types';
 import { parseSupabaseJson } from '@/types';
 
 interface PatientInfoProps {
-  patient: Patient;
+  patient: Patient | null;
+  isNew?: boolean;
 }
 
 interface ContactInfo {
@@ -10,10 +11,21 @@ interface ContactInfo {
   email?: string;
 }
 
-export const PatientInfo = ({ patient }: PatientInfoProps) => {
+export const PatientInfo = ({ patient, isNew = false }: PatientInfoProps) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
+
+  if (isNew || !patient) {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">Personal Information</h2>
+        <div className="p-4 border rounded-lg bg-white/5">
+          <p className="text-gray-500 italic">Please fill in patient information</p>
+        </div>
+      </div>
+    );
+  }
 
   const contactInfo = parseSupabaseJson<ContactInfo>(patient.contact_info) || {};
 
