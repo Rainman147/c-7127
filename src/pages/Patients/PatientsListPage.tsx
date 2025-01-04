@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Search, UserPlus } from 'lucide-react';
-import { NewPatientModal } from './components/NewPatientModal';
+import { NewPatientModal } from './components/NewPatient/NewPatientModal';
 
 interface Patient {
   id: string;
