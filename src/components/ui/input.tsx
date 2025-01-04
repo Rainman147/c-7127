@@ -8,6 +8,13 @@ export interface InputProps
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, ...props }, ref) => {
     const isDateInput = type === 'date';
+    const inputRef = React.useRef<HTMLInputElement>(null);
+    
+    const handleCalendarClick = () => {
+      if (inputRef.current) {
+        inputRef.current.showPicker();
+      }
+    };
     
     return (
       <div className="relative w-full">
@@ -27,13 +34,22 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             isDateInput && "[&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute",
             className
           )}
-          ref={ref}
+          ref={(element) => {
+            // Forward the ref while also maintaining our local ref
+            if (typeof ref === 'function') {
+              ref(element);
+            } else if (ref) {
+              ref.current = element;
+            }
+            inputRef.current = element;
+          }}
           {...props}
         />
         {isDateInput && (
           <Calendar 
-            className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" 
-            aria-hidden="true"
+            className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 hover:text-gray-300 cursor-pointer" 
+            onClick={handleCalendarClick}
+            aria-label="Open date picker"
           />
         )}
       </div>
