@@ -39,17 +39,16 @@ export const NewPatientModal = ({ isOpen, onClose, onSuccess }: NewPatientModalP
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="modalCancel"
               onClick={onClose}
               disabled={isLoading}
-              className="text-sm text-white/70 border-chatgpt-border/20 hover:bg-chatgpt-hover/50"
             >
               Cancel
             </Button>
             <Button 
               type="submit" 
+              variant="modalConfirm"
               disabled={isLoading}
-              className="text-sm text-chatgpt-main bg-white hover:bg-gray-100"
             >
               {isLoading ? "Creating..." : "Create Patient"}
             </Button>
