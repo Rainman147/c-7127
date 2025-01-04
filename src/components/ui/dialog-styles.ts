@@ -38,8 +38,8 @@ export const dialogHeaderStyles = cn(
 export const dialogFooterStyles = cn(
   "flex justify-end gap-2",
   "border-t border-chatgpt-border/20",
-  "px-6 pt-4 pb-8", // Increased bottom padding from pb-6 to pb-8
-  "mt-6 mb-2" // Added mb-2 for additional margin at the bottom
+  "px-6 pt-4 pb-6", // Adjusted padding to match header (removed extra bottom padding)
+  "mt-6" // Removed mb-2 to maintain symmetry with header
 );
 
 export const dialogTitleStyles = cn(
