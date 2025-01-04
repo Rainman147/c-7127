@@ -10,9 +10,26 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const isDateInput = type === 'date';
     const inputRef = React.useRef<HTMLInputElement>(null);
     
-    const handleCalendarClick = () => {
-      if (inputRef.current) {
-        inputRef.current.showPicker();
+    const handleCalendarClick = async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (!inputRef.current) return;
+      
+      try {
+        // Try using the modern showPicker API
+        if ('showPicker' in HTMLInputElement.prototype) {
+          await inputRef.current.showPicker();
+        } else {
+          // Fallback: Focus the input which will usually trigger the native picker
+          inputRef.current.focus();
+          // Some browsers need a click to show the picker
+          inputRef.current.click();
+        }
+      } catch (error) {
+        console.log('Date picker not supported in this browser, falling back to focus:', error);
+        // Final fallback: just focus the input
+        inputRef.current.focus();
       }
     };
     
@@ -47,9 +64,11 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         />
         {isDateInput && (
           <Calendar 
-            className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 hover:text-gray-300 cursor-pointer" 
+            className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 hover:text-gray-300 transition-colors cursor-pointer" 
             onClick={handleCalendarClick}
             aria-label="Open date picker"
+            role="button"
+            tabIndex={0}
           />
         )}
       </div>
