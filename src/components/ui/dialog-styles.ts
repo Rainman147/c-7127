@@ -12,16 +12,14 @@ export const dialogContentStyles = cn(
   // Width and padding (responsive)
   "w-full px-4 sm:px-6",
   // Colors and effects
-  "bg-gray-900 text-gray-100 shadow-2xl",
+  "bg-chatgpt-main text-gray-100 shadow-2xl rounded-lg", // Updated background and added rounded corners
   // Animations
   "duration-300",
   "data-[state=open]:animate-in data-[state=closed]:animate-out",
   "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
   "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-100",
   "data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
-  "data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
-  // Responsive design
-  "sm:rounded-lg"
+  "data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]"
 );
 
 export const dialogHeaderStyles = cn(
@@ -44,12 +42,12 @@ export const dialogDescriptionStyles = cn(
 export const dialogInputStyles = cn(
   "w-full bg-transparent",
   "border border-gray-700 border-opacity-50",
-  "rounded-lg px-4 py-2.5", // Enhanced padding and more rounded corners
-  "transition-all duration-200", // Smooth transitions
+  "rounded-lg px-4 py-2.5",
+  "transition-all duration-200",
   "focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-opacity-50",
-  "focus:border-opacity-75", // Increased border opacity on focus
+  "focus:border-opacity-75",
   "placeholder:text-gray-400",
-  "text-base" // Slightly larger text for better readability
+  "text-base"
 );
 
 export const getSizeClass = (size: "sm" | "md" | "lg" = "md") => {
