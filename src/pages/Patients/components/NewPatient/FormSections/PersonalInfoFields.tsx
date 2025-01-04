@@ -30,9 +30,9 @@ export const PersonalInfoFields = ({ name, dob, onChange }: PersonalInfoFieldsPr
         <Input
           id="dob"
           name="dob"
-          type="date"
           value={dob}
           onChange={onChange}
+          isDob={true}
           required
         />
       </div>

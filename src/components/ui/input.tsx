@@ -1,73 +1,92 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { Calendar } from "lucide-react"
 
 export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {}
+  extends React.InputHTMLAttributes<HTMLInputElement> {
+  isDob?: boolean;
+}
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, ...props }, ref) => {
-    const isDateInput = type === 'date';
-    const inputRef = React.useRef<HTMLInputElement>(null);
+  ({ className, type, isDob, onChange, ...props }, ref) => {
+    // Convert type="date" to text input with formatting if isDob is true
+    const inputType = isDob ? "text" : type;
     
-    const handleCalendarClick = (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
+    const formatDateString = (value: string) => {
+      // Remove all non-digits
+      const digits = value.replace(/\D/g, '');
       
-      if (!inputRef.current) return;
+      // Add slashes after MM and DD
+      let formatted = '';
+      if (digits.length > 0) formatted += digits.slice(0, 2);
+      if (digits.length > 2) formatted += '/' + digits.slice(2, 4);
+      if (digits.length > 4) formatted += '/' + digits.slice(4, 8);
       
-      // Focus the input first
-      inputRef.current.focus();
-      
-      // Force click on the actual date input to show native picker
-      const nativePickerClick = new MouseEvent('click', {
-        view: window,
-        bubbles: true,
-        cancelable: true
-      });
-      
-      inputRef.current.dispatchEvent(nativePickerClick);
+      return formatted;
     };
-    
+
+    const handleDateInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!isDob) {
+        onChange?.(e);
+        return;
+      }
+
+      const input = e.target;
+      const cursorPosition = input.selectionStart;
+      const previousValue = input.value;
+      
+      // Format the new value
+      const formatted = formatDateString(input.value);
+      
+      // Only update if the format is different
+      if (formatted !== previousValue) {
+        // Create a new synthetic event with the formatted value
+        const syntheticEvent = {
+          ...e,
+          target: {
+            ...e.target,
+            value: formatted
+          }
+        } as React.ChangeEvent<HTMLInputElement>;
+
+        // Update the input value
+        input.value = formatted;
+        
+        // Call the original onChange
+        onChange?.(syntheticEvent);
+        
+        // Restore cursor position, accounting for added slashes
+        requestAnimationFrame(() => {
+          let newPosition = cursorPosition;
+          // If we just added a slash, move cursor one position forward
+          if (formatted.length > previousValue.length && formatted[cursorPosition - 1] === '/') {
+            newPosition++;
+          }
+          input.setSelectionRange(newPosition, newPosition);
+        });
+      }
+    };
+
     return (
-      <div className="relative w-full">
-        <input
-          type={type}
-          className={cn(
-            "w-full bg-transparent",
-            "border border-chatgpt-border/20",
-            "rounded px-4 py-2.5",
-            "transition-colors duration-200",
-            "focus:outline-none focus-visible:ring-0",
-            "focus:border-chatgpt-border/70",
-            "hover:border-chatgpt-border/30",
-            "placeholder:text-gray-400",
-            "text-base",
-            // Hide native calendar picker icon for date inputs
-            isDateInput && "[&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute",
-            className
-          )}
-          ref={(element) => {
-            // Forward the ref while also maintaining our local ref
-            if (typeof ref === 'function') {
-              ref(element);
-            } else if (ref) {
-              ref.current = element;
-            }
-            inputRef.current = element;
-          }}
-          {...props}
-        />
-        {isDateInput && (
-          <Calendar 
-            className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 hover:text-gray-300 transition-colors cursor-pointer" 
-            onClick={handleCalendarClick}
-            aria-label="Open date picker"
-            role="button"
-            tabIndex={0}
-          />
+      <input
+        type={inputType}
+        className={cn(
+          "w-full bg-transparent",
+          "border border-chatgpt-border/20",
+          "rounded px-4 py-2.5",
+          "transition-colors duration-200",
+          "focus:outline-none focus-visible:ring-0",
+          "focus:border-chatgpt-border/70",
+          "hover:border-chatgpt-border/30",
+          "placeholder:text-gray-400",
+          "text-base",
+          className
         )}
-      </div>
+        onChange={handleDateInput}
+        placeholder={isDob ? "MM/DD/YYYY" : props.placeholder}
+        maxLength={isDob ? 10 : props.maxLength}
+        ref={ref}
+        {...props}
+      />
     )
   }
 )
