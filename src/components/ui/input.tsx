@@ -11,11 +11,11 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         type={type}
         className={cn(
           "w-full bg-transparent",
-          "border border-gray-700 border-opacity-50",
-          "rounded-md px-4 py-2.5",
+          "border border-chatgpt-border/20",
+          "rounded px-4 py-2.5",
           "transition-all duration-200",
-          "focus:outline-none focus:bg-chatgpt-hover",
-          "focus:border-chatgpt-border/50 focus:border-opacity-75",
+          "focus:outline-none",
+          "focus:border-chatgpt-border/50",
           "hover:border-chatgpt-border/30",
           "placeholder:text-gray-400",
           "text-base",
