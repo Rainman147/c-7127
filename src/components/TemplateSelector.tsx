@@ -6,10 +6,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TemplateItem } from "./template/TemplateItem";
-import { useTemplateState } from "@/features/templates/hooks/useTemplateState";
+import { useTemplateSelection } from "./template/useTemplateSelection";
 import { templates } from "./template/types";
 import { getDefaultTemplate } from "@/utils/template/templateStateManager";
-import { useUrlStateManager } from "@/features/routing/hooks/useUrlStateManager";
+import { useUrlStateManager } from "@/hooks/useUrlStateManager";
 import type { Template } from "./template/types";
 
 interface TemplateSelectorProps {
@@ -20,14 +20,13 @@ interface TemplateSelectorProps {
 export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
   console.log('[TemplateSelector] Initializing with currentChatId:', currentChatId);
   
-  const { urlState, handleTemplateChange: updateUrlTemplate } = useUrlStateManager(currentChatId);
-  const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
-
-  const { selectedTemplate, isLoading, handleTemplateChange } = useTemplateState({
+  const { selectedTemplate, isLoading, handleTemplateChange } = useTemplateSelection(
     currentChatId,
-    initialTemplateId: urlState.templateId,
     onTemplateChange
-  });
+  );
+
+  const { handleTemplateChange: updateUrlTemplate } = useUrlStateManager(currentChatId);
+  const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
   const handleTemplateSelect = useCallback((template: Template) => {
     console.log('[TemplateSelector] Template selection triggered:', template.name);
