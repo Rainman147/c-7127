@@ -2,11 +2,7 @@ import { memo, useCallback, useState } from 'react';
 import { usePatientSearch } from './hooks/usePatientSearch';
 import { usePatientSelection } from './hooks/usePatientSelection';
 import { PatientSelectorTrigger } from './PatientSelectorTrigger';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Dialog, DialogContent } from '@/components/ui/styled-dialog';
 import { Search } from 'lucide-react';
 import type { Patient } from '@/types';
 
@@ -31,18 +27,13 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
   });
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <PatientSelectorTrigger
-          selectedPatient={selectedPatient}
-          isLoading={isLoadingPatient}
-          onClick={() => setIsOpen(true)}
-        />
-      </PopoverTrigger>
-      <PopoverContent 
-        className="w-80 p-0 bg-chatgpt-main border border-chatgpt-border"
-        align="start"
-      >
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <PatientSelectorTrigger
+        selectedPatient={selectedPatient}
+        isLoading={isLoadingPatient}
+        onClick={() => setIsOpen(true)}
+      />
+      <DialogContent className="w-[280px] p-0 gap-0 bg-chatgpt-main border-chatgpt-border">
         <div className="flex items-center px-3 py-2 border-b border-chatgpt-border">
           <Search className="h-4 w-4 text-gray-400" />
           <input
@@ -53,7 +44,7 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
             autoFocus
           />
         </div>
-        <div className="max-h-80 overflow-y-auto">
+        <div className="max-h-[320px] overflow-y-auto">
           {patients.map((patient) => (
             <button
               key={patient.id}
@@ -77,8 +68,8 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
             </div>
           )}
         </div>
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   );
 });
 
