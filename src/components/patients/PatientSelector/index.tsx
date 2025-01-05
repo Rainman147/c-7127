@@ -4,9 +4,9 @@ import { usePatientSelection } from './hooks/usePatientSelection';
 import { PatientSelectorTrigger } from './PatientSelectorTrigger';
 import { Search } from 'lucide-react';
 import {
-  StyledDialog,
-  StyledDialogContent
-} from '@/components/ui/styled-dialog';
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog';
 import type { Patient } from '@/types';
 
 interface PatientSelectorProps {
@@ -30,13 +30,13 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
   });
 
   return (
-    <StyledDialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <PatientSelectorTrigger
         selectedPatient={selectedPatient}
         isLoading={isLoadingPatient}
         onClick={() => setIsOpen(true)}
       />
-      <StyledDialogContent className="w-[280px] p-0 gap-0 bg-chatgpt-main border-chatgpt-border">
+      <DialogContent className="w-[280px] p-0 gap-0 bg-chatgpt-main border-chatgpt-border">
         <div className="flex items-center px-3 py-2 border-b border-chatgpt-border">
           <Search className="h-4 w-4 text-gray-400" />
           <input
@@ -71,8 +71,8 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
             </div>
           )}
         </div>
-      </StyledDialogContent>
-    </StyledDialog>
+      </DialogContent>
+    </Dialog>
   );
 });
 
