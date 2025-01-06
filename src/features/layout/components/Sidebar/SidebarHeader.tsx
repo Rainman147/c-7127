@@ -1,4 +1,4 @@
-import { Menu, Plus } from 'lucide-react';
+import { Menu, Plus, Search } from 'lucide-react';
 import { useUI } from '@/contexts/UIContext';
 import { useNavigate } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
