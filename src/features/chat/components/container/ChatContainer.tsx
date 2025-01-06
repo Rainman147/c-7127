@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useUI } from '@/contexts/UIContext';
+import { useTemplate } from '@/contexts/TemplateContext';
 import { ChatHeader } from '@/features/chat/components/header/ChatHeader';
 import MessageList from '@/features/chat/components/message/MessageList';
 import ChatInput from '@/features/chat/components/input/ChatInput';
@@ -28,11 +29,22 @@ const ChatContainer = ({
 }: ChatContainerProps) => {
   console.log('[ChatContainer] Rendering with messages:', messages);
   const { isSidebarOpen } = useUI();
+  const { currentTemplate } = useTemplate();
   const [transcriptionText, setTranscriptionText] = useState('');
 
   const handleTranscriptionUpdate = (text: string) => {
     console.log('[ChatContainer] Transcription update:', text);
     setTranscriptionText(text);
+  };
+
+  const handleMessageSend = async (
+    content: string,
+    type: 'text' | 'audio' = 'text',
+    systemInstructions?: string
+  ) => {
+    console.log('[ChatContainer] Sending message with system instructions:', 
+      systemInstructions ? 'Present' : 'Not provided');
+    await onMessageSend(content, type, systemInstructions);
   };
 
   return (
@@ -50,7 +62,7 @@ const ChatContainer = ({
       </div>
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-chatgpt-main via-chatgpt-main to-transparent pb-3 pt-6">
         <ChatInput
-          onSend={onMessageSend}
+          onSend={handleMessageSend}
           onTranscriptionComplete={onTranscriptionComplete}
           onTranscriptionUpdate={handleTranscriptionUpdate}
           isLoading={isLoading}

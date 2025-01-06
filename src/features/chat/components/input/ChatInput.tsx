@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useTemplate } from "@/contexts/TemplateContext";
 import AudioControls from "../audio/AudioControls";
 import ChatInputField from "./ChatInputField";
 import ChatInputActions from "./ChatInputActions";
 
 interface ChatInputProps {
-  onSend: (message: string, type?: 'text' | 'audio') => void;
+  onSend: (message: string, type?: 'text' | 'audio', systemInstructions?: string) => void;
   onTranscriptionComplete: (text: string) => void;
   onTranscriptionUpdate?: (text: string) => void;
   isLoading?: boolean;
@@ -19,10 +20,18 @@ const ChatInput = ({
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const { toast } = useToast();
+  const { currentTemplate } = useTemplate();
 
   const handleSubmit = () => {
     if (message.trim() && !isLoading) {
-      onSend(message);
+      console.log('[ChatInput] Sending message with template instructions:', 
+        currentTemplate?.systemInstructions ? 'Present' : 'Not provided');
+      
+      onSend(
+        message, 
+        'text',
+        currentTemplate?.systemInstructions
+      );
       setMessage("");
     }
   };
