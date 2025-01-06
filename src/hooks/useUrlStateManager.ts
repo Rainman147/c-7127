@@ -1,8 +1,9 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { validateTemplateId } from '@/utils/template/urlParamValidation';
 import { getDefaultTemplate } from '@/utils/template/templateStateManager';
 import type { Template } from '@/components/template/types';
+import type { Patient } from '@/types';
 
 export const useUrlStateManager = (currentChatId: string | null) => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -48,10 +49,18 @@ export const useUrlStateManager = (currentChatId: string | null) => {
     }
   }, [searchParams, updateUrlParameters]);
 
+  const handlePatientChange = useCallback((patient: Patient | null) => {
+    console.log('[useUrlStateManager] Patient change requested:', patient?.name);
+    
+    const currentTemplateId = searchParams.get('templateId');
+    updateUrlParameters(currentTemplateId, patient?.id || null);
+  }, [searchParams, updateUrlParameters]);
+
   return {
     templateId: searchParams.get('templateId'),
     patientId: searchParams.get('patientId'),
     updateUrlParameters,
-    handleTemplateChange
+    handleTemplateChange,
+    handlePatientChange
   };
 };
