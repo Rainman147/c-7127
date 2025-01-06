@@ -24,6 +24,7 @@ serve(async (req) => {
     // Prepare messages array with system instructions if provided
     const messageArray = []
     if (systemInstructions) {
+      console.log('Adding system instructions to message array')
       messageArray.push({
         role: 'system',
         content: systemInstructions
@@ -47,6 +48,8 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: messageArray,
+        temperature: 0.7,
+        max_tokens: 2000,
       }),
     })
 
