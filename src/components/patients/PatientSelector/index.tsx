@@ -54,6 +54,14 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
     }
   };
 
+  const handleOpenChange = useCallback((open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      setHighlightedIndex(-1);
+      setSearchTerm('');
+    }
+  }, [setSearchTerm]);
+
   console.log('[PatientSelector] Rendering with:', { 
     isOpen, 
     patientsCount: patients.length,
@@ -62,7 +70,7 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
   });
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <PatientSelectorTrigger
           selectedPatient={selectedPatient}
