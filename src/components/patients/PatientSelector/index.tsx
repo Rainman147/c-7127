@@ -39,7 +39,12 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
           onClick={() => setIsOpen(true)}
         />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[280px] p-0 gap-0 bg-chatgpt-main border-chatgpt-border">
+      <DropdownMenuContent 
+        className="w-[280px] p-0 gap-0 bg-chatgpt-main border-chatgpt-border animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+        align="start"
+        side="bottom"
+        sideOffset={8}
+      >
         <div className="flex items-center px-3 py-2 border-b border-chatgpt-border">
           <Search className="h-4 w-4 text-gray-400" />
           <input
@@ -50,7 +55,7 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
             autoFocus
           />
         </div>
-        <div className="max-h-[320px] overflow-y-auto">
+        <div className="max-h-[320px] overflow-y-auto scrollbar-thin scrollbar-thumb-chatgpt-border scrollbar-track-transparent">
           {patients.map((patient) => (
             <button
               key={patient.id}
