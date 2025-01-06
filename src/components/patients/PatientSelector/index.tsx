@@ -31,8 +31,6 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
 
   const { selectedPatient, isLoading: isLoadingPatient, handlePatientSelect } = usePatientSelection(onPatientSelect);
   const { handlePatientChange: updateUrlPatient } = useUrlStateManager(null);
-  const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
-  
   const observerTarget = useRef(null);
 
   const handlePatientSelection = useCallback((patient: Patient | null) => {
@@ -40,11 +38,6 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
     handlePatientSelect(patient);
     updateUrlPatient(patient);
   }, [handlePatientSelect, updateUrlPatient]);
-
-  const handleTooltipChange = useCallback((patientId: string | null) => {
-    console.log('[PatientSelector] Tooltip state changed for patient:', patientId);
-    setOpenTooltipId(patientId);
-  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -108,8 +101,6 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
               isSelected={selectedPatient?.id === patient.id}
               onSelect={handlePatientSelection}
               isLoading={isLoadingPatient}
-              isTooltipOpen={openTooltipId === patient.id}
-              onTooltipChange={(isOpen) => handleTooltipChange(isOpen ? patient.id : null)}
             />
           ))}
           {isSearching && (
