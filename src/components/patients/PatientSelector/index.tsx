@@ -87,8 +87,6 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
         collisionPadding={16}
         avoidCollisions={true}
         onKeyDown={handleKeyDown}
-        role="listbox"
-        aria-label="Select a patient"
       >
         <div className="flex items-center px-3 py-2 border-b border-chatgpt-border">
           <Search className="h-4 w-4 text-gray-400" />
@@ -97,16 +95,14 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
             placeholder="Search patients..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            aria-label="Search patients"
             autoFocus
           />
         </div>
         <div 
           className="max-h-[320px] overflow-y-auto scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-main"
-          role="presentation"
         >
           {isSearching ? (
-            <div className="px-3 py-4 text-sm text-gray-400 text-center" role="status">
+            <div className="px-3 py-4 text-sm text-gray-400 text-center">
               Searching...
             </div>
           ) : patients.length > 0 ? (
@@ -117,8 +113,6 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
                   index === highlightedIndex ? 'bg-chatgpt-hover' : ''
                 }`}
                 onClick={() => handleSelect(patient)}
-                role="option"
-                aria-selected={index === highlightedIndex}
                 onMouseEnter={() => setHighlightedIndex(index)}
               >
                 <div className="font-medium">{patient.name}</div>
@@ -128,11 +122,11 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
               </button>
             ))
           ) : searchTerm ? (
-            <div className="px-3 py-4 text-sm text-gray-400 text-center" role="status">
+            <div className="px-3 py-4 text-sm text-gray-400 text-center">
               No patients found
             </div>
           ) : (
-            <div className="px-3 py-4 text-sm text-gray-400 text-center" role="status">
+            <div className="px-3 py-4 text-sm text-gray-400 text-center">
               Type to search patients
             </div>
           )}

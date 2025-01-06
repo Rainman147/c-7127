@@ -19,16 +19,15 @@ export const PatientSelectorTrigger = memo(({
   });
 
   return (
-    <button
+    <div
       className="flex items-center gap-2 text-sm font-medium text-white hover:text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       onClick={onClick}
-      disabled={isLoading}
     >
       <span className="whitespace-nowrap">
         {selectedPatient ? selectedPatient.name : 'Select Patient'}
       </span>
       <ChevronDown className="h-4 w-4 opacity-70" />
-    </button>
+    </div>
   );
 });
 
