@@ -1,12 +1,13 @@
 import { memo, useCallback, useState } from 'react';
+import { Search } from 'lucide-react';
 import { usePatientSearch } from './hooks/usePatientSearch';
 import { usePatientSelection } from './hooks/usePatientSelection';
 import { PatientSelectorTrigger } from './PatientSelectorTrigger';
-import { Search } from 'lucide-react';
 import {
-  Dialog,
-  DialogContent,
-} from '@/components/ui/dialog';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { Patient } from '@/types';
 
 interface PatientSelectorProps {
@@ -30,13 +31,15 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
   });
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <PatientSelectorTrigger
-        selectedPatient={selectedPatient}
-        isLoading={isLoadingPatient}
-        onClick={() => setIsOpen(true)}
-      />
-      <DialogContent className="w-[280px] p-0 gap-0 bg-chatgpt-main border-chatgpt-border">
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenuTrigger asChild>
+        <PatientSelectorTrigger
+          selectedPatient={selectedPatient}
+          isLoading={isLoadingPatient}
+          onClick={() => setIsOpen(true)}
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-[280px] p-0 gap-0 bg-chatgpt-main border-chatgpt-border">
         <div className="flex items-center px-3 py-2 border-b border-chatgpt-border">
           <Search className="h-4 w-4 text-gray-400" />
           <input
@@ -71,8 +74,8 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 });
 
