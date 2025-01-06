@@ -55,7 +55,7 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
             autoFocus
           />
         </div>
-        <div className="max-h-[320px] overflow-y-auto scrollbar-thin scrollbar-thumb-chatgpt-border scrollbar-track-transparent">
+        <div className="max-h-[320px] overflow-y-auto scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-main">
           {patients.map((patient) => (
             <button
               key={patient.id}
