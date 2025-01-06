@@ -19,7 +19,7 @@ export const PatientSelectorTrigger = memo(({
 
   return (
     <DropdownMenuTrigger 
-      className="flex items-center gap-2 text-sm font-medium text-white hover:text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      className="flex items-center gap-2 text-sm font-medium text-white hover:text-gray-300 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       disabled={isLoading}
     >
       <span className="whitespace-nowrap">

@@ -75,7 +75,7 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
         isLoading={isLoadingPatient}
       />
       <DropdownMenuContent 
-        className="w-[280px] p-0 gap-0 bg-chatgpt-main border-chatgpt-border animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+        className="w-72 p-0 gap-0 bg-chatgpt-main border-chatgpt-border animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
         align="start"
         side="bottom"
         sideOffset={8}
