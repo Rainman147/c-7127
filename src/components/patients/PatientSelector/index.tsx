@@ -81,13 +81,13 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
         <ChevronDown className="h-4 w-4 opacity-70" />
       </DropdownMenuTrigger>
       <DropdownMenuContent 
-        className="w-72 bg-chatgpt-main border border-chatgpt-border rounded-sm shadow-lg z-50"
+        className="w-72 bg-chatgpt-main border border-chatgpt-border rounded-md shadow-lg z-50"
         align="start"
       >
         {selectedPatient && (
           <>
             <DropdownMenuItem
-              className="text-sm text-gray-400 hover:text-white hover:bg-gray-800/50 cursor-pointer px-3 py-2"
+              className="text-sm text-gray-400 hover:text-white hover:bg-gray-800/50 cursor-pointer px-3 py-2 rounded-md"
               onClick={() => handlePatientSelection(null)}
             >
               Clear Selection

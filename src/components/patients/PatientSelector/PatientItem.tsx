@@ -43,7 +43,7 @@ export const PatientItem = ({
         onOpenChange={onTooltipChange}
       >
         <DropdownMenuItem
-          className={`flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-chatgpt-hover transition-colors rounded-[2px] ${
+          className={`flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-chatgpt-hover transition-colors rounded-md ${
             isSelected ? 'bg-chatgpt-secondary' : ''
           }`}
           onClick={() => !isLoading && onSelect(patient)}
@@ -66,7 +66,7 @@ export const PatientItem = ({
             </TooltipTrigger>
             <TooltipContent
               side="left"
-              className="w-[280px] max-w-[80vw] bg-chatgpt-main border border-chatgpt-border p-2.5 rounded-[2px] shadow-lg"
+              className="w-[280px] max-w-[80vw] bg-chatgpt-main border border-chatgpt-border p-2.5 rounded-md shadow-lg"
               sideOffset={5}
               align="center"
               onPointerDownOutside={() => isIOS && onTooltipChange(false)}

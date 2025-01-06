@@ -53,7 +53,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         <ChevronDown className="h-4 w-4 opacity-70" />
       </DropdownMenuTrigger>
       <DropdownMenuContent 
-        className="w-72 bg-chatgpt-main border border-chatgpt-border rounded-sm shadow-lg z-50"
+        className="w-72 bg-chatgpt-main border border-chatgpt-border rounded-md shadow-lg z-50"
         align="start"
         onCloseAutoFocus={() => console.log('[TemplateSelector] Dropdown closed')}
       >
