@@ -20,6 +20,7 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         modalCancel: "text-sm border border-chatgpt-border/20 bg-transparent text-white/70 hover:bg-chatgpt-hover/50",
         modalConfirm: "text-sm bg-white text-chatgpt-main hover:bg-gray-100",
+        sidebarHeader: "h-10 w-10 rounded-xl text-gray-300 hover:text-white hover:bg-chatgpt-hover transition-all duration-200 inline-flex items-center justify-center",
       },
       size: {
         default: "h-10 px-4 py-2",
