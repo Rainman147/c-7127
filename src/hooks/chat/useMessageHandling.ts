@@ -26,7 +26,6 @@ export const useMessageHandling = () => {
     }
 
     setIsLoading(true);
-    console.log('[useMessageHandling] Sending message with system instructions:', systemInstructions ? 'Present' : 'Not provided');
 
     try {
       const userMessage: Message = { role: 'user', content, type };
@@ -45,15 +44,15 @@ export const useMessageHandling = () => {
       abortControllerRef.current = new AbortController();
 
       // Call Gemini function with system instructions
-      const { data, error } = await supabase.functions.invoke('chat', {
+      const { data, error } = await supabase.functions.invoke('gemini', {
         body: { 
           messages: newMessages,
-          systemInstructions 
+          systemInstructions: systemInstructions 
         }
       });
 
       if (error) throw error;
-      if (!data) throw new Error('No response from Chat API');
+      if (!data) throw new Error('No response from Gemini API');
 
       // Create and save assistant message
       if (data.content) {
@@ -78,7 +77,7 @@ export const useMessageHandling = () => {
       };
 
     } catch (error: any) {
-      console.error('[useMessageHandling] Error sending message:', error);
+      console.error('Error sending message:', error);
       toast({
         title: "Error",
         description: error.message,

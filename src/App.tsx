@@ -1,19 +1,22 @@
-import { AuthProvider } from '@/contexts/AuthContext';
-import { UIProvider } from '@/contexts/UIContext';
-import { TemplateProvider } from '@/contexts/TemplateContext';
-import AppRouter from './app/Router';
-import './App.css';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { UIProvider } from "@/contexts/UIContext";
+import Router from "./app/Router";
 
-function App() {
-  return (
-    <AuthProvider>
-      <UIProvider>
-        <TemplateProvider>
-          <AppRouter />
-        </TemplateProvider>
-      </UIProvider>
-    </AuthProvider>
-  );
-}
+const queryClient = new QueryClient();
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <UIProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <Router />
+      </TooltipProvider>
+    </UIProvider>
+  </QueryClientProvider>
+);
 
 export default App;

@@ -7,7 +7,7 @@ import TemplatesListPage from '@/pages/Templates/TemplatesListPage';
 import TemplateDetailPage from '@/pages/Templates/TemplateDetailPage';
 import ProtectedLayout from '@/features/layout/components/ProtectedLayout';
 
-export const AppRouter = () => {
+const Router = () => {
   console.log('[Router] Initializing router');
   
   return (
@@ -65,4 +65,4 @@ export const AppRouter = () => {
   );
 };
 
-export default AppRouter;
+export default Router;
