@@ -41,7 +41,6 @@ export const usePatientSearch = () => {
     }
   }, []);
 
-  // Effect to trigger search when debounced term changes
   useEffect(() => {
     searchPatients(debouncedSearch);
   }, [debouncedSearch, searchPatients]);
