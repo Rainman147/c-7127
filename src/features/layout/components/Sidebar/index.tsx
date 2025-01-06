@@ -36,11 +36,6 @@ const Sidebar = ({
     onApiKeyChange(newApiKey);
   };
 
-  const handleNewChat = () => {
-    console.log('[Sidebar] Navigating to new chat');
-    navigate('/');
-  };
-
   const handleSessionClick = (sessionId: string) => {
     console.log('[Sidebar] Session selected:', sessionId);
     setActiveSessionId(sessionId);
@@ -67,7 +62,6 @@ const Sidebar = ({
         {isSidebarOpen && (
           <>
             <SidebarContent
-              onNewChat={handleNewChat}
               activeSessionId={activeSessionId}
               sessions={sessions}
               onSessionSelect={handleSessionClick}
