@@ -20,7 +20,7 @@ const SidebarHeader = () => {
         onClick={toggleSidebar}
         aria-label="Toggle sidebar"
       >
-        <Menu className="h-5 w-5" />
+        <Menu className="h-6 w-6" />
       </Button>
       
       {isSidebarOpen && (
@@ -28,7 +28,7 @@ const SidebarHeader = () => {
           variant="sidebarHeader"
           aria-label="Search chats"
         >
-          <Search className="h-5 w-5" />
+          <Search className="h-6 w-6" />
         </Button>
       )}
       
@@ -40,7 +40,7 @@ const SidebarHeader = () => {
               onClick={handleNewChat}
               aria-label="New session"
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="h-6 w-6" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
