@@ -3,54 +3,68 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { supabase } from '@/integrations/supabase/client';
 import type { Patient } from '@/types';
 
+const PATIENTS_PER_PAGE = 50;
+
 export const usePatientSearch = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+  const [hasMore, setHasMore] = useState(true);
   const debouncedSearch = useDebounce(searchTerm, 300);
 
-  const searchPatients = useCallback(async (term: string) => {
-    if (!term.trim()) {
-      setPatients([]);
-      return;
-    }
+  const fetchPatients = useCallback(async (search: string, startIndex: number = 0) => {
+    console.log('[usePatientSearch] Fetching patients:', { search, startIndex });
+    setIsLoading(true);
 
     try {
-      setIsLoading(true);
-      setError(null);
-      console.log('[PatientSearch] Searching for patients with term:', term);
-
-      const { data, error: searchError } = await supabase
+      let query = supabase
         .from('patients')
         .select('*')
-        .ilike('name', `%${term}%`)
-        .limit(10);
+        .order('last_accessed', { ascending: false })
+        .range(startIndex, startIndex + PATIENTS_PER_PAGE - 1);
 
-      if (searchError) throw searchError;
+      if (search) {
+        query = query.ilike('name', `%${search}%`);
+      }
 
-      console.log('[PatientSearch] Found patients:', data);
-      setPatients(data || []);
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      console.log('[usePatientSearch] Fetched patients:', data?.length);
+      
+      if (startIndex === 0) {
+        setPatients(data || []);
+      } else {
+        setPatients(prev => [...prev, ...(data || [])]);
+      }
+      
+      setHasMore((data?.length || 0) === PATIENTS_PER_PAGE);
     } catch (err) {
-      console.error('[PatientSearch] Error searching patients:', err);
-      setError('Failed to search patients');
-      setPatients([]);
+      console.error('[usePatientSearch] Error fetching patients:', err);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Effect to trigger search when debounced term changes
+  const loadMore = useCallback(() => {
+    if (!isLoading && hasMore) {
+      console.log('[usePatientSearch] Loading more patients');
+      fetchPatients(debouncedSearch, patients.length);
+    }
+  }, [fetchPatients, debouncedSearch, patients.length, isLoading, hasMore]);
+
   useEffect(() => {
-    searchPatients(debouncedSearch);
-  }, [debouncedSearch, searchPatients]);
+    console.log('[usePatientSearch] Search term changed:', debouncedSearch);
+    fetchPatients(debouncedSearch);
+  }, [debouncedSearch, fetchPatients]);
 
   return {
     searchTerm,
     setSearchTerm,
     patients,
     isLoading,
-    error
+    hasMore,
+    loadMore
   };
 };

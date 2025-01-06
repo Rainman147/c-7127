@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useState, useRef, useEffect } from 'react';
 import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -20,10 +20,20 @@ interface PatientSelectorProps {
 export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) => {
   console.log('[PatientSelector] Initializing');
   
-  const { searchTerm, setSearchTerm, patients, isLoading: isSearching } = usePatientSearch();
+  const { 
+    searchTerm, 
+    setSearchTerm, 
+    patients, 
+    isLoading: isSearching,
+    hasMore,
+    loadMore 
+  } = usePatientSearch();
+
   const { selectedPatient, isLoading: isLoadingPatient, handlePatientSelect } = usePatientSelection(onPatientSelect);
   const { handlePatientChange: updateUrlPatient } = useUrlStateManager(null);
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
+  
+  const observerTarget = useRef(null);
 
   const handlePatientSelection = useCallback((patient: Patient | null) => {
     console.log('[PatientSelector] Patient selection triggered:', patient?.name);
@@ -35,6 +45,29 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
     console.log('[PatientSelector] Tooltip state changed for patient:', patientId);
     setOpenTooltipId(patientId);
   }, []);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          loadMore();
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [hasMore, loadMore]);
 
   return (
     <DropdownMenu>
@@ -91,6 +124,15 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
           {!isSearching && searchTerm && patients.length === 0 && (
             <div className="px-3 py-2 text-sm text-gray-400">
               No patients found
+            </div>
+          )}
+          {hasMore && (
+            <div ref={observerTarget} className="p-2 text-center">
+              {isSearching ? (
+                <span className="text-sm text-gray-400">Loading more...</span>
+              ) : (
+                <span className="text-sm text-gray-400">Scroll for more</span>
+              )}
             </div>
           )}
         </div>

@@ -407,6 +407,7 @@ export type Database = {
           current_medications: Json | null
           dob: string
           id: string
+          last_accessed: string | null
           medical_history: string | null
           name: string
           recent_tests: Json | null
@@ -420,6 +421,7 @@ export type Database = {
           current_medications?: Json | null
           dob: string
           id?: string
+          last_accessed?: string | null
           medical_history?: string | null
           name: string
           recent_tests?: Json | null
@@ -433,6 +435,7 @@ export type Database = {
           current_medications?: Json | null
           dob?: string
           id?: string
+          last_accessed?: string | null
           medical_history?: string | null
           name?: string
           recent_tests?: Json | null
