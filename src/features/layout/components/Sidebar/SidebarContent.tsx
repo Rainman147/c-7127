@@ -1,60 +1,29 @@
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import ChatList from './ChatList';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { Users, FileText } from 'lucide-react';
 
-interface SidebarContentProps {
-  onNewChat: () => void;
-  activeSessionId: string | null;
-  sessions: any[];
-  onSessionSelect: (sessionId: string) => void;
-  onSessionEdit: (session: { id: string; title: string }) => void;
-  onSessionDelete: (sessionId: string) => void;
-}
+const SidebarContent = () => {
+  const location = useLocation();
+  console.log('[SidebarContent] Current location:', location.pathname);
 
-const SidebarContent = ({
-  onNewChat,
-  activeSessionId,
-  sessions,
-  onSessionSelect,
-  onSessionEdit,
-  onSessionDelete
-}: SidebarContentProps) => {
   return (
-    <div className="flex-col flex-1 transition-opacity duration-500 relative -mr-2 pr-2 overflow-y-auto sidebar-scrollbar">
-      <div className="mb-4">
-        <Button
-          onClick={onNewChat}
-          className="w-full flex items-center gap-2 bg-[#2F2F2F] hover:bg-[#404040] rounded-xl"
-        >
-          <Plus className="h-4 w-4" />
-          New Chat
-        </Button>
-      </div>
-
-      {/* Navigation Links */}
-      <nav className="mb-4">
+    <div className="flex-1 overflow-y-auto">
+      <nav className="flex flex-col gap-1 px-2 py-2">
         <Link
           to="/patients"
-          className="block py-2 px-4 mb-2 text-white hover:text-gray-300 transition-colors duration-200 rounded-xl"
+          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white transition-colors"
         >
+          <Users className="h-4 w-4" />
           Patients
         </Link>
+        
         <Link
           to="/templates"
-          className="block py-2 px-4 text-white hover:text-gray-300 transition-colors duration-200 rounded-xl"
+          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white transition-colors"
         >
+          <FileText className="h-4 w-4" />
           Templates
         </Link>
       </nav>
-
-      <ChatList
-        sessions={sessions}
-        activeSessionId={activeSessionId}
-        onSessionSelect={onSessionSelect}
-        onSessionEdit={onSessionEdit}
-        onSessionDelete={onSessionDelete}
-      />
     </div>
   );
 };
