@@ -1,4 +1,4 @@
-import { memo, useCallback, useState, useRef, KeyboardEvent } from 'react';
+import { memo, useCallback, useState, KeyboardEvent } from 'react';
 import { Search } from 'lucide-react';
 import { usePatientSearch } from './hooks/usePatientSearch';
 import { usePatientSelection } from './hooks/usePatientSelection';
@@ -19,7 +19,6 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const { searchTerm, setSearchTerm, patients, isLoading: isSearching } = usePatientSearch();
   const { selectedPatient, isLoading: isLoadingPatient, handlePatientSelect } = usePatientSelection(onPatientSelect);
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const handleSelect = useCallback((patient: Patient | null) => {
     handlePatientSelect(patient);
@@ -83,7 +82,6 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
         <div className="flex items-center px-3 py-2 border-b border-chatgpt-border">
           <Search className="h-4 w-4 text-gray-400" />
           <input
-            ref={searchInputRef}
             className="flex-1 bg-transparent border-0 outline-none text-sm text-white placeholder-gray-400 ml-2"
             placeholder="Search patients..."
             value={searchTerm}
