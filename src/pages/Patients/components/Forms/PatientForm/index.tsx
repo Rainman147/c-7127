@@ -11,7 +11,7 @@ export const PatientForm = ({
   handleInputChange,
 }: PatientFormProps) => {
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <form id="new-patient-form" onSubmit={onSubmit} className="space-y-6">
       <div className="max-h-[60vh] overflow-y-auto modal-content-scrollbar space-y-6 py-4">
         <FormSection>
           <PersonalInfoFields

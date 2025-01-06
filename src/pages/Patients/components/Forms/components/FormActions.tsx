@@ -17,7 +17,8 @@ export const FormActions = ({ onCancel, isLoading }: FormActionsProps) => {
         Cancel
       </Button>
       <Button 
-        type="submit" 
+        type="submit"
+        form="new-patient-form"
         variant="modalConfirm"
         disabled={isLoading}
       >
