@@ -1,12 +1,39 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Users, FileText } from 'lucide-react';
+import ChatList from './ChatList';
 
-const SidebarContent = () => {
+interface SidebarContentProps {
+  sessions: any[];
+  activeSessionId: string | null;
+  onSessionSelect: (sessionId: string) => void;
+  onSessionEdit: (session: { id: string; title: string }) => void;
+  onSessionDelete: (sessionId: string) => void;
+}
+
+const SidebarContent = ({
+  sessions,
+  activeSessionId,
+  onSessionSelect,
+  onSessionEdit,
+  onSessionDelete
+}: SidebarContentProps) => {
   const location = useLocation();
   console.log('[SidebarContent] Current location:', location.pathname);
 
   return (
     <div className="flex-1 overflow-y-auto">
+      {/* Chat List */}
+      <div className="mb-4">
+        <ChatList
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onSessionSelect={onSessionSelect}
+          onSessionEdit={onSessionEdit}
+          onSessionDelete={onSessionDelete}
+        />
+      </div>
+
+      {/* Navigation Links */}
       <nav className="flex flex-col gap-1 px-2 py-2">
         <Link
           to="/patients"
