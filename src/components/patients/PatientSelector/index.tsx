@@ -6,7 +6,6 @@ import { PatientSelectorTrigger } from './PatientSelectorTrigger';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { Patient } from '@/types';
 
@@ -71,13 +70,10 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
-      <DropdownMenuTrigger asChild>
-        <PatientSelectorTrigger
-          selectedPatient={selectedPatient}
-          isLoading={isLoadingPatient}
-          onClick={() => setIsOpen(true)}
-        />
-      </DropdownMenuTrigger>
+      <PatientSelectorTrigger
+        selectedPatient={selectedPatient}
+        isLoading={isLoadingPatient}
+      />
       <DropdownMenuContent 
         className="w-[280px] p-0 gap-0 bg-chatgpt-main border-chatgpt-border animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
         align="start"
