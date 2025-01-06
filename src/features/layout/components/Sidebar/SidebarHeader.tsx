@@ -1,9 +1,9 @@
-import { Menu, Plus } from 'lucide-react';
+import { Menu, Plus, Search } from 'lucide-react';
 import { useUI } from '@/contexts/UIContext';
 import { useNavigate } from 'react-router-dom';
 
 const SidebarHeader = () => {
-  const { toggleSidebar } = useUI();
+  const { toggleSidebar, isSidebarOpen } = useUI();
   const navigate = useNavigate();
 
   const handleNewChat = () => {
@@ -19,6 +19,15 @@ const SidebarHeader = () => {
       >
         <Menu className="h-5 w-5" />
       </button>
+      
+      {isSidebarOpen && (
+        <button
+          className="h-10 rounded-lg px-2 text-token-text-secondary hover:text-gray-300 transition-colors"
+          aria-label="Search chats"
+        >
+          <Search className="h-5 w-5" />
+        </button>
+      )}
       
       <button
         onClick={handleNewChat}
