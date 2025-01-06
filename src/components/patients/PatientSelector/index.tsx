@@ -56,26 +56,30 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
           />
         </div>
         <div className="max-h-[320px] overflow-y-auto scrollbar-thin scrollbar-thumb-chatgpt-border hover:scrollbar-thumb-chatgpt-border/80 scrollbar-track-chatgpt-main">
-          {patients.map((patient) => (
-            <button
-              key={patient.id}
-              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-chatgpt-hover transition-colors"
-              onClick={() => handleSelect(patient)}
-            >
-              <div className="font-medium">{patient.name}</div>
-              <div className="text-xs text-gray-400">
-                DOB: {new Date(patient.dob).toLocaleDateString()}
-              </div>
-            </button>
-          ))}
-          {isSearching && (
-            <div className="px-3 py-2 text-sm text-gray-400">
+          {isSearching ? (
+            <div className="px-3 py-4 text-sm text-gray-400 text-center">
               Searching...
             </div>
-          )}
-          {!isSearching && searchTerm && patients.length === 0 && (
-            <div className="px-3 py-2 text-sm text-gray-400">
+          ) : patients.length > 0 ? (
+            patients.map((patient) => (
+              <button
+                key={patient.id}
+                className="w-full px-3 py-2 text-left text-sm text-white hover:bg-chatgpt-hover transition-colors"
+                onClick={() => handleSelect(patient)}
+              >
+                <div className="font-medium">{patient.name}</div>
+                <div className="text-xs text-gray-400">
+                  DOB: {new Date(patient.dob).toLocaleDateString()}
+                </div>
+              </button>
+            ))
+          ) : searchTerm ? (
+            <div className="px-3 py-4 text-sm text-gray-400 text-center">
               No patients found
+            </div>
+          ) : (
+            <div className="px-3 py-4 text-sm text-gray-400 text-center">
+              Type to search patients
             </div>
           )}
         </div>
