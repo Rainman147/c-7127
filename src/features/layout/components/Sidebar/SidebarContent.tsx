@@ -22,17 +22,6 @@ const SidebarContent = ({
 
   return (
     <div className="flex-1 overflow-y-auto">
-      {/* Chat List */}
-      <div className="mb-4">
-        <ChatList
-          sessions={sessions}
-          activeSessionId={activeSessionId}
-          onSessionSelect={onSessionSelect}
-          onSessionEdit={onSessionEdit}
-          onSessionDelete={onSessionDelete}
-        />
-      </div>
-
       {/* Navigation Links */}
       <nav className="flex flex-col gap-1 px-2 py-2">
         <Link
@@ -51,6 +40,17 @@ const SidebarContent = ({
           Templates
         </Link>
       </nav>
+
+      {/* Chat List */}
+      <div className="mt-2">
+        <ChatList
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onSessionSelect={onSessionSelect}
+          onSessionEdit={onSessionEdit}
+          onSessionDelete={onSessionDelete}
+        />
+      </div>
     </div>
   );
 };
