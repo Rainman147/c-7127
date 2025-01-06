@@ -9,17 +9,12 @@ export const useAuthStateChange = () => {
     const handleAuthStateChange = (event: string) => {
       console.log('Auth event:', event);
       
+      // Only show toasts for critical events
       switch (event) {
-        case 'SIGNED_IN':
+        case 'PASSWORD_RECOVERY':
           toast({
-            title: "Welcome back!",
-            description: "Successfully signed in.",
-          });
-          break;
-        case 'SIGNED_OUT':
-          toast({
-            title: "Signed out",
-            description: "Successfully signed out.",
+            title: "Password recovery",
+            description: "Check your email for password reset instructions.",
           });
           break;
         case 'USER_UPDATED':
@@ -28,15 +23,11 @@ export const useAuthStateChange = () => {
             description: "Your profile has been updated.",
           });
           break;
-        case 'PASSWORD_RECOVERY':
-          toast({
-            title: "Password recovery",
-            description: "Check your email for password reset instructions.",
-          });
-          break;
         case 'TOKEN_REFRESHED':
           console.log('Auth token refreshed successfully');
           break;
+        default:
+          console.log('Auth state changed:', event);
       }
     };
 

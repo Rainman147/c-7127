@@ -54,7 +54,6 @@ export const useTemplateSelection = (
     loadTemplateForChat();
   }, [currentChatId, onTemplateChange, toast]);
 
-  // Load template from URL if available
   useEffect(() => {
     if (templateId && (!selectedTemplate || selectedTemplate.id !== templateId)) {
       const template = findTemplateById(templateId);
@@ -82,12 +81,6 @@ export const useTemplateSelection = (
       if (currentChatId) {
         await saveTemplateToDb(currentChatId, template.id);
       }
-
-      toast({
-        title: "Template Changed",
-        description: `Now using: ${template.name}`,
-        duration: 3000,
-      });
       
       console.log('[useTemplateSelection] Template change completed successfully');
     } catch (error) {
