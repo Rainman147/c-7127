@@ -1,9 +1,11 @@
 import { memo, useCallback, useState } from 'react';
-import { ChevronDown, Loader } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { PatientItem } from './PatientItem';
 import { usePatientSearch } from './hooks/usePatientSearch';
@@ -49,6 +51,17 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
         className="w-72 bg-chatgpt-main border border-chatgpt-border rounded-sm shadow-lg z-50"
         align="start"
       >
+        {selectedPatient && (
+          <>
+            <DropdownMenuItem
+              className="text-sm text-gray-400 hover:text-white hover:bg-gray-800/50 cursor-pointer px-3 py-2"
+              onClick={() => handlePatientSelection(null)}
+            >
+              Clear Selection
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-chatgpt-border/50 my-1" />
+          </>
+        )}
         <div className="px-3 py-2 border-b border-chatgpt-border">
           <input
             className="w-full bg-transparent border-0 outline-none text-sm text-white placeholder-gray-400"
