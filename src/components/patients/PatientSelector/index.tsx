@@ -1,13 +1,13 @@
-import { memo, useCallback, useState, KeyboardEvent } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { usePatientSearch } from './hooks/usePatientSearch';
 import { usePatientSelection } from './hooks/usePatientSelection';
 import { PatientSelectorTrigger } from './PatientSelectorTrigger';
-import { SearchInput } from './components/SearchInput';
-import { PatientList } from './components/PatientList';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-} from '@/components/ui/dropdown-menu';
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Search } from 'lucide-react';
 import type { Patient } from '@/types';
 
 interface PatientSelectorProps {
@@ -16,84 +16,69 @@ interface PatientSelectorProps {
 
 export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const { searchTerm, setSearchTerm, patients, isLoading: isSearching } = usePatientSearch();
   const { selectedPatient, isLoading: isLoadingPatient, handlePatientSelect } = usePatientSelection(onPatientSelect);
 
   const handleSelect = useCallback((patient: Patient | null) => {
-    console.log('[PatientSelector] Patient selected:', patient?.name);
     handlePatientSelect(patient);
     setIsOpen(false);
-    setHighlightedIndex(-1);
   }, [handlePatientSelect]);
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setHighlightedIndex(prev => 
-          prev < patients.length - 1 ? prev + 1 : prev
-        );
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setHighlightedIndex(prev => 
-          prev > 0 ? prev - 1 : prev
-        );
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (highlightedIndex >= 0 && highlightedIndex < patients.length) {
-          handleSelect(patients[highlightedIndex]);
-        }
-        break;
-      case 'Escape':
-        e.preventDefault();
-        setIsOpen(false);
-        setHighlightedIndex(-1);
-        break;
-    }
-  };
-
-  const handleOpenChange = useCallback((open: boolean) => {
-    console.log('[PatientSelector] Dropdown state changed:', open);
-    setIsOpen(open);
-    if (!open) {
-      setHighlightedIndex(-1);
-      setSearchTerm('');
-    }
-  }, [setSearchTerm]);
+  console.log('[PatientSelector] Rendering with:', { 
+    isOpen, 
+    patientsCount: patients.length,
+    hasSelectedPatient: !!selectedPatient 
+  });
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
-      <PatientSelectorTrigger
-        selectedPatient={selectedPatient}
-        isLoading={isLoadingPatient}
-      />
-      <DropdownMenuContent 
-        className="w-72 p-0 gap-0 bg-chatgpt-main border-chatgpt-border animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <PatientSelectorTrigger
+          selectedPatient={selectedPatient}
+          isLoading={isLoadingPatient}
+          onClick={() => setIsOpen(true)}
+        />
+      </PopoverTrigger>
+      <PopoverContent 
+        className="w-80 p-0 bg-chatgpt-main border border-chatgpt-border"
         align="start"
-        side="bottom"
-        sideOffset={8}
-        alignOffset={0}
-        collisionPadding={16}
-        avoidCollisions={true}
-        onKeyDown={handleKeyDown}
       >
-        <SearchInput 
-          value={searchTerm}
-          onChange={setSearchTerm}
-        />
-        <PatientList
-          patients={patients}
-          isSearching={isSearching}
-          searchTerm={searchTerm}
-          highlightedIndex={highlightedIndex}
-          onSelect={handleSelect}
-          onHighlight={setHighlightedIndex}
-        />
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <div className="flex items-center px-3 py-2 border-b border-chatgpt-border">
+          <Search className="h-4 w-4 text-gray-400" />
+          <input
+            className="flex-1 bg-transparent border-0 outline-none text-sm text-white placeholder-gray-400 ml-2"
+            placeholder="Search patients..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <div className="max-h-80 overflow-y-auto">
+          {patients.map((patient) => (
+            <button
+              key={patient.id}
+              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-chatgpt-hover transition-colors"
+              onClick={() => handleSelect(patient)}
+            >
+              <div className="font-medium">{patient.name}</div>
+              <div className="text-xs text-gray-400">
+                DOB: {new Date(patient.dob).toLocaleDateString()}
+              </div>
+            </button>
+          ))}
+          {isSearching && (
+            <div className="px-3 py-2 text-sm text-gray-400">
+              Searching...
+            </div>
+          )}
+          {!isSearching && searchTerm && patients.length === 0 && (
+            <div className="px-3 py-2 text-sm text-gray-400">
+              No patients found
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 });
 

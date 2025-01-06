@@ -8,6 +8,7 @@ export const usePatientSelection = (onPatientSelect: (patientId: string | null) 
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Load patient details when patientId is in URL
   const loadPatientDetails = useCallback(async (patientId: string) => {
     try {
       setIsLoading(true);
@@ -31,10 +32,12 @@ export const usePatientSelection = (onPatientSelect: (patientId: string | null) 
     }
   }, []);
 
+  // Handle patient selection
   const handlePatientSelect = useCallback((patient: Patient | null) => {
     console.log('[PatientSelection] Patient selected:', patient);
     setSelectedPatient(patient);
     
+    // Update URL parameters while maintaining existing ones
     const newParams = new URLSearchParams(searchParams);
     if (patient) {
       newParams.set('patientId', patient.id);
@@ -43,9 +46,11 @@ export const usePatientSelection = (onPatientSelect: (patientId: string | null) 
     }
     setSearchParams(newParams);
     
+    // Notify parent component
     onPatientSelect(patient?.id || null);
   }, [searchParams, setSearchParams, onPatientSelect]);
 
+  // Initialize from URL params
   useEffect(() => {
     const patientId = searchParams.get('patientId');
     if (patientId && (!selectedPatient || selectedPatient.id !== patientId)) {
