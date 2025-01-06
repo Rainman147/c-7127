@@ -6,7 +6,6 @@ import {
   TooltipProvider, 
   TooltipTrigger 
 } from "@/components/ui/tooltip";
-import { getDeviceType } from "@/utils/deviceDetection";
 import type { Template } from "./types";
 
 interface TemplateItemProps {
@@ -26,20 +25,16 @@ export const TemplateItem = ({
   isTooltipOpen,
   onTooltipChange
 }: TemplateItemProps) => {
-  const { isIOS } = getDeviceType();
-
   const handleInfoClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     console.log('[TemplateItem] Info button clicked for:', template.name);
-    if (isIOS) {
-      onTooltipChange(!isTooltipOpen);
-    }
+    onTooltipChange(!isTooltipOpen);
   };
 
   return (
     <TooltipProvider delayDuration={0}>
       <Tooltip 
-        open={isIOS ? isTooltipOpen : undefined}
+        open={isTooltipOpen}
         onOpenChange={onTooltipChange}
       >
         <DropdownMenuItem
@@ -67,7 +62,7 @@ export const TemplateItem = ({
               className="w-[280px] max-w-[80vw] bg-chatgpt-main border border-chatgpt-border p-2.5 rounded-xl shadow-lg"
               sideOffset={5}
               align="center"
-              onPointerDownOutside={() => isIOS && onTooltipChange(false)}
+              onPointerDownOutside={() => onTooltipChange(false)}
             >
               <div className="space-y-1.5">
                 <p className="font-medium text-sm text-white">{template.name}</p>
