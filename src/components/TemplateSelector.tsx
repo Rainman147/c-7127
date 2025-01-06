@@ -39,7 +39,6 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     setOpenTooltipId(templateId);
   }, []);
 
-  // Get the display template - either selected or default
   const displayTemplate = selectedTemplate || getDefaultTemplate();
 
   return (
@@ -52,11 +51,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         <span className="whitespace-nowrap">{displayTemplate.name}</span>
         <ChevronDown className="h-4 w-4 opacity-70" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        className="w-72 bg-chatgpt-main border border-chatgpt-border rounded-md shadow-lg z-50"
-        align="start"
-        onCloseAutoFocus={() => console.log('[TemplateSelector] Dropdown closed')}
-      >
+      <DropdownMenuContent align="start">
         {templates.map((template) => (
           <TemplateItem
             key={template.id}

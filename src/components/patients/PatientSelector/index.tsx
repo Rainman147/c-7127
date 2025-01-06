@@ -46,7 +46,6 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
     setOpenTooltipId(patientId);
   }, []);
 
-  // Intersection Observer for infinite scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -80,10 +79,7 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
         </span>
         <ChevronDown className="h-4 w-4 opacity-70" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        className="w-72 bg-chatgpt-main border border-chatgpt-border rounded-md shadow-lg z-50"
-        align="start"
-      >
+      <DropdownMenuContent align="start">
         {selectedPatient && (
           <>
             <DropdownMenuItem
