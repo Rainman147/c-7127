@@ -1,4 +1,4 @@
-import { Info } from "lucide-react";
+import { Info, Check } from "lucide-react";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { 
   Tooltip, 
@@ -43,13 +43,16 @@ export const TemplateItem = ({
         onOpenChange={onTooltipChange}
       >
         <DropdownMenuItem
-          className={`flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-chatgpt-hover transition-colors rounded-[2px] ${
-            isSelected ? 'bg-chatgpt-secondary' : ''
-          }`}
+          className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-chatgpt-hover transition-colors"
           onClick={() => !isLoading && onSelect(template)}
           disabled={isLoading}
         >
-          <span className="flex-1 text-sm font-medium text-white">{template.name}</span>
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-sm font-medium text-white">{template.name}</span>
+            {isSelected && (
+              <Check className="h-4 w-4 text-green-500" />
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <TooltipTrigger asChild>
               <button 
@@ -61,7 +64,7 @@ export const TemplateItem = ({
             </TooltipTrigger>
             <TooltipContent 
               side="left" 
-              className="w-[280px] max-w-[80vw] bg-chatgpt-main border border-chatgpt-border p-2.5 rounded-[2px] shadow-lg"
+              className="w-[280px] max-w-[80vw] bg-chatgpt-main border border-chatgpt-border p-2.5 rounded-xl shadow-lg"
               sideOffset={5}
               align="center"
               onPointerDownOutside={() => isIOS && onTooltipChange(false)}
