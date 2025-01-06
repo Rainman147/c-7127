@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 import type { Template } from '@/components/template/types';
 
 interface TemplateContextType {
