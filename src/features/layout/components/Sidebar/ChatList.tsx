@@ -35,8 +35,8 @@ const ChatList = ({
         <div
           key={session.id}
           className={cn(
-            "group flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-[#2F2F2F] cursor-pointer",
-            activeSessionId === session.id && "bg-[#2F2F2F]"
+            "group flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-chatgpt-hover/45 cursor-pointer transition-all duration-200",
+            activeSessionId === session.id && "bg-chatgpt-hover/45"
           )}
         >
           <div

@@ -26,7 +26,7 @@ const SidebarContent = ({
       <nav className="flex flex-col gap-1 px-2 py-2">
         <Link
           to="/patients"
-          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white transition-colors"
+          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-chatgpt-hover/45 rounded-lg transition-all duration-200"
         >
           <Users className="h-4 w-4" />
           Patients
@@ -34,7 +34,7 @@ const SidebarContent = ({
         
         <Link
           to="/templates"
-          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white transition-colors"
+          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-chatgpt-hover/45 rounded-lg transition-all duration-200"
         >
           <FileText className="h-4 w-4" />
           Templates
