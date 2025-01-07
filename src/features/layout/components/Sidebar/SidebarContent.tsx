@@ -21,7 +21,7 @@ const SidebarContent = ({
   console.log('[SidebarContent] Current location:', location.pathname);
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto sidebar-scrollbar">
       {/* Navigation Links */}
       <nav className="flex flex-col gap-1 px-2 py-2">
         <Link
