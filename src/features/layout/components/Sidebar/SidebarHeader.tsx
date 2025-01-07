@@ -14,13 +14,13 @@ const SidebarHeader = () => {
   };
 
   return (
-    <div className="flex items-center h-14">
+    <div className="flex items-center">
       <Button 
         variant="sidebarHeader"
         onClick={toggleSidebar}
         aria-label="Toggle sidebar"
       >
-        <Menu className="h-8 w-8" />
+        <Menu />
       </Button>
       
       {isSidebarOpen && (
@@ -28,7 +28,7 @@ const SidebarHeader = () => {
           variant="sidebarHeader"
           aria-label="Search chats"
         >
-          <Search className="h-8 w-8" />
+          <Search />
         </Button>
       )}
       
@@ -40,7 +40,7 @@ const SidebarHeader = () => {
               onClick={handleNewChat}
               aria-label="New session"
             >
-              <Plus className="h-8 w-8" />
+              <Plus />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
