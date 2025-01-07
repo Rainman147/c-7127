@@ -35,8 +35,8 @@ const ChatList = ({
         <div
           key={session.id}
           className={cn(
-            "group flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-chatgpt-hover/45 cursor-pointer transition-all duration-200",
-            activeSessionId === session.id && "bg-chatgpt-hover/45"
+            "group flex items-center gap-2 rounded-lg px-2 py-2 text-gray-300 hover:text-white hover:bg-chatgpt-hover/45 cursor-pointer transition-all duration-200",
+            activeSessionId === session.id && "bg-chatgpt-hover/45 text-white"
           )}
         >
           <div
@@ -49,7 +49,7 @@ const ChatList = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-6 w-6 text-gray-300 hover:text-white"
               onClick={() => onSessionEdit(session)}
             >
               <Pencil className="h-3 w-3" />
@@ -59,7 +59,7 @@ const ChatList = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6"
+                  className="h-6 w-6 text-gray-300 hover:text-white"
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
