@@ -53,9 +53,22 @@ const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
   }, [navigate, toast]);
 
   return (
-    <div className="flex h-screen bg-chatgpt-main">
-      <Sidebar />
-      <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+    <div className="relative flex h-screen overflow-hidden bg-chatgpt-main">
+      {/* Sidebar with fixed positioning */}
+      <div 
+        className={`fixed top-0 left-0 z-40 h-full w-[260px] transform transition-transform duration-300 ease-in-out ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <Sidebar />
+      </div>
+
+      {/* Main content area with proper margin transition */}
+      <main 
+        className={`flex-1 overflow-auto transition-[margin] duration-300 ease-in-out ${
+          isSidebarOpen ? 'ml-[260px]' : 'ml-0'
+        }`}
+      >
         {children}
       </main>
     </div>
