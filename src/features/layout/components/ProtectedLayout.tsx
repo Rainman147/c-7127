@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Menu } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { checkSession } from '@/utils/auth/sessionManager';
 import { supabase } from '@/integrations/supabase/client';
 import Sidebar from './Sidebar';
 import { useUI } from '@/contexts/UIContext';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ProtectedLayoutProps {
   children: React.ReactNode;
@@ -13,7 +15,7 @@ interface ProtectedLayoutProps {
 const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isSidebarOpen } = useUI();
+  const { isSidebarOpen, toggleSidebar } = useUI();
 
   useEffect(() => {
     console.log('[ProtectedLayout] Initializing');
@@ -69,7 +71,22 @@ const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
           isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
         }`}
       >
-        {/* Secondary buttons will be added here in the next step */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button 
+                onClick={toggleSidebar} 
+                className="h-10 rounded-lg px-2 text-gray-300 hover:text-white hover:bg-chatgpt-hover/45 transition-all duration-200"
+                aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* Main content area with proper margin transition */}
