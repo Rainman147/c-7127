@@ -19,6 +19,8 @@ const buttonVariants = cva(
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         sidebarHeader: "h-10 px-2 hover:bg-chatgpt-hover transition-colors duration-200 text-white",
+        modalCancel: "text-sm border border-chatgpt-border/20 bg-transparent text-white/70 hover:bg-chatgpt-hover/50",
+        modalConfirm: "text-sm bg-white text-chatgpt-main hover:bg-gray-100",
       },
       size: {
         default: "h-9 px-4 py-2",
