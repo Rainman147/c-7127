@@ -1,7 +1,6 @@
 import { Menu, Plus, Search } from 'lucide-react';
 import { useUI } from '@/contexts/UIContext';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const SidebarHeader = () => {
@@ -14,34 +13,33 @@ const SidebarHeader = () => {
   };
 
   return (
-    <div className="flex items-center">
-      <Button 
-        variant="sidebarHeader"
-        onClick={toggleSidebar}
-        aria-label="Toggle sidebar"
+    <div className="flex justify-between items-center h-[60px] px-2">
+      <button 
+        onClick={toggleSidebar} 
+        className="h-10 rounded-lg px-2 text-token-text-secondary hover:text-gray-300 transition-colors"
       >
-        <Menu />
-      </Button>
+        <Menu className="h-5 w-5" />
+      </button>
       
       {isSidebarOpen && (
-        <Button
-          variant="sidebarHeader"
+        <button
+          className="h-10 rounded-lg px-2 text-token-text-secondary hover:text-gray-300 transition-colors"
           aria-label="Search chats"
         >
-          <Search />
-        </Button>
+          <Search className="h-5 w-5" />
+        </button>
       )}
       
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              variant="sidebarHeader"
+            <button
               onClick={handleNewChat}
+              className="h-10 w-10 rounded-lg flex items-center justify-center text-gray-300 hover:text-white hover:bg-chatgpt-hover transition-all duration-200"
               aria-label="New session"
             >
-              <Plus />
-            </Button>
+              <Plus className="h-5 w-5" />
+            </button>
           </TooltipTrigger>
           <TooltipContent>
             <p>New Session</p>
