@@ -19,7 +19,7 @@ const SidebarHeader = () => {
           <TooltipTrigger asChild>
             <button 
               onClick={toggleSidebar} 
-              className="h-10 rounded-lg px-2 text-token-text-secondary hover:text-gray-300 transition-colors"
+              className="h-10 rounded-lg px-2 text-token-text-secondary hover:text-white hover:bg-chatgpt-hover transition-all duration-200"
               aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             >
               <Menu className="h-5 w-5" />
@@ -36,7 +36,7 @@ const SidebarHeader = () => {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                className="h-10 rounded-lg px-2 text-token-text-secondary hover:text-gray-300 transition-colors"
+                className="h-10 rounded-lg px-2 text-token-text-secondary hover:text-white hover:bg-chatgpt-hover transition-all duration-200"
                 aria-label="Search sessions"
               >
                 <Search className="h-5 w-5" />
