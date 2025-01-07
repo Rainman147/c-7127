@@ -14,7 +14,7 @@ const SidebarHeader = () => {
   };
 
   return (
-    <div className="flex justify-between items-center h-[60px] px-2">
+    <div className="flex items-center h-14">
       <Button 
         variant="sidebarHeader"
         onClick={toggleSidebar}
