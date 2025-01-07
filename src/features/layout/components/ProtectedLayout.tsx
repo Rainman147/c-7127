@@ -65,36 +65,36 @@ const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
         <Sidebar />
       </div>
 
-      {/* Main content area with proper margin transition */}
+      {/* Secondary buttons container - now a sibling */}
+      <div 
+        className={`fixed top-0 left-0 z-35 h-[60px] px-2 flex items-center transition-opacity duration-300 ${
+          isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
+      >
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button 
+                onClick={toggleSidebar} 
+                className="h-10 rounded-lg px-2 text-gray-300 hover:text-white hover:bg-chatgpt-hover/45 transition-all duration-200"
+                aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+
+      {/* Main content area */}
       <main 
         className={`flex-1 overflow-auto transition-[margin] duration-300 ease-in-out ${
           isSidebarOpen ? 'ml-[260px]' : 'ml-0'
         }`}
       >
-        {/* Secondary buttons container - positioned in main content */}
-        <div 
-          className={`fixed top-0 left-0 z-35 h-[60px] px-2 flex items-center transition-opacity duration-300 ${
-            isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
-          }`}
-        >
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button 
-                  onClick={toggleSidebar} 
-                  className="h-10 rounded-lg px-2 text-gray-300 hover:text-white hover:bg-chatgpt-hover/45 transition-all duration-200"
-                  aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
         {children}
       </main>
     </div>
