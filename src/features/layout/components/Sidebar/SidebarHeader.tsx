@@ -54,7 +54,7 @@ const SidebarHeader = () => {
           <TooltipTrigger asChild>
             <button
               onClick={handleNewChat}
-              className="h-10 w-10 rounded-lg flex items-center justify-center text-gray-300 hover:text-white hover:bg-chatgpt-hover transition-all duration-200"
+              className="h-10 rounded-lg px-2 text-gray-300 hover:text-white hover:bg-chatgpt-hover transition-all duration-200"
               aria-label="New session"
             >
               <Plus className="h-5 w-5" />
