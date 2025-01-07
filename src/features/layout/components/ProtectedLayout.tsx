@@ -65,9 +65,9 @@ const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
         <Sidebar />
       </div>
 
-      {/* Secondary buttons container - positioned to match sidebar header */}
+      {/* Secondary buttons container - positioned to match sidebar header with updated z-index */}
       <div 
-        className={`fixed top-0 left-0 z-30 h-[60px] px-2 flex items-center transition-opacity duration-300 ${
+        className={`fixed top-0 left-0 z-35 h-[60px] px-2 flex items-center transition-opacity duration-300 ${
           isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
         }`}
       >
