@@ -63,6 +63,15 @@ const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
         <Sidebar />
       </div>
 
+      {/* Secondary buttons container - positioned to match sidebar header */}
+      <div 
+        className={`fixed top-0 left-0 z-30 h-[60px] px-2 flex items-center transition-opacity duration-300 ${
+          isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
+      >
+        {/* Secondary buttons will be added here in the next step */}
+      </div>
+
       {/* Main content area with proper margin transition */}
       <main 
         className={`flex-1 overflow-auto transition-[margin] duration-300 ease-in-out ${
