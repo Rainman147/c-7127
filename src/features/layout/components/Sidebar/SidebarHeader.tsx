@@ -14,20 +14,39 @@ const SidebarHeader = () => {
 
   return (
     <div className="flex justify-between items-center h-[60px] px-2">
-      <button 
-        onClick={toggleSidebar} 
-        className="h-10 rounded-lg px-2 text-token-text-secondary hover:text-gray-300 transition-colors"
-      >
-        <Menu className="h-5 w-5" />
-      </button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button 
+              onClick={toggleSidebar} 
+              className="h-10 rounded-lg px-2 text-token-text-secondary hover:text-gray-300 transition-colors"
+              aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       
       {isSidebarOpen && (
-        <button
-          className="h-10 rounded-lg px-2 text-token-text-secondary hover:text-gray-300 transition-colors"
-          aria-label="Search chats"
-        >
-          <Search className="h-5 w-5" />
-        </button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className="h-10 rounded-lg px-2 text-token-text-secondary hover:text-gray-300 transition-colors"
+                aria-label="Search sessions"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Search Sessions</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
       
       <TooltipProvider>
