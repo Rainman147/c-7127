@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Template, DbTemplate } from "@/components/template/types/Template";
-import { templates } from "@/components/template/types";
+import { templates } from "@/components/template/types/defaultTemplates";
 import { parseJsonField } from "@/components/template/types/utils";
 
 // Helper functions
@@ -15,6 +15,7 @@ const findTemplateById = (templateId: string): Template | undefined => {
 // Convert DB template to frontend template
 const convertDbTemplate = (dbTemplate: DbTemplate): Template => ({
   ...dbTemplate,
+  systemInstructions: dbTemplate.system_instructions,
   instructions: parseJsonField(dbTemplate.instructions),
   schema: parseJsonField(dbTemplate.schema),
   priority_rules: parseJsonField(dbTemplate.priority_rules),
@@ -67,9 +68,7 @@ export const useTemplatesListQuery = () => {
         }
         
         // Map custom templates to match Template type
-        const mappedCustomTemplates = customTemplates?.map((template: DbTemplate) => 
-          convertDbTemplate(template)
-        ) || [];
+        const mappedCustomTemplates = customTemplates?.map(convertDbTemplate) || [];
         
         // Combine and return all templates
         const allTemplates = [...defaultTemplates, ...mappedCustomTemplates];

@@ -100,7 +100,7 @@ const Index = () => {
     if (templateError) {
       toast({
         title: "Template Error",
-        description: templateError,
+        description: templateError.message, // Access error message property
         variant: "destructive",
       });
     }
@@ -113,7 +113,7 @@ const Index = () => {
       {templateError && (
         <Alert variant="destructive" className="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 w-96">
           <AlertTitle>Template Error</AlertTitle>
-          <AlertDescription>{templateError}</AlertDescription>
+          <AlertDescription>{templateError.message}</AlertDescription>
         </Alert>
       )}
       <ChatContainer 

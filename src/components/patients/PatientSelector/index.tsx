@@ -30,14 +30,14 @@ export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) 
   } = usePatientSearch();
 
   const { selectedPatient, isLoading: isLoadingPatient, handlePatientSelect } = usePatientSelection(onPatientSelect);
-  const { handlePatientChange: updateUrlPatient } = useUrlStateManager(null);
+  const { updatePatientId } = useUrlStateManager();
   const observerTarget = useRef(null);
 
   const handlePatientSelection = useCallback((patient: Patient | null) => {
     console.log('[PatientSelector] Patient selection triggered:', patient?.name);
     handlePatientSelect(patient);
-    updateUrlPatient(patient);
-  }, [handlePatientSelect, updateUrlPatient]);
+    updatePatientId(patient?.id || null);
+  }, [handlePatientSelect, updatePatientId]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
