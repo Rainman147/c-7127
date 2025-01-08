@@ -22,14 +22,19 @@ const Index = () => {
   
   const { 
     messages, 
-    isLoading, 
+    isLoading: isChatLoading, 
     handleSendMessage,
     loadChatMessages,
     currentChatId,
     setCurrentChatId
   } = useChat();
 
-  const { selectedTemplate, handleTemplateChange } = useTemplateSelection(currentChatId, (template: Template) => {
+  const { 
+    selectedTemplate, 
+    isLoading: isTemplateLoading, 
+    error: templateError,
+    handleTemplateChange 
+  } = useTemplateSelection(currentChatId, (template: Template) => {
     console.log('[Index] Template changed:', template.name);
   });
 
@@ -89,11 +94,22 @@ const Index = () => {
     );
   };
 
+  // Show error toast if template error occurs
+  useEffect(() => {
+    if (templateError) {
+      toast({
+        title: "Template Error",
+        description: templateError,
+        variant: "destructive",
+      });
+    }
+  }, [templateError, toast]);
+
   return (
     <div className="flex h-screen">
       <ChatContainer 
         messages={messages}
-        isLoading={isLoading}
+        isLoading={isChatLoading || isTemplateLoading}
         currentChatId={currentChatId}
         onMessageSend={handleMessageSend}
         onTemplateChange={handleTemplateChange}

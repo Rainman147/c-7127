@@ -14,6 +14,7 @@ export const useTemplateSelection = (
   
   const [selectedTemplate, setSelectedTemplate] = useState<Template>(getDefaultTemplate());
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { templateId, patientId, updateUrlParameters } = useUrlStateManager(currentChatId);
   
@@ -28,11 +29,13 @@ export const useTemplateSelection = (
         const defaultTemplate = getDefaultTemplate();
         setSelectedTemplate(defaultTemplate);
         onTemplateChange(defaultTemplate);
+        setError(null);
         return;
       }
 
       try {
         setIsLoading(true);
+        setError(null);
         const templateType = await loadTemplateFromDb(currentChatId);
         
         if (templateType) {
@@ -41,15 +44,24 @@ export const useTemplateSelection = (
             console.log('[useTemplateSelection] Found template in database:', template.name);
             setSelectedTemplate(template);
             onTemplateChange(template);
+          } else {
+            throw new Error(`Invalid template type: ${templateType}`);
           }
         }
       } catch (error) {
         console.error('[useTemplateSelection] Failed to load template:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load template settings';
+        setError(errorMessage);
         toast({
           title: "Error",
-          description: "Failed to load template settings",
+          description: errorMessage,
           variant: "destructive",
         });
+        
+        // Fallback to default template on error
+        const defaultTemplate = getDefaultTemplate();
+        setSelectedTemplate(defaultTemplate);
+        onTemplateChange(defaultTemplate);
       } finally {
         setIsLoading(false);
         console.log('[useTemplateSelection] Template loading completed');
@@ -61,15 +73,33 @@ export const useTemplateSelection = (
 
   // Handle template changes from URL
   useEffect(() => {
-    if (templateId && (!selectedTemplate || selectedTemplate.id !== templateId)) {
+    if (templateId) {
       const template = findTemplateById(templateId);
       if (template) {
-        console.log('[useTemplateSelection] Loading template from URL:', template.name);
-        setSelectedTemplate(template);
-        onTemplateChange(template);
+        if (!selectedTemplate || selectedTemplate.id !== templateId) {
+          console.log('[useTemplateSelection] Loading template from URL:', template.name);
+          setSelectedTemplate(template);
+          onTemplateChange(template);
+          setError(null);
+        }
+      } else {
+        console.error('[useTemplateSelection] Invalid template ID in URL:', templateId);
+        const errorMessage = `Invalid template ID: ${templateId}`;
+        setError(errorMessage);
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        
+        // Fallback to default template for invalid URL parameter
+        const defaultTemplate = getDefaultTemplate();
+        setSelectedTemplate(defaultTemplate);
+        onTemplateChange(defaultTemplate);
+        updateUrlParameters(defaultTemplate.id, patientId);
       }
     }
-  }, [templateId, selectedTemplate, onTemplateChange]);
+  }, [templateId, selectedTemplate, onTemplateChange, toast, patientId, updateUrlParameters]);
 
   // Update URL when template changes
   useEffect(() => {
@@ -88,6 +118,8 @@ export const useTemplateSelection = (
     }
 
     setIsLoading(true);
+    setError(null);
+    
     try {
       setSelectedTemplate(template);
       onTemplateChange(template);
@@ -99,19 +131,26 @@ export const useTemplateSelection = (
       console.log('[useTemplateSelection] Template change completed successfully');
     } catch (error) {
       console.error('[useTemplateSelection] Failed to update template:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update template';
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: "Failed to update template",
+        description: errorMessage,
         variant: "destructive",
       });
+      
+      // Revert to previous template on error
+      setSelectedTemplate(selectedTemplate);
+      onTemplateChange(selectedTemplate);
     } finally {
       setIsLoading(false);
     }
-  }, [currentChatId, selectedTemplate.id, onTemplateChange, toast]);
+  }, [currentChatId, selectedTemplate, onTemplateChange, toast]);
 
   return {
     selectedTemplate,
     isLoading,
+    error,
     handleTemplateChange
   };
 };
