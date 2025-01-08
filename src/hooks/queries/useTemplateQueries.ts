@@ -1,15 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Template } from "@/components/template/types";
+import type { Template, DbTemplate } from "@/components/template/types";
 import { templates } from "@/components/template/types";
+import { parseJsonField } from "@/components/template/types/utils";
 
-// Helper functions (moved from templateStateManager)
+// Helper functions
 const getDefaultTemplate = (): Template => templates[0];
 
 const findTemplateById = (templateId: string): Template | undefined => {
   console.log('[useTemplateQueries] Finding template by id:', templateId);
   return templates.find(t => t.id === templateId);
 };
+
+// Convert DB template to frontend template
+const convertDbTemplate = (dbTemplate: DbTemplate): Template => ({
+  ...dbTemplate,
+  instructions: parseJsonField(dbTemplate.instructions),
+  schema: parseJsonField(dbTemplate.schema),
+  priority_rules: parseJsonField(dbTemplate.priority_rules),
+});
 
 // Fetch a single template
 export const useTemplateQuery = (templateId: string | null) => {
@@ -58,19 +67,9 @@ export const useTemplatesListQuery = () => {
         }
         
         // Map custom templates to match Template type
-        const mappedCustomTemplates = customTemplates?.map(template => ({
-          id: template.id,
-          name: template.name,
-          description: template.description,
-          systemInstructions: template.system_instructions,
-          content: template.content,
-          instructions: template.instructions,
-          schema: template.schema,
-          priority_rules: template.priority_rules,
-          created_at: template.created_at,
-          updated_at: template.updated_at,
-          user_id: template.user_id
-        })) || [];
+        const mappedCustomTemplates = customTemplates?.map((template: DbTemplate) => 
+          convertDbTemplate(template)
+        ) || [];
         
         // Combine and return all templates
         const allTemplates = [...defaultTemplates, ...mappedCustomTemplates];
