@@ -5,7 +5,7 @@ import { useTemplateQuery, useTemplatesListQuery } from "@/hooks/queries/useTemp
 import { useToast } from "@/hooks/use-toast";
 import { TemplateSelectorTrigger } from "./template/selector/TemplateSelectorTrigger";
 import { TemplateSelectorContent } from "./template/selector/TemplateSelectorContent";
-import type { Template } from "@/types";
+import type { Template } from "@/types/template";
 import { isValidTemplate } from "@/types/template";
 
 interface TemplateSelectorProps {

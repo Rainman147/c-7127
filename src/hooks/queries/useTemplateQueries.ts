@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Template, DbTemplate } from "@/types";
-import { templates } from "@/components/template/types/defaultTemplates";
+import type { Template, DbTemplate } from "@/types/template";
+import { templates } from "@/types/template/defaultTemplates";
 import { convertDbTemplate, isValidTemplate } from "@/types/template";
 
 const getDefaultTemplate = (): Template => {
