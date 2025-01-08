@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { findTemplateById } from "@/utils/template/templateStateManager";
 import type { Template } from "@/components/template/types";
-import { templates } from "@/components/template/types"; // Add this import
+import { templates } from "@/components/template/types";
 
 // Fetch a single template
 export const useTemplateQuery = (templateId: string | null) => {
@@ -50,8 +50,23 @@ export const useTemplatesListQuery = () => {
           throw error;
         }
         
+        // Map custom templates to match Template type
+        const mappedCustomTemplates = customTemplates?.map(template => ({
+          id: template.id,
+          name: template.name,
+          description: template.description,
+          systemInstructions: template.system_instructions,
+          content: template.content,
+          instructions: template.instructions,
+          schema: template.schema,
+          priority_rules: template.priority_rules,
+          created_at: template.created_at,
+          updated_at: template.updated_at,
+          user_id: template.user_id
+        })) || [];
+        
         // Combine and return all templates
-        const allTemplates = [...defaultTemplates, ...(customTemplates || [])];
+        const allTemplates = [...defaultTemplates, ...mappedCustomTemplates];
         console.log('[useTemplatesListQuery] Fetched templates:', allTemplates.length);
         return allTemplates;
       } catch (error) {
