@@ -7,6 +7,7 @@ import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { useTemplateSelection } from '@/components/template/useTemplateSelection';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import type { Template } from '@/components/template/types';
 
 const Index = () => {
@@ -105,11 +106,19 @@ const Index = () => {
     }
   }, [templateError, toast]);
 
+  const isLoading = isChatLoading || isTemplateLoading;
+
   return (
     <div className="flex h-screen">
+      {templateError && (
+        <Alert variant="destructive" className="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 w-96">
+          <AlertTitle>Template Error</AlertTitle>
+          <AlertDescription>{templateError}</AlertDescription>
+        </Alert>
+      )}
       <ChatContainer 
         messages={messages}
-        isLoading={isChatLoading || isTemplateLoading}
+        isLoading={isLoading}
         currentChatId={currentChatId}
         onMessageSend={handleMessageSend}
         onTemplateChange={handleTemplateChange}
