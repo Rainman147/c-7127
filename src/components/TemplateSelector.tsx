@@ -8,8 +8,7 @@ import {
 import { TemplateItem } from "./template/TemplateItem";
 import { useTemplateSelection } from "./template/useTemplateSelection";
 import { templates } from "./template/types";
-import { getDefaultTemplate } from "@/utils/template/templateStateManager";
-import { useUrlStateManager } from "@/hooks/useUrlStateManager";
+import { useSearchParams } from "react-router-dom";
 import type { Template } from "./template/types";
 
 interface TemplateSelectorProps {
@@ -18,37 +17,50 @@ interface TemplateSelectorProps {
 }
 
 export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
-  console.log('[TemplateSelector] Initializing with currentChatId:', currentChatId);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTemplateId = searchParams.get('templateId');
+  
+  console.log('[TemplateSelector] Initializing with:', { 
+    currentChatId, 
+    initialTemplateId 
+  });
   
   const { selectedTemplate, isLoading, handleTemplateChange } = useTemplateSelection(
     currentChatId,
-    onTemplateChange
+    onTemplateChange,
+    initialTemplateId
   );
 
-  const { handleTemplateChange: updateUrlTemplate } = useUrlStateManager(currentChatId);
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
   const handleTemplateSelect = useCallback((template: Template) => {
     console.log('[TemplateSelector] Template selection triggered:', template.name);
+    
+    // Update URL first
+    const params = new URLSearchParams(searchParams);
+    if (template.id === templates[0].id) {
+      params.delete('templateId');
+    } else {
+      params.set('templateId', template.id);
+    }
+    setSearchParams(params, { replace: true });
+    
+    // Then update template state
     handleTemplateChange(template);
-    updateUrlTemplate(template);
-  }, [handleTemplateChange, updateUrlTemplate]);
+  }, [handleTemplateChange, searchParams, setSearchParams]);
 
   const handleTooltipChange = useCallback((templateId: string | null) => {
     console.log('[TemplateSelector] Tooltip state changed for template:', templateId);
     setOpenTooltipId(templateId);
   }, []);
 
-  const displayTemplate = selectedTemplate || getDefaultTemplate();
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger 
         className="flex items-center gap-2 text-sm font-medium text-white hover:text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={isLoading}
-        onClick={() => console.log('[TemplateSelector] Dropdown trigger clicked')}
       >
-        <span className="whitespace-nowrap">{displayTemplate.name}</span>
+        <span className="whitespace-nowrap">{selectedTemplate.name}</span>
         <ChevronDown className="h-4 w-4 opacity-70" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
@@ -56,7 +68,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
           <TemplateItem
             key={template.id}
             template={template}
-            isSelected={displayTemplate.id === template.id}
+            isSelected={selectedTemplate.id === template.id}
             onSelect={handleTemplateSelect}
             isLoading={isLoading}
             isTooltipOpen={openTooltipId === template.id}
