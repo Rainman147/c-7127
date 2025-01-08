@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { findTemplateById } from "@/utils/template/templateStateManager";
 import type { Template } from "@/components/template/types";
+import { templates } from "@/components/template/types"; // Add this import
 
 // Fetch a single template
 export const useTemplateQuery = (templateId: string | null) => {
