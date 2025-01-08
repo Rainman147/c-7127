@@ -5,7 +5,7 @@ import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
-import { useTemplateSelection } from '@/components/template/useTemplateSelection';
+import { useTemplateSelection } from '@/hooks/useTemplateSelection';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import type { Template } from '@/components/template/types';
