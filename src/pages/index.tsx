@@ -5,7 +5,7 @@ import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
-import { useTemplateSelection } from '@/hooks/useTemplateSelection';
+import { useTemplateQuery } from '@/hooks/queries/useTemplateQueries';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import type { Template } from '@/components/template/types';
@@ -30,14 +30,16 @@ const Index = () => {
     setCurrentChatId
   } = useChat();
 
+  // Get template ID from URL
+  const params = new URLSearchParams(location.search);
+  const templateId = params.get('templateId');
+
+  // Query for selected template
   const { 
-    selectedTemplate, 
-    isLoading: isTemplateLoading, 
-    error: templateError,
-    handleTemplateChange 
-  } = useTemplateSelection(currentChatId, (template: Template) => {
-    console.log('[Index] Template changed:', template.name);
-  });
+    data: selectedTemplate, 
+    isLoading: isTemplateLoading,
+    error: templateError 
+  } = useTemplateQuery(templateId);
 
   // Initialize audio recovery
   useAudioRecovery();
@@ -74,6 +76,17 @@ const Index = () => {
     navigate(`${location.pathname}?${params.toString()}`, { replace: true });
   };
 
+  const handleTemplateChange = (template: Template) => {
+    console.log('[Index] Template changed:', template.name);
+    const params = new URLSearchParams(location.search);
+    if (template.id === 'live-session') {
+      params.delete('templateId');
+    } else {
+      params.set('templateId', template.id);
+    }
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+  };
+
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
     if (!currentChatId) {
       console.log('[Index] Creating new session for first message');
@@ -100,7 +113,7 @@ const Index = () => {
     if (templateError) {
       toast({
         title: "Template Error",
-        description: templateError.message, // Access error message property
+        description: templateError.message,
         variant: "destructive",
       });
     }
