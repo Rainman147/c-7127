@@ -1,14 +1,10 @@
 import { memo, useCallback, useState } from "react";
-import { ChevronDown } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { TemplateItem } from "./template/TemplateItem";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useSearchParams } from "react-router-dom";
 import { useTemplateQuery, useTemplatesListQuery } from "@/hooks/queries/useTemplateQueries";
 import { useToast } from "@/hooks/use-toast";
+import { TemplateSelectorTrigger } from "./template/selector/TemplateSelectorTrigger";
+import { TemplateSelectorContent } from "./template/selector/TemplateSelectorContent";
 import type { Template } from "./template/types";
 
 interface TemplateSelectorProps {
@@ -57,36 +53,20 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
 
   const isLoading = isLoadingTemplates || isLoadingTemplate;
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-2 text-sm font-medium text-white opacity-50">
-        <span className="whitespace-nowrap">Loading templates...</span>
-        <ChevronDown className="h-4 w-4 opacity-70" />
-      </div>
-    );
-  }
-
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger 
-        className="flex items-center gap-2 text-sm font-medium text-white hover:text-gray-300 transition-colors"
-      >
-        <span className="whitespace-nowrap">{selectedTemplate?.name || 'Select Template'}</span>
-        <ChevronDown className="h-4 w-4 opacity-70" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
-        {templates.map((template) => (
-          <TemplateItem
-            key={template.id}
-            template={template}
-            isSelected={selectedTemplate?.id === template.id}
-            onSelect={handleTemplateSelect}
-            isLoading={isLoading}
-            isTooltipOpen={openTooltipId === template.id}
-            onTooltipChange={(isOpen) => handleTooltipChange(isOpen ? template.id : null)}
-          />
-        ))}
-      </DropdownMenuContent>
+      <TemplateSelectorTrigger 
+        selectedTemplate={selectedTemplate}
+        isLoading={isLoading}
+      />
+      <TemplateSelectorContent
+        templates={templates}
+        selectedTemplate={selectedTemplate}
+        isLoading={isLoading}
+        openTooltipId={openTooltipId}
+        onTemplateSelect={handleTemplateSelect}
+        onTooltipChange={handleTooltipChange}
+      />
     </DropdownMenu>
   );
 });
