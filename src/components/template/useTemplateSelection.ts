@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { loadTemplateFromDb, saveTemplateToDb } from "@/utils/template/templateDbOperations";
-import { getDefaultTemplate, findTemplateById, isTemplateChange } from "@/utils/template/templateStateManager";
+import { getDefaultTemplate, findTemplateById } from "@/utils/template/templateStateManager";
 import { useUrlStateManager } from "@/hooks/useUrlStateManager";
+import { useDebounce } from "@/hooks/useDebounce";
 import type { Template } from "./types";
 
 export const useTemplateSelection = (
@@ -14,8 +15,12 @@ export const useTemplateSelection = (
   const [selectedTemplate, setSelectedTemplate] = useState<Template>(getDefaultTemplate());
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { templateId, updateUrlParameters } = useUrlStateManager(currentChatId);
+  const { templateId, patientId, updateUrlParameters } = useUrlStateManager(currentChatId);
+  
+  // Debounce template changes to avoid excessive URL updates
+  const debouncedTemplate = useDebounce(selectedTemplate, 300);
 
+  // Load template from database when chat ID changes
   useEffect(() => {
     const loadTemplateForChat = async () => {
       if (!currentChatId) {
@@ -54,6 +59,7 @@ export const useTemplateSelection = (
     loadTemplateForChat();
   }, [currentChatId, onTemplateChange, toast]);
 
+  // Handle template changes from URL
   useEffect(() => {
     if (templateId && (!selectedTemplate || selectedTemplate.id !== templateId)) {
       const template = findTemplateById(templateId);
@@ -65,10 +71,18 @@ export const useTemplateSelection = (
     }
   }, [templateId, selectedTemplate, onTemplateChange]);
 
+  // Update URL when template changes
+  useEffect(() => {
+    if (debouncedTemplate) {
+      console.log('[useTemplateSelection] Updating URL with debounced template:', debouncedTemplate.name);
+      updateUrlParameters(debouncedTemplate.id, patientId);
+    }
+  }, [debouncedTemplate, patientId, updateUrlParameters]);
+
   const handleTemplateChange = useCallback(async (template: Template) => {
     console.log('[useTemplateSelection] Template change requested:', template.name);
     
-    if (!isTemplateChange(selectedTemplate.id, template)) {
+    if (selectedTemplate.id === template.id) {
       console.log('[useTemplateSelection] Same template selected, no changes needed');
       return;
     }
@@ -82,9 +96,6 @@ export const useTemplateSelection = (
         await saveTemplateToDb(currentChatId, template.id);
       }
       
-      // Update URL parameters
-      updateUrlParameters(template.id);
-      
       console.log('[useTemplateSelection] Template change completed successfully');
     } catch (error) {
       console.error('[useTemplateSelection] Failed to update template:', error);
@@ -96,7 +107,7 @@ export const useTemplateSelection = (
     } finally {
       setIsLoading(false);
     }
-  }, [currentChatId, selectedTemplate.id, onTemplateChange, toast, updateUrlParameters]);
+  }, [currentChatId, selectedTemplate.id, onTemplateChange, toast]);
 
   return {
     selectedTemplate,

@@ -6,7 +6,6 @@ import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { useTemplateSelection } from '@/components/template/useTemplateSelection';
-import { findTemplateById } from '@/utils/template/templateStateManager';
 import { useToast } from '@/hooks/use-toast';
 import type { Template } from '@/components/template/types';
 
@@ -37,29 +36,16 @@ const Index = () => {
   // Initialize audio recovery
   useAudioRecovery();
 
-  // Handle URL parameters and routing
+  // Handle patient selection changes
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const templateId = params.get('templateId');
     const patientId = params.get('patientId');
     
-    console.log('[Index] Processing URL parameters:', { templateId, patientId });
-
-    // Update selected patient state
     if (patientId !== selectedPatientId) {
       setSelectedPatientId(patientId);
       console.log('[Index] Updated selected patient:', patientId);
     }
-
-    // Handle template selection from URL
-    if (templateId && selectedTemplate?.id !== templateId) {
-      const template = findTemplateById(templateId);
-      if (template) {
-        console.log('[Index] Loading template from URL:', template.name);
-        handleTemplateChange(template);
-      }
-    }
-  }, [location.search, sessionId, selectedTemplate?.id, selectedPatientId, handleTemplateChange]);
+  }, [location.search, selectedPatientId]);
 
   const handleSessionSelect = async (chatId: string) => {
     console.log('[Index] Selecting session:', chatId);
