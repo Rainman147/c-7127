@@ -17,7 +17,20 @@ export const useUrlStateManager = () => {
     setSearchParams(params, { replace: true });
   }, [searchParams, setSearchParams]);
 
+  const updatePatientId = useCallback((patientId: string | null) => {
+    console.log('[useUrlStateManager] Updating patient ID:', patientId);
+    
+    const params = new URLSearchParams(searchParams);
+    if (!patientId) {
+      params.delete('patientId');
+    } else {
+      params.set('patientId', patientId);
+    }
+    setSearchParams(params, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   return {
-    updateTemplateId
+    updateTemplateId,
+    updatePatientId
   };
 };
