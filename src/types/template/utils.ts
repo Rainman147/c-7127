@@ -2,7 +2,9 @@ import { Json } from '@/integrations/supabase/types';
 import type { Template, DbTemplate, TemplateTransformOptions } from './Template';
 import { isValidTemplate } from './guards';
 
-// Helper function to safely parse JSON fields
+/**
+ * Helper function to safely parse JSON fields
+ */
 export const parseJsonField = (json: Json | null): Record<string, any> | null => {
   if (!json) return null;
   if (typeof json === 'string') {
@@ -15,7 +17,9 @@ export const parseJsonField = (json: Json | null): Record<string, any> | null =>
   return json as Record<string, any>;
 };
 
-// Convert a database template to the frontend Template type
+/**
+ * Convert a database template to the frontend Template type
+ */
 export const convertDbTemplate = (dbTemplate: DbTemplate): Template => ({
   id: dbTemplate.id,
   name: dbTemplate.name,
@@ -30,7 +34,9 @@ export const convertDbTemplate = (dbTemplate: DbTemplate): Template => ({
   user_id: dbTemplate.user_id
 });
 
-// Transform template data based on options
+/**
+ * Transform template data based on options
+ */
 export const transformTemplate = (
   template: Template, 
   options: TemplateTransformOptions = {}
@@ -54,7 +60,9 @@ export const transformTemplate = (
   return transformed;
 };
 
-// Normalize template data for consistency
+/**
+ * Normalize template data for consistency
+ */
 export const normalizeTemplate = (template: Template): Template => {
   return transformTemplate(template, {
     stripHtml: true,
