@@ -14,7 +14,7 @@ export const useTemplateSelection = (
   const [selectedTemplate, setSelectedTemplate] = useState<Template>(getDefaultTemplate());
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { templateId } = useUrlStateManager(currentChatId);
+  const { templateId, updateUrlParameters } = useUrlStateManager(currentChatId);
 
   useEffect(() => {
     const loadTemplateForChat = async () => {
@@ -82,6 +82,9 @@ export const useTemplateSelection = (
         await saveTemplateToDb(currentChatId, template.id);
       }
       
+      // Update URL parameters
+      updateUrlParameters(template.id);
+      
       console.log('[useTemplateSelection] Template change completed successfully');
     } catch (error) {
       console.error('[useTemplateSelection] Failed to update template:', error);
@@ -93,7 +96,7 @@ export const useTemplateSelection = (
     } finally {
       setIsLoading(false);
     }
-  }, [currentChatId, selectedTemplate.id, onTemplateChange, toast]);
+  }, [currentChatId, selectedTemplate.id, onTemplateChange, toast, updateUrlParameters]);
 
   return {
     selectedTemplate,

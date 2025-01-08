@@ -5,7 +5,7 @@ import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
-import { useTemplateHandling } from '@/features/chat/hooks/useTemplateHandling';
+import { useTemplateSelection } from '@/components/template/useTemplateSelection';
 import { findTemplateById } from '@/utils/template/templateStateManager';
 import { useToast } from '@/hooks/use-toast';
 import type { Template } from '@/components/template/types';
@@ -20,7 +20,6 @@ const Index = () => {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
-  const { currentTemplate, handleTemplateChange } = useTemplateHandling();
   
   const { 
     messages, 
@@ -30,6 +29,10 @@ const Index = () => {
     currentChatId,
     setCurrentChatId
   } = useChat();
+
+  const { selectedTemplate, handleTemplateChange } = useTemplateSelection(currentChatId, (template: Template) => {
+    console.log('[Index] Template changed:', template.name);
+  });
 
   // Initialize audio recovery
   useAudioRecovery();
@@ -49,14 +52,14 @@ const Index = () => {
     }
 
     // Handle template selection from URL
-    if (templateId && currentTemplate?.id !== templateId) {
+    if (templateId && selectedTemplate?.id !== templateId) {
       const template = findTemplateById(templateId);
       if (template) {
         console.log('[Index] Loading template from URL:', template.name);
         handleTemplateChange(template);
       }
     }
-  }, [location.search, sessionId, currentTemplate?.id, selectedPatientId, handleTemplateChange]);
+  }, [location.search, sessionId, selectedTemplate?.id, selectedPatientId, handleTemplateChange]);
 
   const handleSessionSelect = async (chatId: string) => {
     console.log('[Index] Selecting session:', chatId);
@@ -96,7 +99,7 @@ const Index = () => {
     await handleSendMessage(
       message, 
       type, 
-      currentTemplate?.systemInstructions
+      selectedTemplate?.systemInstructions
     );
   };
 
