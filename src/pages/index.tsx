@@ -5,8 +5,8 @@ import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
-import { getDefaultTemplate, findTemplateById } from '@/utils/template/templateStateManager';
-import { supabase } from '@/integrations/supabase/client';
+import { useTemplateHandling } from '@/features/chat/hooks/useTemplateHandling';
+import { findTemplateById } from '@/utils/template/templateStateManager';
 import { useToast } from '@/hooks/use-toast';
 import type { Template } from '@/components/template/types';
 
@@ -17,16 +17,10 @@ const Index = () => {
   const { sessionId } = useParams();
   const { toast } = useToast();
   
-  const [currentTemplate, setCurrentTemplate] = useState<Template | null>(() => {
-    const defaultTemplate = getDefaultTemplate();
-    console.log('[Index] Setting default template:', defaultTemplate.name);
-    return defaultTemplate;
-  });
-  
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  
   const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
+  const { currentTemplate, handleTemplateChange } = useTemplateHandling();
   
   const { 
     messages, 
@@ -55,29 +49,14 @@ const Index = () => {
     }
 
     // Handle template selection from URL
-    if (templateId) {
+    if (templateId && currentTemplate?.id !== templateId) {
       const template = findTemplateById(templateId);
-      if (template && template.id !== currentTemplate?.id) {
+      if (template) {
         console.log('[Index] Loading template from URL:', template.name);
-        setCurrentTemplate(template);
+        handleTemplateChange(template);
       }
     }
-
-    // If we have a patient but no template, add default template
-    if (patientId && !templateId) {
-      const defaultTemplate = getDefaultTemplate();
-      const newParams = new URLSearchParams(params);
-      newParams.set('templateId', defaultTemplate.id);
-      console.log('[Index] Adding default template to URL for patient');
-      navigate(`${location.pathname}?${newParams.toString()}`, { replace: true });
-    }
-
-    // If we have neither patient nor template and we're not on the root path
-    if (!patientId && !templateId && location.search) {
-      console.log('[Index] Cleaning URL - no parameters needed');
-      navigate(location.pathname, { replace: true });
-    }
-  }, [location.search, sessionId, currentTemplate?.id, selectedPatientId, navigate, location.pathname]);
+  }, [location.search, sessionId, currentTemplate?.id, selectedPatientId, handleTemplateChange]);
 
   const handleSessionSelect = async (chatId: string) => {
     console.log('[Index] Selecting session:', chatId);
@@ -86,78 +65,28 @@ const Index = () => {
     await loadChatMessages(chatId);
   };
 
-  const handleTemplateChange = (template: Template) => {
-    console.log('[Index] Template changed to:', template.name);
-    setCurrentTemplate(template);
-    
-    const params = new URLSearchParams(location.search);
-    const patientId = params.get('patientId');
-    
-    // Clear parameters if switching to default template without patient
-    if (template.id === getDefaultTemplate().id && !patientId) {
-      console.log('[Index] Removing template from URL (default template, no patient)');
-      navigate(location.pathname, { replace: true });
-      return;
-    }
-    
-    // Update template in URL
-    params.set('templateId', template.id);
-    console.log('[Index] Updating template in URL:', template.id);
-    
-    // Maintain parameter order: templateId first, then patientId
-    const orderedParams = new URLSearchParams();
-    orderedParams.set('templateId', template.id);
-    if (patientId) {
-      orderedParams.set('patientId', patientId);
-    }
-    
-    const search = orderedParams.toString();
-    const baseUrl = sessionId ? `/c/${sessionId}` : '/';
-    const newUrl = search ? `${baseUrl}?${search}` : baseUrl;
-    
-    navigate(newUrl, { replace: true });
-  };
-
   const handlePatientSelect = async (patientId: string | null) => {
     console.log('[Index] Patient selection changed:', patientId);
+    setSelectedPatientId(patientId);
     
     const params = new URLSearchParams(location.search);
-    
     if (patientId) {
-      // When selecting a patient, ensure we have a template (use default if none)
-      const templateId = params.get('templateId') || getDefaultTemplate().id;
-      
-      // Maintain parameter order: templateId first, then patientId
-      const orderedParams = new URLSearchParams();
-      orderedParams.set('templateId', templateId);
-      orderedParams.set('patientId', patientId);
-      
-      const newUrl = `${location.pathname}?${orderedParams.toString()}`;
-      navigate(newUrl, { replace: true });
+      params.set('patientId', patientId);
     } else {
-      // When deselecting patient, keep template only if non-default
-      const currentTemplateId = params.get('templateId');
-      if (currentTemplateId && currentTemplateId !== getDefaultTemplate().id) {
-        params.delete('patientId');
-        navigate(`${location.pathname}?${params.toString()}`, { replace: true });
-      } else {
-        // Clean URL if default template and no patient
-        navigate(location.pathname, { replace: true });
-      }
+      params.delete('patientId');
     }
     
-    setSelectedPatientId(patientId);
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
   };
 
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
     if (!currentChatId) {
-      console.log('[Index] Creating new session for first message with template:', currentTemplate?.name);
+      console.log('[Index] Creating new session for first message');
       const sessionId = await createSession('New Chat');
       if (sessionId) {
         console.log('[Index] Created new session:', sessionId);
         setCurrentChatId(sessionId);
         
-        // Update URL with new session ID while preserving other parameters
         const params = new URLSearchParams(location.search);
         navigate(`/c/${sessionId}?${params.toString()}`);
         await new Promise(resolve => setTimeout(resolve, 100));
