@@ -5,7 +5,8 @@ import { useTemplateQuery, useTemplatesListQuery } from "@/hooks/queries/useTemp
 import { useToast } from "@/hooks/use-toast";
 import { TemplateSelectorTrigger } from "./template/selector/TemplateSelectorTrigger";
 import { TemplateSelectorContent } from "./template/selector/TemplateSelectorContent";
-import type { Template } from "./template/types";
+import type { Template } from "@/types";
+import { isValidTemplate } from "@/types/template";
 
 interface TemplateSelectorProps {
   currentChatId: string | null;
@@ -23,15 +24,24 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
   });
   
   // Query for all templates
-  const { data: templates = [], isLoading: isLoadingTemplates } = useTemplatesListQuery();
+  const { data: templates = [], isLoading: isLoadingTemplates, error: templatesError } = useTemplatesListQuery();
   
   // Query for selected template
-  const { data: selectedTemplate, isLoading: isLoadingTemplate } = useTemplateQuery(initialTemplateId);
+  const { data: selectedTemplate, isLoading: isLoadingTemplate, error: templateError } = useTemplateQuery(initialTemplateId);
   
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
   const handleTemplateSelect = useCallback((template: Template) => {
     console.log('[TemplateSelector] Template selection triggered:', template.name);
+    
+    if (!isValidTemplate(template)) {
+      toast({
+        title: "Invalid Template",
+        description: "The selected template is invalid. Please try another one.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Update URL first
     const params = new URLSearchParams(searchParams);
@@ -44,12 +54,21 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     
     // Then update parent component
     onTemplateChange(template);
-  }, [searchParams, setSearchParams, onTemplateChange]);
+  }, [searchParams, setSearchParams, onTemplateChange, toast]);
 
   const handleTooltipChange = useCallback((templateId: string | null) => {
     console.log('[TemplateSelector] Tooltip state changed for template:', templateId);
     setOpenTooltipId(templateId);
   }, []);
+
+  // Handle errors
+  if (templatesError || templateError) {
+    toast({
+      title: "Error Loading Templates",
+      description: "There was an error loading the templates. Please try again.",
+      variant: "destructive",
+    });
+  }
 
   const isLoading = isLoadingTemplates || isLoadingTemplate;
 

@@ -2,13 +2,25 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Template, DbTemplate } from "@/types";
 import { templates } from "@/components/template/types/defaultTemplates";
-import { convertDbTemplate } from "@/types/template";
+import { convertDbTemplate, isValidTemplate } from "@/types/template";
 
-const getDefaultTemplate = (): Template => templates[0];
+const getDefaultTemplate = (): Template => {
+  console.log('[useTemplateQueries] Using default template');
+  const defaultTemplate = templates[0];
+  if (!isValidTemplate(defaultTemplate)) {
+    throw new Error('Default template is invalid');
+  }
+  return defaultTemplate;
+};
 
 const findTemplateById = (templateId: string): Template | undefined => {
   console.log('[useTemplateQueries] Finding template by id:', templateId);
-  return templates.find(t => t.id === templateId);
+  const template = templates.find(t => t.id === templateId);
+  if (template && !isValidTemplate(template)) {
+    console.error('[useTemplateQueries] Found template is invalid:', template);
+    return undefined;
+  }
+  return template;
 };
 
 export const useTemplateQuery = (templateId: string | null) => {
@@ -41,7 +53,7 @@ export const useTemplatesListQuery = () => {
   return useQuery({
     queryKey: ['templates'],
     queryFn: async () => {
-      const defaultTemplates = [...templates];
+      const defaultTemplates = [...templates].filter(isValidTemplate);
       
       try {
         const { data: customTemplates, error } = await supabase
@@ -53,9 +65,9 @@ export const useTemplatesListQuery = () => {
           throw error;
         }
         
-        const mappedCustomTemplates = customTemplates?.map(template => 
-          convertDbTemplate(template as DbTemplate)
-        ) || [];
+        const mappedCustomTemplates = customTemplates
+          ?.map(template => convertDbTemplate(template as DbTemplate))
+          .filter(isValidTemplate) || [];
         
         const allTemplates = [...defaultTemplates, ...mappedCustomTemplates];
         console.log('[useTemplatesListQuery] Fetched templates:', allTemplates.length);
