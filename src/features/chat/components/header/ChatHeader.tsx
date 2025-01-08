@@ -2,7 +2,7 @@ import { memo } from "react";
 import { TemplateSelector } from "@/components/TemplateSelector";
 import { PatientSelector } from "@/components/patients/PatientSelector";
 import { useUI } from "@/contexts/UIContext";
-import type { Template } from "@/types";
+import type { Template } from "@/components/template/types";
 
 interface ChatHeaderProps {
   currentChatId: string | null;
@@ -26,16 +26,6 @@ const ChatHeaderComponent = ({
     hasTemplateChangeHandler: !!onTemplateChange,
     hasPatientSelectHandler: !!onPatientSelect
   });
-  
-  const handleTemplateChange = (template: Template) => {
-    console.log('[ChatHeader] Template change requested:', template);
-    onTemplateChange(template);
-  };
-
-  const handlePatientSelect = async (patientId: string | null) => {
-    console.log('[ChatHeader] Patient selection changed:', patientId);
-    await onPatientSelect(patientId);
-  };
 
   return (
     <div className="fixed top-0 z-30 w-full bg-chatgpt-main/95 backdrop-blur">
@@ -45,10 +35,10 @@ const ChatHeaderComponent = ({
             <TemplateSelector 
               key={currentChatId || 'default'}
               currentChatId={currentChatId}
-              onTemplateChange={handleTemplateChange}
+              onTemplateChange={onTemplateChange}
             />
           </span>
-          <PatientSelector onPatientSelect={handlePatientSelect} />
+          <PatientSelector onPatientSelect={onPatientSelect} />
         </div>
       </div>
     </div>
