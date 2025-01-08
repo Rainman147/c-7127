@@ -1,8 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { findTemplateById } from "@/utils/template/templateStateManager";
 import type { Template } from "@/components/template/types";
 import { templates } from "@/components/template/types";
+
+// Helper functions (moved from templateStateManager)
+const getDefaultTemplate = (): Template => templates[0];
+
+const findTemplateById = (templateId: string): Template | undefined => {
+  console.log('[useTemplateQueries] Finding template by id:', templateId);
+  return templates.find(t => t.id === templateId);
+};
 
 // Fetch a single template
 export const useTemplateQuery = (templateId: string | null) => {
@@ -13,13 +20,13 @@ export const useTemplateQuery = (templateId: string | null) => {
     queryFn: async () => {
       if (!templateId) {
         console.log('[useTemplateQuery] No templateId provided, using default template');
-        return findTemplateById('live-session') as Template;
+        return getDefaultTemplate();
       }
       
       const template = findTemplateById(templateId);
       if (!template) {
         console.warn('[useTemplateQuery] Template not found:', templateId);
-        return findTemplateById('live-session') as Template;
+        return getDefaultTemplate();
       }
       
       console.log('[useTemplateQuery] Template found:', template.name);
@@ -37,7 +44,7 @@ export const useTemplatesListQuery = () => {
     queryKey: ['templates'],
     queryFn: async () => {
       // First get hardcoded templates
-      const defaultTemplates = await Promise.resolve([...templates]);
+      const defaultTemplates = [...templates];
       
       try {
         // Then fetch user's custom templates from Supabase
