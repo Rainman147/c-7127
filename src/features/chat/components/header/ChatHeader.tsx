@@ -28,20 +28,23 @@ const ChatHeaderComponent = ({
   });
 
   return (
-    <div className="fixed top-0 z-30 w-full bg-chatgpt-main/95 backdrop-blur">
+    <header className="fixed top-0 z-30 w-full bg-chatgpt-main/95 backdrop-blur supports-[backdrop-filter]:bg-chatgpt-main/75">
       <div className="flex h-[60px] items-center justify-between px-4">
         <div className="flex items-center gap-4">
-          <span className={`${!isSidebarOpen ? 'ml-24' : ''}`}>
+          <div className={`${!isSidebarOpen ? 'ml-24' : ''} transition-all duration-200`}>
             <TemplateSelector 
               key={currentChatId || 'default'}
               currentChatId={currentChatId}
               onTemplateChange={onTemplateChange}
             />
-          </span>
-          <PatientSelector onPatientSelect={onPatientSelect} />
+          </div>
+          <PatientSelector 
+            onPatientSelect={onPatientSelect}
+            selectedPatientId={selectedPatientId}
+          />
         </div>
       </div>
-    </div>
+    </header>
   );
 };
 
