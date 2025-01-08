@@ -18,7 +18,13 @@ export const useTemplateSelection = (
 ): UseTemplateSelectionResult => {
   console.log('[useTemplateSelection] Initializing with:', { currentChatId, initialTemplateId });
   
-  const [selectedTemplate, setSelectedTemplate] = useState<Template>(getDefaultTemplate());
+  const [selectedTemplate, setSelectedTemplate] = useState<Template>(() => {
+    if (initialTemplateId) {
+      const template = findTemplateById(initialTemplateId);
+      return template || getDefaultTemplate();
+    }
+    return getDefaultTemplate();
+  });
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
