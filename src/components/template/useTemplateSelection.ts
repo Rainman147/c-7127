@@ -101,13 +101,13 @@ export const useTemplateSelection = (
     }
   }, [templateId, selectedTemplate, onTemplateChange, toast, patientId, updateUrlParameters]);
 
-  // Update URL when template changes
+  // Update URL when template changes - WITH FIX for infinite loop
   useEffect(() => {
-    if (debouncedTemplate) {
+    if (debouncedTemplate && debouncedTemplate.id !== templateId) {
       console.log('[useTemplateSelection] Updating URL with debounced template:', debouncedTemplate.name);
       updateUrlParameters(debouncedTemplate.id, patientId);
     }
-  }, [debouncedTemplate, patientId, updateUrlParameters]);
+  }, [debouncedTemplate, patientId, updateUrlParameters, templateId]);
 
   const handleTemplateChange = useCallback(async (template: Template) => {
     console.log('[useTemplateSelection] Template change requested:', template.name);
