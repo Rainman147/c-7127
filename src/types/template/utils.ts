@@ -20,7 +20,7 @@ export const convertDbTemplate = (dbTemplate: DbTemplate): Template => ({
   id: dbTemplate.id,
   name: dbTemplate.name,
   description: dbTemplate.description,
-  systemInstructions: dbTemplate.system_instructions,
+  systemInstructions: dbTemplate.systemInstructions,
   content: dbTemplate.content,
   instructions: parseJsonField(dbTemplate.instructions),
   schema: parseJsonField(dbTemplate.schema),
