@@ -15,10 +15,11 @@ import type { Patient } from '@/types';
 
 interface PatientSelectorProps {
   onPatientSelect: (patientId: string | null) => void;
+  selectedPatientId?: string | null;
 }
 
-export const PatientSelector = memo(({ onPatientSelect }: PatientSelectorProps) => {
-  console.log('[PatientSelector] Initializing');
+export const PatientSelector = memo(({ onPatientSelect, selectedPatientId }: PatientSelectorProps) => {
+  console.log('[PatientSelector] Initializing with selectedPatientId:', selectedPatientId);
   
   const { 
     searchTerm, 
