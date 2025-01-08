@@ -65,6 +65,11 @@ const ChatPage = () => {
     navigate(`${location.pathname}?${params.toString()}`, { replace: true });
   };
 
+  const handleTemplateChange = (template: Template) => {
+    console.log('[ChatPage] Template changed:', template.name);
+    // Template change handling is now managed by React Query and URL parameters
+  };
+
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
     if (!currentChatId) {
       console.log('[ChatPage] Creating new session for first message');
@@ -91,6 +96,7 @@ const ChatPage = () => {
         onMessageSend={handleMessageSend}
         onPatientSelect={handlePatientSelect}
         selectedPatientId={selectedPatientId}
+        onTemplateChange={handleTemplateChange}
         onTranscriptionComplete={async (text: string) => {
           console.log('[ChatPage] Transcription complete, ready for user to edit:', text);
           if (text) {
