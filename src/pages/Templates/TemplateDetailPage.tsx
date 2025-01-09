@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import type { Template } from '@/components/template/types';
-import { parseJsonField } from '@/components/template/types';
+import type { Template } from '@/types/template';
+import { parseJsonField } from '@/types/template/utils';
 
 const TemplateDetailPage = () => {
   const { templateId } = useParams();

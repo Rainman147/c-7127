@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { Template } from '@/components/template/types';
-import { parseJsonField } from '@/components/template/types';
+import type { Template } from '@/types/template';
+import { parseJsonField } from '@/types/template/utils';
 
 const TemplatesListPage = () => {
   const [templates, setTemplates] = useState<Template[]>([]);

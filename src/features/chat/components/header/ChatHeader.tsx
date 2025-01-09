@@ -2,7 +2,7 @@ import { memo } from "react";
 import { TemplateSelector } from "@/components/TemplateSelector";
 import { PatientSelector } from "@/components/patients/PatientSelector";
 import { useUI } from "@/contexts/UIContext";
-import type { Template } from "@/components/template/types";
+import type { Template } from "@/types/template";
 
 interface ChatHeaderProps {
   currentChatId: string | null;

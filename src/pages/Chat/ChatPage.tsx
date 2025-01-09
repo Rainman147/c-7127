@@ -5,10 +5,9 @@ import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
-import { useTemplateQuery } from '@/hooks/queries/useTemplateQueries';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import type { Template } from '@/components/template/types';
+import type { Template } from '@/types/template';
 
 const ChatPage = () => {
   console.log('[ChatPage] Component initializing');
