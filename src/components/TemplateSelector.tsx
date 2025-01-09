@@ -5,6 +5,7 @@ import { useTemplateQuery, useTemplatesListQuery } from "@/hooks/queries/useTemp
 import { useToast } from "@/hooks/use-toast";
 import { TemplateSelectorTrigger } from "./template/selector/TemplateSelectorTrigger";
 import { TemplateSelectorContent } from "./template/selector/TemplateSelectorContent";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Template } from "@/types/template";
 import { isValidTemplate } from "@/types/template/guards";
 
@@ -24,10 +25,20 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
   });
   
   // Query for all templates
-  const { data: templates = [], isLoading: isLoadingTemplates, error: templatesError } = useTemplatesListQuery();
+  const { 
+    data: templates = [], 
+    isLoading: isLoadingTemplates, 
+    error: templatesError,
+    isError: isTemplatesError
+  } = useTemplatesListQuery();
   
   // Query for selected template
-  const { data: selectedTemplate, isLoading: isLoadingTemplate, error: templateError } = useTemplateQuery(initialTemplateId);
+  const { 
+    data: selectedTemplate, 
+    isLoading: isLoadingTemplate, 
+    error: templateError,
+    isError: isTemplateError 
+  } = useTemplateQuery(initialTemplateId);
   
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
@@ -35,6 +46,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     console.log('[TemplateSelector] Template selection triggered:', template.name);
     
     if (!isValidTemplate(template)) {
+      console.error('[TemplateSelector] Invalid template selected:', template);
       toast({
         title: "Invalid Template",
         description: "The selected template is invalid. Please try another one.",
@@ -43,17 +55,28 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
       return;
     }
     
-    // Update URL first
-    const params = new URLSearchParams(searchParams);
-    if (template.id === 'live-session') {
-      params.delete('templateId');
-    } else {
-      params.set('templateId', template.id);
+    try {
+      // Update URL first
+      const params = new URLSearchParams(searchParams);
+      if (template.id === 'live-session') {
+        params.delete('templateId');
+      } else {
+        params.set('templateId', template.id);
+      }
+      setSearchParams(params, { replace: true });
+      
+      // Then update parent component
+      onTemplateChange(template);
+      
+      console.log('[TemplateSelector] Template selection successful:', template.name);
+    } catch (error) {
+      console.error('[TemplateSelector] Error during template selection:', error);
+      toast({
+        title: "Template Selection Failed",
+        description: "There was an error selecting the template. Please try again.",
+        variant: "destructive",
+      });
     }
-    setSearchParams(params, { replace: true });
-    
-    // Then update parent component
-    onTemplateChange(template);
   }, [searchParams, setSearchParams, onTemplateChange, toast]);
 
   const handleTooltipChange = useCallback((templateId: string | null) => {
@@ -61,22 +84,27 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     setOpenTooltipId(templateId);
   }, []);
 
-  // Handle errors
-  if (templatesError || templateError) {
-    toast({
-      title: "Error Loading Templates",
-      description: "There was an error loading the templates. Please try again.",
-      variant: "destructive",
-    });
+  // Handle critical errors that prevent template selection
+  if (isTemplatesError && templatesError) {
+    console.error('[TemplateSelector] Critical error loading templates:', templatesError);
+    return (
+      <Alert variant="destructive" className="w-[260px]">
+        <AlertDescription>
+          Unable to load templates. Please refresh the page or try again later.
+        </AlertDescription>
+      </Alert>
+    );
   }
 
   const isLoading = isLoadingTemplates || isLoadingTemplate;
+  const hasError = isTemplatesError || isTemplateError;
 
   return (
     <DropdownMenu>
       <TemplateSelectorTrigger 
         selectedTemplate={selectedTemplate}
         isLoading={isLoading}
+        hasError={hasError}
       />
       <TemplateSelectorContent
         templates={templates}
@@ -85,6 +113,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         openTooltipId={openTooltipId}
         onTemplateSelect={handleTemplateSelect}
         onTooltipChange={handleTooltipChange}
+        error={templatesError || templateError}
       />
     </DropdownMenu>
   );
