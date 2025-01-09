@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { DropdownMenuContent } from "@/components/ui/dropdown-menu";
 import { TemplateItem } from "../TemplateItem";
-import type { Template } from "../types";
+import type { Template } from "@/types/template";
 
 interface TemplateSelectorContentProps {
   templates: Template[];

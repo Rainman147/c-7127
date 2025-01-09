@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { ChevronDown } from "lucide-react";
-import type { Template } from "../types";
+import type { Template } from "@/types/template";
 
 interface TemplateSelectorTriggerProps {
   selectedTemplate: Template | undefined;

@@ -6,7 +6,7 @@ import {
   TooltipProvider, 
   TooltipTrigger 
 } from "@/components/ui/tooltip";
-import type { Template } from "./types";
+import type { Template } from "@/types/template";
 
 interface TemplateItemProps {
   template: Template;
