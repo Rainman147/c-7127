@@ -12,14 +12,20 @@ const MessageList = ({ messages }: MessageListProps) => {
   return (
     <div className="flex-1 overflow-y-auto px-4">
       <div className="flex flex-col gap-4 py-4">
-        {messages.map((message) => (
-          <Message
-            key={message.id || `${message.role}-${message.content}`}
-            content={message.content}
-            sender={message.role === 'user' ? 'user' : 'ai'}
-            type={message.type}
-          />
-        ))}
+        {messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-gray-400">
+            Start a new conversation
+          </div>
+        ) : (
+          messages.map((message) => (
+            <Message
+              key={message.id || `${message.role}-${message.content}`}
+              content={message.content}
+              sender={message.role === 'user' ? 'user' : 'ai'}
+              type={message.type}
+            />
+          ))
+        )}
       </div>
     </div>
   );

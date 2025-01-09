@@ -6,7 +6,6 @@ import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import type { Template } from '@/types/template';
 
 const ChatPage = () => {
@@ -32,6 +31,18 @@ const ChatPage = () => {
   // Initialize audio recovery
   useAudioRecovery();
 
+  // Effect to handle sessionId changes
+  useEffect(() => {
+    console.log('[ChatPage] Session ID changed:', sessionId);
+    if (sessionId) {
+      setCurrentChatId(sessionId);
+      loadChatMessages(sessionId);
+    } else {
+      // On index route, reset chat state
+      setCurrentChatId(null);
+    }
+  }, [sessionId, setCurrentChatId, loadChatMessages]);
+
   // Handle patient selection changes
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -42,13 +53,6 @@ const ChatPage = () => {
       console.log('[ChatPage] Updated selected patient:', patientId);
     }
   }, [location.search, selectedPatientId]);
-
-  const handleSessionSelect = async (chatId: string) => {
-    console.log('[ChatPage] Selecting session:', chatId);
-    const currentParams = new URLSearchParams(location.search);
-    navigate(`/c/${chatId}?${currentParams.toString()}`);
-    await loadChatMessages(chatId);
-  };
 
   const handlePatientSelect = async (patientId: string | null) => {
     console.log('[ChatPage] Patient selection changed:', patientId);
@@ -66,7 +70,6 @@ const ChatPage = () => {
 
   const handleTemplateChange = (template: Template) => {
     console.log('[ChatPage] Template changed:', template.name);
-    // Template change handling is now managed by React Query and URL parameters
   };
 
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
@@ -79,6 +82,7 @@ const ChatPage = () => {
         
         const params = new URLSearchParams(location.search);
         navigate(`/c/${sessionId}?${params.toString()}`);
+        // Wait for navigation to complete
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }

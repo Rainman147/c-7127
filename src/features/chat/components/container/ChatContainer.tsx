@@ -8,7 +8,7 @@ import type { Message, Template } from '@/types';
 interface ChatContainerProps {
   messages: Message[];
   isLoading: boolean;
-  currentChatId: string;
+  currentChatId: string | null;
   onMessageSend: (content: string, type?: 'text' | 'audio', systemInstructions?: string) => Promise<void>;
   onTranscriptionComplete: (text: string) => Promise<void>;
   onTemplateChange: (template: Template) => void;
@@ -26,7 +26,7 @@ const ChatContainer = ({
   onPatientSelect,
   selectedPatientId
 }: ChatContainerProps) => {
-  console.log('[ChatContainer] Rendering with messages:', messages);
+  console.log('[ChatContainer] Rendering with messages:', messages, 'currentChatId:', currentChatId);
   const { isSidebarOpen } = useUI();
   const [transcriptionText, setTranscriptionText] = useState('');
 
