@@ -17,19 +17,27 @@ const Message = ({ content, sender, type = 'text' }: MessageProps) => {
       isAIMessage ? "bg-gray-800/30" : ""
     )}>
       <div className={cn(
-        "relative m-auto flex gap-4 px-4",
+        "relative m-auto flex flex-col gap-4 px-4",
         "max-w-3xl",
-        !isAIMessage && "justify-end"
+        !isAIMessage && "items-end"
       )}>
-        {isAIMessage && <MessageAvatar sender={sender} />}
         <div className={cn(
-          "space-y-4",
-          isAIMessage ? "flex-1" : "max-w-[80%] md:max-w-[80%] sm:max-w-[90%]"
+          "flex gap-4 w-full",
+          !isAIMessage && "justify-end"
         )}>
-          <MessageContent content={content} type={type} isAIMessage={isAIMessage} />
+          {isAIMessage && <MessageAvatar sender={sender} />}
+          <div className={cn(
+            "space-y-4",
+            isAIMessage ? "flex-1" : "max-w-[80%] md:max-w-[80%] sm:max-w-[90%]"
+          )}>
+            <MessageContent content={content} type={type} isAIMessage={isAIMessage} />
+          </div>
         </div>
-        {!isAIMessage && <MessageAvatar sender={sender} />}
-        <MessageActions content={content} isAIMessage={isAIMessage} />
+        {isAIMessage && (
+          <div className="ml-12 flex items-center space-x-2">
+            <MessageActions content={content} isAIMessage={isAIMessage} />
+          </div>
+        )}
       </div>
     </div>
   );

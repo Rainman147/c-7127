@@ -12,7 +12,7 @@ const MessageActions = ({ content, isAIMessage }: MessageActionsProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   return (
-    <div className="flex items-center space-x-2">
+    <div className="flex items-center space-x-2 mt-2">
       {isAIMessage && (
         <AudioButton 
           content={content} 
