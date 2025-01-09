@@ -16,35 +16,22 @@ export type Template = {
 };
 
 // Helper type for database templates
-export type DbTemplate = Omit<Template, 'instructions' | 'schema' | 'priority_rules'> & {
+export type DbTemplate = {
+  id: string;
+  name: string;
+  description: string;
+  system_instructions: string; // Match database column name
+  content: string;
   instructions: Json;
   schema: Json;
   priority_rules: Json;
-  system_instructions: string; // Match the database column name
+  created_at: string;
+  updated_at: string;
+  user_id: string;
 };
-
-// Template configuration interface
-export interface TemplateConfig {
-  defaultTemplate: Template;
-  allowCustomTemplates: boolean;
-  maxCustomTemplates?: number;
-  validationRules?: {
-    minNameLength?: number;
-    maxNameLength?: number;
-    minDescriptionLength?: number;
-    maxDescriptionLength?: number;
-  };
-}
 
 // Template validation errors
 export type TemplateValidationError = {
   field: keyof Template;
   message: string;
 };
-
-// Template transformation options
-export interface TemplateTransformOptions {
-  stripHtml?: boolean;
-  sanitizeInstructions?: boolean;
-  normalizeWhitespace?: boolean;
-}
