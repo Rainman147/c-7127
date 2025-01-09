@@ -20,6 +20,7 @@ export type DbTemplate = Omit<Template, 'instructions' | 'schema' | 'priority_ru
   instructions: Json;
   schema: Json;
   priority_rules: Json;
+  system_instructions: string; // Match the database column name
 };
 
 // Template configuration interface

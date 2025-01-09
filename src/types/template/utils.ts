@@ -23,7 +23,7 @@ export const convertDbTemplate = (dbTemplate: DbTemplate): Template => ({
   id: dbTemplate.id,
   name: dbTemplate.name,
   description: dbTemplate.description,
-  systemInstructions: dbTemplate.systemInstructions,
+  systemInstructions: dbTemplate.system_instructions, // Map from snake_case to camelCase
   content: dbTemplate.content,
   instructions: parseJsonField(dbTemplate.instructions),
   schema: parseJsonField(dbTemplate.schema),
