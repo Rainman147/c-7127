@@ -5,31 +5,48 @@ import { useAuthStateChange } from '@/hooks/useAuthStateChange';
 import { clearSession } from '@/utils/auth/sessionManager';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   useAuthStateChange();
 
   useEffect(() => {
-    clearSession();
-    console.log('Session cleared on Login component mount');
+    const init = async () => {
+      console.log('Initializing Login component');
+      
+      // Clear any existing session
+      await clearSession();
+      console.log('Session cleared on Login component mount');
 
-    // Check if user is already authenticated
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Check if user is already authenticated
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Error checking session:', error);
+        toast({
+          title: "Authentication Error",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (session) {
         console.log('User already authenticated, redirecting to home');
         navigate('/');
+        return;
       }
     };
 
-    checkSession();
+    init();
 
     // Listen for auth state changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state changed:', _event);
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event);
       if (session) {
         console.log('User authenticated, redirecting to home');
         navigate('/');
@@ -40,7 +57,7 @@ const Login = () => {
       console.log('Cleaning up auth subscriptions');
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, toast]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">

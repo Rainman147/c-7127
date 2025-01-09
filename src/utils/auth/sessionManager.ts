@@ -2,10 +2,15 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const clearSession = async () => {
   try {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error clearing session:', error);
+      throw error;
+    }
     console.log('Session cleared successfully');
   } catch (error) {
     console.error('Error clearing session:', error);
+    throw error;
   }
 };
 
@@ -17,6 +22,11 @@ export const checkSession = async () => {
       console.error('Session error:', error);
       await clearSession();
       throw error;
+    }
+
+    if (!session) {
+      console.log('No active session found');
+      return { session: null, error: null };
     }
 
     return { session, error: null };
