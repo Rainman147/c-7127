@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import type { Template } from '@/types/template';
 import { parseJsonField } from '@/types/template/utils';
+import type { Template } from '@/types/template';
 
 const TemplateDetailPage = () => {
   const { templateId } = useParams();
@@ -12,7 +12,7 @@ const TemplateDetailPage = () => {
   useEffect(() => {
     const loadTemplate = async () => {
       if (!templateId) return;
-
+      
       try {
         const { data, error } = await supabase
           .from('templates')
@@ -27,8 +27,8 @@ const TemplateDetailPage = () => {
           const uiTemplate: Template = {
             id: data.id,
             name: data.name,
-            description: data.name, // Use name as description for now
-            systemInstructions: data.content || '',
+            description: data.description,
+            systemInstructions: data.system_instructions || '',
             content: data.content,
             instructions: parseJsonField(data.instructions),
             schema: parseJsonField(data.schema),
@@ -37,7 +37,6 @@ const TemplateDetailPage = () => {
             updated_at: data.updated_at,
             user_id: data.user_id
           };
-
           setTemplate(uiTemplate);
         }
       } catch (error) {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { Template } from '@/types/template';
 import { parseJsonField } from '@/types/template/utils';
+import type { Template } from '@/types/template';
 
 const TemplatesListPage = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -20,8 +20,8 @@ const TemplatesListPage = () => {
         const uiTemplates: Template[] = data.map(dbTemplate => ({
           id: dbTemplate.id,
           name: dbTemplate.name,
-          description: dbTemplate.name, // Use name as description for now
-          systemInstructions: dbTemplate.content || '',
+          description: dbTemplate.description,
+          systemInstructions: dbTemplate.system_instructions || '',
           content: dbTemplate.content,
           instructions: parseJsonField(dbTemplate.instructions),
           schema: parseJsonField(dbTemplate.schema),
