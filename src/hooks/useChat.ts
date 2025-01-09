@@ -15,33 +15,47 @@ export const useChat = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Load messages when currentChatId changes
   useEffect(() => {
-    console.log('[useChat] Initializing with currentChatId:', currentChatId);
+    console.log('[useChat] Effect triggered with currentChatId:', currentChatId);
     
+    if (!currentChatId) {
+      console.log('[useChat] No chat ID, skipping message load');
+      return;
+    }
+
+    const controller = new AbortController();
+    
+    const loadChatMessages = async () => {
+      console.log('[useChat] Loading messages for chat:', currentChatId);
+      try {
+        const loadedMessages = await loadMessages(currentChatId);
+        console.log('[useChat] Successfully loaded messages:', loadedMessages.length);
+        
+        // Only set messages if the request wasn't aborted
+        if (!controller.signal.aborted) {
+          setMessages(loadedMessages);
+        }
+      } catch (error) {
+        console.error('[useChat] Error loading chat messages:', error);
+        if (!controller.signal.aborted) {
+          toast({
+            title: "Error loading messages",
+            description: "Failed to load chat messages. Please try again.",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    loadChatMessages();
+
+    // Cleanup function to abort any in-flight requests when switching chats
     return () => {
-      console.log('[useChat] Cleaning up chat resources');
-      const controller = new AbortController();
+      console.log('[useChat] Cleaning up effect for chat:', currentChatId);
       controller.abort();
     };
-  }, []);
-
-  const handleLoadChatMessages = useCallback(async (chatId: string) => {
-    console.log('[useChat] Loading messages for chat:', chatId);
-    try {
-      const loadedMessages = await loadMessages(chatId);
-      console.log('[useChat] Successfully loaded messages:', loadedMessages.length);
-      setMessages(loadedMessages);
-      setCurrentChatId(chatId);
-    } catch (error) {
-      console.error('[useChat] Error loading chat messages:', error);
-      toast({
-        title: "Error loading messages",
-        description: "Failed to load chat messages. Please try again.",
-        variant: "destructive",
-      });
-      throw error; // Re-throw to allow handling by the component
-    }
-  }, [loadMessages, toast]);
+  }, [currentChatId, loadMessages, toast]); // Added proper dependencies
 
   const handleSendMessage = useCallback(async (
     content: string,
@@ -87,7 +101,7 @@ export const useChat = () => {
     messages,
     isLoading,
     handleSendMessage,
-    loadChatMessages: handleLoadChatMessages,
+    loadChatMessages: loadMessages,
     setMessages,
     currentChatId,
     setCurrentChatId
