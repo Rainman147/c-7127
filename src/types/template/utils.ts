@@ -1,6 +1,5 @@
 import { Json } from '@/integrations/supabase/types';
-import type { Template, DbTemplate, TemplateTransformOptions } from './Template';
-import { isValidTemplate } from './guards';
+import type { Template, DbTemplate } from './Template';
 
 /**
  * Helper function to safely parse JSON fields
@@ -33,40 +32,3 @@ export const convertDbTemplate = (dbTemplate: DbTemplate): Template => ({
   updated_at: dbTemplate.updated_at,
   user_id: dbTemplate.user_id
 });
-
-/**
- * Transform template data based on options
- */
-export const transformTemplate = (
-  template: Template, 
-  options: TemplateTransformOptions = {}
-): Template => {
-  if (!isValidTemplate(template)) {
-    throw new Error('Invalid template data');
-  }
-
-  const transformed = { ...template };
-
-  if (options.stripHtml) {
-    transformed.description = transformed.description.replace(/<[^>]*>/g, '');
-    transformed.systemInstructions = transformed.systemInstructions.replace(/<[^>]*>/g, '');
-  }
-
-  if (options.normalizeWhitespace) {
-    transformed.description = transformed.description.trim().replace(/\s+/g, ' ');
-    transformed.systemInstructions = transformed.systemInstructions.trim().replace(/\s+/g, ' ');
-  }
-
-  return transformed;
-};
-
-/**
- * Normalize template data for consistency
- */
-export const normalizeTemplate = (template: Template): Template => {
-  return transformTemplate(template, {
-    stripHtml: true,
-    sanitizeInstructions: true,
-    normalizeWhitespace: true
-  });
-};

@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TemplateSelectorTrigger } from "./template/selector/TemplateSelectorTrigger";
 import { TemplateSelectorContent } from "./template/selector/TemplateSelectorContent";
 import type { Template } from "@/types/template";
-import { isValidTemplate } from "@/types/template";
+import { isValidTemplate } from "@/types/template/guards";
 
 interface TemplateSelectorProps {
   currentChatId: string | null;
