@@ -13,9 +13,10 @@ const MessageContent = ({ content, type = 'text', isAIMessage = false }: Message
   return (
     <div className={cn(
       "prose prose-invert max-w-none",
-      "leading-7",
+      "leading-7 text-white",
       !isAIMessage && "bg-gray-700/50 rounded-[20px] px-4 py-3",
-      type === 'audio' && "italic text-gray-400"
+      type === 'audio' && "italic text-gray-400",
+      isAIMessage && "space-y-6"
     )}>
       {content}
     </div>

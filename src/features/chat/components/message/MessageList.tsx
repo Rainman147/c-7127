@@ -11,7 +11,7 @@ const MessageList = ({ messages }: MessageListProps) => {
 
   return (
     <div className="h-full overflow-y-auto px-4 scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600">
-      <div className="flex flex-col gap-4 py-4">
+      <div className="flex flex-col gap-2 py-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-400">
             Start a new conversation

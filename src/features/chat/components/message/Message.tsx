@@ -13,8 +13,7 @@ const Message = ({ content, sender, type = 'text' }: MessageProps) => {
   return (
     <div className={cn(
       "group relative px-4 py-6 text-gray-100",
-      "hover:bg-gray-800/50 transition-colors",
-      isAIMessage ? "bg-gray-800/30" : ""
+      "transition-colors"
     )}>
       <div className={cn(
         "relative m-auto flex flex-col gap-4 px-4",
