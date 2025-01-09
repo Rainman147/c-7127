@@ -98,6 +98,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
 
   const isLoading = isLoadingTemplates || isLoadingTemplate;
   const hasError = isTemplatesError || isTemplateError;
+  const error = templatesError || templateError;
 
   return (
     <DropdownMenu>
@@ -113,7 +114,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         openTooltipId={openTooltipId}
         onTemplateSelect={handleTemplateSelect}
         onTooltipChange={handleTooltipChange}
-        error={templatesError || templateError}
+        error={error}
       />
     </DropdownMenu>
   );

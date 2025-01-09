@@ -10,6 +10,7 @@ interface TemplateSelectorContentProps {
   openTooltipId: string | null;
   onTemplateSelect: (template: Template) => void;
   onTooltipChange: (templateId: string | null) => void;
+  error?: Error | null; // Added error prop type
 }
 
 export const TemplateSelectorContent = memo(({ 
@@ -18,9 +19,10 @@ export const TemplateSelectorContent = memo(({
   isLoading,
   openTooltipId,
   onTemplateSelect,
-  onTooltipChange
+  onTooltipChange,
+  error
 }: TemplateSelectorContentProps) => {
-  console.log('[TemplateSelectorContent] Rendering with templates:', templates.length);
+  console.log('[TemplateSelectorContent] Rendering with templates:', templates.length, error ? 'Error present' : 'No error');
   
   return (
     <DropdownMenuContent align="start">
