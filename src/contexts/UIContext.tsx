@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-// Define explicit types for our context
 interface UIState {
   isSidebarOpen: boolean;
   isDesktop: boolean;
@@ -13,19 +12,33 @@ interface UIContextType extends UIState {
 
 const UIContext = createContext<UIContextType | undefined>(undefined);
 
-const DESKTOP_BREAKPOINT = 768; // Matches the existing breakpoint
+const DESKTOP_BREAKPOINT = 768;
 
 export function UIProvider({ children }: { children: React.ReactNode }) {
   console.log('[UIProvider] Initializing');
   
-  // Combine related state
   const [state, setState] = useState<UIState>(() => {
     const isDesktop = window.innerWidth >= DESKTOP_BREAKPOINT;
     return {
-      isSidebarOpen: isDesktop, // Default open on desktop, closed on mobile
+      isSidebarOpen: isDesktop,
       isDesktop,
     };
   });
+
+  // Handle scroll locking
+  useEffect(() => {
+    if (!state.isDesktop && state.isSidebarOpen) {
+      console.log('[UIProvider] Locking scroll');
+      document.body.style.overflow = 'hidden';
+    } else {
+      console.log('[UIProvider] Unlocking scroll');
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [state.isSidebarOpen, state.isDesktop]);
 
   useEffect(() => {
     console.log('[UIProvider] Setting up resize listener');
@@ -35,12 +48,10 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       console.log('[UIProvider] Window resized, isDesktop:', isDesktop);
       
       setState(prevState => {
-        // Only update if there's a change in device type
         if (prevState.isDesktop !== isDesktop) {
           console.log('[UIProvider] Device type changed, updating sidebar state');
           return {
             isDesktop,
-            // Auto-close on mobile, auto-open on desktop
             isSidebarOpen: isDesktop,
           };
         }

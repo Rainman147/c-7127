@@ -17,7 +17,7 @@ const Sidebar = ({
 }: SidebarProps) => {
   console.log('[Sidebar] Rendering');
   const navigate = useNavigate();
-  const { isSidebarOpen } = useUI();
+  const { isSidebarOpen, isDesktop, setSidebarOpen } = useUI();
   const [apiKey, setApiKey] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -41,42 +41,60 @@ const Sidebar = ({
     setActiveSessionId(sessionId);
     navigate(`/c/${sessionId}`);
     onSessionSelect(sessionId);
+    if (!isDesktop) {
+      setSidebarOpen(false);
+    }
   };
 
-  const handleSessionEdit = (session: { id: string; title: string }) => {
-    setEditingId(session.id);
-    setEditTitle(session.title);
-  };
-
-  const handleSessionDelete = async (sessionId: string) => {
-    await deleteSession(sessionId);
+  const handleBackdropClick = () => {
+    if (!isDesktop) {
+      setSidebarOpen(false);
+    }
   };
 
   return (
-    <div className={`fixed top-0 left-0 z-40 h-screen bg-chatgpt-sidebar transition-all duration-300 ${
-      isSidebarOpen ? "w-64" : "w-0"
-    }`}>
-      <nav className="flex h-full w-full flex-col px-3" aria-label="Chat history">
-        <SidebarHeader />
-        
-        {isSidebarOpen && (
-          <>
-            <SidebarContent
-              activeSessionId={activeSessionId}
-              sessions={sessions}
-              onSessionSelect={handleSessionClick}
-              onSessionEdit={handleSessionEdit}
-              onSessionDelete={handleSessionDelete}
-            />
-            
-            <SidebarFooter
-              apiKey={apiKey}
-              onApiKeyChange={handleApiKeyChange}
-            />
-          </>
-        )}
-      </nav>
-    </div>
+    <>
+      {/* Backdrop for mobile */}
+      {!isDesktop && isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30"
+          onClick={handleBackdropClick}
+          aria-hidden="true"
+        />
+      )}
+      
+      {/* Sidebar */}
+      <div 
+        className={`fixed top-0 left-0 z-40 h-screen bg-chatgpt-sidebar transition-all duration-300 
+          ${isSidebarOpen ? "w-64" : "w-0"}
+          ${!isDesktop && isSidebarOpen ? "shadow-xl" : ""}
+        `}
+      >
+        <nav className="flex h-full w-full flex-col px-3" aria-label="Chat history">
+          <SidebarHeader />
+          
+          {isSidebarOpen && (
+            <>
+              <SidebarContent
+                activeSessionId={activeSessionId}
+                sessions={sessions}
+                onSessionSelect={handleSessionClick}
+                onSessionEdit={(session) => {
+                  setEditingId(session.id);
+                  setEditTitle(session.title);
+                }}
+                onSessionDelete={deleteSession}
+              />
+              
+              <SidebarFooter
+                apiKey={apiKey}
+                onApiKeyChange={handleApiKeyChange}
+              />
+            </>
+          )}
+        </nav>
+      </div>
+    </>
   );
 };
 
