@@ -36,7 +36,7 @@ const ChatContainer = ({
   };
 
   return (
-    <div className={`relative flex h-full w-full flex-1 flex-col items-center justify-between bg-chatgpt-main transition-all duration-300 ${
+    <div className={`relative flex h-screen w-full flex-1 flex-col items-center justify-between bg-chatgpt-main transition-all duration-300 ${
       isSidebarOpen ? 'ml-64' : 'ml-0'
     }`}>
       <ChatHeader 
@@ -45,8 +45,10 @@ const ChatContainer = ({
         onPatientSelect={onPatientSelect}
         selectedPatientId={selectedPatientId}
       />
-      <div className="flex-1 w-full overflow-hidden pt-[60px] pb-[100px]">
-        <MessageList messages={messages} />
+      <div className="flex-1 w-full overflow-hidden">
+        <div className="h-full pt-[60px] pb-[100px]">
+          <MessageList messages={messages} />
+        </div>
       </div>
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-chatgpt-main via-chatgpt-main to-transparent pb-3 pt-6">
         <ChatInput
