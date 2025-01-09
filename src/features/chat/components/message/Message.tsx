@@ -16,11 +16,19 @@ const Message = ({ content, sender, type = 'text' }: MessageProps) => {
       "hover:bg-gray-800/50 transition-colors",
       isAIMessage ? "bg-gray-800/30" : ""
     )}>
-      <div className="relative m-auto flex max-w-3xl gap-4 px-4">
-        <MessageAvatar sender={sender} />
-        <div className="flex-1 space-y-4">
-          <MessageContent content={content} type={type} />
+      <div className={cn(
+        "relative m-auto flex gap-4 px-4",
+        "max-w-3xl",
+        !isAIMessage && "justify-end"
+      )}>
+        {isAIMessage && <MessageAvatar sender={sender} />}
+        <div className={cn(
+          "space-y-4",
+          isAIMessage ? "flex-1" : "max-w-[80%] md:max-w-[80%] sm:max-w-[90%]"
+        )}>
+          <MessageContent content={content} type={type} isAIMessage={isAIMessage} />
         </div>
+        {!isAIMessage && <MessageAvatar sender={sender} />}
         <MessageActions content={content} isAIMessage={isAIMessage} />
       </div>
     </div>

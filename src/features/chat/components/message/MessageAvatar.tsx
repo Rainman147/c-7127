@@ -14,7 +14,7 @@ const MessageAvatar = ({ sender }: MessageAvatarProps) => {
           <User className="w-5 h-5 text-white" />
         </div>
       ) : (
-        <div className="w-8 h-8 bg-[#10A37F] rounded-full flex items-center justify-center">
+        <div className="w-8 h-8 bg-[#0096FF] rounded-full flex items-center justify-center">
           <Bot className="w-5 h-5 text-white" />
         </div>
       )}
