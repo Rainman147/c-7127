@@ -58,14 +58,16 @@ export const useTemplateQuery = (templateId: string | null) => {
     staleTime: STALE_TIME,
     retry: RETRY_COUNT,
     retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), RETRY_DELAY),
-    onError: (error) => {
-      console.error('[useTemplateQuery] Error fetching template:', error);
-      toast({
-        title: "Error Loading Template",
-        description: "There was an error loading the template. Using default template instead.",
-        variant: "destructive",
-      });
-    },
+    meta: {
+      errorHandler: (error: Error) => {
+        console.error('[useTemplateQuery] Error fetching template:', error);
+        toast({
+          title: "Error Loading Template",
+          description: "There was an error loading the template. Using default template instead.",
+          variant: "destructive",
+        });
+      }
+    }
   });
 };
 
@@ -108,8 +110,10 @@ export const useTemplatesListQuery = () => {
     staleTime: STALE_TIME,
     retry: RETRY_COUNT,
     retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), RETRY_DELAY),
-    onError: (error) => {
-      console.error('[useTemplatesListQuery] Error in templates list query:', error);
-    },
+    meta: {
+      errorHandler: (error: Error) => {
+        console.error('[useTemplatesListQuery] Error in templates list query:', error);
+      }
+    }
   });
 };
