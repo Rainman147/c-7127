@@ -1,6 +1,20 @@
 import { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+// Define valid table names
+export type TableName = 
+  | 'users'
+  | 'patients'
+  | 'messages'
+  | 'chats'
+  | 'audio_chunks'
+  | 'doctors'
+  | 'edited_messages'
+  | 'ehr_exports'
+  | 'feedback'
+  | 'file_upload_sessions'
+  | 'templates';
+
 export interface QueryOptions {
   filters?: Record<string, any>;
   ordering?: {
@@ -21,7 +35,7 @@ export interface QueryResult<T> {
 }
 
 export async function runSupabaseQuery<T>(
-  tableName: string,
+  tableName: TableName,
   options: QueryOptions = {}
 ): Promise<QueryResult<T>> {
   const { filters, ordering, pagination, signal } = options;
@@ -72,7 +86,7 @@ export async function runSupabaseQuery<T>(
     }
 
     console.log(`[supabaseQuery] Successfully fetched ${data?.length} records from ${tableName}`);
-    return { data, error: null, count };
+    return { data: data as T[], error: null, count };
 
   } catch (error) {
     console.error(`[supabaseQuery] Unexpected error querying ${tableName}:`, error);
@@ -86,7 +100,7 @@ export async function runSupabaseQuery<T>(
 
 // Helper function for single record queries
 export async function runSupabaseSingleQuery<T>(
-  tableName: string,
+  tableName: TableName,
   options: QueryOptions = {}
 ): Promise<{ data: T | null; error: PostgrestError | Error | null }> {
   try {
