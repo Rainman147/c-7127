@@ -1,12 +1,20 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useSession } from '@/contexts/SessionContext';
 import type { Message } from '@/types/chat';
 
 export const useMessagePersistence = () => {
   const { toast } = useToast();
+  const { status } = useSession();
 
   const saveMessageToSupabase = async (message: Message, chatId?: string) => {
+    if (status !== 'validated') {
+      console.log('[useMessagePersistence] Waiting for session validation...');
+      return;
+    }
+
     try {
+      console.log('[useMessagePersistence] Saving message to Supabase');
       // First verify authentication
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
@@ -57,28 +65,20 @@ export const useMessagePersistence = () => {
       
       return { chatId, messageId: messageData.id };
     } catch (error: any) {
-      console.error('Error saving message:', error);
+      console.error('[useMessagePersistence] Error saving message:', error);
       throw error;
     }
   };
 
   const loadChatMessages = async (chatId: string) => {
+    if (status !== 'validated') {
+      console.log('[useMessagePersistence] Waiting for session validation before loading messages');
+      return [];
+    }
+
     try {
       console.log('[useMessagePersistence] Loading messages for chat:', chatId);
       
-      // Verify authentication first
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session) {
-        console.error('Authentication error:', sessionError);
-        toast({
-          title: "Authentication Error",
-          description: "Please log in again to continue",
-          variant: "destructive"
-        });
-        throw new Error('Authentication required');
-      }
-
       const { data: messages, error: messagesError } = await supabase
         .from('messages')
         .select('*')
