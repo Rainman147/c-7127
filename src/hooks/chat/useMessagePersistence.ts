@@ -151,7 +151,7 @@ export const useMessagePersistence = () => {
       
       const messagesPromise = supabase
         .from('messages')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('chat_id', chatId)
         .order('created_at', { ascending: true })
         .abortSignal(controller.signal);
@@ -187,7 +187,7 @@ export const useMessagePersistence = () => {
 
       const { data: editedMessages, error: editsError } = await supabase
         .from('edited_messages')
-        .select('*')
+        .select('*', { count: 'exact' })
         .in('message_id', messageIds)
         .order('created_at', { ascending: false })
         .abortSignal(controller.signal);
