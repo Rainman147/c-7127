@@ -18,6 +18,11 @@ interface DatabaseMessage {
   seen_at: string;
 }
 
+interface MessagesResponse {
+  messages: Message[];
+  count: number;
+}
+
 const mapDatabaseMessageToMessage = (dbMessage: DatabaseMessage): Message => ({
   id: dbMessage.id,
   role: dbMessage.sender === 'user' ? 'user' : 'assistant',
@@ -46,7 +51,7 @@ export const useMessagePersistence = () => {
     }
   };
 
-  const loadChatMessages = useCallback(async (chatId: string) => {
+  const loadChatMessages = useCallback(async (chatId: string): Promise<MessagesResponse> => {
     console.log('[useMessagePersistence] Loading messages for chat:', chatId);
 
     // Cancel any existing operations for this chat with reason
@@ -82,7 +87,7 @@ export const useMessagePersistence = () => {
       const duration = Date.now() - operation.startTime;
       console.log(`[useMessagePersistence] Successfully loaded ${messages.length} messages in ${duration}ms`);
 
-      return messages;
+      return { messages, count: messages.length };
     } catch (error: any) {
       if (error.name === 'AbortError') {
         console.log('[useMessagePersistence] Operation cancelled for chat:', chatId, 'Reason:', error.message);

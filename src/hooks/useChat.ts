@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useMessageHandling } from './chat/useMessageHandling';
 import { useMessagePersistence } from './chat/useMessagePersistence';
 import { useChatSessions } from './useChatSessions';
-import type { Message } from '@/types/chat';
+import type { Message } from '@/types';
 
 export const useChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -30,11 +30,11 @@ export const useChat = () => {
       console.log('[useChat] Loading messages for chat:', currentChatId);
       try {
         const loadedMessages = await loadMessages(currentChatId);
-        console.log('[useChat] Successfully loaded messages:', loadedMessages.length);
+        console.log('[useChat] Successfully loaded messages:', loadedMessages.messages.length);
         
         // Only set messages if the request wasn't aborted
         if (!controller.signal.aborted) {
-          setMessages(loadedMessages);
+          setMessages(loadedMessages.messages);
         }
       } catch (error) {
         console.error('[useChat] Error loading chat messages:', error);
@@ -53,9 +53,9 @@ export const useChat = () => {
     // Cleanup function to abort any in-flight requests when switching chats
     return () => {
       console.log('[useChat] Cleaning up effect for chat:', currentChatId);
-      controller.abort();
+      controller.abort('Chat ID changed or component unmounted');
     };
-  }, [currentChatId, loadMessages, toast]); // Added proper dependencies
+  }, [currentChatId, loadMessages, toast]);
 
   const handleSendMessage = useCallback(async (
     content: string,
