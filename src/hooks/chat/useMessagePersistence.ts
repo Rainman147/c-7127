@@ -66,6 +66,7 @@ export const useMessagePersistence = () => {
 
   const loadChatMessages = useCallback(async (chatId: string) => {
     console.log('[useMessagePersistence] Loading messages for chat:', chatId);
+    clearQueuedOperations(chatId, 'New chat load requested');
     
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -80,49 +81,64 @@ export const useMessagePersistence = () => {
         throw new Error('Authentication required');
       }
 
-      const { data: messages, error: messagesError } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('chat_id', chatId)
-        .order('created_at', { ascending: true });
+      const controller = new AbortController();
+      const cleanup = registerCleanup(
+        () => controller.abort('Operation completed or aborted'),
+        'Message loading cleanup'
+      );
 
-      if (messagesError) {
-        console.error('[useMessagePersistence] Messages fetch error:', messagesError);
-        throw messagesError;
-      }
+      try {
+        const { data: messages, error: messagesError } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('chat_id', chatId)
+          .order('created_at', { ascending: true })
+          .abortSignal(controller.signal);
 
-      console.log('[useMessagePersistence] Successfully fetched messages:', messages?.length);
-
-      const messageIds = messages?.map(m => m.id) || [];
-      
-      if (messageIds.length === 0) {
-        return [];
-      }
-
-      const { data: editedMessages, error: editsError } = await supabase
-        .from('edited_messages')
-        .select('*')
-        .in('message_id', messageIds)
-        .order('created_at', { ascending: false });
-
-      if (editsError) {
-        console.error('[useMessagePersistence] Edits fetch error:', editsError);
-        throw editsError;
-      }
-
-      const editedContentMap = (editedMessages || []).reduce((acc: Record<string, string>, edit) => {
-        if (!acc[edit.message_id]) {
-          acc[edit.message_id] = edit.edited_content;
+        if (messagesError) {
+          console.error('[useMessagePersistence] Messages fetch error:', messagesError);
+          throw messagesError;
         }
-        return acc;
-      }, {});
 
-      return (messages || []).map(msg => ({
-        role: msg.sender as 'user' | 'assistant',
-        content: editedContentMap[msg.id] || msg.content,
-        type: msg.type as 'text' | 'audio',
-        id: msg.id
-      }));
+        console.log('[useMessagePersistence] Successfully fetched messages:', messages?.length);
+
+        const messageIds = messages?.map(m => m.id) || [];
+        
+        if (messageIds.length === 0) {
+          return [];
+        }
+
+        const { data: editedMessages, error: editsError } = await supabase
+          .from('edited_messages')
+          .select('*')
+          .in('message_id', messageIds)
+          .order('created_at', { ascending: false })
+          .abortSignal(controller.signal);
+
+        if (editsError) {
+          console.error('[useMessagePersistence] Edits fetch error:', editsError);
+          throw editsError;
+        }
+
+        const editedContentMap = (editedMessages || []).reduce((acc: Record<string, string>, edit) => {
+          if (!acc[edit.message_id]) {
+            acc[edit.message_id] = edit.edited_content;
+          }
+          return acc;
+        }, {});
+
+        cleanup();
+        return (messages || []).map(msg => ({
+          role: msg.sender as 'user' | 'assistant',
+          content: editedContentMap[msg.id] || msg.content,
+          type: msg.type as 'text' | 'audio',
+          id: msg.id
+        }));
+
+      } catch (error) {
+        cleanup();
+        throw error;
+      }
 
     } catch (error: any) {
       console.error('[useMessagePersistence] Error loading chat messages:', error);
@@ -133,7 +149,7 @@ export const useMessagePersistence = () => {
       });
       throw error;
     }
-  }, [toast]);
+  }, [toast, registerCleanup, clearQueuedOperations]);
 
   return {
     saveMessage,
