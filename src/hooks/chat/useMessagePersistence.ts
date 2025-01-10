@@ -49,14 +49,15 @@ export const useMessagePersistence = () => {
   const loadChatMessages = useCallback(async (chatId: string) => {
     console.log('[useMessagePersistence] Loading messages for chat:', chatId);
 
-    // Cancel any existing operations for this chat
-    cleanup.clearQueuedOperations(chatId);
+    // Cancel any existing operations for this chat with reason
+    cleanup.clearQueuedOperations(chatId, 'New chat load requested');
 
     // Create new abort controller for this operation
     const controller = new AbortController();
     const operation = { 
       controller,
-      cleanup: undefined as (() => void) | undefined 
+      cleanup: undefined as (() => void) | undefined,
+      startTime: Date.now()
     };
     cleanup.operationQueueRef.current.set(chatId, operation);
 
@@ -67,6 +68,8 @@ export const useMessagePersistence = () => {
       const { subscribe } = useMessageSubscriptions(chatId);
       const unsubscribe = subscribe(() => {
         console.log('[useMessagePersistence] Message update received, reloading messages');
+        // Pass abort reason for existing operation
+        cleanup.clearQueuedOperations(chatId, 'Real-time update triggered');
         loadMessages(chatId, controller.signal);
       });
 
@@ -76,8 +79,15 @@ export const useMessagePersistence = () => {
       // Convert database messages to Message type
       const messages = (dbMessages as DatabaseMessage[]).map(mapDatabaseMessageToMessage);
 
+      const duration = Date.now() - operation.startTime;
+      console.log(`[useMessagePersistence] Successfully loaded ${messages.length} messages in ${duration}ms`);
+
       return messages;
     } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('[useMessagePersistence] Operation cancelled for chat:', chatId, 'Reason:', error.message);
+        return { messages: [], count: 0 };
+      }
       console.error('[useMessagePersistence] Error loading chat messages:', error);
       toast({
         title: "Error",
