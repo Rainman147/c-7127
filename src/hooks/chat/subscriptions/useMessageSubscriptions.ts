@@ -1,11 +1,11 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export const useMessageSubscriptions = (chatId: string | null) => {
   const channelRef = useRef<RealtimeChannel | null>(null);
 
-  const subscribe = useCallback((onUpdate: () => void) => {
+  const setupSubscription = (onUpdate: () => void) => {
     if (!chatId) return;
 
     console.log('[useMessageSubscriptions] Setting up subscription for chat:', chatId);
@@ -33,17 +33,7 @@ export const useMessageSubscriptions = (chatId: string | null) => {
         channelRef.current = null;
       }
     };
-  }, [chatId]);
+  };
 
-  useEffect(() => {
-    return () => {
-      if (channelRef.current) {
-        console.log('[useMessageSubscriptions] Component unmounting, cleaning up subscription');
-        channelRef.current.unsubscribe();
-        channelRef.current = null;
-      }
-    };
-  }, []);
-
-  return { subscribe };
+  return { setupSubscription };
 };

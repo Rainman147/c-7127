@@ -36,21 +36,7 @@ export const useMessagePersistence = () => {
   const { toast } = useToast();
   const { saveMessage, loadMessages } = useMessageOperations();
   const cleanup = useCleanupManager();
-
-  const saveMessageToSupabase = async (message: Message, chatId?: string) => {
-    console.log('[useMessagePersistence] Saving message to Supabase');
-    try {
-      return await saveMessage(message, chatId);
-    } catch (error: any) {
-      console.error('[useMessagePersistence] Error saving message:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save message",
-        variant: "destructive"
-      });
-      throw error;
-    }
-  };
+  const { setupSubscription } = useMessageSubscriptions(null); // Initialize with null
 
   const loadChatMessages = useCallback(async (chatId: string): Promise<MessagesResponse> => {
     console.log('[useMessagePersistence] Loading messages for chat:', chatId);
@@ -72,8 +58,7 @@ export const useMessagePersistence = () => {
 
     try {
       // Set up real-time subscription before loading messages
-      const { subscribe } = useMessageSubscriptions(chatId);
-      const unsubscribe = subscribe(() => {
+      const unsubscribe = setupSubscription(() => {
         console.log('[useMessagePersistence] Message update received for chat:', chatId);
         cleanup.clearQueuedOperations(chatId, 'Real-time update triggered');
         loadMessages(chatId, controller.signal);
@@ -115,10 +100,10 @@ export const useMessagePersistence = () => {
         cleanup.clearQueuedOperations(chatId, 'Operation completed or failed');
       }
     }
-  }, [cleanup, loadMessages, toast]);
+  }, [cleanup, loadMessages, toast, setupSubscription]);
 
   return {
-    saveMessageToSupabase,
+    saveMessage,
     loadChatMessages,
     clearQueuedOperations: cleanup.clearQueuedOperations,
     registerCleanup: cleanup.registerCleanup
