@@ -5,6 +5,27 @@ import { useMessageSubscriptions } from './subscriptions/useMessageSubscriptions
 import { useCleanupManager } from './cleanup/useCleanupManager';
 import type { Message } from '@/types/chat';
 
+interface DatabaseMessage {
+  id: string;
+  chat_id: string;
+  content: string;
+  sender: string;
+  type: string;
+  created_at: string;
+  sequence: number;
+  status: string;
+  delivered_at: string;
+  seen_at: string;
+}
+
+const mapDatabaseMessageToMessage = (dbMessage: DatabaseMessage): Message => ({
+  id: dbMessage.id,
+  role: dbMessage.sender === 'user' ? 'user' : 'assistant',
+  content: dbMessage.content,
+  type: dbMessage.type as 'text' | 'audio',
+  isStreaming: dbMessage.status === 'streaming'
+});
+
 export const useMessagePersistence = () => {
   const { toast } = useToast();
   const { saveMessage, loadMessages } = useMessageOperations();
@@ -33,11 +54,14 @@ export const useMessagePersistence = () => {
 
     // Create new abort controller for this operation
     const controller = new AbortController();
-    const operation = { controller };
+    const operation = { 
+      controller,
+      cleanup: undefined as (() => void) | undefined 
+    };
     cleanup.operationQueueRef.current.set(chatId, operation);
 
     try {
-      const { messages } = await loadMessages(chatId, controller.signal);
+      const { messages: dbMessages } = await loadMessages(chatId, controller.signal);
       
       // Set up real-time subscription
       const { subscribe } = useMessageSubscriptions(chatId);
@@ -49,7 +73,10 @@ export const useMessagePersistence = () => {
       // Register cleanup for subscription
       operation.cleanup = unsubscribe;
 
-      return messages as Message[];
+      // Convert database messages to Message type
+      const messages = (dbMessages as DatabaseMessage[]).map(mapDatabaseMessageToMessage);
+
+      return messages;
     } catch (error: any) {
       console.error('[useMessagePersistence] Error loading chat messages:', error);
       toast({

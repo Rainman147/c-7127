@@ -12,10 +12,18 @@ export const useMessageSubscriptions = (chatId: string | null) => {
     
     channelRef.current = supabase
       .channel(`messages:${chatId}`)
-      .on('*', () => {
-        console.log('[useMessageSubscriptions] Message update received for chat:', chatId);
-        onUpdate();
-      })
+      .on('postgres_changes', 
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_id=eq.${chatId}`
+        },
+        () => {
+          console.log('[useMessageSubscriptions] Message update received for chat:', chatId);
+          onUpdate();
+        }
+      )
       .subscribe();
 
     return () => {
