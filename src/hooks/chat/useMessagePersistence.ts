@@ -16,10 +16,12 @@ export const useMessagePersistence = () => {
         timestamp: new Date().toISOString()
       });
 
-      if (!session) {
-        console.log('[useMessagePersistence] Attempting session refresh before save');
-        const refreshedSession = await refreshSession();
-        if (!refreshedSession) {
+      // Ensure we have a valid session
+      let currentSession = session;
+      if (!currentSession) {
+        console.log('[useMessagePersistence] No session found, attempting refresh');
+        currentSession = await refreshSession();
+        if (!currentSession) {
           throw new Error('Authentication required');
         }
       }
@@ -27,7 +29,7 @@ export const useMessagePersistence = () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
-        console.error('User fetch error:', userError);
+        console.error('[useMessagePersistence] User fetch error:', userError);
         throw new Error('You must be logged in to send messages');
       }
 
@@ -42,7 +44,7 @@ export const useMessagePersistence = () => {
           .single();
 
         if (chatError) {
-          console.error('Chat creation error:', chatError);
+          console.error('[useMessagePersistence] Chat creation error:', chatError);
           throw chatError;
         }
         chatId = chatData.id;
@@ -60,7 +62,7 @@ export const useMessagePersistence = () => {
         .single();
 
       if (messageError) {
-        console.error('Message save error:', messageError);
+        console.error('[useMessagePersistence] Message save error:', messageError);
         throw messageError;
       }
       
@@ -83,10 +85,12 @@ export const useMessagePersistence = () => {
     try {
       console.log('[useMessagePersistence] Loading messages for chat:', chatId);
       
-      if (!session) {
-        console.log('[useMessagePersistence] Attempting session refresh before load');
-        const refreshedSession = await refreshSession();
-        if (!refreshedSession) {
+      // Ensure we have a valid session before proceeding
+      let currentSession = session;
+      if (!currentSession) {
+        console.log('[useMessagePersistence] No session found, attempting refresh');
+        currentSession = await refreshSession();
+        if (!currentSession) {
           throw new Error('Authentication required');
         }
       }
