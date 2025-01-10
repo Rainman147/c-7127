@@ -43,18 +43,24 @@ const ChatContainer = ({
           onPatientSelect={onPatientSelect}
           selectedPatientId={selectedPatientId}
         />
-        <div className="flex-1 overflow-hidden relative">
+        
+        {/* Messages Viewport - Takes remaining height */}
+        <div className="flex-1 relative">
+          {/* Scrollable Container - Flush with edges */}
           <div className="absolute inset-0 pt-[60px] pb-[100px]">
+            {/* Content Wrapper - Centered with optimal width */}
             <div className="h-full">
-              <div className="mx-auto max-w-3xl h-full px-4 md:px-8">
+              <div className="mx-auto max-w-2xl h-full px-4 sm:px-6 md:px-8">
                 <MessageList messages={messages} />
               </div>
             </div>
           </div>
         </div>
+
+        {/* Input Section - Matches message width */}
         <div className="relative w-full bg-gradient-to-t from-chatgpt-main via-chatgpt-main to-transparent pb-3 pt-6">
-          <div className="px-4 md:px-8">
-            <div className="mx-auto max-w-3xl">
+          <div className="px-4 sm:px-6 md:px-8">
+            <div className="mx-auto max-w-2xl">
               <ChatInput
                 onSend={onMessageSend}
                 onTranscriptionComplete={onTranscriptionComplete}

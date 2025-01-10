@@ -10,7 +10,7 @@ const MessageList = ({ messages }: MessageListProps) => {
   console.log('[MessageList] Rendering messages:', messages);
 
   return (
-    <div className="h-full overflow-y-auto scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600">
+    <div className="h-full overflow-y-auto chat-scrollbar">
       <div className="flex flex-col gap-2 py-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-400">
