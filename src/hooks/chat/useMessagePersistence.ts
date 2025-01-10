@@ -1,13 +1,39 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSession } from '@/contexts/SessionContext';
 import type { Message } from '@/types/chat';
 
+interface ActiveOperation {
+  controller: AbortController;
+  cleanup?: () => void;
+}
+
 export const useMessagePersistence = () => {
   const { toast } = useToast();
   const { status } = useSession();
-  const operationQueueRef = useRef<Map<string, AbortController>>(new Map());
+  const operationQueueRef = useRef<Map<string, ActiveOperation>>(new Map());
+  const activeListenersRef = useRef<Set<() => void>>(new Set());
+  const isUnmountingRef = useRef(false);
+
+  // Cleanup helper to ensure consistent resource release
+  const cleanupOperation = useCallback((chatId: string) => {
+    console.log('[useMessagePersistence] Cleaning up operation for chat:', chatId);
+    
+    const operation = operationQueueRef.current.get(chatId);
+    if (operation) {
+      try {
+        operation.controller.abort();
+        if (operation.cleanup) {
+          operation.cleanup();
+        }
+        operationQueueRef.current.delete(chatId);
+        console.log('[useMessagePersistence] Successfully cleaned up operation for chat:', chatId);
+      } catch (error) {
+        console.error('[useMessagePersistence] Error during operation cleanup:', error);
+      }
+    }
+  }, []);
 
   const clearQueuedOperations = useCallback((chatId?: string) => {
     console.log('[useMessagePersistence] Clearing operations', 
@@ -15,19 +41,26 @@ export const useMessagePersistence = () => {
     );
 
     if (chatId) {
-      const controller = operationQueueRef.current.get(chatId);
-      if (controller) {
-        controller.abort();
-        operationQueueRef.current.delete(chatId);
-        console.log('[useMessagePersistence] Cancelled operations for chat:', chatId);
-      }
+      cleanupOperation(chatId);
     } else {
-      operationQueueRef.current.forEach((controller, id) => {
-        controller.abort();
-        console.log('[useMessagePersistence] Cancelled operations for chat:', id);
-      });
+      const chatIds = Array.from(operationQueueRef.current.keys());
+      chatIds.forEach(id => cleanupOperation(id));
       operationQueueRef.current.clear();
     }
+
+    // Log cleanup state
+    console.log('[useMessagePersistence] Operation queue state after cleanup:', {
+      pendingOperations: operationQueueRef.current.size,
+      activeListeners: activeListenersRef.current.size
+    });
+  }, [cleanupOperation]);
+
+  // Register cleanup function for event listeners
+  const registerCleanup = useCallback((cleanup: () => void) => {
+    activeListenersRef.current.add(cleanup);
+    return () => {
+      activeListenersRef.current.delete(cleanup);
+    };
   }, []);
 
   const saveMessageToSupabase = async (message: Message, chatId?: string) => {
@@ -43,6 +76,7 @@ export const useMessagePersistence = () => {
       
       if (sessionError || !session) {
         console.error('[useMessagePersistence] Authentication error:', sessionError);
+        clearQueuedOperations(); // Clear operations on auth error
         throw new Error('You must be logged in to send messages');
       }
 
@@ -50,6 +84,7 @@ export const useMessagePersistence = () => {
       
       if (userError || !user) {
         console.error('[useMessagePersistence] User fetch error:', userError);
+        clearQueuedOperations(); // Clear operations on user fetch error
         throw new Error('You must be logged in to send messages');
       }
 
@@ -65,6 +100,7 @@ export const useMessagePersistence = () => {
 
         if (chatError) {
           console.error('[useMessagePersistence] Chat creation error:', chatError);
+          clearQueuedOperations(); // Clear operations on chat creation error
           throw chatError;
         }
         chatId = chatData.id;
@@ -83,6 +119,7 @@ export const useMessagePersistence = () => {
 
       if (messageError) {
         console.error('[useMessagePersistence] Message save error:', messageError);
+        clearQueuedOperations(); // Clear operations on message save error
         throw messageError;
       }
       
@@ -90,6 +127,7 @@ export const useMessagePersistence = () => {
       return { chatId, messageId: messageData.id };
     } catch (error: any) {
       console.error('[useMessagePersistence] Error saving message:', error);
+      clearQueuedOperations(); // Clear operations on error
       throw error;
     }
   };
@@ -105,24 +143,41 @@ export const useMessagePersistence = () => {
 
     // Create new abort controller for this operation
     const controller = new AbortController();
-    operationQueueRef.current.set(chatId, controller);
+    const operation: ActiveOperation = { controller };
+    operationQueueRef.current.set(chatId, operation);
 
     try {
       console.log('[useMessagePersistence] Loading messages for chat:', chatId);
       
-      const { data: messages, error: messagesError } = await supabase
+      const messagesPromise = supabase
         .from('messages')
         .select('*')
         .eq('chat_id', chatId)
         .order('created_at', { ascending: true })
         .abortSignal(controller.signal);
 
+      // Set up real-time subscription for updates
+      const subscription = supabase
+        .channel(`messages:${chatId}`)
+        .on('*', () => {
+          if (!isUnmountingRef.current) {
+            console.log('[useMessagePersistence] Message update received for chat:', chatId);
+          }
+        })
+        .subscribe();
+
+      // Register cleanup for subscription
+      operation.cleanup = () => {
+        subscription.unsubscribe();
+        console.log('[useMessagePersistence] Unsubscribed from messages channel:', chatId);
+      };
+
+      const { data: messages, error: messagesError } = await messagesPromise;
+
       if (messagesError) {
         console.error('[useMessagePersistence] Messages fetch error:', messagesError);
         throw messagesError;
       }
-
-      console.log('[useMessagePersistence] Successfully fetched messages:', messages?.length);
 
       const messageIds = messages?.map(m => m.id) || [];
       
@@ -174,16 +229,49 @@ export const useMessagePersistence = () => {
       throw error;
     } finally {
       // Clean up the controller if it hasn't been replaced
-      if (operationQueueRef.current.get(chatId) === controller) {
-        operationQueueRef.current.delete(chatId);
-        console.log('[useMessagePersistence] Cleaned up operation for chat:', chatId);
+      if (operationQueueRef.current.get(chatId) === operation) {
+        cleanupOperation(chatId);
       }
     }
   };
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isUnmountingRef.current = true;
+      console.log('[useMessagePersistence] Component unmounting, cleaning up resources');
+      
+      // Log state before cleanup
+      console.log('[useMessagePersistence] State before cleanup:', {
+        pendingOperations: operationQueueRef.current.size,
+        activeListeners: activeListenersRef.current.size
+      });
+
+      // Clear all operations
+      clearQueuedOperations();
+
+      // Clear all registered listeners
+      activeListenersRef.current.forEach(cleanup => {
+        try {
+          cleanup();
+        } catch (error) {
+          console.error('[useMessagePersistence] Error during listener cleanup:', error);
+        }
+      });
+      activeListenersRef.current.clear();
+
+      // Log final state
+      console.log('[useMessagePersistence] Final cleanup state:', {
+        pendingOperations: operationQueueRef.current.size,
+        activeListeners: activeListenersRef.current.size
+      });
+    };
+  }, [clearQueuedOperations]);
+
   return {
     saveMessageToSupabase,
     loadChatMessages,
-    clearQueuedOperations
+    clearQueuedOperations,
+    registerCleanup
   };
 };
