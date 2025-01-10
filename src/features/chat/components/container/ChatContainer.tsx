@@ -49,8 +49,8 @@ const ChatContainer = ({
           {/* Scrollable Container - Flush with edges */}
           <div className="absolute inset-0 pt-[60px] pb-[100px]">
             {/* Content Wrapper - Centered with optimal width */}
-            <div className="h-full">
-              <div className="mx-auto max-w-2xl h-full px-4 sm:px-6 md:px-8">
+            <div className="mx-auto max-w-2xl h-full">
+              <div className="px-4 sm:px-6 md:px-8">
                 <MessageList messages={messages} />
               </div>
             </div>
