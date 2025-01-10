@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
 import { useChat } from '@/hooks/useChat';
@@ -9,13 +9,15 @@ import { useToast } from '@/hooks/use-toast';
 import type { Template } from '@/types/template';
 
 const ChatPage = () => {
-  console.log('[ChatPage] Component initializing');
+  console.log('[ChatPage] Initializing with session ID:', useParams().sessionId);
+  
   const navigate = useNavigate();
   const location = useLocation();
   const { sessionId } = useParams();
   const { toast } = useToast();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
   
@@ -31,29 +33,54 @@ const ChatPage = () => {
   // Initialize audio recovery
   useAudioRecovery();
 
-  // Effect to handle sessionId changes - only runs once on mount and when sessionId changes
+  // Effect to handle sessionId changes - only runs when sessionId changes and isn't already set
   useEffect(() => {
-    console.log('[ChatPage] Session ID changed:', sessionId);
-    if (sessionId && sessionId !== currentChatId) {
-      console.log('[ChatPage] Setting current chat ID:', sessionId);
-      setCurrentChatId(sessionId);
-      loadChatMessages(sessionId);
-    }
-  }, [sessionId, setCurrentChatId, loadChatMessages]);
+    console.log('[ChatPage] Session ID effect triggered:', { 
+      sessionId, 
+      currentChatId, 
+      isInitialized 
+    });
 
-  // Handle patient selection changes
+    if (!sessionId || sessionId === currentChatId) {
+      console.log('[ChatPage] Skipping initialization - session already matches or not provided');
+      return;
+    }
+
+    const initializeChat = async () => {
+      console.log('[ChatPage] Initializing chat with session:', sessionId);
+      setCurrentChatId(sessionId);
+      await loadChatMessages(sessionId);
+      setIsInitialized(true);
+    };
+
+    initializeChat();
+
+    // Cleanup function
+    return () => {
+      console.log('[ChatPage] Cleaning up chat initialization for session:', sessionId);
+      setIsInitialized(false);
+    };
+  }, [sessionId, currentChatId, setCurrentChatId, loadChatMessages]);
+
+  // Handle patient selection changes - only update if different from current
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const patientId = params.get('patientId');
     
     if (patientId !== selectedPatientId) {
+      console.log('[ChatPage] Updating selected patient:', patientId);
       setSelectedPatientId(patientId);
-      console.log('[ChatPage] Updated selected patient:', patientId);
     }
   }, [location.search, selectedPatientId]);
 
-  const handlePatientSelect = async (patientId: string | null) => {
+  const handlePatientSelect = useCallback(async (patientId: string | null) => {
     console.log('[ChatPage] Patient selection changed:', patientId);
+    
+    if (patientId === selectedPatientId) {
+      console.log('[ChatPage] Skipping patient selection - already selected');
+      return;
+    }
+    
     setSelectedPatientId(patientId);
     
     const params = new URLSearchParams(location.search);
@@ -64,13 +91,13 @@ const ChatPage = () => {
     }
     
     navigate(`${location.pathname}?${params.toString()}`, { replace: true });
-  };
+  }, [location.pathname, location.search, navigate, selectedPatientId]);
 
-  const handleTemplateChange = (template: Template) => {
+  const handleTemplateChange = useCallback((template: Template) => {
     console.log('[ChatPage] Template changed:', template.name);
-  };
+  }, []);
 
-  const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
+  const handleMessageSend = useCallback(async (message: string, type: 'text' | 'audio' = 'text') => {
     if (!currentChatId) {
       console.log('[ChatPage] Creating new session for first message');
       const sessionId = await createSession('New Chat');
@@ -86,7 +113,13 @@ const ChatPage = () => {
     }
 
     await handleSendMessage(message, type);
-  };
+  }, [currentChatId, createSession, handleSendMessage, location.search, navigate, setCurrentChatId]);
+
+  // Only render ChatContainer once initialization is complete
+  if (!isInitialized && sessionId) {
+    console.log('[ChatPage] Waiting for chat initialization...');
+    return <div>Loading chat session...</div>;
+  }
 
   return (
     <div className="flex h-screen">
