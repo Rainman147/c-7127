@@ -1,9 +1,11 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useSessionManagement } from '@/hooks/useSessionManagement';
 import type { Message } from '@/types/chat';
 
 export const useMessagePersistence = () => {
   const { toast } = useToast();
+  const { session, refreshSession } = useSessionManagement();
 
   const saveMessageToSupabase = async (message: Message, chatId?: string) => {
     const startTime = performance.now();
@@ -14,12 +16,12 @@ export const useMessagePersistence = () => {
         timestamp: new Date().toISOString()
       });
 
-      // First verify authentication
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session) {
-        console.error('Authentication error:', sessionError);
-        throw new Error('You must be logged in to send messages');
+      if (!session) {
+        console.log('[useMessagePersistence] Attempting session refresh before save');
+        const refreshedSession = await refreshSession();
+        if (!refreshedSession) {
+          throw new Error('Authentication required');
+        }
       }
 
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -71,7 +73,7 @@ export const useMessagePersistence = () => {
       
       return { chatId, messageId: messageData.id };
     } catch (error: any) {
-      console.error('Error saving message:', error);
+      console.error('[useMessagePersistence] Error saving message:', error);
       throw error;
     }
   };
@@ -81,17 +83,12 @@ export const useMessagePersistence = () => {
     try {
       console.log('[useMessagePersistence] Loading messages for chat:', chatId);
       
-      // Verify authentication first
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session) {
-        console.error('Authentication error:', sessionError);
-        toast({
-          title: "Authentication Error",
-          description: "Please log in again to continue",
-          variant: "destructive"
-        });
-        throw new Error('Authentication required');
+      if (!session) {
+        console.log('[useMessagePersistence] Attempting session refresh before load');
+        const refreshedSession = await refreshSession();
+        if (!refreshedSession) {
+          throw new Error('Authentication required');
+        }
       }
 
       const { data: messages, error: messagesError } = await supabase
