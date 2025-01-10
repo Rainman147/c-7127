@@ -51,22 +51,20 @@ const ChatInput = ({
   };
 
   return (
-    <div className="relative flex w-full flex-col items-center">
-      <div className="w-full max-w-4xl rounded-3xl overflow-hidden bg-[#2F2F2F]">
-        <ChatInputField
-          message={message}
-          setMessage={setMessage}
-          handleKeyDown={handleKeyDown}
-          isLoading={isLoading}
-        />
-        <ChatInputActions
-          isLoading={isLoading}
-          message={message}
-          handleSubmit={handleSubmit}
-          onTranscriptionComplete={handleTranscriptionComplete}
-          handleFileUpload={handleFileUpload}
-        />
-      </div>
+    <div className="w-full rounded-xl overflow-hidden bg-[#2F2F2F]">
+      <ChatInputField
+        message={message}
+        setMessage={setMessage}
+        handleKeyDown={handleKeyDown}
+        isLoading={isLoading}
+      />
+      <ChatInputActions
+        isLoading={isLoading}
+        message={message}
+        handleSubmit={handleSubmit}
+        onTranscriptionComplete={handleTranscriptionComplete}
+        handleFileUpload={handleFileUpload}
+      />
     </div>
   );
 };
