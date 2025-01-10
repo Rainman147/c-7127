@@ -51,7 +51,7 @@ const ChatInput = ({
   };
 
   return (
-    <div className="w-full rounded-lg overflow-hidden bg-[#2F2F2F]">
+    <div className="w-full rounded-2xl overflow-hidden bg-[#2F2F2F]">
       <ChatInputField
         message={message}
         setMessage={setMessage}

@@ -45,8 +45,8 @@ const ChatContainer = ({
         />
         <div className="flex-1 overflow-hidden relative">
           <div className="absolute inset-0 pt-[60px] pb-[100px]">
-            <div className="h-full px-4 md:px-8">
-              <div className="mx-auto max-w-3xl h-full">
+            <div className="h-full">
+              <div className="mx-auto max-w-3xl h-full px-4 md:px-8">
                 <MessageList messages={messages} />
               </div>
             </div>
