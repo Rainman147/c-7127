@@ -3,7 +3,7 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
 import { useChat } from '@/hooks/useChat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
-import { useSession } from '@/contexts/SessionContext';
+import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { useToast } from '@/hooks/use-toast';
 import type { Template } from '@/types/template';
@@ -14,9 +14,9 @@ const ChatPage = () => {
   const location = useLocation();
   const { sessionId } = useParams();
   const { toast } = useToast();
-  const { status } = useSession();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
   
   const { 
@@ -31,22 +31,17 @@ const ChatPage = () => {
   // Initialize audio recovery
   useAudioRecovery();
 
+  // Effect to handle sessionId changes
   useEffect(() => {
-    if (status !== 'validated') {
-      console.log('[ChatPage] Waiting for session validation...');
-      return;
-    }
-
-    console.log('[ChatPage] Session validated, initializing chat components');
-    
+    console.log('[ChatPage] Session ID changed:', sessionId);
     if (sessionId) {
-      console.log('[ChatPage] Session ID changed:', sessionId);
       setCurrentChatId(sessionId);
       loadChatMessages(sessionId);
     } else {
+      // On index route, reset chat state
       setCurrentChatId(null);
     }
-  }, [sessionId, setCurrentChatId, loadChatMessages, status]);
+  }, [sessionId, setCurrentChatId, loadChatMessages]);
 
   // Handle patient selection changes
   useEffect(() => {
