@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Template } from '@/types/template';
 
 const ChatPage = () => {
+  const startTime = performance.now();
   console.log('[ChatPage] Initializing with session ID:', useParams().sessionId);
   
   const navigate = useNavigate();
@@ -35,10 +36,12 @@ const ChatPage = () => {
 
   // Effect to handle sessionId changes - only runs when sessionId changes and isn't already set
   useEffect(() => {
+    const initStartTime = performance.now();
     console.log('[ChatPage] Session ID effect triggered:', { 
       sessionId, 
       currentChatId, 
-      isInitialized 
+      isInitialized,
+      timeElapsed: `${(initStartTime - startTime).toFixed(2)}ms`
     });
 
     if (!sessionId || sessionId === currentChatId) {
@@ -51,13 +54,18 @@ const ChatPage = () => {
       setCurrentChatId(sessionId);
       await loadChatMessages(sessionId);
       setIsInitialized(true);
+      console.log('[ChatPage] Chat initialization complete:', {
+        timeElapsed: `${(performance.now() - initStartTime).toFixed(2)}ms`
+      });
     };
 
     initializeChat();
 
     // Cleanup function
     return () => {
-      console.log('[ChatPage] Cleaning up chat initialization for session:', sessionId);
+      console.log('[ChatPage] Cleaning up chat initialization for session:', sessionId, {
+        timeElapsed: `${(performance.now() - initStartTime).toFixed(2)}ms`
+      });
       setIsInitialized(false);
     };
   }, [sessionId, currentChatId, setCurrentChatId, loadChatMessages]);

@@ -6,7 +6,14 @@ export const useMessagePersistence = () => {
   const { toast } = useToast();
 
   const saveMessageToSupabase = async (message: Message, chatId?: string) => {
+    const startTime = performance.now();
     try {
+      console.log('[useMessagePersistence] Saving message:', { 
+        chatId,
+        messageType: message.type,
+        timestamp: new Date().toISOString()
+      });
+
       // First verify authentication
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
@@ -55,6 +62,13 @@ export const useMessagePersistence = () => {
         throw messageError;
       }
       
+      const endTime = performance.now();
+      console.log('[useMessagePersistence] Message saved successfully:', {
+        chatId,
+        messageId: messageData.id,
+        duration: `${(endTime - startTime).toFixed(2)}ms`
+      });
+      
       return { chatId, messageId: messageData.id };
     } catch (error: any) {
       console.error('Error saving message:', error);
@@ -63,6 +77,7 @@ export const useMessagePersistence = () => {
   };
 
   const loadChatMessages = async (chatId: string) => {
+    const startTime = performance.now();
     try {
       console.log('[useMessagePersistence] Loading messages for chat:', chatId);
       
@@ -90,11 +105,14 @@ export const useMessagePersistence = () => {
         throw messagesError;
       }
 
-      console.log('[useMessagePersistence] Successfully fetched messages:', messages?.length);
-
       const messageIds = messages?.map(m => m.id) || [];
       
       if (messageIds.length === 0) {
+        const endTime = performance.now();
+        console.log('[useMessagePersistence] No messages found:', {
+          chatId,
+          duration: `${(endTime - startTime).toFixed(2)}ms`
+        });
         return [];
       }
 
@@ -115,6 +133,13 @@ export const useMessagePersistence = () => {
         }
         return acc;
       }, {});
+
+      const endTime = performance.now();
+      console.log('[useMessagePersistence] Successfully loaded messages:', {
+        count: messages?.length || 0,
+        chatId,
+        duration: `${(endTime - startTime).toFixed(2)}ms`
+      });
 
       return (messages || []).map(msg => ({
         role: msg.sender as 'user' | 'assistant',

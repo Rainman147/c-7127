@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState, useRef, useEffect } from "react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useSearchParams } from "react-router-dom";
 import { useTemplateQuery, useTemplatesListQuery } from "@/hooks/queries/useTemplateQueries";
@@ -15,14 +15,21 @@ interface TemplateSelectorProps {
 }
 
 export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: TemplateSelectorProps) => {
+  const initRef = useRef(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTemplateId = searchParams.get('templateId');
   const { toast } = useToast();
   
-  console.log('[TemplateSelector] Initializing with:', { 
-    currentChatId, 
-    initialTemplateId 
-  });
+  useEffect(() => {
+    if (!initRef.current) {
+      console.log('[TemplateSelector] Initial mount with:', { 
+        currentChatId, 
+        initialTemplateId,
+        timestamp: new Date().toISOString()
+      });
+      initRef.current = true;
+    }
+  }, [currentChatId, initialTemplateId]);
   
   // Query for all templates
   const { 
