@@ -31,15 +31,13 @@ const ChatPage = () => {
   // Initialize audio recovery
   useAudioRecovery();
 
-  // Effect to handle sessionId changes
+  // Effect to handle sessionId changes - only runs once on mount and when sessionId changes
   useEffect(() => {
     console.log('[ChatPage] Session ID changed:', sessionId);
-    if (sessionId) {
+    if (sessionId && sessionId !== currentChatId) {
+      console.log('[ChatPage] Setting current chat ID:', sessionId);
       setCurrentChatId(sessionId);
       loadChatMessages(sessionId);
-    } else {
-      // On index route, reset chat state
-      setCurrentChatId(null);
     }
   }, [sessionId, setCurrentChatId, loadChatMessages]);
 

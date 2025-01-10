@@ -24,7 +24,7 @@ export const useChat = () => {
       return;
     }
 
-    const controller = new AbortController();
+    let isSubscribed = true;
     
     const loadChatMessages = async () => {
       console.log('[useChat] Loading messages for chat:', currentChatId);
@@ -32,13 +32,13 @@ export const useChat = () => {
         const loadedMessages = await loadMessages(currentChatId);
         console.log('[useChat] Successfully loaded messages:', loadedMessages.length);
         
-        // Only set messages if the request wasn't aborted
-        if (!controller.signal.aborted) {
+        // Only update state if component is still mounted
+        if (isSubscribed) {
           setMessages(loadedMessages);
         }
       } catch (error) {
         console.error('[useChat] Error loading chat messages:', error);
-        if (!controller.signal.aborted) {
+        if (isSubscribed) {
           toast({
             title: "Error loading messages",
             description: "Failed to load chat messages. Please try again.",
@@ -50,12 +50,12 @@ export const useChat = () => {
 
     loadChatMessages();
 
-    // Cleanup function to abort any in-flight requests when switching chats
+    // Cleanup function
     return () => {
       console.log('[useChat] Cleaning up effect for chat:', currentChatId);
-      controller.abort();
+      isSubscribed = false;
     };
-  }, [currentChatId, loadMessages, toast]); // Added proper dependencies
+  }, [currentChatId, loadMessages, toast]); 
 
   const handleSendMessage = useCallback(async (
     content: string,
@@ -64,7 +64,7 @@ export const useChat = () => {
   ) => {
     console.log('[useChat] Sending message:', { content, type, systemInstructions });
     try {
-      // If no current chat ID, create a new session before sending the message
+      // Only create a new session if we don't have a chat ID
       if (!currentChatId) {
         console.log('[useChat] Creating new session for first message');
         const sessionId = await createSession('New Chat');
@@ -72,6 +72,8 @@ export const useChat = () => {
           console.log('[useChat] Created new session:', sessionId);
           setCurrentChatId(sessionId);
           navigate(`/c/${sessionId}`);
+          // Wait for navigation and state update
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
 
