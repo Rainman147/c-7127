@@ -18,6 +18,7 @@ export const useCleanupManager = () => {
     if (operation) {
       try {
         const duration = Date.now() - operation.startTime;
+        // Ensure we pass a proper Error object with the abort reason
         operation.controller.abort(new Error(`Operation aborted: ${reason}`));
         if (operation.cleanup) {
           operation.cleanup();
@@ -51,10 +52,13 @@ export const useCleanupManager = () => {
   }, [cleanupOperation]);
 
   const registerCleanup = useCallback((cleanup: () => void) => {
-    activeListenersRef.current.add(cleanup);
-    return () => {
-      activeListenersRef.current.delete(cleanup);
-    };
+    if (!isUnmountingRef.current) {
+      activeListenersRef.current.add(cleanup);
+      return () => {
+        activeListenersRef.current.delete(cleanup);
+      };
+    }
+    return () => {};
   }, []);
 
   useEffect(() => {

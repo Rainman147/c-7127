@@ -64,12 +64,12 @@ export const useMessagePersistence = () => {
       cleanup: undefined as (() => void) | undefined,
       startTime: Date.now()
     };
+
+    // Register the new operation before making the request
     cleanup.operationQueueRef.current.set(chatId, operation);
 
     try {
-      const { messages: dbMessages } = await loadMessages(chatId, controller.signal);
-      
-      // Set up real-time subscription
+      // Set up real-time subscription before loading messages
       const { subscribe } = useMessageSubscriptions(chatId);
       const unsubscribe = subscribe(() => {
         console.log('[useMessagePersistence] Message update received, reloading messages');
@@ -81,6 +81,16 @@ export const useMessagePersistence = () => {
       // Register cleanup for subscription
       operation.cleanup = unsubscribe;
 
+      // Load messages with abort signal
+      const { messages: dbMessages } = await loadMessages(chatId, controller.signal);
+
+      // Check if operation was aborted during the request
+      if (controller.signal.aborted) {
+        console.log('[useMessagePersistence] Operation was aborted during message load:', 
+          controller.signal.reason);
+        return { messages: [], count: 0 };
+      }
+
       // Convert database messages to Message type
       const messages = (dbMessages as DatabaseMessage[]).map(mapDatabaseMessageToMessage);
 
@@ -90,7 +100,8 @@ export const useMessagePersistence = () => {
       return { messages, count: messages.length };
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        console.log('[useMessagePersistence] Operation cancelled for chat:', chatId, 'Reason:', error.message);
+        console.log('[useMessagePersistence] Operation cancelled for chat:', chatId, 
+          'Reason:', error.message || controller.signal.reason);
         return { messages: [], count: 0 };
       }
       console.error('[useMessagePersistence] Error loading chat messages:', error);
@@ -100,6 +111,11 @@ export const useMessagePersistence = () => {
         variant: "destructive"
       });
       throw error;
+    } finally {
+      // Clean up the operation if it's still in the queue
+      if (cleanup.operationQueueRef.current.has(chatId)) {
+        cleanup.clearQueuedOperations(chatId, 'Operation completed or failed');
+      }
     }
   }, [cleanup, loadMessages, toast]);
 
