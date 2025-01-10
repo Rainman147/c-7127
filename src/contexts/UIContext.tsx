@@ -25,7 +25,6 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     };
   });
 
-  // Handle scroll locking
   useEffect(() => {
     if (!state.isDesktop && state.isSidebarOpen) {
       console.log('[UIProvider] Locking scroll');

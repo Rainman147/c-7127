@@ -36,27 +36,29 @@ const ChatContainer = ({
   };
 
   return (
-    <div className={`relative flex h-screen w-full flex-1 flex-col items-center justify-between bg-chatgpt-main transition-all duration-300 ${
-      isSidebarOpen ? 'ml-64' : 'ml-0'
-    }`}>
-      <ChatHeader 
-        currentChatId={currentChatId} 
-        onTemplateChange={onTemplateChange}
-        onPatientSelect={onPatientSelect}
-        selectedPatientId={selectedPatientId}
-      />
-      <div className="flex-1 w-full overflow-hidden">
-        <div className="h-full pt-[60px] pb-[100px]">
-          <MessageList messages={messages} />
-        </div>
-      </div>
-      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-chatgpt-main via-chatgpt-main to-transparent pb-3 pt-6">
-        <ChatInput
-          onSend={onMessageSend}
-          onTranscriptionComplete={onTranscriptionComplete}
-          onTranscriptionUpdate={handleTranscriptionUpdate}
-          isLoading={isLoading}
+    <div className="flex h-screen w-full">
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${
+        isSidebarOpen ? 'ml-64' : 'ml-0'
+      }`}>
+        <ChatHeader 
+          currentChatId={currentChatId} 
+          onTemplateChange={onTemplateChange}
+          onPatientSelect={onPatientSelect}
+          selectedPatientId={selectedPatientId}
         />
+        <div className="flex-1 overflow-hidden relative">
+          <div className="absolute inset-0 pt-[60px] pb-[100px]">
+            <MessageList messages={messages} />
+          </div>
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-chatgpt-main via-chatgpt-main to-transparent pb-3 pt-6">
+          <ChatInput
+            onSend={onMessageSend}
+            onTranscriptionComplete={onTranscriptionComplete}
+            onTranscriptionUpdate={handleTranscriptionUpdate}
+            isLoading={isLoading}
+          />
+        </div>
       </div>
     </div>
   );
