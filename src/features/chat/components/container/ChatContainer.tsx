@@ -44,20 +44,23 @@ const ChatContainer = ({
           selectedPatientId={selectedPatientId}
         />
         
-        {/* Messages Viewport - Takes remaining height */}
-        <div className="flex-1 relative">
-          {/* Scrollable Container - Flush with edges */}
-          <div className="absolute inset-0 pt-[60px] pb-[100px]">
-            {/* Content Wrapper - Centered with optimal width */}
-            <div className="h-full">
-              <div className="mx-auto max-w-2xl h-full px-4 sm:px-6 md:px-8">
-                <MessageList messages={messages} />
+        {/* Messages Container - Takes remaining height with overflow */}
+        <div className="flex-1 overflow-hidden">
+          {/* Scrollable Area with Padding Space */}
+          <div className="h-full relative">
+            {/* Content Container */}
+            <div className="absolute inset-0 overflow-y-auto chat-scrollbar">
+              {/* Message Width Container */}
+              <div className="mx-auto max-w-2xl px-4 sm:px-6 md:px-8">
+                <div className="pt-[60px] pb-[100px]">
+                  <MessageList messages={messages} />
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Input Section - Matches message width */}
+        {/* Input Section - Fixed at bottom */}
         <div className="relative w-full bg-gradient-to-t from-chatgpt-main via-chatgpt-main to-transparent pb-3 pt-6">
           <div className="px-4 sm:px-6 md:px-8">
             <div className="mx-auto max-w-2xl">
