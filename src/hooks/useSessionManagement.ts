@@ -8,6 +8,8 @@ interface QueuedOperation {
   id: string;
   operation: () => Promise<any>;
   retryCount: number;
+  startTime?: number;
+  type: 'auth' | 'data' | 'cleanup';
 }
 
 export const useSessionManagement = () => {
@@ -21,27 +23,45 @@ export const useSessionManagement = () => {
     if (operationQueue.length === 0) return;
 
     const currentOperation = operationQueue[0];
+    const startTime = performance.now();
+    currentOperation.startTime = startTime;
+
     console.log('[SessionManagement] Processing queued operation:', {
       operationId: currentOperation.id,
+      type: currentOperation.type,
       retryCount: currentOperation.retryCount,
-      queueLength: operationQueue.length
+      queueLength: operationQueue.length,
+      startTime: new Date().toISOString(),
+      queuedAt: currentOperation.startTime ? 
+        `${(startTime - currentOperation.startTime).toFixed(2)}ms ago` : 'unknown'
     });
 
     try {
       await currentOperation.operation();
+      const endTime = performance.now();
+      console.log('[SessionManagement] Operation completed successfully:', {
+        operationId: currentOperation.id,
+        type: currentOperation.type,
+        duration: `${(endTime - startTime).toFixed(2)}ms`,
+        remainingQueue: operationQueue.length - 1
+      });
       setOperationQueue(queue => queue.slice(1));
-      console.log('[SessionManagement] Operation completed successfully:', currentOperation.id);
     } catch (error) {
       console.error('[SessionManagement] Operation failed:', {
         operationId: currentOperation.id,
+        type: currentOperation.type,
         error,
-        retryCount: currentOperation.retryCount
+        retryCount: currentOperation.retryCount,
+        duration: `${(performance.now() - startTime).toFixed(2)}ms`
       });
 
       if (currentOperation.retryCount < 3) {
-        // Exponential backoff: 1s, 2s, 4s
         const delay = Math.pow(2, currentOperation.retryCount) * 1000;
-        console.log(`[SessionManagement] Retrying operation in ${delay}ms`);
+        console.log(`[SessionManagement] Retrying operation in ${delay}ms`, {
+          operationId: currentOperation.id,
+          attempt: currentOperation.retryCount + 1,
+          maxAttempts: 3
+        });
         
         setTimeout(() => {
           setOperationQueue(queue => [
@@ -50,7 +70,11 @@ export const useSessionManagement = () => {
           ]);
         }, delay);
       } else {
-        console.error('[SessionManagement] Operation failed after max retries:', currentOperation.id);
+        console.error('[SessionManagement] Operation failed after max retries:', {
+          operationId: currentOperation.id,
+          type: currentOperation.type,
+          totalDuration: `${(performance.now() - (currentOperation.startTime || startTime)).toFixed(2)}ms`
+        });
         setOperationQueue(queue => queue.slice(1));
         toast({
           title: "Operation Failed",
@@ -60,19 +84,6 @@ export const useSessionManagement = () => {
       }
     }
   }, [operationQueue, toast]);
-
-  const queueOperation = useCallback((operation: () => Promise<any>) => {
-    const operationId = crypto.randomUUID();
-    console.log('[SessionManagement] Queueing new operation:', operationId);
-    
-    setOperationQueue(queue => [...queue, {
-      id: operationId,
-      operation,
-      retryCount: 0
-    }]);
-
-    return operationId;
-  }, []);
 
   const validateSession = useCallback(async () => {
     const startTime = performance.now();
@@ -137,44 +148,65 @@ export const useSessionManagement = () => {
   }, []);
 
   const handleAuthStateChange = useCallback(async (event: string, currentSession: Session | null) => {
+    const startTime = performance.now();
     console.log('[SessionManagement] Auth state changed:', {
       event,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      hasSession: !!currentSession
     });
     
     if (event === 'SIGNED_OUT' || !currentSession) {
-      console.log('[SessionManagement] User signed out or session expired');
+      console.log('[SessionManagement] Cleaning up session state:', {
+        event,
+        queueLength: operationQueue.length,
+        timeElapsed: `${(performance.now() - startTime).toFixed(2)}ms`
+      });
       setSession(null);
+      setOperationQueue([]);
       navigate('/auth');
       return;
     }
 
     if (event === 'TOKEN_REFRESHED') {
-      console.log('[SessionManagement] Token refreshed, updating session');
+      console.log('[SessionManagement] Token refreshed:', {
+        timestamp: new Date().toISOString(),
+        timeElapsed: `${(performance.now() - startTime).toFixed(2)}ms`
+      });
       setSession(currentSession);
     }
-  }, [navigate]);
+  }, [navigate, operationQueue.length]);
 
   useEffect(() => {
     console.log('[SessionManagement] Initializing session management');
     let isSubscribed = true;
+    const initStartTime = performance.now();
 
     const initializeSession = async () => {
       try {
         setIsValidating(true);
         const validSession = await validateSession();
 
-        if (!isSubscribed) return;
+        if (!isSubscribed) {
+          console.log('[SessionManagement] Cleanup: Component unmounted during initialization', {
+            timeElapsed: `${(performance.now() - initStartTime).toFixed(2)}ms`
+          });
+          return;
+        }
 
         if (!validSession) {
-          console.log('[SessionManagement] No valid session, redirecting to auth');
+          console.log('[SessionManagement] No valid session, redirecting to auth', {
+            timeElapsed: `${(performance.now() - initStartTime).toFixed(2)}ms`
+          });
           navigate('/auth');
           return;
         }
 
         setSession(validSession);
       } catch (error: any) {
-        console.error('[SessionManagement] Session initialization error:', error);
+        console.error('[SessionManagement] Session initialization error:', {
+          error,
+          timeElapsed: `${(performance.now() - initStartTime).toFixed(2)}ms`
+        });
         toast({
           title: "Authentication Error",
           description: error.message || "Please sign in again",
@@ -193,11 +225,32 @@ export const useSessionManagement = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
     return () => {
-      console.log('[SessionManagement] Cleaning up session management');
+      const cleanupStartTime = performance.now();
+      console.log('[SessionManagement] Starting cleanup:', {
+        queueLength: operationQueue.length,
+        isValidating,
+        hasSession: !!session
+      });
+
       isSubscribed = false;
       subscription.unsubscribe();
+
+      if (operationQueue.length > 0) {
+        console.log('[SessionManagement] Cleaning up pending operations:', {
+          pendingOperations: operationQueue.map(op => ({
+            id: op.id,
+            type: op.type,
+            retryCount: op.retryCount
+          }))
+        });
+      }
+
+      console.log('[SessionManagement] Cleanup completed:', {
+        duration: `${(performance.now() - cleanupStartTime).toFixed(2)}ms`,
+        totalSessionDuration: `${(performance.now() - initStartTime).toFixed(2)}ms`
+      });
     };
-  }, [validateSession, handleAuthStateChange, navigate, toast]);
+  }, [validateSession, handleAuthStateChange, navigate, toast, operationQueue, session, isValidating]);
 
   // Process queue when it changes
   useEffect(() => {
@@ -211,6 +264,24 @@ export const useSessionManagement = () => {
     isValidating,
     validateSession,
     refreshSession,
-    queueOperation
+    queueOperation: useCallback((operation: () => Promise<any>, type: 'auth' | 'data' | 'cleanup' = 'data') => {
+      const operationId = crypto.randomUUID();
+      console.log('[SessionManagement] Queueing new operation:', {
+        id: operationId,
+        type,
+        queueLength: operationQueue.length + 1,
+        timestamp: new Date().toISOString()
+      });
+      
+      setOperationQueue(queue => [...queue, {
+        id: operationId,
+        operation,
+        retryCount: 0,
+        type,
+        startTime: performance.now()
+      }]);
+
+      return operationId;
+    }, [operationQueue.length])
   };
 };
