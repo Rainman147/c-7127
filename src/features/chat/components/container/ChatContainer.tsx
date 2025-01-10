@@ -48,7 +48,7 @@ const ChatContainer = ({
             <MessageList messages={messages} />
           </div>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-chatgpt-main via-chatgpt-main to-transparent pb-3 pt-6">
+        <div className="relative w-full bg-gradient-to-t from-chatgpt-main via-chatgpt-main to-transparent pb-3 pt-6">
           <ChatInput
             onSend={onMessageSend}
             onTranscriptionComplete={onTranscriptionComplete}
