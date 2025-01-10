@@ -44,23 +44,17 @@ const ChatContainer = ({
           selectedPatientId={selectedPatientId}
         />
         <div className="flex-1 overflow-hidden relative">
-          <div className="absolute inset-0 pt-[60px] pb-[100px] flex justify-center">
-            <div className="w-full max-w-3xl px-4 sm:px-8 md:px-12">
-              <MessageList messages={messages} />
-            </div>
+          <div className="absolute inset-0 pt-[60px] pb-[100px]">
+            <MessageList messages={messages} />
           </div>
         </div>
         <div className="relative w-full bg-gradient-to-t from-chatgpt-main via-chatgpt-main to-transparent pb-3 pt-6">
-          <div className="flex justify-center px-4 sm:px-8 md:px-12">
-            <div className="w-full max-w-3xl">
-              <ChatInput
-                onSend={onMessageSend}
-                onTranscriptionComplete={onTranscriptionComplete}
-                onTranscriptionUpdate={handleTranscriptionUpdate}
-                isLoading={isLoading}
-              />
-            </div>
-          </div>
+          <ChatInput
+            onSend={onMessageSend}
+            onTranscriptionComplete={onTranscriptionComplete}
+            onTranscriptionUpdate={handleTranscriptionUpdate}
+            isLoading={isLoading}
+          />
         </div>
       </div>
     </div>
