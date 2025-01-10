@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/types/chat';
@@ -6,8 +6,7 @@ import { useMessagePersistence } from './useMessagePersistence';
 
 export const useMessageHandling = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const { saveMessageToSupabase } = useMessagePersistence();
+  const { saveMessage } = useMessagePersistence(); // Updated from saveMessageToSupabase
 
   const handleSendMessage = async (
     content: string, 
@@ -32,16 +31,8 @@ export const useMessageHandling = () => {
       const newMessages = [...currentMessages, userMessage];
 
       // Save message to Supabase
-      const { chatId, messageId } = await saveMessageToSupabase(userMessage, currentChatId);
+      const { chatId, messageId } = await saveMessage(userMessage, currentChatId);
       userMessage.id = messageId;
-
-      // Cancel any ongoing stream
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-
-      // Create new abort controller for this stream
-      abortControllerRef.current = new AbortController();
 
       // Call Gemini function with system instructions
       const { data, error } = await supabase.functions.invoke('gemini', {
@@ -62,7 +53,7 @@ export const useMessageHandling = () => {
           isStreaming: false
         };
         
-        const { messageId: assistantMessageId } = await saveMessageToSupabase(assistantMessage, chatId);
+        const { messageId: assistantMessageId } = await saveMessage(assistantMessage, chatId);
         assistantMessage.id = assistantMessageId;
         
         return {

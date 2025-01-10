@@ -1,13 +1,15 @@
+import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types/chat';
+import { useCleanupManager } from './cleanup/useCleanupManager';
 
 export const useMessagePersistence = () => {
   const { toast } = useToast();
+  const { registerCleanup, clearQueuedOperations } = useCleanupManager();
 
-  const saveMessageToSupabase = async (message: Message, chatId?: string) => {
+  const saveMessage = async (message: Message, chatId?: string) => {
     try {
-      // First verify authentication
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !session) {
@@ -62,11 +64,10 @@ export const useMessagePersistence = () => {
     }
   };
 
-  const loadChatMessages = async (chatId: string) => {
+  const loadChatMessages = useCallback(async (chatId: string) => {
+    console.log('[useMessagePersistence] Loading messages for chat:', chatId);
+    
     try {
-      console.log('[useMessagePersistence] Loading messages for chat:', chatId);
-      
-      // Verify authentication first
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !session) {
@@ -132,10 +133,12 @@ export const useMessagePersistence = () => {
       });
       throw error;
     }
-  };
+  }, [toast]);
 
   return {
-    saveMessageToSupabase,
-    loadChatMessages
+    saveMessage,
+    loadChatMessages,
+    clearQueuedOperations,
+    registerCleanup
   };
 };
