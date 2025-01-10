@@ -1,35 +1,24 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useSessionManagement } from '@/hooks/useSessionManagement';
 import type { Message } from '@/types/chat';
 
 export const useMessagePersistence = () => {
   const { toast } = useToast();
-  const { session, refreshSession } = useSessionManagement();
 
   const saveMessageToSupabase = async (message: Message, chatId?: string) => {
-    const startTime = performance.now();
     try {
-      console.log('[useMessagePersistence] Saving message:', { 
-        chatId,
-        messageType: message.type,
-        timestamp: new Date().toISOString()
-      });
-
-      // Ensure we have a valid session
-      let currentSession = session;
-      if (!currentSession) {
-        console.log('[useMessagePersistence] No session found, attempting refresh');
-        currentSession = await refreshSession();
-        if (!currentSession) {
-          throw new Error('Authentication required');
-        }
+      // First verify authentication
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.error('Authentication error:', sessionError);
+        throw new Error('You must be logged in to send messages');
       }
 
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
-        console.error('[useMessagePersistence] User fetch error:', userError);
+        console.error('User fetch error:', userError);
         throw new Error('You must be logged in to send messages');
       }
 
@@ -44,7 +33,7 @@ export const useMessagePersistence = () => {
           .single();
 
         if (chatError) {
-          console.error('[useMessagePersistence] Chat creation error:', chatError);
+          console.error('Chat creation error:', chatError);
           throw chatError;
         }
         chatId = chatData.id;
@@ -62,37 +51,32 @@ export const useMessagePersistence = () => {
         .single();
 
       if (messageError) {
-        console.error('[useMessagePersistence] Message save error:', messageError);
+        console.error('Message save error:', messageError);
         throw messageError;
       }
       
-      const endTime = performance.now();
-      console.log('[useMessagePersistence] Message saved successfully:', {
-        chatId,
-        messageId: messageData.id,
-        duration: `${(endTime - startTime).toFixed(2)}ms`
-      });
-      
       return { chatId, messageId: messageData.id };
     } catch (error: any) {
-      console.error('[useMessagePersistence] Error saving message:', error);
+      console.error('Error saving message:', error);
       throw error;
     }
   };
 
   const loadChatMessages = async (chatId: string) => {
-    const startTime = performance.now();
     try {
       console.log('[useMessagePersistence] Loading messages for chat:', chatId);
       
-      // Ensure we have a valid session before proceeding
-      let currentSession = session;
-      if (!currentSession) {
-        console.log('[useMessagePersistence] No session found, attempting refresh');
-        currentSession = await refreshSession();
-        if (!currentSession) {
-          throw new Error('Authentication required');
-        }
+      // Verify authentication first
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.error('Authentication error:', sessionError);
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again to continue",
+          variant: "destructive"
+        });
+        throw new Error('Authentication required');
       }
 
       const { data: messages, error: messagesError } = await supabase
@@ -106,14 +90,11 @@ export const useMessagePersistence = () => {
         throw messagesError;
       }
 
+      console.log('[useMessagePersistence] Successfully fetched messages:', messages?.length);
+
       const messageIds = messages?.map(m => m.id) || [];
       
       if (messageIds.length === 0) {
-        const endTime = performance.now();
-        console.log('[useMessagePersistence] No messages found:', {
-          chatId,
-          duration: `${(endTime - startTime).toFixed(2)}ms`
-        });
         return [];
       }
 
@@ -134,13 +115,6 @@ export const useMessagePersistence = () => {
         }
         return acc;
       }, {});
-
-      const endTime = performance.now();
-      console.log('[useMessagePersistence] Successfully loaded messages:', {
-        count: messages?.length || 0,
-        chatId,
-        duration: `${(endTime - startTime).toFixed(2)}ms`
-      });
 
       return (messages || []).map(msg => ({
         role: msg.sender as 'user' | 'assistant',
