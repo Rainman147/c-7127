@@ -27,7 +27,6 @@ const ChatContainer = ({
   selectedPatientId
 }: ChatContainerProps) => {
   console.log('[ChatContainer] Rendering with messages:', messages, 'currentChatId:', currentChatId);
-  const { isSidebarOpen } = useUI();
   const [transcriptionText, setTranscriptionText] = useState('');
 
   const handleTranscriptionUpdate = (text: string) => {
@@ -37,9 +36,7 @@ const ChatContainer = ({
 
   return (
     <div className="flex h-screen w-full">
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${
-        isSidebarOpen ? 'ml-64' : 'ml-0'
-      }`}>
+      <div className="flex-1 flex flex-col">
         <ChatHeader 
           currentChatId={currentChatId} 
           onTemplateChange={onTemplateChange}
