@@ -3,6 +3,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useMessageOperations } from './operations/useMessageOperations';
 import { useMessageSubscriptions } from './subscriptions/useMessageSubscriptions';
 import { useCleanupManager } from './cleanup/useCleanupManager';
+import { createAbortController, abortWithReason, wasAborted } from '@/utils/abortController';
 import type { Message } from '@/types/chat';
 
 interface DatabaseMessage {
@@ -54,26 +55,26 @@ export const useMessagePersistence = () => {
   const loadChatMessages = useCallback(async (chatId: string): Promise<MessagesResponse> => {
     console.log('[useMessagePersistence] Loading messages for chat:', chatId);
 
-    // Cancel any existing operations for this chat with reason
+    // Cancel any existing operations for this chat
     cleanup.clearQueuedOperations(chatId, 'New chat load requested');
 
     // Create new abort controller for this operation
-    const controller = new AbortController();
+    const controller = createAbortController(`Load messages for chat ${chatId}`);
+    
     const operation = { 
       controller,
       cleanup: undefined as (() => void) | undefined,
       startTime: Date.now()
     };
 
-    // Register the new operation before making the request
+    // Register the new operation
     cleanup.operationQueueRef.current.set(chatId, operation);
 
     try {
       // Set up real-time subscription before loading messages
       const { subscribe } = useMessageSubscriptions(chatId);
       const unsubscribe = subscribe(() => {
-        console.log('[useMessagePersistence] Message update received, reloading messages');
-        // Pass abort reason for existing operation
+        console.log('[useMessagePersistence] Message update received for chat:', chatId);
         cleanup.clearQueuedOperations(chatId, 'Real-time update triggered');
         loadMessages(chatId, controller.signal);
       });
@@ -85,9 +86,7 @@ export const useMessagePersistence = () => {
       const { messages: dbMessages } = await loadMessages(chatId, controller.signal);
 
       // Check if operation was aborted during the request
-      if (controller.signal.aborted) {
-        console.log('[useMessagePersistence] Operation was aborted during message load:', 
-          controller.signal.reason);
+      if (wasAborted(controller.signal)) {
         return { messages: [], count: 0 };
       }
 
@@ -100,8 +99,7 @@ export const useMessagePersistence = () => {
       return { messages, count: messages.length };
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        console.log('[useMessagePersistence] Operation cancelled for chat:', chatId, 
-          'Reason:', error.message || controller.signal.reason);
+        console.log('[useMessagePersistence] Operation cancelled:', error.message);
         return { messages: [], count: 0 };
       }
       console.error('[useMessagePersistence] Error loading chat messages:', error);

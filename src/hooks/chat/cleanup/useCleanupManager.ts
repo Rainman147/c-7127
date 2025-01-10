@@ -1,7 +1,9 @@
 import { useRef, useCallback, useEffect } from 'react';
+import { abortWithReason } from '@/utils/abortController';
+import type { AbortControllerWithReason } from '@/utils/abortController';
 
 interface ActiveOperation {
-  controller: AbortController;
+  controller: AbortControllerWithReason;
   cleanup?: () => void;
   startTime: number;
 }
@@ -18,8 +20,7 @@ export const useCleanupManager = () => {
     if (operation) {
       try {
         const duration = Date.now() - operation.startTime;
-        // Ensure we pass a proper Error object with the abort reason
-        operation.controller.abort(new Error(`Operation aborted: ${reason}`));
+        abortWithReason(operation.controller, reason);
         if (operation.cleanup) {
           operation.cleanup();
         }
