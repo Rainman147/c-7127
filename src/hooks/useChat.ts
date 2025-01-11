@@ -11,7 +11,7 @@ export const useChat = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Use TanStack Query hooks with v5 loading states
+  // Use TanStack Query hooks with optimistic updates
   const { 
     data: messages = [], 
     isPending: isMessagesLoading,

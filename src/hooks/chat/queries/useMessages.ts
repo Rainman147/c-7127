@@ -13,6 +13,13 @@ export const useMessages = (chatId: string | null) => {
       console.log('[useMessages] Fetching messages for chat:', chatId);
       if (!chatId) return [];
       
+      // Try to get from localStorage first
+      const cachedMessages = localStorage.getItem(`chat_messages_${chatId}`);
+      if (cachedMessages) {
+        console.log('[useMessages] Found cached messages');
+        return JSON.parse(cachedMessages);
+      }
+
       const { data: messagesWithContext, error } = await supabase
         .from('messages')
         .select(`
@@ -44,6 +51,9 @@ export const useMessages = (chatId: string | null) => {
         console.log('[useMessages] Transformed message:', message.id);
         return message;
       });
+
+      // Cache the messages in localStorage
+      localStorage.setItem(`chat_messages_${chatId}`, JSON.stringify(transformedMessages));
 
       return transformedMessages;
     },

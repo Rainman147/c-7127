@@ -78,17 +78,55 @@ export const useSendMessage = () => {
 
       const transformedMessage = transformDbMessageToMessage(message as DbMessage);
       console.log('[useSendMessage] Message sent successfully:', transformedMessage);
+
+      // Update localStorage cache
+      const cachedMessages = localStorage.getItem(`chat_messages_${chatId}`);
+      if (cachedMessages) {
+        const messages = JSON.parse(cachedMessages);
+        messages.push(transformedMessage);
+        localStorage.setItem(`chat_messages_${chatId}`, JSON.stringify(messages));
+      }
       
       return transformedMessage;
     },
-    onSuccess: (data, variables) => {
-      console.log('[useSendMessage] Updating cache after successful send');
+    onMutate: async (newMessage) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: messageKeys.chat(newMessage.chatId) });
+
+      // Snapshot the previous value
+      const previousMessages = queryClient.getQueryData<Message[]>(messageKeys.chat(newMessage.chatId)) || [];
+
+      // Create optimistic message
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`,
+        chatId: newMessage.chatId,
+        content: newMessage.content,
+        role: 'user',
+        type: newMessage.type || 'text',
+        status: 'sending',
+        createdAt: new Date().toISOString(),
+      };
+
+      // Optimistically update the cache
+      queryClient.setQueryData<Message[]>(
+        messageKeys.chat(newMessage.chatId),
+        old => [...(old || []), optimisticMessage]
+      );
+
+      return { previousMessages };
+    },
+    onError: (err, newMessage, context) => {
+      console.error('[useSendMessage] Error in mutation:', err);
+      // Revert the optimistic update
+      if (context?.previousMessages) {
+        queryClient.setQueryData(messageKeys.chat(newMessage.chatId), context.previousMessages);
+      }
+    },
+    onSettled: (data, error, variables) => {
+      console.log('[useSendMessage] Invalidating queries after settled');
       queryClient.invalidateQueries({
         queryKey: messageKeys.chat(variables.chatId),
       });
-    },
-    onError: (error) => {
-      console.error('[useSendMessage] Error in mutation:', error);
     }
   });
 };
