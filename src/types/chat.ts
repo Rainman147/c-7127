@@ -1,7 +1,9 @@
+import { Message, MessageRole } from './message';
+
 export interface MessageQuery {
   chatId: string;
   content: string;
-  sender: 'user' | 'assistant';
+  role: MessageRole;
   timestamp: string;
   status: 'sending' | 'sent' | 'error';
   type?: 'text' | 'audio';

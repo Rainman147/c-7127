@@ -1,8 +1,9 @@
 import { Loader2, Mic } from 'lucide-react';
 import TiptapEditor from '@/features/chat/components/editor/TiptapEditor';
+import { Message, MessageRole } from '@/types/message';
 
 type MessageItemProps = {
-  role: 'user' | 'assistant';
+  role: MessageRole;
   content: string;
   type?: 'text' | 'audio';
   isStreaming?: boolean;
