@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUI } from '@/contexts/UIContext';
 import { ChatHeader } from '@/features/chat/components/header/ChatHeader';
 import MessageList from '@/features/chat/components/message/MessageList';
 import ChatInput from '@/features/chat/components/input/ChatInput';
-import type { Message, Template } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { formatPatientContext } from '@/types/patient';
+import type { Message, Template, Patient, PatientContext } from '@/types';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -28,11 +30,41 @@ const ChatContainer = ({
 }: ChatContainerProps) => {
   console.log('[ChatContainer] Rendering with messages:', messages, 'currentChatId:', currentChatId);
   const [transcriptionText, setTranscriptionText] = useState('');
+  const [patientContext, setPatientContext] = useState<PatientContext | null>(null);
 
   const handleTranscriptionUpdate = (text: string) => {
     console.log('[ChatContainer] Transcription update:', text);
     setTranscriptionText(text);
   };
+
+  // Fetch and format patient context when selectedPatientId changes
+  useEffect(() => {
+    const loadPatientContext = async () => {
+      if (!selectedPatientId) {
+        setPatientContext(null);
+        return;
+      }
+
+      try {
+        const { data: patient, error } = await supabase
+          .from('patients')
+          .select('*')
+          .eq('id', selectedPatientId)
+          .single();
+
+        if (error) throw error;
+
+        const formattedContext = formatPatientContext(patient);
+        console.log('[ChatContainer] Loaded patient context:', formattedContext);
+        setPatientContext(formattedContext);
+      } catch (err) {
+        console.error('[ChatContainer] Error loading patient context:', err);
+        setPatientContext(null);
+      }
+    };
+
+    loadPatientContext();
+  }, [selectedPatientId]);
 
   return (
     <div className="flex h-screen w-full">

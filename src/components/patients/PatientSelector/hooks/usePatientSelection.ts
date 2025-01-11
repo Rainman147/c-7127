@@ -16,7 +16,7 @@ export const usePatientSelection = (onPatientSelect: (patientId: string | null) 
 
       const { data, error } = await supabase
         .from('patients')
-        .select('*')
+        .select('*, medical_history, current_medications')
         .eq('id', patientId)
         .single();
 
