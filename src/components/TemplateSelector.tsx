@@ -1,4 +1,4 @@
-import { memo, useCallback, useState, useEffect } from "react";
+import { memo, useCallback, useState } from "react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useSearchParams } from "react-router-dom";
 import { useTemplateQuery, useTemplatesListQuery } from "@/hooks/queries/useTemplateQueries";
@@ -19,12 +19,11 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTemplateId = searchParams.get('templateId');
   const { toast } = useToast();
-  const { createContext, currentContext } = useTemplateContextQueries(currentChatId);
+  const { createContext } = useTemplateContextQueries(currentChatId);
   
   console.log('[TemplateSelector] Initializing with:', { 
     currentChatId, 
-    initialTemplateId,
-    currentContext 
+    initialTemplateId 
   });
   
   const { 
@@ -39,7 +38,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     isLoading: isLoadingTemplate, 
     error: templateError,
     isError: isTemplateError 
-  } = useTemplateQuery(initialTemplateId || currentContext?.template_id);
+  } = useTemplateQuery(initialTemplateId);
   
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
@@ -89,16 +88,6 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     console.log('[TemplateSelector] Tooltip state changed for template:', templateId);
     setOpenTooltipId(templateId);
   }, []);
-
-  // Load initial template from context if available
-  useEffect(() => {
-    if (currentContext && !initialTemplateId) {
-      const contextTemplate = templates.find(t => t.id === currentContext.template_id);
-      if (contextTemplate) {
-        handleTemplateSelect(contextTemplate);
-      }
-    }
-  }, [currentContext, initialTemplateId, templates, handleTemplateSelect]);
 
   if (isTemplatesError && templatesError) {
     console.error('[TemplateSelector] Critical error loading templates:', templatesError);
