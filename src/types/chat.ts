@@ -1,5 +1,13 @@
 import { Message, MessageRole } from './message';
 
+export type { Message, MessageRole };
+
+export interface MessageProps {
+  content: string;
+  sender: 'user' | 'ai';
+  type?: 'text' | 'audio';
+}
+
 export interface MessageQuery {
   chatId: string;
   content: string;

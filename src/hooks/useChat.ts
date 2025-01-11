@@ -14,7 +14,8 @@ export const useChat = () => {
   // Use TanStack Query hooks
   const { 
     data: messages = [], 
-    isLoading: isMessagesLoading 
+    isLoading: isMessagesLoading,
+    refetch: loadChatMessages
   } = useMessages(currentChatId);
   
   const { 
@@ -82,6 +83,7 @@ export const useChat = () => {
     handleSendMessage,
     currentChatId,
     setCurrentChatId,
-    currentSession
+    currentSession,
+    loadChatMessages
   };
 };
