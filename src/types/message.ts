@@ -1,3 +1,5 @@
+import { Json } from '@/integrations/supabase/types';
+
 export type MessageRole = 'user' | 'assistant';
 export type MessageType = 'text' | 'audio';
 export type MessageStatus = 'queued' | 'sending' | 'sent' | 'error';
@@ -21,6 +23,7 @@ export interface DbMessage {
   sequence?: number;
   delivered_at?: string;
   seen_at?: string;
+  template_contexts?: DbTemplateContext[];
 }
 
 // Frontend message type
@@ -35,6 +38,7 @@ export interface Message {
   metadata?: MessageMetadata;
   isStreaming?: boolean;
   wasEdited?: boolean;
+  templateContext?: TemplateContext;
 }
 
 // Template context types
@@ -44,7 +48,7 @@ export interface TemplateContext {
   chatId?: string;
   messageId?: string;
   systemInstructions: string;
-  metadata?: Record<string, any>;
+  metadata: Record<string, any>;
   version?: number;
   createdAt: string;
   updatedAt: string;
@@ -57,19 +61,14 @@ export interface DbTemplateContext {
   chat_id?: string;
   message_id?: string;
   system_instructions: string;
-  metadata?: Record<string, any>;
+  metadata: Json;
   version?: number;
   created_at: string;
   updated_at: string;
   user_id: string;
 }
 
-// Message with template context
-export interface MessageWithContext extends Message {
-  templateContext?: TemplateContext;
-}
-
-// Type guard to check if a message is from the database
+// Type guards
 export const isDbMessage = (message: any): message is DbMessage => {
   return (
     message &&
@@ -79,7 +78,6 @@ export const isDbMessage = (message: any): message is DbMessage => {
   );
 };
 
-// Type guard for template context
 export const isTemplateContext = (context: any): context is TemplateContext => {
   return (
     context &&
