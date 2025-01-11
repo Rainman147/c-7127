@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { messageKeys, sessionKeys } from '@/types/chat';
-import type { Message, ChatSession } from '@/types/chat';
+import type { Message, DbMessage, transformDbMessageToMessage } from '@/types/message';
+import type { ChatSession } from '@/types/chat';
 import { useToast } from '@/hooks/use-toast';
 
 // Fetch messages for a chat
@@ -30,7 +31,7 @@ export const useMessages = (chatId: string | null) => {
         throw error;
       }
       
-      return data || [];
+      return (data || []).map(transformDbMessageToMessage);
     },
     gcTime: 1000 * 60 * 30, // 30 minutes
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -101,7 +102,7 @@ export const useSendMessage = () => {
         throw error;
       }
       
-      return data;
+      return transformDbMessageToMessage(data);
     },
     onSuccess: (data, variables) => {
       console.log('[useSendMessage] Message sent successfully:', data);
