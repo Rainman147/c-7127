@@ -73,11 +73,16 @@ export const transformDbMessageToMessage = (dbMessage: DbMessage): Message => {
   };
 };
 
-// Transform frontend message to database format
-export const transformMessageToDb = (message: Message): Partial<DbMessage> => {
+// Transform frontend message to database format with required fields
+export const transformMessageToDb = (message: Message): Pick<DbMessage, 'chat_id' | 'content' | 'sender'> & Partial<Omit<DbMessage, 'chat_id' | 'content' | 'sender'>> => {
   console.log('[transformMessageToDb] Converting message for chat:', message.chatId);
   
-  const dbMessage: Partial<DbMessage> = {
+  if (!message.chatId || !message.content || !message.role) {
+    console.error('[transformMessageToDb] Missing required message fields:', message);
+    throw new Error('Missing required message fields for database transformation');
+  }
+
+  const dbMessage = {
     chat_id: message.chatId,
     content: message.content,
     sender: message.role,
