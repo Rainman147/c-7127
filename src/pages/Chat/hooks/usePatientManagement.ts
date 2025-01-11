@@ -25,7 +25,6 @@ export const usePatientManagement = () => {
     } else {
       params.delete('patientId');
     }
-    return params.toString();
   };
 
   return {

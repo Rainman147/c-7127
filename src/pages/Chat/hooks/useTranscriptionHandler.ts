@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 
 export const useTranscriptionHandler = () => {
-  const handleTranscriptionComplete = useCallback((text: string) => {
+  const handleTranscriptionComplete = useCallback(async (text: string) => {
     console.log('[useTranscriptionHandler] Transcription complete, ready for user to edit:', text);
     if (text) {
       const chatInput = document.querySelector('textarea');
