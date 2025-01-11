@@ -13,7 +13,7 @@ serve(async (req) => {
 
   try {
     console.log('Received request to OpenAI function');
-    const { messages, systemInstructions } = await req.json();
+    const { messages, systemInstructions, messageId, chatId } = await req.json();
     
     if (!messages || !Array.isArray(messages)) {
       throw new Error('Invalid messages format');
@@ -48,7 +48,7 @@ serve(async (req) => {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // Using the exact model name as requested
+        model: "gpt-4o-mini",
         messages: openAiMessages,
         temperature: 0.7,
         max_tokens: 2048,
