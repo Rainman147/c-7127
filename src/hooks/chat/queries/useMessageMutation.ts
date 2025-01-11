@@ -15,12 +15,12 @@ export const useSendMessage = () => {
     }) => {
       console.log('[useSendMessage] Sending message:', { content, chatId, type });
       
-      const messageData = transformMessageToDb({
+      const messageData = {
+        chat_id: chatId,
         content,
-        chatId,
         type,
-        role: 'user',
-      });
+        sender: 'user',
+      };
       
       const { data, error } = await supabase
         .from('messages')

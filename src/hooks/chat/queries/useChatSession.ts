@@ -23,7 +23,20 @@ export const useChatSession = (sessionId: string | null) => {
         throw error;
       }
       
-      return data as ChatSession | null;
+      if (!data) return null;
+
+      // Transform the data to match ChatSession type
+      const chatSession: ChatSession = {
+        id: data.id,
+        title: data.title,
+        templateId: data.template_type || undefined,
+        patientId: data.patient_id || undefined,
+        status: 'active',
+        lastMessage: undefined,
+        systemInstructions: undefined
+      };
+      
+      return chatSession;
     },
     gcTime: 1000 * 60 * 60, // 1 hour
     staleTime: 1000 * 60 * 5, // 5 minutes
