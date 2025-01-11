@@ -33,6 +33,77 @@
  */
 
 /**
+ * Template Context Integration
+ * 
+ * 1. Template Types & Storage
+ *    ├─ Hardcoded templates (default, non-modifiable)
+ *    │  ├─ SOAP notes (standard & expanded)
+ *    │  ├─ Live session templates
+ *    │  └─ Referral letters
+ *    └─ Custom templates (user-created)
+ *       ├─ Stored in Supabase
+ *       └─ Version controlled
+ * 
+ * 2. Template Selection Flow
+ *    ├─ URL parameter handling (?templateId=xxx)
+ *    ├─ Template inheritance in chats
+ *    │  ├─ Chat-level default template
+ *    │  └─ Message-level template override
+ *    └─ Fallback mechanisms
+ *       ├─ Invalid template handling
+ *       └─ Default template selection
+ * 
+ * 3. Template Processing
+ *    ├─ System instructions application
+ *    │  ├─ AI response formatting
+ *    │  └─ Context preservation
+ *    ├─ Version tracking
+ *    │  ├─ Template updates
+ *    │  └─ Change history
+ *    └─ Priority rules
+ *       ├─ Template hierarchy
+ *       └─ Override handling
+ */
+
+/**
+ * Patient Data Integration
+ * 
+ * 1. Patient Context Management
+ *    ├─ Selection flow
+ *    │  ├─ URL parameters (?patientId=yyy)
+ *    │  ├─ Search functionality
+ *    │  └─ Context persistence
+ *    ├─ Data synchronization
+ *    │  ├─ Real-time updates
+ *    │  └─ Cache invalidation
+ *    └─ Access control
+ *       ├─ Row-level security
+ *       └─ Data privacy rules
+ * 
+ * 2. Patient-Chat Relationship
+ *    ├─ Chat session linkage
+ *    │  ├─ Patient context in messages
+ *    │  └─ History preservation
+ *    ├─ Template interaction
+ *    │  ├─ Patient data in templates
+ *    │  └─ Template customization
+ *    └─ Data updates
+ *       ├─ Last accessed tracking
+ *       └─ Medical history updates
+ * 
+ * 3. Patient Data Access
+ *    ├─ Caching strategy
+ *    │  ├─ TanStack Query configuration
+ *    │  └─ Invalidation rules
+ *    ├─ Search optimization
+ *    │  ├─ Pagination handling
+ *    │  └─ Filter implementation
+ *    └─ Privacy controls
+ *       ├─ Data encryption
+ *       └─ Access logging
+ */
+
+/**
  * Real-time Updates
  * 
  * 1. WebSocket Channels
@@ -49,7 +120,7 @@
  */
 
 /**
- * Error Propagation
+ * Error Handling
  * 
  * 1. Error Sources
  *    ├─ Network failures
@@ -68,66 +139,12 @@
  */
 
 /**
- * State Updates
- * 
- * 1. Local State
- *    └─ React components
- *       ├─ Form inputs
- *       ├─ UI controls
- *       └─ Temporary data
- * 
- * 2. Query Cache
- *    └─ TanStack Query
- *       ├─ Message history
- *       ├─ Template data
- *       └─ Patient context
- * 
- * 3. Server State
- *    └─ Supabase
- *       ├─ Persistent storage
- *       ├─ Real-time sync
- *       └─ Authentication
- */
-
-/**
- * Template Context Integration
- * 
- * 1. Context Flow
- *    └─ Template selection
- *       ├─ System instructions
- *       ├─ Formatting rules
- *       └─ Validation schema
- * 
- * 2. Message Processing
- *    └─ Template application
- *       ├─ Content formatting
- *       ├─ Validation rules
- *       └─ Error checking
- */
-
-/**
- * Patient Data Integration
- * 
- * 1. Data Access
- *    └─ Patient context
- *       ├─ Basic information
- *       ├─ Medical history
- *       └─ Recent interactions
- * 
- * 2. Data Usage
- *    └─ Message context
- *       ├─ Template customization
- *       ├─ Response formatting
- *       └─ Access control
- */
-
-/**
- * Performance Considerations
+ * Performance Optimization
  * 
  * 1. Caching Strategy
  *    └─ TanStack Query
- *       ├─ Stale time configuration
- *       ├─ Cache invalidation rules
+ *       ├─ Stale time: 5 minutes
+ *       ├─ Cache time: 30 minutes
  *       └─ Background updates
  * 
  * 2. Real-time Updates
@@ -138,7 +155,7 @@
  */
 
 /**
- * Security Patterns
+ * Security Implementation
  * 
  * 1. Authentication Flow
  *    └─ Supabase Auth
@@ -159,11 +176,10 @@ export type DataFlowDocumentation = {
   maintainer: string;
   sections: {
     messageFlow: boolean;
-    realTimeUpdates: boolean;
-    errorPropagation: boolean;
-    stateUpdates: boolean;
     templateContext: boolean;
     patientData: boolean;
+    realTimeUpdates: boolean;
+    errorHandling: boolean;
     performance: boolean;
     security: boolean;
   };
@@ -171,16 +187,15 @@ export type DataFlowDocumentation = {
 
 // Documentation metadata
 export const dataFlowDoc: DataFlowDocumentation = {
-  version: '1.0.0',
+  version: '1.1.0',
   lastUpdated: new Date().toISOString(),
   maintainer: 'Development Team',
   sections: {
     messageFlow: true,
-    realTimeUpdates: true,
-    errorPropagation: true,
-    stateUpdates: true,
     templateContext: true,
     patientData: true,
+    realTimeUpdates: true,
+    errorHandling: true,
     performance: true,
     security: true,
   },
