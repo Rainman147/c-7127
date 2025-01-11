@@ -56,3 +56,5 @@ export const isDbMessage = (message: any): message is DbMessage => {
     typeof message.content === 'string'
   );
 };
+
+export { transformTemplateContext } from './templateContextTransformer';

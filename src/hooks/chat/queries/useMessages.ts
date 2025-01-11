@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { messageKeys } from '@/types/chat';
-import { Message, DbMessage, TemplateContext } from '@/types/message';
-import { transformDbMessageToMessage, transformTemplateContext } from '../transformers/messageTransformer';
+import { Message, DbMessage } from '@/types/message';
+import { transformDbMessageToMessage } from '../transformers/messageTransformer';
 
 export const useMessages = (chatId: string | null) => {
   console.log('[useMessages] Initializing with chatId:', chatId);
@@ -30,12 +30,7 @@ export const useMessages = (chatId: string | null) => {
 
       // Transform the messages with their template contexts
       return (messagesWithContext || []).map(msg => {
-        const message = transformDbMessageToMessage(msg as DbMessage);
-        if (msg.template_contexts?.[0]) {
-          const context = transformTemplateContext(msg.template_contexts[0]);
-          return { ...message, templateContext: context };
-        }
-        return message;
+        return transformDbMessageToMessage(msg as DbMessage);
       });
     },
     gcTime: 1000 * 60 * 30, // 30 minutes
