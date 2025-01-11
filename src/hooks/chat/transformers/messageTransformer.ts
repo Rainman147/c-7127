@@ -7,6 +7,7 @@ import type {
   TemplateContext,
   DbTemplateContext 
 } from '@/types/message';
+import { parseSupabaseJson } from '@/types/utils';
 
 // Validate and convert database sender to frontend role
 const validateMessageRole = (sender: string): MessageRole => {
@@ -48,7 +49,7 @@ export const transformTemplateContext = (dbContext: DbTemplateContext): Template
     chatId: dbContext.chat_id,
     messageId: dbContext.message_id,
     systemInstructions: dbContext.system_instructions,
-    metadata: dbContext.metadata,
+    metadata: parseSupabaseJson(dbContext.metadata) || {},
     version: dbContext.version,
     createdAt: dbContext.created_at,
     updatedAt: dbContext.updated_at,
