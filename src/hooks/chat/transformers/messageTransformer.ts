@@ -20,6 +20,29 @@ const validateMessageStatus = (status: string | null): MessageStatus => {
   return status as MessageStatus;
 };
 
+// Extract template context from message metadata if available
+const extractTemplateContext = (dbMessage: DbMessage) => {
+  console.log('[extractTemplateContext] Checking for template context in message:', dbMessage.id);
+  
+  if (!dbMessage.template_context) {
+    return undefined;
+  }
+
+  try {
+    const context = typeof dbMessage.template_context === 'string' 
+      ? JSON.parse(dbMessage.template_context)
+      : dbMessage.template_context;
+
+    return {
+      templateId: context.templateId,
+      systemInstructions: context.systemInstructions
+    };
+  } catch (error) {
+    console.warn('[extractTemplateContext] Error parsing template context:', error);
+    return undefined;
+  }
+};
+
 // Transform database message to frontend message
 export const transformDbMessageToMessage = (dbMessage: DbMessage): Message => {
   console.log('[transformDbMessageToMessage] Converting message:', dbMessage.id);
@@ -36,7 +59,8 @@ export const transformDbMessageToMessage = (dbMessage: DbMessage): Message => {
       sequence: dbMessage.sequence,
       deliveredAt: dbMessage.delivered_at,
       seenAt: dbMessage.seen_at
-    }
+    },
+    templateContext: extractTemplateContext(dbMessage)
   };
 };
 
@@ -49,7 +73,7 @@ export const transformMessageToDb = (message: Message): Required<Pick<DbMessage,
     throw new Error('Missing required message fields');
   }
   
-  return {
+  const dbMessage = {
     chat_id: message.chatId,
     content: message.content,
     sender: message.role,
@@ -59,6 +83,14 @@ export const transformMessageToDb = (message: Message): Required<Pick<DbMessage,
     delivered_at: message.metadata?.deliveredAt,
     seen_at: message.metadata?.seenAt
   };
+
+  // Add template context if available
+  if (message.templateContext) {
+    console.log('[transformMessageToDb] Adding template context');
+    dbMessage.template_context = JSON.stringify(message.templateContext);
+  }
+
+  return dbMessage;
 };
 
 // Type guard to check if a message is from the database
