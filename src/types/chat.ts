@@ -1,23 +1,15 @@
-export type Message = {
-  role: 'user' | 'assistant';
-  content: string;
-  isStreaming?: boolean;
-  type?: 'text' | 'audio';
+export interface Message {
   id?: string;
-};
-
-export interface MessageProps {
-  content: string;
-  sender: 'user' | 'ai';
-  type?: 'text' | 'audio';
-}
-
-export interface MessageContentProps {
+  role: 'user' | 'assistant' | 'system';
   content: string;
   type?: 'text' | 'audio';
+  isStreaming?: boolean;
 }
 
-export interface MessageActionsProps {
-  content: string;
-  isAIMessage: boolean;
+export interface TemplateContext {
+  id: string;
+  template: Template;
+  systemInstructions: string;
+  version?: number;
+  metadata?: Record<string, any>;
 }

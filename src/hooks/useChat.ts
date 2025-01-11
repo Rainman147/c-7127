@@ -80,7 +80,7 @@ export const useChat = () => {
       let updatedMessages = [...messages];
       if (systemInstructions && messages.length === 0) {
         updatedMessages = [{
-          role: 'system',
+          role: 'system' as const,
           content: systemInstructions,
           type: 'text'
         }];
