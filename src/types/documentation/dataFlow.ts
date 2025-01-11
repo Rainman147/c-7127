@@ -6,6 +6,8 @@
  * throughout the application, with special focus on chat functionality.
  */
 
+import type { Message } from '@/types/message';
+
 /**
  * 1. Chat Session Lifecycle
  * 
@@ -117,52 +119,29 @@
  *    └─ Recovery options
  */
 
-/**
- * 5. State Synchronization
- * 
- * Data Flow:
- * ├─ Client State
- * │  ├─ React Query cache
- * │  ├─ UI state
- * │  └─ Form state
- * │
- * ├─ Server State
- * │  ├─ Database
- * │  ├─ Real-time updates
- * │  └─ Background jobs
- * │
- * └─ Sync Mechanisms
- *    ├─ Polling
- *    ├─ WebSocket
- *    └─ Event sourcing
- */
-
-// Type definitions for state management documentation
-export interface StateManagementDocumentation {
-  version: string;
-  lastUpdated: string;
-  maintainer: string;
-  sections: {
-    chatSessionLifecycle: boolean;
-    messageStateTransitions: boolean;
-    templateContextManagement: boolean;
-    errorStateHandling: boolean;
-    stateSynchronization: boolean;
-  };
+// State interfaces
+export interface ChatSessionState {
+  status: ChatSessionStatus;
+  templateContext?: TemplateContextStatus;
+  patientId?: string;
+  messages: Message[];
+  error?: ErrorState;
 }
 
-// Documentation metadata
-export const stateManagementDoc: StateManagementDocumentation = {
-  version: '1.0.0',
-  lastUpdated: new Date().toISOString(),
-  maintainer: 'Development Team',
-  sections: {
-    chatSessionLifecycle: true,
-    messageStateTransitions: true,
-    templateContextManagement: true,
-    errorStateHandling: true,
-    stateSynchronization: true,
-  },
+export interface ErrorState {
+  category: ErrorCategory;
+  message: string;
+  retryCount: number;
+  timestamp: string;
+  recoverable: boolean;
+}
+
+// Helper type for tracking state transitions
+export type StateTransition<T> = {
+  from: T;
+  to: T;
+  timestamp: string;
+  metadata?: Record<string, unknown>;
 };
 
 // State transition type definitions
@@ -192,28 +171,3 @@ export type ErrorCategory =
   | 'auth'
   | 'processing'
   | 'business';
-
-// State interfaces
-export interface ChatSessionState {
-  status: ChatSessionStatus;
-  templateContext?: TemplateContextStatus;
-  patientId?: string;
-  messages: Message[];
-  error?: ErrorState;
-}
-
-export interface ErrorState {
-  category: ErrorCategory;
-  message: string;
-  retryCount: number;
-  timestamp: string;
-  recoverable: boolean;
-}
-
-// Helper type for tracking state transitions
-export type StateTransition<T> = {
-  from: T;
-  to: T;
-  timestamp: string;
-  metadata?: Record<string, unknown>;
-};
