@@ -1,13 +1,25 @@
 import { memo } from 'react';
 import Message from './Message';
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Message as MessageType } from '@/types/chat';
 
 interface MessageListProps {
   messages: MessageType[];
+  isLoading?: boolean;
 }
 
-const MessageList = ({ messages }: MessageListProps) => {
+const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
   console.log('[MessageList] Rendering messages:', messages);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-3/4" />
+        <Skeleton className="h-12 w-2/3" />
+        <Skeleton className="h-12 w-4/5" />
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-y-auto chat-scrollbar">
