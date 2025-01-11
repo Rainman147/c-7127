@@ -1,202 +1,219 @@
 /**
- * Data Flow Documentation
+ * State Management Documentation
+ * Version: 1.0.0
  * 
- * This file documents the flow of data through the chat application,
- * including message processing, state updates, and real-time features.
+ * Comprehensive documentation of state management patterns and data flow
+ * throughout the application, with special focus on chat functionality.
  */
 
 /**
- * Message Flow
+ * 1. Chat Session Lifecycle
  * 
- * 1. User Input Flow
- *    └─ ChatInput component
- *       ├─ Text input: Direct message creation
- *       └─ Audio input: Transcription then message creation
- *          ├─ Recording (WebRTC) -> Raw audio blob
- *          ├─ Audio processing (chunks) -> WAV format
- *          └─ Transcription (Edge Function) -> Text content
- * 
- * 2. Message Processing
- *    └─ ChatContainer orchestrates
- *       ├─ New message creation
- *       │  ├─ Optimistic update to UI
- *       │  └─ Background persistence
- *       └─ Template context integration
- *          ├─ System instructions
- *          └─ Formatting rules
- * 
- * 3. Storage Flow
- *    └─ Supabase tables
- *       ├─ messages: Core message content
- *       ├─ template_contexts: Template metadata
- *       └─ audio_chunks: Processed audio data
+ * Session States:
+ * ├─ Initialization
+ * │  ├─ New chat creation
+ * │  │  ├─ Empty state
+ * │  │  ├─ Template selection (optional)
+ * │  │  └─ Patient context (optional)
+ * │  │
+ * │  └─ Existing chat loading
+ * │     ├─ Message history retrieval
+ * │     ├─ Template context restoration
+ * │     └─ Patient data rehydration
+ * │
+ * ├─ Active Session
+ * │  ├─ Message processing
+ * │  ├─ Template context updates
+ * │  ├─ Real-time synchronization
+ * │  └─ State persistence
+ * │
+ * └─ Session Termination
+ *    ├─ State cleanup
+ *    ├─ Cache invalidation
+ *    └─ Resource release
  */
 
 /**
- * Template Context Integration
+ * 2. Message State Transitions
  * 
- * 1. Template Types & Storage
- *    ├─ Hardcoded templates (default, non-modifiable)
- *    │  ├─ SOAP notes (standard & expanded)
- *    │  ├─ Live session templates
- *    │  └─ Referral letters
- *    └─ Custom templates (user-created)
- *       ├─ Stored in Supabase
- *       └─ Version controlled
+ * Message Lifecycle:
+ * ├─ Creation
+ * │  ├─ Draft (local only)
+ * │  ├─ Sending (optimistic update)
+ * │  └─ Persisted (confirmed)
+ * │
+ * ├─ Processing
+ * │  ├─ Text messages
+ * │  │  ├─ Validation
+ * │  │  ├─ Template processing
+ * │  │  └─ AI enhancement
+ * │  │
+ * │  └─ Audio messages
+ * │     ├─ Recording
+ * │     ├─ Transcription
+ * │     └─ Processing
+ * │
+ * ├─ Delivery
+ * │  ├─ Sent
+ * │  ├─ Delivered
+ * │  └─ Seen
+ * │
+ * └─ Special States
+ *    ├─ Error
+ *    ├─ Retrying
+ *    └─ Edited
+ */
+
+/**
+ * 3. Template Context Management
  * 
- * 2. Template Selection Flow
- *    ├─ URL parameter handling (?templateId=xxx)
- *    ├─ Template inheritance in chats
- *    │  ├─ Chat-level default template
- *    │  └─ Message-level template override
- *    └─ Fallback mechanisms
- *       ├─ Invalid template handling
- *       └─ Default template selection
- * 
- * 3. Template Processing
- *    ├─ System instructions application
- *    │  ├─ AI response formatting
- *    │  └─ Context preservation
+ * Template State:
+ * ├─ Selection
+ * │  ├─ Default template
+ * │  ├─ User selection
+ * │  └─ Context inheritance
+ * │
+ * ├─ Application
+ * │  ├─ Global level
+ * │  │  ├─ Chat-wide settings
+ * │  │  └─ Default instructions
+ * │  │
+ * │  └─ Message level
+ * │     ├─ Per-message overrides
+ * │     └─ Context modifications
+ * │
+ * └─ Persistence
+ *    ├─ State synchronization
  *    ├─ Version tracking
- *    │  ├─ Template updates
- *    │  └─ Change history
- *    └─ Priority rules
- *       ├─ Template hierarchy
- *       └─ Override handling
+ *    └─ History maintenance
  */
 
 /**
- * Patient Data Integration
+ * 4. Error State Handling
  * 
- * 1. Patient Context Management
- *    ├─ Selection flow
- *    │  ├─ URL parameters (?patientId=yyy)
- *    │  ├─ Search functionality
- *    │  └─ Context persistence
- *    ├─ Data synchronization
- *    │  ├─ Real-time updates
- *    │  └─ Cache invalidation
- *    └─ Access control
- *       ├─ Row-level security
- *       └─ Data privacy rules
- * 
- * 2. Patient-Chat Relationship
- *    ├─ Chat session linkage
- *    │  ├─ Patient context in messages
- *    │  └─ History preservation
- *    ├─ Template interaction
- *    │  ├─ Patient data in templates
- *    │  └─ Template customization
- *    └─ Data updates
- *       ├─ Last accessed tracking
- *       └─ Medical history updates
- * 
- * 3. Patient Data Access
- *    ├─ Caching strategy
- *    │  ├─ TanStack Query configuration
- *    │  └─ Invalidation rules
- *    ├─ Search optimization
- *    │  ├─ Pagination handling
- *    │  └─ Filter implementation
- *    └─ Privacy controls
- *       ├─ Data encryption
- *       └─ Access logging
+ * Error Management:
+ * ├─ Categorization
+ * │  ├─ Network errors
+ * │  ├─ Authentication errors
+ * │  ├─ Processing errors
+ * │  └─ Business logic errors
+ * │
+ * ├─ Recovery Strategies
+ * │  ├─ Automatic retry
+ * │  │  ├─ Exponential backoff
+ * │  │  └─ Retry limits
+ * │  │
+ * │  ├─ Manual recovery
+ * │  │  ├─ User-initiated retry
+ * │  │  └─ Alternative actions
+ * │  │
+ * │  └─ Fallback behavior
+ * │     ├─ Cached data
+ * │     └─ Offline mode
+ * │
+ * └─ User Feedback
+ *    ├─ Error notifications
+ *    ├─ Progress indicators
+ *    └─ Recovery options
  */
 
 /**
- * Real-time Updates
+ * 5. State Synchronization
  * 
- * 1. WebSocket Channels
- *    └─ Supabase real-time
- *       ├─ Message updates
- *       ├─ Template changes
- *       └─ Status updates
- * 
- * 2. State Sync
- *    └─ React Query cache
- *       ├─ Automatic background updates
- *       ├─ Optimistic updates
- *       └─ Error recovery
+ * Data Flow:
+ * ├─ Client State
+ * │  ├─ React Query cache
+ * │  ├─ UI state
+ * │  └─ Form state
+ * │
+ * ├─ Server State
+ * │  ├─ Database
+ * │  ├─ Real-time updates
+ * │  └─ Background jobs
+ * │
+ * └─ Sync Mechanisms
+ *    ├─ Polling
+ *    ├─ WebSocket
+ *    └─ Event sourcing
  */
 
-/**
- * Error Handling
- * 
- * 1. Error Sources
- *    ├─ Network failures
- *    ├─ Authentication issues
- *    ├─ Validation errors
- *    └─ Processing failures
- * 
- * 2. Error Handling
- *    └─ Error boundaries
- *       ├─ Component level
- *       │  ├─ Toast notifications
- *       │  └─ Retry mechanisms
- *       └─ Application level
- *          ├─ Session recovery
- *          └─ Fallback UI
- */
-
-/**
- * Performance Optimization
- * 
- * 1. Caching Strategy
- *    └─ TanStack Query
- *       ├─ Stale time: 5 minutes
- *       ├─ Cache time: 30 minutes
- *       └─ Background updates
- * 
- * 2. Real-time Updates
- *    └─ WebSocket optimization
- *       ├─ Connection management
- *       ├─ Reconnection strategy
- *       └─ Data synchronization
- */
-
-/**
- * Security Implementation
- * 
- * 1. Authentication Flow
- *    └─ Supabase Auth
- *       ├─ Session management
- *       ├─ Token refresh
- *       └─ Permission checks
- * 
- * 2. Data Access
- *    └─ Row Level Security
- *       ├─ User-specific data
- *       ├─ Patient privacy
- *       └─ Audit logging
- */
-
-export type DataFlowDocumentation = {
+// Type definitions for state management documentation
+export interface StateManagementDocumentation {
   version: string;
   lastUpdated: string;
   maintainer: string;
   sections: {
-    messageFlow: boolean;
-    templateContext: boolean;
-    patientData: boolean;
-    realTimeUpdates: boolean;
-    errorHandling: boolean;
-    performance: boolean;
-    security: boolean;
+    chatSessionLifecycle: boolean;
+    messageStateTransitions: boolean;
+    templateContextManagement: boolean;
+    errorStateHandling: boolean;
+    stateSynchronization: boolean;
   };
-};
+}
 
 // Documentation metadata
-export const dataFlowDoc: DataFlowDocumentation = {
-  version: '1.1.0',
+export const stateManagementDoc: StateManagementDocumentation = {
+  version: '1.0.0',
   lastUpdated: new Date().toISOString(),
   maintainer: 'Development Team',
   sections: {
-    messageFlow: true,
-    templateContext: true,
-    patientData: true,
-    realTimeUpdates: true,
-    errorHandling: true,
-    performance: true,
-    security: true,
+    chatSessionLifecycle: true,
+    messageStateTransitions: true,
+    templateContextManagement: true,
+    errorStateHandling: true,
+    stateSynchronization: true,
   },
+};
+
+// State transition type definitions
+export type MessageStatus = 
+  | 'draft'
+  | 'sending'
+  | 'sent'
+  | 'delivered'
+  | 'seen'
+  | 'error'
+  | 'retrying';
+
+export type ChatSessionStatus =
+  | 'initializing'
+  | 'active'
+  | 'error'
+  | 'terminated';
+
+export type TemplateContextStatus =
+  | 'default'
+  | 'selected'
+  | 'modified'
+  | 'inherited';
+
+export type ErrorCategory =
+  | 'network'
+  | 'auth'
+  | 'processing'
+  | 'business';
+
+// State interfaces
+export interface ChatSessionState {
+  status: ChatSessionStatus;
+  templateContext?: TemplateContextStatus;
+  patientId?: string;
+  messages: Message[];
+  error?: ErrorState;
+}
+
+export interface ErrorState {
+  category: ErrorCategory;
+  message: string;
+  retryCount: number;
+  timestamp: string;
+  recoverable: boolean;
+}
+
+// Helper type for tracking state transitions
+export type StateTransition<T> = {
+  from: T;
+  to: T;
+  timestamp: string;
+  metadata?: Record<string, unknown>;
 };
