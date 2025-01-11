@@ -50,7 +50,7 @@ const ChatContainer = ({
       await createContext({ 
         template,
         patientId: selectedPatientId,
-        systemInstructions: formattedContext.systemInstructions
+        systemInstructions: formattedContext.systemInstructions 
       });
     }
   };

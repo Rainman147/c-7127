@@ -1,3 +1,5 @@
+import type { Template } from './template';
+
 export interface Message {
   id?: string;
   role: 'user' | 'assistant' | 'system';
