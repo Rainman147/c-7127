@@ -6,6 +6,7 @@ import ChatInput from '@/features/chat/components/input/ChatInput';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPatientContext } from '@/types/patient';
 import { useTemplateContextQueries } from '@/hooks/queries/useTemplateContextQueries';
+import { formatSystemContext } from '@/utils/contextFormatter';
 import type { Message, Template, PatientContext } from '@/types';
 
 interface ChatContainerProps {
@@ -45,9 +46,11 @@ const ChatContainer = ({
     onTemplateChange(template);
     
     if (currentChatId) {
+      const formattedContext = formatSystemContext(template, patientContext);
       await createContext({ 
         template,
-        patientId: selectedPatientId 
+        patientId: selectedPatientId,
+        systemInstructions: formattedContext.systemInstructions
       });
     }
   };
@@ -107,11 +110,14 @@ const ChatContainer = ({
           <div className="px-4 sm:px-6 md:px-8">
             <div className="mx-auto max-w-2xl">
               <ChatInput
-                onSend={(content, type) => onMessageSend(
-                  content, 
-                  type, 
-                  currentContext?.system_instructions
-                )}
+                onSend={(content, type) => {
+                  const formattedContext = formatSystemContext(currentContext?.template || null, patientContext);
+                  onMessageSend(
+                    content, 
+                    type, 
+                    formattedContext.systemInstructions
+                  );
+                }}
                 onTranscriptionComplete={onTranscriptionComplete}
                 onTranscriptionUpdate={handleTranscriptionUpdate}
                 isLoading={isLoading}
