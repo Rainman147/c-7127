@@ -11,16 +11,16 @@ export const useChat = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Use TanStack Query hooks
+  // Use TanStack Query hooks with v5 loading states
   const { 
     data: messages = [], 
-    isLoading: isMessagesLoading,
+    isPending: isMessagesLoading,
     refetch: loadChatMessages
   } = useMessages(currentChatId);
   
   const { 
     data: currentSession,
-    isLoading: isSessionLoading 
+    isPending: isSessionLoading 
   } = useChatSession(currentChatId);
   
   const { 
