@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Router } from '@/app/Router';
+import Router from '@/app/Router';
 import { Toaster } from '@/components/ui/toaster';
 import './App.css';
 
