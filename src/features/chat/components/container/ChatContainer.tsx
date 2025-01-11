@@ -50,7 +50,7 @@ const ChatContainer = ({
       await createContext({ 
         template,
         patientId: selectedPatientId,
-        instructions: formattedContext.systemInstructions // Changed from systemInstructions to instructions
+        systemInstructions: formattedContext.systemInstructions
       });
     }
   };
@@ -112,7 +112,7 @@ const ChatContainer = ({
               <ChatInput
                 onSend={(content, type) => {
                   const formattedContext = formatSystemContext(
-                    currentContext?.templateData || null, // Changed from template to templateData
+                    currentContext?.template || null,
                     patientContext
                   );
                   onMessageSend(
