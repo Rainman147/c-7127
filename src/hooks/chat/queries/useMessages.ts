@@ -8,17 +8,25 @@ export const useMessages = (chatId: string | null) => {
   console.log('[useMessages] Initializing with chatId:', chatId);
   
   return useQuery({
-    queryKey: chatId ? messageKeys.chat(chatId) : null,
+    queryKey: messageKeys.chat(chatId),
     queryFn: async (): Promise<Message[]> => {
       console.log('[useMessages] Fetching messages for chat:', chatId);
       if (!chatId) return [];
       
-      // Fetch messages with template contexts in a single query
       const { data: messagesWithContext, error } = await supabase
         .from('messages')
         .select(`
           *,
-          template_contexts (*)
+          template_contexts (
+            id,
+            template_id,
+            system_instructions,
+            metadata,
+            version,
+            created_at,
+            updated_at,
+            user_id
+          )
         `)
         .eq('chat_id', chatId)
         .order('created_at', { ascending: true });
@@ -28,13 +36,22 @@ export const useMessages = (chatId: string | null) => {
         throw error;
       }
 
+      console.log('[useMessages] Successfully fetched messages:', messagesWithContext?.length);
+
       // Transform the messages with their template contexts
-      return (messagesWithContext || []).map(msg => {
-        return transformDbMessageToMessage(msg as DbMessage);
+      const transformedMessages = (messagesWithContext || []).map(msg => {
+        const message = transformDbMessageToMessage(msg as DbMessage);
+        console.log('[useMessages] Transformed message:', message.id);
+        return message;
       });
+
+      return transformedMessages;
     },
     gcTime: 1000 * 60 * 30, // 30 minutes
     staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: !!chatId,
+    meta: {
+      errorMessage: 'Failed to fetch messages'
+    }
   });
 };

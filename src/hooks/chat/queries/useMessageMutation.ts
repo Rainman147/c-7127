@@ -33,7 +33,19 @@ export const useSendMessage = () => {
       const { data: message, error: messageError } = await supabase
         .from('messages')
         .insert(messageData)
-        .select()
+        .select(`
+          *,
+          template_contexts (
+            id,
+            template_id,
+            system_instructions,
+            metadata,
+            version,
+            created_at,
+            updated_at,
+            user_id
+          )
+        `)
         .single();
         
       if (messageError) {
@@ -53,7 +65,9 @@ export const useSendMessage = () => {
             chat_id: chatId,
             template_id: templateContext.templateId,
             system_instructions: templateContext.systemInstructions,
-            user_id: user.id
+            user_id: user.id,
+            metadata: {},
+            version: 1
           });
 
         if (contextError) {
