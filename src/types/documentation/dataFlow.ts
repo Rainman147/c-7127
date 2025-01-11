@@ -6,7 +6,9 @@
  * throughout the application, with special focus on chat functionality.
  */
 
-import type { Message } from '@/types/message';
+import type { ChatSessionState, ChatSessionStatus, MessageStatus, TemplateContextStatus } from './sessionTypes';
+import type { ErrorState, ErrorCategory } from './errorTypes';
+import type { StateTransition } from './stateTransitionTypes';
 
 /**
  * 1. Chat Session Lifecycle
@@ -67,31 +69,7 @@ import type { Message } from '@/types/message';
  */
 
 /**
- * 3. Template Context Management
- * 
- * Template State:
- * ├─ Selection
- * │  ├─ Default template
- * │  ├─ User selection
- * │  └─ Context inheritance
- * │
- * ├─ Application
- * │  ├─ Global level
- * │  │  ├─ Chat-wide settings
- * │  │  └─ Default instructions
- * │  │
- * │  └─ Message level
- * │     ├─ Per-message overrides
- * │     └─ Context modifications
- * │
- * └─ Persistence
- *    ├─ State synchronization
- *    ├─ Version tracking
- *    └─ History maintenance
- */
-
-/**
- * 4. Error State Handling
+ * 3. Error Handling & Recovery
  * 
  * Error Management:
  * ├─ Categorization
@@ -119,55 +97,13 @@ import type { Message } from '@/types/message';
  *    └─ Recovery options
  */
 
-// State interfaces
-export interface ChatSessionState {
-  status: ChatSessionStatus;
-  templateContext?: TemplateContextStatus;
-  patientId?: string;
-  messages: Message[];
-  error?: ErrorState;
-}
-
-export interface ErrorState {
-  category: ErrorCategory;
-  message: string;
-  retryCount: number;
-  timestamp: string;
-  recoverable: boolean;
-}
-
-// Helper type for tracking state transitions
-export type StateTransition<T> = {
-  from: T;
-  to: T;
-  timestamp: string;
-  metadata?: Record<string, unknown>;
+// Re-export all types for convenience
+export type {
+  ChatSessionState,
+  ChatSessionStatus,
+  MessageStatus,
+  TemplateContextStatus,
+  ErrorState,
+  ErrorCategory,
+  StateTransition,
 };
-
-// State transition type definitions
-export type MessageStatus = 
-  | 'draft'
-  | 'sending'
-  | 'sent'
-  | 'delivered'
-  | 'seen'
-  | 'error'
-  | 'retrying';
-
-export type ChatSessionStatus =
-  | 'initializing'
-  | 'active'
-  | 'error'
-  | 'terminated';
-
-export type TemplateContextStatus =
-  | 'default'
-  | 'selected'
-  | 'modified'
-  | 'inherited';
-
-export type ErrorCategory =
-  | 'network'
-  | 'auth'
-  | 'processing'
-  | 'business';
