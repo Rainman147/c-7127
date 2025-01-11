@@ -452,6 +452,67 @@ export type Database = {
           },
         ]
       }
+      template_contexts: {
+        Row: {
+          chat_id: string | null
+          created_at: string
+          id: string
+          message_id: string | null
+          metadata: Json | null
+          system_instructions: string
+          template_id: string
+          updated_at: string
+          user_id: string
+          version: number | null
+        }
+        Insert: {
+          chat_id?: string | null
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          system_instructions: string
+          template_id: string
+          updated_at?: string
+          user_id: string
+          version?: number | null
+        }
+        Update: {
+          chat_id?: string | null
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          system_instructions?: string
+          template_id?: string
+          updated_at?: string
+          user_id?: string
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_contexts_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_contexts_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_contexts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       templates: {
         Row: {
           content: string
