@@ -48,6 +48,10 @@ export const useTemplateContextQueries = (chatId: string | null) => {
       patientId?: string | null;
     }) => {
       if (!chatId) throw new Error('No chat ID provided');
+      
+      // Get the current user's ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
 
       const { data, error } = await supabase
         .from('template_contexts')
@@ -56,6 +60,7 @@ export const useTemplateContextQueries = (chatId: string | null) => {
           template_id: template.id,
           system_instructions: template.systemInstructions,
           metadata: { patientId },
+          user_id: user.id // Add the user_id field
         })
         .select()
         .single();
