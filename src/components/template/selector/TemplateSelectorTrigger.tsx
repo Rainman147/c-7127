@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { ChevronDown, AlertCircle, Loader2 } from "lucide-react";
+import { ChevronDown, AlertCircle } from "lucide-react";
 import { DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { Template } from "@/types/template";
 
@@ -16,10 +16,9 @@ export const TemplateSelectorTrigger = memo(({
 }: TemplateSelectorTriggerProps) => {
   if (isLoading) {
     return (
-      <DropdownMenuTrigger asChild aria-label="Loading templates" disabled>
-        <div className="flex items-center gap-2 text-sm font-medium text-white/80">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span className="whitespace-nowrap">Loading template...</span>
+      <DropdownMenuTrigger asChild aria-label="Select template" disabled>
+        <div className="flex items-center gap-2 text-sm font-medium text-white opacity-50">
+          <span className="whitespace-nowrap">Loading templates...</span>
           <ChevronDown className="h-4 w-4 opacity-70" />
         </div>
       </DropdownMenuTrigger>

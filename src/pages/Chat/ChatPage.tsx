@@ -1,53 +1,75 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
 import { useChat } from '@/hooks/useChat';
-import { useTemplateManagement } from './hooks/useTemplateManagement';
-import { usePatientManagement } from './hooks/usePatientManagement';
-import { useTranscriptionHandler } from './hooks/useTranscriptionHandler';
+import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
+import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
-import type { Template } from '@/types';
+import { useToast } from '@/hooks/use-toast';
+import type { Template } from '@/types/template';
 
 const ChatPage = () => {
+  console.log('[ChatPage] Component initializing');
   const navigate = useNavigate();
   const location = useLocation();
   const { sessionId } = useParams();
   const { toast } = useToast();
+  
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
   
   const { 
     messages, 
     isLoading: isChatLoading, 
-    error: chatError,
     handleSendMessage,
     loadChatMessages,
     currentChatId,
     setCurrentChatId
   } = useChat();
 
-  const {
-    selectedTemplate,
-    handleTemplateChange,
-    isTemplateLoading,
-    templateError
-  } = useTemplateManagement();
+  // Initialize audio recovery
+  useAudioRecovery();
 
-  const {
-    selectedPatientId,
-    handlePatientSelect
-  } = usePatientManagement();
+  // Effect to handle sessionId changes
+  useEffect(() => {
+    console.log('[ChatPage] Session ID changed:', sessionId);
+    if (sessionId) {
+      setCurrentChatId(sessionId);
+      loadChatMessages(sessionId);
+    } else {
+      // On index route, reset chat state
+      setCurrentChatId(null);
+    }
+  }, [sessionId, setCurrentChatId, loadChatMessages]);
 
-  const {
-    handleTranscriptionComplete
-  } = useTranscriptionHandler();
+  // Handle patient selection changes
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const patientId = params.get('patientId');
+    
+    if (patientId !== selectedPatientId) {
+      setSelectedPatientId(patientId);
+      console.log('[ChatPage] Updated selected patient:', patientId);
+    }
+  }, [location.search, selectedPatientId]);
 
-  const handleSessionSelect = async (chatId: string) => {
-    console.log('[ChatPage] Selecting session:', chatId);
-    const currentParams = new URLSearchParams(location.search);
-    navigate(`/c/${chatId}?${currentParams.toString()}`);
-    await loadChatMessages({ throwOnError: true });
+  const handlePatientSelect = async (patientId: string | null) => {
+    console.log('[ChatPage] Patient selection changed:', patientId);
+    setSelectedPatientId(patientId);
+    
+    const params = new URLSearchParams(location.search);
+    if (patientId) {
+      params.set('patientId', patientId);
+    } else {
+      params.delete('patientId');
+    }
+    
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+  };
+
+  const handleTemplateChange = (template: Template) => {
+    console.log('[ChatPage] Template changed:', template.name);
   };
 
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
@@ -60,38 +82,35 @@ const ChatPage = () => {
         
         const params = new URLSearchParams(location.search);
         navigate(`/c/${sessionId}?${params.toString()}`);
+        // Wait for navigation to complete
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
 
-    await handleSendMessage(
-      message, 
-      type, 
-      selectedTemplate?.systemInstructions
-    );
+    await handleSendMessage(message, type);
   };
-
-  const isLoading = isChatLoading || isTemplateLoading;
-  const error = chatError || templateError;
 
   return (
     <div className="flex h-screen">
-      {templateError && (
-        <Alert variant="destructive" className="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 w-96">
-          <AlertTitle>Template Error</AlertTitle>
-          <AlertDescription>{templateError.message}</AlertDescription>
-        </Alert>
-      )}
       <ChatContainer 
         messages={messages}
-        isLoading={isLoading}
+        isLoading={isChatLoading}
         currentChatId={currentChatId}
         onMessageSend={handleMessageSend}
-        onTemplateChange={handleTemplateChange}
         onPatientSelect={handlePatientSelect}
         selectedPatientId={selectedPatientId}
-        error={error}
-        onTranscriptionComplete={handleTranscriptionComplete}
+        onTemplateChange={handleTemplateChange}
+        onTranscriptionComplete={async (text: string) => {
+          console.log('[ChatPage] Transcription complete, ready for user to edit:', text);
+          if (text) {
+            const chatInput = document.querySelector('textarea');
+            if (chatInput) {
+              (chatInput as HTMLTextAreaElement).value = text;
+              const event = new Event('input', { bubbles: true });
+              chatInput.dispatchEvent(event);
+            }
+          }
+        }}
       />
     </div>
   );

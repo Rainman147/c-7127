@@ -1,15 +1,13 @@
 import { memo, useCallback, useState } from "react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useSearchParams } from "react-router-dom";
-import { useTemplateQuery, useTemplatesListQuery, useTemplateRefresh } from "@/hooks/queries/useTemplateQueries";
+import { useTemplateQuery, useTemplatesListQuery } from "@/hooks/queries/useTemplateQueries";
 import { useToast } from "@/hooks/use-toast";
 import { TemplateSelectorTrigger } from "./template/selector/TemplateSelectorTrigger";
 import { TemplateSelectorContent } from "./template/selector/TemplateSelectorContent";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Template } from "@/types/template";
 import { isValidTemplate } from "@/types/template/guards";
-import { RefreshCw } from "lucide-react";
-import { Button } from "./ui/button";
 
 interface TemplateSelectorProps {
   currentChatId: string | null;
@@ -20,34 +18,31 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTemplateId = searchParams.get('templateId');
   const { toast } = useToast();
-  const { refreshTemplate, refreshAllTemplates } = useTemplateRefresh();
   
   console.log('[TemplateSelector] Initializing with:', { 
     currentChatId, 
     initialTemplateId 
   });
   
-  // Query for all templates with better error handling
+  // Query for all templates
   const { 
     data: templates = [], 
     isLoading: isLoadingTemplates, 
     error: templatesError,
-    isError: isTemplatesError,
-    refetch: refetchTemplates
+    isError: isTemplatesError
   } = useTemplatesListQuery();
   
-  // Query for selected template with better error handling
+  // Query for selected template
   const { 
     data: selectedTemplate, 
     isLoading: isLoadingTemplate, 
     error: templateError,
-    isError: isTemplateError,
-    refetch: refetchTemplate
+    isError: isTemplateError 
   } = useTemplateQuery(initialTemplateId);
   
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
-  const handleTemplateSelect = useCallback(async (template: Template) => {
+  const handleTemplateSelect = useCallback((template: Template) => {
     console.log('[TemplateSelector] Template selection triggered:', template.name);
     
     if (!isValidTemplate(template)) {
@@ -81,31 +76,13 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         description: "There was an error selecting the template. Please try again.",
         variant: "destructive",
       });
-      
-      // Attempt to recover by refetching data
-      refetchTemplates();
-      if (initialTemplateId) {
-        refetchTemplate();
-      }
     }
-  }, [searchParams, setSearchParams, onTemplateChange, toast, refetchTemplates, refetchTemplate, initialTemplateId]);
+  }, [searchParams, setSearchParams, onTemplateChange, toast]);
 
   const handleTooltipChange = useCallback((templateId: string | null) => {
     console.log('[TemplateSelector] Tooltip state changed for template:', templateId);
     setOpenTooltipId(templateId);
   }, []);
-
-  const handleRefresh = useCallback(async () => {
-    console.log('[TemplateSelector] Manual refresh triggered');
-    if (initialTemplateId) {
-      await refreshTemplate(initialTemplateId);
-    }
-    await refreshAllTemplates();
-    toast({
-      title: "Templates Refreshed",
-      description: "Template list has been updated.",
-    });
-  }, [initialTemplateId, refreshTemplate, refreshAllTemplates, toast]);
 
   // Handle critical errors that prevent template selection
   if (isTemplatesError && templatesError) {
@@ -124,33 +101,22 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
   const error = templatesError || templateError;
 
   return (
-    <div className="flex items-center gap-2">
-      <DropdownMenu>
-        <TemplateSelectorTrigger 
-          selectedTemplate={selectedTemplate}
-          isLoading={isLoading}
-          hasError={hasError}
-        />
-        <TemplateSelectorContent
-          templates={templates}
-          selectedTemplate={selectedTemplate}
-          isLoading={isLoading}
-          openTooltipId={openTooltipId}
-          onTemplateSelect={handleTemplateSelect}
-          onTooltipChange={handleTooltipChange}
-          error={error}
-        />
-      </DropdownMenu>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={handleRefresh}
-        className="h-8 w-8"
-        title="Refresh templates"
-      >
-        <RefreshCw className="h-4 w-4" />
-      </Button>
-    </div>
+    <DropdownMenu>
+      <TemplateSelectorTrigger 
+        selectedTemplate={selectedTemplate}
+        isLoading={isLoading}
+        hasError={hasError}
+      />
+      <TemplateSelectorContent
+        templates={templates}
+        selectedTemplate={selectedTemplate}
+        isLoading={isLoading}
+        openTooltipId={openTooltipId}
+        onTemplateSelect={handleTemplateSelect}
+        onTooltipChange={handleTooltipChange}
+        error={error}
+      />
+    </DropdownMenu>
   );
 });
 

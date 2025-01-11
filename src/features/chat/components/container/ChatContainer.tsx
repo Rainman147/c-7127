@@ -3,7 +3,6 @@ import { useUI } from '@/contexts/UIContext';
 import { ChatHeader } from '@/features/chat/components/header/ChatHeader';
 import MessageList from '@/features/chat/components/message/MessageList';
 import ChatInput from '@/features/chat/components/input/ChatInput';
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Message, Template } from '@/types';
 
 interface ChatContainerProps {
@@ -15,7 +14,6 @@ interface ChatContainerProps {
   onTemplateChange: (template: Template) => void;
   onPatientSelect: (patientId: string | null) => Promise<void>;
   selectedPatientId: string | null;
-  error?: Error | null;
 }
 
 const ChatContainer = ({ 
@@ -26,8 +24,7 @@ const ChatContainer = ({
   onTranscriptionComplete,
   onTemplateChange,
   onPatientSelect,
-  selectedPatientId,
-  error
+  selectedPatientId
 }: ChatContainerProps) => {
   console.log('[ChatContainer] Rendering with messages:', messages, 'currentChatId:', currentChatId);
   const [transcriptionText, setTranscriptionText] = useState('');
@@ -47,12 +44,6 @@ const ChatContainer = ({
           selectedPatientId={selectedPatientId}
         />
         
-        {error && (
-          <Alert variant="destructive" className="mx-4 mt-4">
-            <AlertDescription>{error.message}</AlertDescription>
-          </Alert>
-        )}
-        
         {/* Messages Container - Takes remaining height with overflow */}
         <div className="flex-1 overflow-hidden">
           {/* Scrollable Area with Padding Space */}
@@ -62,10 +53,7 @@ const ChatContainer = ({
               {/* Message Width Container */}
               <div className="mx-auto max-w-2xl px-4 sm:px-6 md:px-8">
                 <div className="pt-[60px] pb-[100px]">
-                  <MessageList 
-                    messages={messages} 
-                    isLoading={isLoading}
-                  />
+                  <MessageList messages={messages} />
                 </div>
               </div>
             </div>

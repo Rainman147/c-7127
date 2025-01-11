@@ -1,31 +1,20 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Template, DbTemplate } from "@/types/template";
 import { isValidTemplate } from "@/types/template/guards";
 import { convertDbTemplate } from "@/types/template/utils";
 import { templates } from "@/types/template/templates";
-import { getFallbackTemplate } from "@/types/template/fallbacks";
 import { useToast } from "@/hooks/use-toast";
 
-// Cache configuration
 const STALE_TIME = 5 * 60 * 1000; // 5 minutes
-const GC_TIME = 30 * 60 * 1000; // 30 minutes (renamed from CACHE_TIME)
-const RETRY_COUNT = 2;
+const RETRY_COUNT = 3;
 const RETRY_DELAY = 1000; // 1 second
-
-// Query keys for better cache management
-export const templateKeys = {
-  all: ['templates'] as const,
-  single: (id: string) => ['template', id] as const,
-  defaults: ['templates', 'defaults'] as const
-};
 
 const getDefaultTemplate = (): Template => {
   console.log('[useTemplateQueries] Using default template');
   const defaultTemplate = templates[0];
   if (!isValidTemplate(defaultTemplate)) {
-    console.error('[useTemplateQueries] Default template is invalid, using fallback');
-    return getFallbackTemplate();
+    throw new Error('Default template is invalid');
   }
   return defaultTemplate;
 };
@@ -35,7 +24,7 @@ const findTemplateById = (templateId: string): Template | undefined => {
   const template = templates.find(t => t.id === templateId);
   if (template && !isValidTemplate(template)) {
     console.error('[useTemplateQueries] Found template is invalid:', template);
-    return getFallbackTemplate(templateId);
+    return undefined;
   }
   return template;
 };
@@ -43,58 +32,51 @@ const findTemplateById = (templateId: string): Template | undefined => {
 export const useTemplateQuery = (templateId: string | null) => {
   console.log('[useTemplateQuery] Initializing with templateId:', templateId);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
   return useQuery({
-    queryKey: templateId ? templateKeys.single(templateId) : templateKeys.defaults,
+    queryKey: ['template', templateId],
     queryFn: async () => {
       if (!templateId) {
         console.log('[useTemplateQuery] No templateId provided, using default template');
         return getDefaultTemplate();
       }
       
-      try {
-        const template = findTemplateById(templateId);
-        if (!template) {
-          console.warn('[useTemplateQuery] Template not found:', templateId);
-          const fallback = getFallbackTemplate(templateId);
-          toast({
-            title: "Template Not Found",
-            description: `Using ${fallback.name} template instead.`,
-            variant: "default",
-          });
-          return fallback;
-        }
-        
-        console.log('[useTemplateQuery] Template found:', template.name);
-        return template;
-      } catch (error) {
-        console.error('[useTemplateQuery] Error processing template:', error);
-        const fallback = getFallbackTemplate(templateId);
+      const template = findTemplateById(templateId);
+      if (!template) {
+        console.warn('[useTemplateQuery] Template not found:', templateId);
         toast({
-          title: "Template Error",
-          description: `Using ${fallback.name} template instead.`,
-          variant: "destructive",
+          title: "Template Not Found",
+          description: "Using default template instead.",
+          variant: "default",
         });
-        return fallback;
+        return getDefaultTemplate();
       }
+      
+      console.log('[useTemplateQuery] Template found:', template.name);
+      return template;
     },
     staleTime: STALE_TIME,
-    gcTime: GC_TIME, // Changed from cacheTime to gcTime
     retry: RETRY_COUNT,
     retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), RETRY_DELAY),
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    meta: {
+      errorHandler: (error: Error) => {
+        console.error('[useTemplateQuery] Error fetching template:', error);
+        toast({
+          title: "Error Loading Template",
+          description: "There was an error loading the template. Using default template instead.",
+          variant: "destructive",
+        });
+      }
+    }
   });
 };
 
 export const useTemplatesListQuery = () => {
   console.log('[useTemplatesListQuery] Initializing templates list query');
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
   return useQuery({
-    queryKey: templateKeys.all,
+    queryKey: ['templates'],
     queryFn: async () => {
       const defaultTemplates = [...templates].filter(isValidTemplate);
       
@@ -126,26 +108,12 @@ export const useTemplatesListQuery = () => {
       }
     },
     staleTime: STALE_TIME,
-    gcTime: GC_TIME, // Changed from cacheTime to gcTime
     retry: RETRY_COUNT,
     retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), RETRY_DELAY),
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-  });
-};
-
-// Manual refresh utility
-export const useTemplateRefresh = () => {
-  const queryClient = useQueryClient();
-  
-  return {
-    refreshTemplate: async (templateId: string) => {
-      console.log('[useTemplateRefresh] Manually refreshing template:', templateId);
-      await queryClient.invalidateQueries({ queryKey: templateKeys.single(templateId) });
-    },
-    refreshAllTemplates: async () => {
-      console.log('[useTemplateRefresh] Manually refreshing all templates');
-      await queryClient.invalidateQueries({ queryKey: templateKeys.all });
+    meta: {
+      errorHandler: (error: Error) => {
+        console.error('[useTemplatesListQuery] Error in templates list query:', error);
+      }
     }
-  };
+  });
 };

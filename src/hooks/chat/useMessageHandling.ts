@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import type { Message } from '@/types/message';
+import type { Message } from '@/types/chat';
 import { useMessagePersistence } from './useMessagePersistence';
 
 export const useMessageHandling = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const { saveMessage } = useMessagePersistence();
+  const { saveMessage } = useMessagePersistence(); // Updated from saveMessageToSupabase
 
   const handleSendMessage = async (
     content: string, 
@@ -27,12 +27,7 @@ export const useMessageHandling = () => {
     setIsLoading(true);
 
     try {
-      const userMessage: Message = { 
-        role: 'user', 
-        content, 
-        type,
-        chatId: currentChatId || '',
-      };
+      const userMessage: Message = { role: 'user', content, type };
       const newMessages = [...currentMessages, userMessage];
 
       // Save message to Supabase
@@ -55,8 +50,7 @@ export const useMessageHandling = () => {
         const assistantMessage: Message = {
           role: 'assistant',
           content: data.content,
-          type: 'text',
-          chatId: chatId,
+          isStreaming: false
         };
         
         const { messageId: assistantMessageId } = await saveMessage(assistantMessage, chatId);
