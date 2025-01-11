@@ -6,7 +6,6 @@ export interface MessageMetadata {
   sequence?: number;
   deliveredAt?: string;
   seenAt?: string;
-  patientId?: string;
 }
 
 export interface TemplateContext {
@@ -22,13 +21,10 @@ export interface Message {
   type: MessageType;
   status?: MessageStatus;
   createdAt?: string;
-  isStreaming?: boolean;
-  wasEdited?: boolean;
   metadata?: MessageMetadata;
   templateContext?: TemplateContext;
 }
 
-// Database message type to ensure proper mapping
 export interface DbMessage {
   id: string;
   chat_id: string;

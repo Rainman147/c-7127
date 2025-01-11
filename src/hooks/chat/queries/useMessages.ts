@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { messageKeys } from '@/types/chat';
-import { Message, DbMessage, transformDbMessageToMessage } from '@/types/message';
+import { Message, DbMessage } from '@/types/message';
+import { transformDbMessageToMessage } from '../transformers/messageTransformer';
 
 export const useMessages = (chatId: string | null) => {
   console.log('[useMessages] Initializing with chatId:', chatId);
