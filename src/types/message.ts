@@ -23,6 +23,7 @@ export interface Message {
   createdAt?: string;
   metadata?: MessageMetadata;
   templateContext?: TemplateContext;
+  isStreaming?: boolean;
 }
 
 export interface DbMessage {

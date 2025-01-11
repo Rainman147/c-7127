@@ -57,7 +57,6 @@ export const useMessageHandling = () => {
           content: data.content,
           type: 'text',
           chatId: chatId,
-          isStreaming: false
         };
         
         const { messageId: assistantMessageId } = await saveMessage(assistantMessage, chatId);
