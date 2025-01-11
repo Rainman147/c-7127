@@ -5,7 +5,8 @@ import MessageList from '@/features/chat/components/message/MessageList';
 import ChatInput from '@/features/chat/components/input/ChatInput';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPatientContext } from '@/types/patient';
-import type { Message, Template, Patient, PatientContext } from '@/types';
+import { useTemplateContextQueries } from '@/hooks/queries/useTemplateContextQueries';
+import type { Message, Template, PatientContext } from '@/types';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -31,10 +32,24 @@ const ChatContainer = ({
   console.log('[ChatContainer] Rendering with messages:', messages, 'currentChatId:', currentChatId);
   const [transcriptionText, setTranscriptionText] = useState('');
   const [patientContext, setPatientContext] = useState<PatientContext | null>(null);
+  
+  const { currentContext, createContext } = useTemplateContextQueries(currentChatId);
 
   const handleTranscriptionUpdate = (text: string) => {
     console.log('[ChatContainer] Transcription update:', text);
     setTranscriptionText(text);
+  };
+
+  const handleTemplateChange = async (template: Template) => {
+    console.log('[ChatContainer] Template change:', template.name);
+    onTemplateChange(template);
+    
+    if (currentChatId) {
+      await createContext({ 
+        template,
+        patientId: selectedPatientId 
+      });
+    }
   };
 
   // Fetch and format patient context when selectedPatientId changes
@@ -71,18 +86,14 @@ const ChatContainer = ({
       <div className="flex-1 flex flex-col">
         <ChatHeader 
           currentChatId={currentChatId} 
-          onTemplateChange={onTemplateChange}
+          onTemplateChange={handleTemplateChange}
           onPatientSelect={onPatientSelect}
           selectedPatientId={selectedPatientId}
         />
         
-        {/* Messages Container - Takes remaining height with overflow */}
         <div className="flex-1 overflow-hidden">
-          {/* Scrollable Area with Padding Space */}
           <div className="h-full relative">
-            {/* Content Container */}
             <div className="absolute inset-0 overflow-y-auto chat-scrollbar">
-              {/* Message Width Container */}
               <div className="mx-auto max-w-2xl px-4 sm:px-6 md:px-8">
                 <div className="pt-[60px] pb-[100px]">
                   <MessageList messages={messages} />
@@ -92,12 +103,15 @@ const ChatContainer = ({
           </div>
         </div>
 
-        {/* Input Section - Fixed at bottom */}
         <div className="relative w-full bg-gradient-to-t from-chatgpt-main via-chatgpt-main to-transparent pb-3 pt-6">
           <div className="px-4 sm:px-6 md:px-8">
             <div className="mx-auto max-w-2xl">
               <ChatInput
-                onSend={onMessageSend}
+                onSend={(content, type) => onMessageSend(
+                  content, 
+                  type, 
+                  currentContext?.system_instructions
+                )}
                 onTranscriptionComplete={onTranscriptionComplete}
                 onTranscriptionUpdate={handleTranscriptionUpdate}
                 isLoading={isLoading}

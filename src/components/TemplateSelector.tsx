@@ -2,6 +2,7 @@ import { memo, useCallback, useState } from "react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useSearchParams } from "react-router-dom";
 import { useTemplateQuery, useTemplatesListQuery } from "@/hooks/queries/useTemplateQueries";
+import { useTemplateContextQueries } from "@/hooks/queries/useTemplateContextQueries";
 import { useToast } from "@/hooks/use-toast";
 import { TemplateSelectorTrigger } from "./template/selector/TemplateSelectorTrigger";
 import { TemplateSelectorContent } from "./template/selector/TemplateSelectorContent";
@@ -18,13 +19,13 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTemplateId = searchParams.get('templateId');
   const { toast } = useToast();
+  const { createContext } = useTemplateContextQueries(currentChatId);
   
   console.log('[TemplateSelector] Initializing with:', { 
     currentChatId, 
     initialTemplateId 
   });
   
-  // Query for all templates
   const { 
     data: templates = [], 
     isLoading: isLoadingTemplates, 
@@ -32,7 +33,6 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     isError: isTemplatesError
   } = useTemplatesListQuery();
   
-  // Query for selected template
   const { 
     data: selectedTemplate, 
     isLoading: isLoadingTemplate, 
@@ -42,7 +42,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
   
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
-  const handleTemplateSelect = useCallback((template: Template) => {
+  const handleTemplateSelect = useCallback(async (template: Template) => {
     console.log('[TemplateSelector] Template selection triggered:', template.name);
     
     if (!isValidTemplate(template)) {
@@ -65,6 +65,11 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
       }
       setSearchParams(params, { replace: true });
       
+      // Create template context if we have a chat
+      if (currentChatId) {
+        await createContext({ template });
+      }
+      
       // Then update parent component
       onTemplateChange(template);
       
@@ -77,14 +82,13 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         variant: "destructive",
       });
     }
-  }, [searchParams, setSearchParams, onTemplateChange, toast]);
+  }, [searchParams, setSearchParams, onTemplateChange, toast, currentChatId, createContext]);
 
   const handleTooltipChange = useCallback((templateId: string | null) => {
     console.log('[TemplateSelector] Tooltip state changed for template:', templateId);
     setOpenTooltipId(templateId);
   }, []);
 
-  // Handle critical errors that prevent template selection
   if (isTemplatesError && templatesError) {
     console.error('[TemplateSelector] Critical error loading templates:', templatesError);
     return (
