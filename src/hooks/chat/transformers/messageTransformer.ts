@@ -1,7 +1,7 @@
 import type { Message, DbMessage } from '@/types/message';
 import { validateMessageRole, validateMessageStatus, validateMessageType } from './baseTransformer';
-import { transformTemplateContext } from './templateContextTransformer';
 import { extractMetadata } from './metadataTransformer';
+import { transformTemplateContext } from './templateContextTransformer';
 
 // Transform database message to frontend message
 export const transformDbMessageToMessage = (dbMessage: DbMessage): Message => {
@@ -47,14 +47,5 @@ export const transformMessageToDb = (message: Message): Omit<DbMessage, 'id' | '
   };
 };
 
-// Type guard to check if a message is from the database
-export const isDbMessage = (message: any): message is DbMessage => {
-  return (
-    message &&
-    typeof message.chat_id === 'string' &&
-    typeof message.sender === 'string' &&
-    typeof message.content === 'string'
-  );
-};
-
+// Re-export template context transformer
 export { transformTemplateContext } from './templateContextTransformer';
