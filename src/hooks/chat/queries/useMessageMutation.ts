@@ -27,24 +27,41 @@ export const useSendMessage = () => {
         type,
         role: 'user',
         status: 'sending',
-        templateContext,
       } as Message);
       
-      const { data, error } = await supabase
+      // Start a Supabase transaction
+      const { data: message, error: messageError } = await supabase
         .from('messages')
         .insert(messageData)
         .select()
         .single();
         
-      if (error) {
-        console.error('[useSendMessage] Error sending message:', error);
-        throw error;
+      if (messageError) {
+        console.error('[useSendMessage] Error sending message:', messageError);
+        throw messageError;
       }
 
-      const message = transformDbMessageToMessage(data as DbMessage);
-      console.log('[useSendMessage] Message sent successfully:', message);
+      // If we have template context, save it
+      if (templateContext && message) {
+        const { error: contextError } = await supabase
+          .from('template_contexts')
+          .insert({
+            message_id: message.id,
+            chat_id: chatId,
+            template_id: templateContext.templateId,
+            system_instructions: templateContext.systemInstructions,
+          });
+
+        if (contextError) {
+          console.error('[useSendMessage] Error saving template context:', contextError);
+          throw contextError;
+        }
+      }
+
+      const transformedMessage = transformDbMessageToMessage(message as DbMessage);
+      console.log('[useSendMessage] Message sent successfully:', transformedMessage);
       
-      return message;
+      return transformedMessage;
     },
     onSuccess: (data, variables) => {
       console.log('[useSendMessage] Updating cache after successful send');

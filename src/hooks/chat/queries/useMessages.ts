@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { messageKeys } from '@/types/chat';
-import { Message, DbMessage } from '@/types/message';
+import { Message, DbMessage, TemplateContext } from '@/types/message';
 import { transformDbMessageToMessage } from '../transformers/messageTransformer';
 
 export const useMessages = (chatId: string | null) => {
@@ -13,9 +13,13 @@ export const useMessages = (chatId: string | null) => {
       console.log('[useMessages] Fetching messages for chat:', chatId);
       if (!chatId) return [];
       
-      const { data: dbMessages, error } = await supabase
+      // Fetch messages with template contexts in a single query
+      const { data: messagesWithContext, error } = await supabase
         .from('messages')
-        .select('*')
+        .select(`
+          *,
+          template_contexts (*)
+        `)
         .eq('chat_id', chatId)
         .order('created_at', { ascending: true });
         
@@ -23,8 +27,15 @@ export const useMessages = (chatId: string | null) => {
         console.error('[useMessages] Error fetching messages:', error);
         throw error;
       }
-      
-      return (dbMessages as DbMessage[] || []).map(transformDbMessageToMessage);
+
+      // Transform the messages with their template contexts
+      return (messagesWithContext || []).map(msg => {
+        const message = transformDbMessageToMessage(msg as DbMessage);
+        if (msg.template_contexts?.[0]) {
+          message.templateContext = msg.template_contexts[0] as TemplateContext;
+        }
+        return message;
+      });
     },
     gcTime: 1000 * 60 * 30, // 30 minutes
     staleTime: 1000 * 60 * 5, // 5 minutes
