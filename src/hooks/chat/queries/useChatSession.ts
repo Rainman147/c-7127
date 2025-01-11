@@ -28,10 +28,9 @@ export const useChatSession = (sessionId: string | null) => {
       // Transform the data to match ChatSession type
       const chatSession: ChatSession = {
         id: data.id,
-        title: data.title,
+        status: 'active',
         templateId: data.template_type || undefined,
         patientId: data.patient_id || undefined,
-        status: 'active',
         lastMessage: undefined,
         systemInstructions: undefined
       };
