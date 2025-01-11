@@ -6,6 +6,7 @@ export interface MessageMetadata {
   sequence?: number;
   deliveredAt?: string;
   seenAt?: string;
+  patientId?: string;
 }
 
 export interface TemplateContext {

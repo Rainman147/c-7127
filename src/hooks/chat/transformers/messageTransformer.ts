@@ -43,6 +43,19 @@ const extractTemplateContext = (dbMessage: DbMessage) => {
   }
 };
 
+// Extract metadata from database message
+const extractMetadata = (dbMessage: DbMessage) => {
+  const metadata = {
+    sequence: dbMessage.sequence,
+    deliveredAt: dbMessage.delivered_at,
+    seenAt: dbMessage.seen_at
+  };
+
+  // Add patientId if available from the chat context
+  // This would need to be implemented when chat context is available
+  return metadata;
+};
+
 // Transform database message to frontend message
 export const transformDbMessageToMessage = (dbMessage: DbMessage): Message => {
   console.log('[transformDbMessageToMessage] Converting message:', dbMessage.id);
@@ -55,25 +68,16 @@ export const transformDbMessageToMessage = (dbMessage: DbMessage): Message => {
     type: (dbMessage.type || 'text') as MessageType,
     status: validateMessageStatus(dbMessage.status),
     createdAt: dbMessage.created_at,
-    metadata: {
-      sequence: dbMessage.sequence,
-      deliveredAt: dbMessage.delivered_at,
-      seenAt: dbMessage.seen_at
-    },
+    metadata: extractMetadata(dbMessage),
     templateContext: extractTemplateContext(dbMessage)
   };
 };
 
 // Transform frontend message to database format
-export const transformMessageToDb = (message: Message): Required<Pick<DbMessage, 'chat_id' | 'content' | 'sender' | 'type'>> & Partial<DbMessage> => {
+export const transformMessageToDb = (message: Message): Partial<DbMessage> => {
   console.log('[transformMessageToDb] Converting message for chat:', message.chatId);
   
-  if (!message.chatId || !message.content || !message.role || !message.type) {
-    console.error('[transformMessageToDb] Missing required message fields:', { message });
-    throw new Error('Missing required message fields');
-  }
-  
-  const dbMessage = {
+  const dbMessage: Partial<DbMessage> = {
     chat_id: message.chatId,
     content: message.content,
     sender: message.role,
