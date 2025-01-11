@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useMessages, useSendMessage, useChatSession } from './chat/useChatQueries';
 import { useChatSessions } from './useChatSessions';
-import type { Message } from '@/types/chat';
+import type { Message } from '@/types/message';
 
 export const useChat = () => {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
@@ -25,7 +25,7 @@ export const useChat = () => {
   
   const { 
     mutate: sendMessage,
-    isLoading: isSending
+    isPending: isSending
   } = useSendMessage();
 
   const handleSendMessage = useCallback(async (

@@ -36,7 +36,7 @@ const ChatPage = () => {
     console.log('[ChatPage] Session ID changed:', sessionId);
     if (sessionId) {
       setCurrentChatId(sessionId);
-      loadChatMessages(sessionId);
+      loadChatMessages({ throwOnError: true });
     } else {
       // On index route, reset chat state
       setCurrentChatId(null);

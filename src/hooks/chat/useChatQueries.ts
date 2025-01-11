@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { messageKeys, sessionKeys } from '@/types/chat';
-import type { Message, DbMessage, transformDbMessageToMessage } from '@/types/message';
+import { Message } from '@/types/message';
+import { transformDbMessageToMessage } from '@/types/message';
 import type { ChatSession } from '@/types/chat';
 import { useToast } from '@/hooks/use-toast';
 

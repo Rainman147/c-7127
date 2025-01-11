@@ -59,7 +59,7 @@ const Index = () => {
     console.log('[Index] Selecting session:', chatId);
     const currentParams = new URLSearchParams(location.search);
     navigate(`/c/${chatId}?${currentParams.toString()}`);
-    await loadChatMessages(chatId);
+    await loadChatMessages({ throwOnError: true });
   };
 
   const handlePatientSelect = async (patientId: string | null) => {
