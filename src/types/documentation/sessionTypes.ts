@@ -1,4 +1,5 @@
 import type { Message } from '@/types/message';
+import type { ErrorState } from './errorTypes';
 
 export interface ChatSessionState {
   status: ChatSessionStatus;
