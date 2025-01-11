@@ -19,11 +19,12 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTemplateId = searchParams.get('templateId');
   const { toast } = useToast();
-  const { createContext } = useTemplateContextQueries(currentChatId);
+  const { createContext, currentContext } = useTemplateContextQueries(currentChatId);
   
   console.log('[TemplateSelector] Initializing with:', { 
     currentChatId, 
-    initialTemplateId 
+    initialTemplateId,
+    currentContext 
   });
   
   const { 
@@ -38,7 +39,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     isLoading: isLoadingTemplate, 
     error: templateError,
     isError: isTemplateError 
-  } = useTemplateQuery(initialTemplateId);
+  } = useTemplateQuery(initialTemplateId || currentContext?.template_id);
   
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
@@ -88,6 +89,16 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     console.log('[TemplateSelector] Tooltip state changed for template:', templateId);
     setOpenTooltipId(templateId);
   }, []);
+
+  // Load initial template from context if available
+  useEffect(() => {
+    if (currentContext && !initialTemplateId) {
+      const contextTemplate = templates.find(t => t.id === currentContext.template_id);
+      if (contextTemplate) {
+        handleTemplateSelect(contextTemplate);
+      }
+    }
+  }, [currentContext, initialTemplateId, templates, handleTemplateSelect]);
 
   if (isTemplatesError && templatesError) {
     console.error('[TemplateSelector] Critical error loading templates:', templatesError);
