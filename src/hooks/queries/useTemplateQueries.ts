@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 
 // Cache configuration
 const STALE_TIME = 5 * 60 * 1000; // 5 minutes
-const CACHE_TIME = 30 * 60 * 1000; // 30 minutes
+const GC_TIME = 30 * 60 * 1000; // 30 minutes (renamed from CACHE_TIME)
 const RETRY_COUNT = 2;
 const RETRY_DELAY = 1000; // 1 second
 
@@ -80,7 +80,7 @@ export const useTemplateQuery = (templateId: string | null) => {
       }
     },
     staleTime: STALE_TIME,
-    cacheTime: CACHE_TIME,
+    gcTime: GC_TIME, // Changed from cacheTime to gcTime
     retry: RETRY_COUNT,
     retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), RETRY_DELAY),
     refetchOnMount: true,
@@ -126,7 +126,7 @@ export const useTemplatesListQuery = () => {
       }
     },
     staleTime: STALE_TIME,
-    cacheTime: CACHE_TIME,
+    gcTime: GC_TIME, // Changed from cacheTime to gcTime
     retry: RETRY_COUNT,
     retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), RETRY_DELAY),
     refetchOnMount: true,
