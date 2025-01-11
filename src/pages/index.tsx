@@ -24,6 +24,7 @@ const Index = () => {
   const { 
     messages, 
     isLoading: isChatLoading, 
+    error: chatError,
     handleSendMessage,
     loadChatMessages,
     currentChatId,
@@ -120,6 +121,7 @@ const Index = () => {
   }, [templateError, toast]);
 
   const isLoading = isChatLoading || isTemplateLoading;
+  const error = chatError || templateError;
 
   return (
     <div className="flex h-screen">
@@ -137,6 +139,7 @@ const Index = () => {
         onTemplateChange={handleTemplateChange}
         onPatientSelect={handlePatientSelect}
         selectedPatientId={selectedPatientId}
+        error={error}
         onTranscriptionComplete={async (text: string) => {
           console.log('[Index] Transcription complete, ready for user to edit:', text);
           if (text) {

@@ -15,17 +15,20 @@ export const useChat = () => {
   const { 
     data: messages = [], 
     isPending: isMessagesLoading,
+    error: messagesError,
     refetch: loadChatMessages
   } = useMessages(currentChatId);
   
   const { 
     data: currentSession,
-    isPending: isSessionLoading 
+    isPending: isSessionLoading,
+    error: sessionError
   } = useChatSession(currentChatId);
   
   const { 
     mutate: sendMessage,
-    isPending: isSending
+    isPending: isSending,
+    error: sendError
   } = useSendMessage();
 
   const handleSendMessage = useCallback(async (
@@ -76,10 +79,12 @@ export const useChat = () => {
   }, [currentChatId, createSession, navigate, sendMessage, toast]);
 
   const isLoading = isMessagesLoading || isSessionLoading || isSending;
+  const error = messagesError || sessionError || sendError;
 
   return {
     messages,
     isLoading,
+    error,
     handleSendMessage,
     currentChatId,
     setCurrentChatId,
