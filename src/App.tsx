@@ -1,22 +1,25 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { UIProvider } from "@/contexts/UIContext";
-import Router from "./app/Router";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Router } from '@/app/Router';
+import { Toaster } from '@/components/ui/toaster';
+import './App.css';
 
-const queryClient = new QueryClient();
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <UIProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <Router />
-      </TooltipProvider>
-    </UIProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Router />
+      <Toaster />
+    </QueryClientProvider>
+  );
+}
 
 export default App;
