@@ -20,8 +20,12 @@ export const transformDbMessageToMessage = (dbMessage: DbMessage): Message => {
   };
 };
 
-export const transformMessageToDb = (message: Partial<Message>): Partial<DbMessage> => {
+export const transformMessageToDb = (message: Partial<Message>): Required<Pick<DbMessage, 'chat_id' | 'content' | 'sender' | 'type'>> & Partial<DbMessage> => {
   console.log('[transformMessageToDb] Converting message for chat:', message.chatId);
+  
+  if (!message.chatId || !message.content || !message.role || !message.type) {
+    throw new Error('Missing required message fields');
+  }
   
   return {
     chat_id: message.chatId,

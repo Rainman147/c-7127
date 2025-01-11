@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { messageKeys } from '@/types/chat';
-import { Message, DbMessage, transformMessageToDb } from '@/types/message';
+import { Message, DbMessage } from '@/types/message';
+import { transformMessageToDb, transformDbMessageToMessage } from '../transformers/messageTransformer';
 
 interface SendMessageVariables {
   content: string;
