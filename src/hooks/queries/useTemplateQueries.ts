@@ -4,17 +4,19 @@ import type { Template, DbTemplate } from "@/types/template";
 import { isValidTemplate } from "@/types/template/guards";
 import { convertDbTemplate } from "@/types/template/utils";
 import { templates } from "@/types/template/templates";
+import { getFallbackTemplate } from "@/types/template/fallbacks";
 import { useToast } from "@/hooks/use-toast";
 
 const STALE_TIME = 5 * 60 * 1000; // 5 minutes
-const RETRY_COUNT = 3;
+const RETRY_COUNT = 2;
 const RETRY_DELAY = 1000; // 1 second
 
 const getDefaultTemplate = (): Template => {
   console.log('[useTemplateQueries] Using default template');
   const defaultTemplate = templates[0];
   if (!isValidTemplate(defaultTemplate)) {
-    throw new Error('Default template is invalid');
+    console.error('[useTemplateQueries] Default template is invalid, using fallback');
+    return getFallbackTemplate();
   }
   return defaultTemplate;
 };
@@ -24,7 +26,7 @@ const findTemplateById = (templateId: string): Template | undefined => {
   const template = templates.find(t => t.id === templateId);
   if (template && !isValidTemplate(template)) {
     console.error('[useTemplateQueries] Found template is invalid:', template);
-    return undefined;
+    return getFallbackTemplate(templateId);
   }
   return template;
 };
@@ -41,33 +43,35 @@ export const useTemplateQuery = (templateId: string | null) => {
         return getDefaultTemplate();
       }
       
-      const template = findTemplateById(templateId);
-      if (!template) {
-        console.warn('[useTemplateQuery] Template not found:', templateId);
+      try {
+        const template = findTemplateById(templateId);
+        if (!template) {
+          console.warn('[useTemplateQuery] Template not found:', templateId);
+          const fallback = getFallbackTemplate(templateId);
+          toast({
+            title: "Template Not Found",
+            description: `Using ${fallback.name} template instead.`,
+            variant: "default",
+          });
+          return fallback;
+        }
+        
+        console.log('[useTemplateQuery] Template found:', template.name);
+        return template;
+      } catch (error) {
+        console.error('[useTemplateQuery] Error processing template:', error);
+        const fallback = getFallbackTemplate(templateId);
         toast({
-          title: "Template Not Found",
-          description: "Using default template instead.",
-          variant: "default",
+          title: "Template Error",
+          description: `Using ${fallback.name} template instead.`,
+          variant: "destructive",
         });
-        return getDefaultTemplate();
+        return fallback;
       }
-      
-      console.log('[useTemplateQuery] Template found:', template.name);
-      return template;
     },
     staleTime: STALE_TIME,
     retry: RETRY_COUNT,
     retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), RETRY_DELAY),
-    meta: {
-      errorHandler: (error: Error) => {
-        console.error('[useTemplateQuery] Error fetching template:', error);
-        toast({
-          title: "Error Loading Template",
-          description: "There was an error loading the template. Using default template instead.",
-          variant: "destructive",
-        });
-      }
-    }
   });
 };
 
@@ -110,10 +114,5 @@ export const useTemplatesListQuery = () => {
     staleTime: STALE_TIME,
     retry: RETRY_COUNT,
     retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), RETRY_DELAY),
-    meta: {
-      errorHandler: (error: Error) => {
-        console.error('[useTemplatesListQuery] Error in templates list query:', error);
-      }
-    }
   });
 };
