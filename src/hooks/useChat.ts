@@ -21,6 +21,7 @@ export const useChat = () => {
     
     if (!currentChatId) {
       console.log('[useChat] No chat ID, skipping message load');
+      setMessages([]); // Reset messages when no chat is selected
       return;
     }
 
@@ -55,7 +56,7 @@ export const useChat = () => {
       console.log('[useChat] Cleaning up effect for chat:', currentChatId);
       controller.abort();
     };
-  }, [currentChatId, loadMessages, toast]); // Added proper dependencies
+  }, [currentChatId, loadMessages, toast]);
 
   const handleSendMessage = useCallback(async (
     content: string,
@@ -75,11 +76,21 @@ export const useChat = () => {
         }
       }
 
+      // Prepare messages array with system message if provided
+      let updatedMessages = [...messages];
+      if (systemInstructions && messages.length === 0) {
+        updatedMessages = [{
+          role: 'system',
+          content: systemInstructions,
+          type: 'text'
+        }];
+      }
+
       const result = await sendMessage(
         content,
         type,
         systemInstructions,
-        messages,
+        updatedMessages,
         currentChatId
       );
 

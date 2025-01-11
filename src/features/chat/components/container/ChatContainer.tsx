@@ -50,7 +50,7 @@ const ChatContainer = ({
       await createContext({ 
         template,
         patientId: selectedPatientId,
-        systemInstructions: formattedContext.systemInstructions
+        systemPrompt: formattedContext.systemInstructions // Changed from systemInstructions to systemPrompt
       });
     }
   };
@@ -111,7 +111,10 @@ const ChatContainer = ({
             <div className="mx-auto max-w-2xl">
               <ChatInput
                 onSend={(content, type) => {
-                  const formattedContext = formatSystemContext(currentContext?.template || null, patientContext);
+                  const formattedContext = formatSystemContext(
+                    currentContext?.templateData || null, 
+                    patientContext
+                  );
                   onMessageSend(
                     content, 
                     type, 
