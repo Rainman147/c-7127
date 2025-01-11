@@ -1,19 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { messageKeys } from '@/types/chat';
-import { transformDbMessageToMessage } from '../transformers/messageTransformer';
-import type { Message } from '@/types/message';
+import { Message, DbMessage, transformDbMessageToMessage } from '@/types/message';
 
 export const useMessages = (chatId: string | null) => {
   console.log('[useMessages] Initializing with chatId:', chatId);
   
   return useQuery({
     queryKey: chatId ? messageKeys.chat(chatId) : null,
-    queryFn: async () => {
+    queryFn: async (): Promise<Message[]> => {
       console.log('[useMessages] Fetching messages for chat:', chatId);
       if (!chatId) return [];
       
-      const { data, error } = await supabase
+      const { data: dbMessages, error } = await supabase
         .from('messages')
         .select('*')
         .eq('chat_id', chatId)
@@ -24,7 +23,7 @@ export const useMessages = (chatId: string | null) => {
         throw error;
       }
       
-      return (data || []).map(transformDbMessageToMessage);
+      return (dbMessages as DbMessage[] || []).map(transformDbMessageToMessage);
     },
     gcTime: 1000 * 60 * 30, // 30 minutes
     staleTime: 1000 * 60 * 5, // 5 minutes
