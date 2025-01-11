@@ -6,6 +6,7 @@ export interface MessageMetadata {
   sequence?: number;
   deliveredAt?: string;
   seenAt?: string;
+  patientId?: string;
 }
 
 export interface TemplateContext {
@@ -27,16 +28,16 @@ export interface Message {
   templateContext?: TemplateContext;
 }
 
-// Type for messages coming from the database
+// Database message type to ensure proper mapping
 export interface DbMessage {
   id: string;
   chat_id: string;
   content: string;
   sender: string;
   type: string;
+  status?: string;
   created_at: string;
   sequence?: number;
-  status?: string;
   delivered_at?: string;
   seen_at?: string;
 }
@@ -51,7 +52,7 @@ export const isDbMessage = (message: any): message is DbMessage => {
   );
 };
 
-// Transformation function to convert DB message to frontend message
+// Transform database message to frontend message
 export const transformDbMessageToMessage = (dbMessage: DbMessage): Message => {
   console.log('[transformDbMessageToMessage] Converting message:', dbMessage.id);
   
@@ -71,7 +72,7 @@ export const transformDbMessageToMessage = (dbMessage: DbMessage): Message => {
   };
 };
 
-// Transformation function to convert frontend message to DB format
+// Transform frontend message to database format
 export const transformMessageToDb = (message: Message): Partial<DbMessage> => {
   console.log('[transformMessageToDb] Converting message for chat:', message.chatId);
   
