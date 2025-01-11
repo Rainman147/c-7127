@@ -43,6 +43,9 @@ export const useSendMessage = () => {
 
       // If we have template context, save it
       if (templateContext && message) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
         const { error: contextError } = await supabase
           .from('template_contexts')
           .insert({
@@ -50,6 +53,7 @@ export const useSendMessage = () => {
             chat_id: chatId,
             template_id: templateContext.templateId,
             system_instructions: templateContext.systemInstructions,
+            user_id: user.id
           });
 
         if (contextError) {
