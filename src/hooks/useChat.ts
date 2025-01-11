@@ -1,61 +1,31 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { useMessageHandling } from './chat/useMessageHandling';
-import { useMessagePersistence } from './chat/useMessagePersistence';
+import { useMessages, useSendMessage, useChatSession } from './chat/useChatQueries';
 import { useChatSessions } from './useChatSessions';
 import type { Message } from '@/types/chat';
 
 export const useChat = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const { isLoading, handleSendMessage: sendMessage } = useMessageHandling();
-  const { loadChatMessages: loadMessages } = useMessagePersistence();
   const { createSession } = useChatSessions();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Load messages when currentChatId changes
-  useEffect(() => {
-    console.log('[useChat] Effect triggered with currentChatId:', currentChatId);
-    
-    if (!currentChatId) {
-      console.log('[useChat] No chat ID, skipping message load');
-      return;
-    }
-
-    const controller = new AbortController();
-    
-    const loadChatMessages = async () => {
-      console.log('[useChat] Loading messages for chat:', currentChatId);
-      try {
-        const loadedMessages = await loadMessages(currentChatId);
-        console.log('[useChat] Successfully loaded messages:', loadedMessages.length);
-        
-        // Only set messages if the request wasn't aborted
-        if (!controller.signal.aborted) {
-          setMessages(loadedMessages);
-        }
-      } catch (error) {
-        console.error('[useChat] Error loading chat messages:', error);
-        if (!controller.signal.aborted) {
-          toast({
-            title: "Error loading messages",
-            description: "Failed to load chat messages. Please try again.",
-            variant: "destructive",
-          });
-        }
-      }
-    };
-
-    loadChatMessages();
-
-    // Cleanup function to abort any in-flight requests when switching chats
-    return () => {
-      console.log('[useChat] Cleaning up effect for chat:', currentChatId);
-      controller.abort();
-    };
-  }, [currentChatId, loadMessages, toast]); // Added proper dependencies
+  // Use TanStack Query hooks
+  const { 
+    data: messages = [], 
+    isLoading: isMessagesLoading 
+  } = useMessages(currentChatId);
+  
+  const { 
+    data: currentSession,
+    isLoading: isSessionLoading 
+  } = useChatSession(currentChatId);
+  
+  const { 
+    mutate: sendMessage,
+    isLoading: isSending
+  } = useSendMessage();
 
   const handleSendMessage = useCallback(async (
     content: string,
@@ -63,6 +33,7 @@ export const useChat = () => {
     systemInstructions?: string
   ) => {
     console.log('[useChat] Sending message:', { content, type, systemInstructions });
+    
     try {
       // If no current chat ID, create a new session before sending the message
       if (!currentChatId) {
@@ -75,35 +46,42 @@ export const useChat = () => {
         }
       }
 
-      const result = await sendMessage(
-        content,
-        type,
-        systemInstructions,
-        messages,
-        currentChatId
-      );
-
-      if (result) {
-        console.log('[useChat] Message sent successfully:', result);
-        setMessages(result.messages);
+      if (currentChatId) {
+        sendMessage(
+          { content, chatId: currentChatId, type },
+          {
+            onSuccess: () => {
+              console.log('[useChat] Message sent successfully');
+            },
+            onError: (error) => {
+              console.error('[useChat] Error sending message:', error);
+              toast({
+                title: "Error sending message",
+                description: "Failed to send message. Please try again.",
+                variant: "destructive",
+              });
+            },
+          }
+        );
       }
     } catch (error) {
-      console.error('[useChat] Error sending message:', error);
+      console.error('[useChat] Error in handleSendMessage:', error);
       toast({
         title: "Error sending message",
         description: "Failed to send message. Please try again.",
         variant: "destructive",
       });
     }
-  }, [messages, currentChatId, sendMessage, createSession, navigate, toast]);
+  }, [currentChatId, createSession, navigate, sendMessage, toast]);
+
+  const isLoading = isMessagesLoading || isSessionLoading || isSending;
 
   return {
     messages,
     isLoading,
     handleSendMessage,
-    loadChatMessages: loadMessages,
-    setMessages,
     currentChatId,
-    setCurrentChatId
+    setCurrentChatId,
+    currentSession
   };
 };
