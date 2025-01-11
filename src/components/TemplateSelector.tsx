@@ -24,25 +24,27 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     initialTemplateId 
   });
   
-  // Query for all templates
+  // Query for all templates with better error handling
   const { 
     data: templates = [], 
     isLoading: isLoadingTemplates, 
     error: templatesError,
-    isError: isTemplatesError
+    isError: isTemplatesError,
+    refetch: refetchTemplates
   } = useTemplatesListQuery();
   
-  // Query for selected template
+  // Query for selected template with better error handling
   const { 
     data: selectedTemplate, 
     isLoading: isLoadingTemplate, 
     error: templateError,
-    isError: isTemplateError 
+    isError: isTemplateError,
+    refetch: refetchTemplate
   } = useTemplateQuery(initialTemplateId);
   
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
-  const handleTemplateSelect = useCallback((template: Template) => {
+  const handleTemplateSelect = useCallback(async (template: Template) => {
     console.log('[TemplateSelector] Template selection triggered:', template.name);
     
     if (!isValidTemplate(template)) {
@@ -76,8 +78,14 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         description: "There was an error selecting the template. Please try again.",
         variant: "destructive",
       });
+      
+      // Attempt to recover by refetching data
+      refetchTemplates();
+      if (initialTemplateId) {
+        refetchTemplate();
+      }
     }
-  }, [searchParams, setSearchParams, onTemplateChange, toast]);
+  }, [searchParams, setSearchParams, onTemplateChange, toast, refetchTemplates, refetchTemplate, initialTemplateId]);
 
   const handleTooltipChange = useCallback((templateId: string | null) => {
     console.log('[TemplateSelector] Tooltip state changed for template:', templateId);

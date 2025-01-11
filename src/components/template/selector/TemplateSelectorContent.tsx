@@ -15,6 +15,15 @@ interface TemplateSelectorContentProps {
   error?: Error | null;
 }
 
+const TemplateSkeleton = () => (
+  <div className="px-3 py-2.5 flex items-center justify-between animate-pulse">
+    <div className="flex items-center gap-2 flex-1">
+      <div className="h-4 w-24 bg-gray-700 rounded"></div>
+    </div>
+    <div className="h-4 w-4 bg-gray-700 rounded-full"></div>
+  </div>
+);
+
 export const TemplateSelectorContent = memo(({ 
   templates,
   selectedTemplate,
@@ -41,10 +50,10 @@ export const TemplateSelectorContent = memo(({
 
   if (isLoading) {
     return (
-      <DropdownMenuContent align="start" className="p-2">
-        <div className="flex items-center justify-center py-2 text-sm text-gray-400">
-          Loading templates...
-        </div>
+      <DropdownMenuContent align="start" className="min-w-[200px]">
+        {[1, 2, 3].map((i) => (
+          <TemplateSkeleton key={i} />
+        ))}
       </DropdownMenuContent>
     );
   }
