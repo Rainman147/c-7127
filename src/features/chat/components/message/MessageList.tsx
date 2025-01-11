@@ -20,9 +20,7 @@ const MessageList = ({ messages }: MessageListProps) => {
           messages.map((message) => (
             <Message
               key={message.id || `${message.role}-${message.content}`}
-              content={message.content}
-              sender={message.role === 'user' ? 'user' : 'ai'}
-              type={message.type}
+              message={message}
             />
           ))
         )}
