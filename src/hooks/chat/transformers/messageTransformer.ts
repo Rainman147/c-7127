@@ -1,8 +1,16 @@
-import type { Message, MessageRole, MessageStatus, MessageType } from '@/types/message';
-import type { DbMessage } from '@/types/message';
+import type { 
+  Message, 
+  MessageRole, 
+  MessageStatus, 
+  MessageType,
+  DbMessage,
+  TemplateContext,
+  DbTemplateContext 
+} from '@/types/message';
 
 // Validate and convert database sender to frontend role
 const validateMessageRole = (sender: string): MessageRole => {
+  console.log('[validateMessageRole] Validating sender:', sender);
   if (sender !== 'user' && sender !== 'assistant') {
     console.warn(`[validateMessageRole] Invalid sender type: ${sender}, defaulting to 'user'`);
     return 'user';
@@ -12,6 +20,7 @@ const validateMessageRole = (sender: string): MessageRole => {
 
 // Validate and convert database status to frontend status
 const validateMessageStatus = (status: string | null): MessageStatus => {
+  console.log('[validateMessageStatus] Validating status:', status);
   const validStatuses: MessageStatus[] = ['queued', 'sending', 'sent', 'error'];
   if (!status || !validStatuses.includes(status as MessageStatus)) {
     console.warn(`[validateMessageStatus] Invalid status: ${status}, defaulting to 'queued'`);
@@ -22,13 +31,29 @@ const validateMessageStatus = (status: string | null): MessageStatus => {
 
 // Extract metadata from database message
 const extractMetadata = (dbMessage: DbMessage) => {
-  const metadata = {
+  console.log('[extractMetadata] Extracting metadata for message:', dbMessage.id);
+  return {
     sequence: dbMessage.sequence,
     deliveredAt: dbMessage.delivered_at,
     seenAt: dbMessage.seen_at
   };
+};
 
-  return metadata;
+// Transform template context from DB to frontend format
+export const transformTemplateContext = (dbContext: DbTemplateContext): TemplateContext => {
+  console.log('[transformTemplateContext] Converting template context:', dbContext.id);
+  return {
+    id: dbContext.id,
+    templateId: dbContext.template_id,
+    chatId: dbContext.chat_id,
+    messageId: dbContext.message_id,
+    systemInstructions: dbContext.system_instructions,
+    metadata: dbContext.metadata,
+    version: dbContext.version,
+    createdAt: dbContext.created_at,
+    updatedAt: dbContext.updated_at,
+    userId: dbContext.user_id
+  };
 };
 
 // Transform database message to frontend message
@@ -47,7 +72,7 @@ export const transformDbMessageToMessage = (dbMessage: DbMessage): Message => {
   };
 };
 
-// Transform frontend message to database format with required fields
+// Transform frontend message to database format
 export const transformMessageToDb = (message: Message): Pick<DbMessage, 'chat_id' | 'content' | 'sender'> & Partial<Omit<DbMessage, 'chat_id' | 'content' | 'sender'>> => {
   console.log('[transformMessageToDb] Converting message for chat:', message.chatId);
   
@@ -77,5 +102,14 @@ export const isDbMessage = (message: any): message is DbMessage => {
     typeof message.chat_id === 'string' &&
     typeof message.sender === 'string' &&
     typeof message.content === 'string'
+  );
+};
+
+// Type guard for template context
+export const isTemplateContext = (context: any): context is TemplateContext => {
+  return (
+    context &&
+    typeof context.templateId === 'string' &&
+    typeof context.systemInstructions === 'string'
   );
 };
