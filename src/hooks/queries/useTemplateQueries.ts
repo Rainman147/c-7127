@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Template, DbTemplate } from "@/types/template";
 import { isValidTemplate } from "@/types/template/guards";
@@ -7,9 +7,18 @@ import { templates } from "@/types/template/templates";
 import { getFallbackTemplate } from "@/types/template/fallbacks";
 import { useToast } from "@/hooks/use-toast";
 
+// Cache configuration
 const STALE_TIME = 5 * 60 * 1000; // 5 minutes
+const CACHE_TIME = 30 * 60 * 1000; // 30 minutes
 const RETRY_COUNT = 2;
 const RETRY_DELAY = 1000; // 1 second
+
+// Query keys for better cache management
+export const templateKeys = {
+  all: ['templates'] as const,
+  single: (id: string) => ['template', id] as const,
+  defaults: ['templates', 'defaults'] as const
+};
 
 const getDefaultTemplate = (): Template => {
   console.log('[useTemplateQueries] Using default template');
@@ -34,9 +43,10 @@ const findTemplateById = (templateId: string): Template | undefined => {
 export const useTemplateQuery = (templateId: string | null) => {
   console.log('[useTemplateQuery] Initializing with templateId:', templateId);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   return useQuery({
-    queryKey: ['template', templateId],
+    queryKey: templateId ? templateKeys.single(templateId) : templateKeys.defaults,
     queryFn: async () => {
       if (!templateId) {
         console.log('[useTemplateQuery] No templateId provided, using default template');
@@ -70,17 +80,21 @@ export const useTemplateQuery = (templateId: string | null) => {
       }
     },
     staleTime: STALE_TIME,
+    cacheTime: CACHE_TIME,
     retry: RETRY_COUNT,
     retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), RETRY_DELAY),
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 };
 
 export const useTemplatesListQuery = () => {
   console.log('[useTemplatesListQuery] Initializing templates list query');
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   return useQuery({
-    queryKey: ['templates'],
+    queryKey: templateKeys.all,
     queryFn: async () => {
       const defaultTemplates = [...templates].filter(isValidTemplate);
       
@@ -112,7 +126,26 @@ export const useTemplatesListQuery = () => {
       }
     },
     staleTime: STALE_TIME,
+    cacheTime: CACHE_TIME,
     retry: RETRY_COUNT,
     retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), RETRY_DELAY),
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
+};
+
+// Manual refresh utility
+export const useTemplateRefresh = () => {
+  const queryClient = useQueryClient();
+  
+  return {
+    refreshTemplate: async (templateId: string) => {
+      console.log('[useTemplateRefresh] Manually refreshing template:', templateId);
+      await queryClient.invalidateQueries({ queryKey: templateKeys.single(templateId) });
+    },
+    refreshAllTemplates: async () => {
+      console.log('[useTemplateRefresh] Manually refreshing all templates');
+      await queryClient.invalidateQueries({ queryKey: templateKeys.all });
+    }
+  };
 };
