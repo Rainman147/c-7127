@@ -20,29 +20,6 @@ const validateMessageStatus = (status: string | null): MessageStatus => {
   return status as MessageStatus;
 };
 
-// Extract template context from message metadata if available
-const extractTemplateContext = (dbMessage: DbMessage) => {
-  console.log('[extractTemplateContext] Checking for template context in message:', dbMessage.id);
-  
-  if (!dbMessage.template_context) {
-    return undefined;
-  }
-
-  try {
-    const context = typeof dbMessage.template_context === 'string' 
-      ? JSON.parse(dbMessage.template_context)
-      : dbMessage.template_context;
-
-    return {
-      templateId: context.templateId,
-      systemInstructions: context.systemInstructions
-    };
-  } catch (error) {
-    console.warn('[extractTemplateContext] Error parsing template context:', error);
-    return undefined;
-  }
-};
-
 // Extract metadata from database message
 const extractMetadata = (dbMessage: DbMessage) => {
   const metadata = {
@@ -51,8 +28,6 @@ const extractMetadata = (dbMessage: DbMessage) => {
     seenAt: dbMessage.seen_at
   };
 
-  // Add patientId if available from the chat context
-  // This would need to be implemented when chat context is available
   return metadata;
 };
 
@@ -68,8 +43,7 @@ export const transformDbMessageToMessage = (dbMessage: DbMessage): Message => {
     type: (dbMessage.type || 'text') as MessageType,
     status: validateMessageStatus(dbMessage.status),
     createdAt: dbMessage.created_at,
-    metadata: extractMetadata(dbMessage),
-    templateContext: extractTemplateContext(dbMessage)
+    metadata: extractMetadata(dbMessage)
   };
 };
 
@@ -92,12 +66,6 @@ export const transformMessageToDb = (message: Message): Pick<DbMessage, 'chat_id
     delivered_at: message.metadata?.deliveredAt,
     seen_at: message.metadata?.seenAt
   };
-
-  // Add template context if available
-  if (message.templateContext) {
-    console.log('[transformMessageToDb] Adding template context');
-    dbMessage.template_context = JSON.stringify(message.templateContext);
-  }
 
   return dbMessage;
 };
