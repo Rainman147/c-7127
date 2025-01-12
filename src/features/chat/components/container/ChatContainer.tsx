@@ -112,7 +112,7 @@ const ChatContainer = ({
               <ChatInput
                 onSend={(content, type) => {
                   const formattedContext = formatSystemContext(
-                    currentContext?.template || null,
+                    currentContext?.template || null, 
                     patientContext
                   );
                   onMessageSend(
