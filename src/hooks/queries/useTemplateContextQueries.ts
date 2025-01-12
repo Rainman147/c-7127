@@ -3,6 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Template } from "@/types/template";
 import { useToast } from "@/hooks/use-toast";
 
+interface CreateTemplateContextInput {
+  template: Template;
+  patientId?: string | null;
+  systemInstructions: string;
+}
+
 interface TemplateContext {
   id: string;
   template_id: string;
@@ -14,6 +20,7 @@ interface TemplateContext {
   created_at: string;
   updated_at: string;
   user_id: string;
+  template?: Template;
 }
 
 export const useTemplateContextQueries = (chatId: string | null) => {
@@ -42,11 +49,9 @@ export const useTemplateContextQueries = (chatId: string | null) => {
   const createContextMutation = useMutation({
     mutationFn: async ({ 
       template,
-      patientId 
-    }: { 
-      template: Template;
-      patientId?: string | null;
-    }) => {
+      patientId,
+      systemInstructions 
+    }: CreateTemplateContextInput) => {
       if (!chatId) throw new Error('No chat ID provided');
       
       // Get the current user's ID
@@ -58,9 +63,9 @@ export const useTemplateContextQueries = (chatId: string | null) => {
         .insert({
           chat_id: chatId,
           template_id: template.id,
-          system_instructions: template.systemInstructions,
+          system_instructions: systemInstructions,
           metadata: { patientId },
-          user_id: user.id // Add the user_id field
+          user_id: user.id
         })
         .select()
         .single();
