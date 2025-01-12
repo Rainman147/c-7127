@@ -67,7 +67,10 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
       
       // Create template context if we have a chat
       if (currentChatId) {
-        await createContext({ template });
+        await createContext({ 
+          template,
+          systemInstructions: template.systemInstructions || 'Process conversation using standard medical documentation format.'
+        });
       }
       
       // Then update parent component
