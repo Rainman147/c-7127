@@ -15,13 +15,12 @@ export const useChat = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Load messages when currentChatId changes
   useEffect(() => {
     console.log('[useChat] Effect triggered with currentChatId:', currentChatId);
     
     if (!currentChatId) {
       console.log('[useChat] No chat ID, skipping message load');
-      setMessages([]); // Reset messages when no chat is selected
+      setMessages([]); 
       return;
     }
 
@@ -33,7 +32,6 @@ export const useChat = () => {
         const loadedMessages = await loadMessages(currentChatId);
         console.log('[useChat] Successfully loaded messages:', loadedMessages.length);
         
-        // Only set messages if the request wasn't aborted
         if (!controller.signal.aborted) {
           setMessages(loadedMessages);
         }
@@ -51,7 +49,6 @@ export const useChat = () => {
 
     loadChatMessages();
 
-    // Cleanup function to abort any in-flight requests when switching chats
     return () => {
       console.log('[useChat] Cleaning up effect for chat:', currentChatId);
       controller.abort();
@@ -65,7 +62,6 @@ export const useChat = () => {
   ) => {
     console.log('[useChat] Sending message:', { content, type, systemInstructions });
     try {
-      // If no current chat ID, create a new session before sending the message
       if (!currentChatId) {
         console.log('[useChat] Creating new session for first message');
         const sessionId = await createSession('New Chat');
@@ -76,11 +72,12 @@ export const useChat = () => {
         }
       }
 
-      // Prepare messages array with system message if provided
+      // Initialize messages array with system message if provided and it's a new chat
       let updatedMessages = [...messages];
       if (systemInstructions && messages.length === 0) {
+        console.log('[useChat] Adding system message:', systemInstructions);
         updatedMessages = [{
-          role: 'system' as const,
+          role: 'system',
           content: systemInstructions,
           type: 'text'
         }];
@@ -95,7 +92,7 @@ export const useChat = () => {
       );
 
       if (result) {
-        console.log('[useChat] Message sent successfully:', result);
+        console.log('[useChat] Message sent successfully, updating messages:', result.messages);
         setMessages(result.messages);
       }
     } catch (error) {

@@ -36,26 +36,20 @@ export const useMessageHandling = () => {
       const { chatId, messageId } = await saveMessage(userMessage, currentChatId);
       userMessage.id = messageId;
 
-      // Save template context if system instructions are provided
-      if (systemInstructions) {
-        console.log('[useMessageHandling] Saving template context');
-        const { error: contextError } = await supabase
-          .from('template_contexts')
-          .insert({
-            message_id: messageId,
-            chat_id: chatId,
-            system_instructions: systemInstructions,
-            template_id: 'live-session',
-            user_id: (await supabase.auth.getUser()).data.user?.id
-          });
-
-        if (contextError) {
-          console.error('[useMessageHandling] Error saving template context:', contextError);
-          throw contextError;
-        }
+      // Save system instructions if provided
+      if (systemInstructions && currentMessages.length === 0) {
+        console.log('[useMessageHandling] Saving system message');
+        const systemMessage: Message = { 
+          role: 'system', 
+          content: systemInstructions,
+          type: 'text'
+        };
+        const { messageId: systemMessageId } = await saveMessage(systemMessage, chatId);
+        systemMessage.id = systemMessageId;
+        newMessages.unshift(systemMessage);
       }
 
-      // Call Gemini function with system instructions
+      // Call Gemini function
       const { data, error } = await supabase.functions.invoke('gemini', {
         body: { 
           messages: newMessages,
@@ -73,7 +67,7 @@ export const useMessageHandling = () => {
         const assistantMessage: Message = {
           role: 'assistant',
           content: data.content,
-          isStreaming: false
+          type: 'text'
         };
         
         const { messageId: assistantMessageId } = await saveMessage(assistantMessage, chatId);
