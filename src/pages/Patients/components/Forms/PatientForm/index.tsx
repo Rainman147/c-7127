@@ -10,6 +10,8 @@ export const PatientForm = ({
   onSubmit, 
   handleInputChange,
 }: PatientFormProps) => {
+  console.log('[PatientForm] Rendering with formData:', formData);
+  
   return (
     <form id="new-patient-form" onSubmit={onSubmit} className="space-y-6">
       <div className="max-h-[60vh] overflow-y-auto modal-content-scrollbar space-y-6 py-4">

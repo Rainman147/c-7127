@@ -17,11 +17,16 @@ export const usePatientForm = (
     phone: '',
     address: '',
     medicalHistory: '',
+    medications: '',
   });
 
   useEffect(() => {
     if (existingPatient) {
       const contactInfo = existingPatient.contact_info as { email?: string; phone?: string } || {};
+      const currentMedications = Array.isArray(existingPatient.current_medications) 
+        ? existingPatient.current_medications.join('\n')
+        : '';
+        
       setFormData({
         name: existingPatient.name || '',
         dob: existingPatient.dob || '',
@@ -29,6 +34,7 @@ export const usePatientForm = (
         phone: contactInfo.phone || '',
         address: existingPatient.address || '',
         medicalHistory: existingPatient.medical_history || '',
+        medications: currentMedications,
       });
     }
   }, [existingPatient]);
@@ -47,6 +53,12 @@ export const usePatientForm = (
       
       if (!user) throw new Error('No authenticated user found');
 
+      // Convert medications string to array, filtering out empty lines
+      const medicationsArray = formData.medications
+        .split('\n')
+        .map(med => med.trim())
+        .filter(med => med.length > 0);
+
       const patientData = {
         name: formData.name,
         dob: formData.dob,
@@ -57,6 +69,7 @@ export const usePatientForm = (
         },
         address: formData.address,
         medical_history: formData.medicalHistory,
+        current_medications: medicationsArray,
       };
 
       let result;
