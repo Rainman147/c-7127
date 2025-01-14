@@ -7,13 +7,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Search, UserPlus } from 'lucide-react';
 import { NewPatientModal } from './components/NewPatient/NewPatientModal';
 import { parseSupabaseJson } from '@/types';
+import { Json } from '@/integrations/supabase/types';
 
 interface Patient {
   id: string;
   name: string;
   dob: string;
-  medical_history?: string;
-  current_medications?: string[];
+  medical_history?: string | null;
+  current_medications?: Json;
+  contact_info?: Json;
+  address?: string | null;
+  recent_tests?: Json;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  last_accessed?: string | null;
 }
 
 const PatientsListPage = () => {
