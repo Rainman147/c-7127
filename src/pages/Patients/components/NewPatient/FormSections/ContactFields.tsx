@@ -5,10 +5,17 @@ interface ContactFieldsProps {
   email: string;
   phone: string;
   address: string;
+  medications?: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-export const ContactFields = ({ email, phone, address, onChange }: ContactFieldsProps) => {
+export const ContactFields = ({ 
+  email, 
+  phone, 
+  address,
+  medications = '',
+  onChange 
+}: ContactFieldsProps) => {
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2">
@@ -49,6 +56,19 @@ export const ContactFields = ({ email, phone, address, onChange }: ContactFields
           name="address"
           value={address}
           onChange={onChange}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label htmlFor="medications" className="text-sm font-medium">
+          Current Medications
+        </label>
+        <Input
+          id="medications"
+          name="medications"
+          value={medications}
+          onChange={onChange}
+          placeholder="Enter medications separated by commas"
         />
       </div>
     </>

@@ -17,7 +17,6 @@ export const PatientForm = ({
           <PersonalInfoFields
             name={formData.name}
             dob={formData.dob}
-            medications={formData.medications}
             onChange={handleInputChange}
           />
         </FormSection>
@@ -27,6 +26,7 @@ export const PatientForm = ({
             email={formData.email}
             phone={formData.phone}
             address={formData.address}
+            medications={formData.medications}
             onChange={handleInputChange}
           />
         </FormSection>
