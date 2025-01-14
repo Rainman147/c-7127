@@ -6,7 +6,9 @@ import { PatientInfo } from './components/PatientInfo';
 import { PatientMedicalInfo } from './components/PatientMedicalInfo';
 import { PatientChatHistory } from './components/PatientChatHistory';
 import { Patient } from '@/types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, PenSquare } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { NewPatientModal } from './components/NewPatient/NewPatientModal';
 
 interface PatientDetailPageProps {
   isNew?: boolean;
@@ -14,9 +16,10 @@ interface PatientDetailPageProps {
 
 const PatientDetailPage = ({ isNew = false }: PatientDetailPageProps) => {
   const { patientId } = useParams();
-  const [patient, setPatient] = useState(null);
+  const [patient, setPatient] = useState<Patient | null>(null);
   const [recentChats, setRecentChats] = useState([]);
   const [isLoading, setIsLoading] = useState(!isNew);
+  const [showEditModal, setShowEditModal] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -77,9 +80,20 @@ const PatientDetailPage = ({ isNew = false }: PatientDetailPageProps) => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold mb-6">
-        {isNew ? 'New Patient' : 'Patient Details'}
-      </h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">
+          {isNew ? 'New Patient' : 'Patient Details'}
+        </h1>
+        {!isNew && (
+          <Button 
+            onClick={() => setShowEditModal(true)}
+            className="bg-blue-500 hover:bg-blue-600"
+          >
+            <PenSquare className="w-4 h-4 mr-2" />
+            Edit Details
+          </Button>
+        )}
+      </div>
       
       <div className="grid gap-6 md:grid-cols-2">
         <PatientInfo patient={patient} isNew={isNew} />
@@ -87,6 +101,21 @@ const PatientDetailPage = ({ isNew = false }: PatientDetailPageProps) => {
       </div>
       
       {!isNew && <PatientChatHistory chats={recentChats} />}
+
+      {showEditModal && (
+        <NewPatientModal 
+          open={showEditModal}
+          onOpenChange={setShowEditModal}
+          existingPatient={patient}
+          onSuccess={() => {
+            fetchPatientDetails();
+            toast({
+              title: "Success",
+              description: "Patient details updated successfully",
+            });
+          }}
+        />
+      )}
     </div>
   );
 };
