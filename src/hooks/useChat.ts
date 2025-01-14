@@ -72,22 +72,11 @@ export const useChat = () => {
         }
       }
 
-      // Initialize messages array with system message if provided and it's a new chat
-      let updatedMessages = [...messages];
-      if (systemInstructions && messages.length === 0) {
-        console.log('[useChat] Adding system message:', systemInstructions);
-        updatedMessages = [{
-          role: 'system',
-          content: systemInstructions,
-          type: 'text'
-        }];
-      }
-
       const result = await sendMessage(
         content,
         type,
         systemInstructions,
-        updatedMessages,
+        messages,
         currentChatId
       );
 

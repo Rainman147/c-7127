@@ -11,15 +11,15 @@ export const useMessageHandling = () => {
   const handleSendMessage = async (
     content: string, 
     type: 'text' | 'audio' = 'text',
+    systemInstructions?: string,
     currentMessages: Message[] = [],
-    currentChatId?: string,
-    templateId?: string
+    currentChatId?: string
   ) => {
     console.log('[useMessageHandling] Sending message:', { 
       content, 
       type, 
       chatId: currentChatId,
-      templateId 
+      hasSystemInstructions: !!systemInstructions 
     });
     
     if (!content.trim()) {
@@ -34,24 +34,6 @@ export const useMessageHandling = () => {
     setIsLoading(true);
 
     try {
-      // Get template context if template ID exists
-      let systemInstructions = 'Process conversation using standard format.';
-      if (templateId) {
-        console.log('[useMessageHandling] Fetching template:', templateId);
-        const { data: template, error: templateError } = await supabase
-          .from('templates')
-          .select('system_instructions')
-          .eq('id', templateId)
-          .maybeSingle();
-        
-        if (templateError) {
-          console.error('[useMessageHandling] Template fetch error:', templateError);
-        } else if (template?.system_instructions) {
-          systemInstructions = template.system_instructions;
-          console.log('[useMessageHandling] Using template instructions');
-        }
-      }
-
       const userMessage: Message = { role: 'user', content, type };
       const newMessages = [...currentMessages, userMessage];
 
