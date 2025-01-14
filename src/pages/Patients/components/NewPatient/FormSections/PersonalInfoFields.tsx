@@ -18,29 +18,31 @@ export const PersonalInfoFields = ({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name">Full Name</Label>
+        <Label htmlFor="name">Full Name *</Label>
         <Input
           id="name"
           name="name"
           value={name}
           onChange={onChange}
           placeholder="Enter patient's full name"
+          required
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="dob">Date of Birth</Label>
+        <Label htmlFor="dob">Date of Birth *</Label>
         <Input
           id="dob"
           name="dob"
           value={dob}
           onChange={onChange}
           isDob={true}
+          required
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="medications">Current Medications (optional)</Label>
+        <Label htmlFor="medications">Current Medications</Label>
         <Input
           id="medications"
           name="medications"

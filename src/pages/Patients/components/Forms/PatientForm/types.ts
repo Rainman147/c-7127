@@ -1,11 +1,11 @@
 export interface PatientFormData {
-  name: string;
-  dob: string;
-  email: string;
-  phone: string;
-  address: string;
-  medicalHistory: string;
-  medications?: string; // Made optional with ?
+  name: string;           // Required
+  dob: string;           // Required
+  phone: string;         // Required
+  email?: string;        // Optional
+  address?: string;      // Optional
+  medicalHistory?: string; // Optional
+  medications?: string;    // Optional
 }
 
 export interface PatientFormProps {

@@ -27,7 +27,7 @@ export const ContactFields = ({ email, phone, address, onChange }: ContactFields
         
         <div className="space-y-2">
           <label htmlFor="phone" className="text-sm font-medium">
-            Phone
+            Phone *
           </label>
           <Input
             id="phone"
@@ -35,6 +35,7 @@ export const ContactFields = ({ email, phone, address, onChange }: ContactFields
             type="tel"
             value={phone}
             onChange={onChange}
+            required
           />
         </div>
       </div>
