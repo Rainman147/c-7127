@@ -4,9 +4,7 @@ import { ChatHeader } from '@/features/chat/components/header/ChatHeader';
 import MessageList from '@/features/chat/components/message/MessageList';
 import ChatInput from '@/features/chat/components/input/ChatInput';
 import { supabase } from '@/integrations/supabase/client';
-import { formatPatientContext } from '@/types/patient';
 import { useTemplateContextQueries } from '@/hooks/queries/useTemplateContextQueries';
-import { formatSystemContext } from '@/utils/contextFormatter';
 import type { Message, Template, PatientContext } from '@/types';
 
 interface ChatContainerProps {
@@ -30,10 +28,8 @@ const ChatContainer = ({
   onPatientSelect,
   selectedPatientId
 }: ChatContainerProps) => {
-  console.log('[ChatContainer] Rendering with messages:', messages, 'currentChatId:', currentChatId);
+  console.log('[ChatContainer] Rendering with messages:', messages.length, 'currentChatId:', currentChatId);
   const [transcriptionText, setTranscriptionText] = useState('');
-  const [patientContext, setPatientContext] = useState<PatientContext | null>(null);
-  
   const { currentContext, createContext } = useTemplateContextQueries(currentChatId);
 
   const handleTranscriptionUpdate = (text: string) => {
@@ -46,43 +42,13 @@ const ChatContainer = ({
     onTemplateChange(template);
     
     if (currentChatId) {
-      const formattedContext = formatSystemContext(template, patientContext);
       await createContext({ 
         template,
         patientId: selectedPatientId,
-        systemInstructions: formattedContext.systemInstructions
+        systemInstructions: template.systemInstructions
       });
     }
   };
-
-  // Fetch and format patient context when selectedPatientId changes
-  useEffect(() => {
-    const loadPatientContext = async () => {
-      if (!selectedPatientId) {
-        setPatientContext(null);
-        return;
-      }
-
-      try {
-        const { data: patient, error } = await supabase
-          .from('patients')
-          .select('*')
-          .eq('id', selectedPatientId)
-          .single();
-
-        if (error) throw error;
-
-        const formattedContext = formatPatientContext(patient);
-        console.log('[ChatContainer] Loaded patient context:', formattedContext);
-        setPatientContext(formattedContext);
-      } catch (err) {
-        console.error('[ChatContainer] Error loading patient context:', err);
-        setPatientContext(null);
-      }
-    };
-
-    loadPatientContext();
-  }, [selectedPatientId]);
 
   return (
     <div className="flex h-screen w-full">
@@ -111,14 +77,10 @@ const ChatContainer = ({
             <div className="mx-auto max-w-2xl">
               <ChatInput
                 onSend={(content, type) => {
-                  const formattedContext = formatSystemContext(
-                    currentContext?.template || null, 
-                    patientContext
-                  );
                   onMessageSend(
                     content, 
                     type, 
-                    formattedContext.systemInstructions
+                    currentContext?.template?.systemInstructions
                   );
                 }}
                 onTranscriptionComplete={onTranscriptionComplete}
