@@ -5,7 +5,7 @@ export interface PatientFormData {
   phone: string;
   address: string;
   medicalHistory: string;
-  medications: string;
+  medications?: string; // Made optional with ?
 }
 
 export interface PatientFormProps {
