@@ -5,6 +5,7 @@ export interface PatientFormData {
   phone: string;
   address: string;
   medicalHistory: string;
+  medications: string;
 }
 
 export interface PatientFormProps {
