@@ -8,26 +8,35 @@ import {
 import { PatientForm } from "../Forms/PatientForm";
 import { FormActions } from "../Forms/components/FormActions";
 import { usePatientForm } from "./usePatientForm";
+import { Patient } from "@/types";
 
-interface PatientModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface NewPatientModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  existingPatient?: Patient | null;
   onSuccess?: () => void;
 }
 
-export const NewPatientModal = ({ isOpen, onClose, onSuccess }: PatientModalProps) => {
+export const NewPatientModal = ({ 
+  open, 
+  onOpenChange, 
+  existingPatient, 
+  onSuccess 
+}: NewPatientModalProps) => {
   const {
     formData,
     isLoading,
     handleInputChange,
     handleSubmit,
-  } = usePatientForm(onSuccess, onClose);
+  } = usePatientForm(onSuccess, () => onOpenChange(false), existingPatient);
 
   return (
-    <StyledDialog open={isOpen} onOpenChange={onClose}>
+    <StyledDialog open={open} onOpenChange={onOpenChange}>
       <StyledDialogContent className="w-full max-w-2xl">
         <StyledDialogHeader>
-          <StyledDialogTitle>New Patient</StyledDialogTitle>
+          <StyledDialogTitle>
+            {existingPatient ? 'Edit Patient' : 'New Patient'}
+          </StyledDialogTitle>
         </StyledDialogHeader>
 
         <PatientForm
@@ -39,7 +48,7 @@ export const NewPatientModal = ({ isOpen, onClose, onSuccess }: PatientModalProp
         
         <StyledDialogFooter>
           <FormActions
-            onCancel={onClose}
+            onCancel={() => onOpenChange(false)}
             isLoading={isLoading}
           />
         </StyledDialogFooter>
