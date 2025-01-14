@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface CreateTemplateContextInput {
   template: Template;
-  patientContext?: PatientContext | null;
+  patientId?: string | null;
   systemInstructions: string;
 }
 
@@ -75,21 +75,17 @@ export const useTemplateContextQueries = (chatId: string | null) => {
   const createContextMutation = useMutation({
     mutationFn: async ({ 
       template,
-      patientContext,
+      patientId,
       systemInstructions 
     }: CreateTemplateContextInput) => {
       if (!chatId) throw new Error('No chat ID provided');
       
       // Validate input
-      const validationErrors = validateTemplateContext({ template, patientContext, systemInstructions });
+      const validationErrors = validateTemplateContext({ template, patientId, systemInstructions });
       if (validationErrors.length > 0) {
         console.error('[useTemplateContextQueries] Validation errors:', validationErrors);
         throw new Error(validationErrors.map(e => e.message).join(', '));
       }
-      
-      // Format system context with patient data
-      const formattedContext = formatSystemContext(template, patientContext);
-      console.log('[useTemplateContextQueries] Formatted context:', formattedContext);
       
       // Get the current user's ID
       const { data: { user } } = await supabase.auth.getUser();
@@ -100,11 +96,11 @@ export const useTemplateContextQueries = (chatId: string | null) => {
         .insert({
           chat_id: chatId,
           template_id: template.id,
-          system_instructions: formattedContext.systemInstructions,
+          system_instructions: systemInstructions,
           metadata: { 
-            patientContext: patientContext || null,
             templateName: template.name,
-            templateDescription: template.description
+            templateDescription: template.description,
+            patientId: patientId || null
           },
           user_id: user.id
         })
