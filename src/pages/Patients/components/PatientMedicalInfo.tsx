@@ -24,21 +24,21 @@ export const PatientMedicalInfo = ({ patient, isNew = false }: PatientMedicalInf
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold">Medical Information</h2>
-      <div className="p-4 border rounded-lg bg-white/5">
-        {patient.medical_history && (
-          <div className="mb-4">
-            <h3 className="font-semibold mb-2">Medical History</h3>
-            <p>{patient.medical_history}</p>
-          </div>
-        )}
-        {medications && medications.length > 0 && (
+      <div className="p-4 border rounded-lg bg-white/5 space-y-4">
+        {medications.length > 0 && (
           <div>
             <h3 className="font-semibold mb-2">Current Medications</h3>
             <ul className="list-disc pl-4">
               {medications.map((med, index) => (
-                <li key={index}>{med}</li>
+                <li key={index} className="text-gray-300">{med}</li>
               ))}
             </ul>
+          </div>
+        )}
+        {patient.medical_history && (
+          <div>
+            <h3 className="font-semibold mb-2">Medical History</h3>
+            <p className="text-gray-300">{patient.medical_history}</p>
           </div>
         )}
       </div>

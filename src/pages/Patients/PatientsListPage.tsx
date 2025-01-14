@@ -6,12 +6,14 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Search, UserPlus } from 'lucide-react';
 import { NewPatientModal } from './components/NewPatient/NewPatientModal';
+import { parseSupabaseJson } from '@/types';
 
 interface Patient {
   id: string;
   name: string;
   dob: string;
   medical_history?: string;
+  current_medications?: string[];
 }
 
 const PatientsListPage = () => {
@@ -90,27 +92,36 @@ const PatientsListPage = () => {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredPatients.map((patient) => (
-            <div 
-              key={patient.id} 
-              className="p-4 border rounded-lg shadow hover:shadow-md transition-shadow bg-white/5"
-            >
-              <h3 className="text-lg font-semibold mb-2">{patient.name}</h3>
-              <p className="text-sm text-gray-400">DOB: {formatDate(patient.dob)}</p>
-              {patient.medical_history && (
-                <p className="text-sm text-gray-400 mt-1 truncate">
-                  History: {patient.medical_history}
-                </p>
-              )}
-              <Button 
-                variant="outline" 
-                className="mt-4 w-full"
-                onClick={() => navigate(`/patients/${patient.id}`)}
+          {filteredPatients.map((patient) => {
+            const medications = parseSupabaseJson<string[]>(patient.current_medications) || [];
+            
+            return (
+              <div 
+                key={patient.id} 
+                className="p-4 border rounded-lg shadow hover:shadow-md transition-shadow bg-white/5"
               >
-                View Details
-              </Button>
-            </div>
-          ))}
+                <h3 className="text-lg font-semibold mb-2">{patient.name}</h3>
+                <p className="text-sm text-gray-400">DOB: {formatDate(patient.dob)}</p>
+                {medications.length > 0 && (
+                  <p className="text-sm text-gray-400 mt-1 truncate">
+                    Medications: {medications.join(', ')}
+                  </p>
+                )}
+                {patient.medical_history && (
+                  <p className="text-sm text-gray-400 mt-1 truncate">
+                    History: {patient.medical_history}
+                  </p>
+                )}
+                <Button 
+                  variant="outline" 
+                  className="mt-4 w-full"
+                  onClick={() => navigate(`/patients/${patient.id}`)}
+                >
+                  View Details
+                </Button>
+              </div>
+            );
+          })}
           
           {filteredPatients.length === 0 && !isLoading && (
             <div className="col-span-full text-center py-8 text-gray-400">
