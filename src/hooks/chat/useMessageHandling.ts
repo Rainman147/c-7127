@@ -11,11 +11,16 @@ export const useMessageHandling = () => {
   const handleSendMessage = async (
     content: string, 
     type: 'text' | 'audio' = 'text',
-    systemInstructions?: string,
     currentMessages: Message[] = [],
-    currentChatId?: string
+    currentChatId?: string,
+    templateId?: string
   ) => {
-    console.log('[useMessageHandling] Sending message:', { content, type, systemInstructions });
+    console.log('[useMessageHandling] Sending message:', { 
+      content, 
+      type, 
+      chatId: currentChatId,
+      templateId 
+    });
     
     if (!content.trim()) {
       toast({
@@ -29,12 +34,43 @@ export const useMessageHandling = () => {
     setIsLoading(true);
 
     try {
+      // Get template context if template ID exists
+      let systemInstructions = 'Process conversation using standard format.';
+      if (templateId) {
+        console.log('[useMessageHandling] Fetching template:', templateId);
+        const { data: template, error: templateError } = await supabase
+          .from('templates')
+          .select('system_instructions')
+          .eq('id', templateId)
+          .maybeSingle();
+        
+        if (templateError) {
+          console.error('[useMessageHandling] Template fetch error:', templateError);
+        } else if (template?.system_instructions) {
+          systemInstructions = template.system_instructions;
+          console.log('[useMessageHandling] Using template instructions');
+        }
+      }
+
       const userMessage: Message = { role: 'user', content, type };
       const newMessages = [...currentMessages, userMessage];
 
       // Save message to Supabase
       const { chatId, messageId } = await saveMessage(userMessage, currentChatId);
       userMessage.id = messageId;
+
+      // Get patient context from chat if exists
+      let patientId = null;
+      if (chatId) {
+        console.log('[useMessageHandling] Fetching chat context:', chatId);
+        const { data: chat } = await supabase
+          .from('chats')
+          .select('patient_id')
+          .eq('id', chatId)
+          .maybeSingle();
+        
+        patientId = chat?.patient_id || null;
+      }
 
       // Save system instructions if provided
       if (systemInstructions && currentMessages.length === 0) {
@@ -49,18 +85,26 @@ export const useMessageHandling = () => {
         newMessages.unshift(systemMessage);
       }
 
-      // Call Gemini function
+      // Call Gemini function with context
       const { data, error } = await supabase.functions.invoke('gemini', {
         body: { 
           messages: newMessages,
           systemInstructions,
+          patientId,
           messageId,
           chatId
         }
       });
 
-      if (error) throw error;
-      if (!data) throw new Error('No response from Gemini API');
+      if (error) {
+        console.error('[useMessageHandling] Gemini API error:', error);
+        throw error;
+      }
+      
+      if (!data) {
+        console.error('[useMessageHandling] No response from Gemini API');
+        throw new Error('No response from Gemini API');
+      }
 
       // Create and save assistant message
       if (data.content) {
@@ -88,7 +132,7 @@ export const useMessageHandling = () => {
       console.error('[useMessageHandling] Error sending message:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to send message",
         variant: "destructive"
       });
       return null;
