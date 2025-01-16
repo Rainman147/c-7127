@@ -1,7 +1,8 @@
 import { memo, useCallback, useState } from "react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useSearchParams } from "react-router-dom";
-import { useTemplatesListQuery, useTemplateQuery } from "@/hooks/queries/useTemplateQueries";
+import { useTemplateQuery, useTemplatesListQuery } from "@/hooks/queries/useTemplateQueries";
+import { useTemplateContextQueries } from "@/hooks/queries/useTemplateContextQueries";
 import { useToast } from "@/hooks/use-toast";
 import { TemplateSelectorTrigger } from "./template/selector/TemplateSelectorTrigger";
 import { TemplateSelectorContent } from "./template/selector/TemplateSelectorContent";
@@ -18,6 +19,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTemplateId = searchParams.get('templateId');
   const { toast } = useToast();
+  const { createContext } = useTemplateContextQueries(currentChatId);
   
   console.log('[TemplateSelector] Initializing with:', { 
     currentChatId, 
@@ -54,7 +56,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     }
     
     try {
-      // Update URL params
+      // Update URL first
       const params = new URLSearchParams(searchParams);
       if (template.id === 'live-session') {
         params.delete('templateId');
@@ -63,7 +65,15 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
       }
       setSearchParams(params, { replace: true });
       
-      // Notify parent of template change
+      // Create template context if we have a chat
+      if (currentChatId) {
+        await createContext({ 
+          template,
+          systemInstructions: template.systemInstructions || 'Process conversation using standard medical documentation format.'
+        });
+      }
+      
+      // Then update parent component
       onTemplateChange(template);
       
       console.log('[TemplateSelector] Template selection successful:', template.name);
@@ -75,7 +85,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
         variant: "destructive",
       });
     }
-  }, [searchParams, setSearchParams, onTemplateChange, toast]);
+  }, [searchParams, setSearchParams, onTemplateChange, toast, currentChatId, createContext]);
 
   const handleTooltipChange = useCallback((templateId: string | null) => {
     console.log('[TemplateSelector] Tooltip state changed for template:', templateId);
