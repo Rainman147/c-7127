@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { useMessageHandling } from './chat/useMessageHandling';
+import { useSimpleMessageHandler } from './chat/useSimpleMessageHandler';
 import { useMessagePersistence } from './chat/useMessagePersistence';
 import { useChatSessions } from './useChatSessions';
 import type { Message } from '@/types/chat';
@@ -9,7 +9,7 @@ import type { Message } from '@/types/chat';
 export const useChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const { isLoading, handleSendMessage: sendMessage } = useMessageHandling();
+  const { isLoading, sendMessage } = useSimpleMessageHandler();
   const { loadChatMessages: loadMessages } = useMessagePersistence();
   const { createSession } = useChatSessions();
   const { toast } = useToast();
@@ -57,10 +57,9 @@ export const useChat = () => {
 
   const handleSendMessage = useCallback(async (
     content: string,
-    type: 'text' | 'audio' = 'text',
-    systemInstructions?: string
+    type: 'text' | 'audio' = 'text'
   ) => {
-    console.log('[useChat] Sending message:', { content, type, systemInstructions });
+    console.log('[useChat] Sending message:', { content, type });
     try {
       if (!currentChatId) {
         console.log('[useChat] Creating new session for first message');
@@ -69,21 +68,38 @@ export const useChat = () => {
           console.log('[useChat] Created new session:', sessionId);
           setCurrentChatId(sessionId);
           navigate(`/c/${sessionId}`);
+          
+          // Wait for state update
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
 
-      const result = await sendMessage(
-        content,
-        type,
-        systemInstructions,
-        messages,
-        currentChatId
-      );
+      if (!currentChatId) {
+        throw new Error('No chat ID available');
+      }
+
+      const result = await sendMessage(content, currentChatId, type);
 
       if (result) {
-        console.log('[useChat] Message sent successfully, updating messages:', result.messages);
-        setMessages(result.messages);
+        const newMessages = [...messages];
+        
+        // Add user message
+        newMessages.push({
+          id: result.userMessage.id,
+          role: 'user',
+          content,
+          type
+        });
+
+        // Add assistant message if present
+        if (result.assistantMessage) {
+          newMessages.push(result.assistantMessage);
+        }
+
+        console.log('[useChat] Updating messages:', newMessages.length);
+        setMessages(newMessages);
       }
+
     } catch (error) {
       console.error('[useChat] Error sending message:', error);
       toast({
