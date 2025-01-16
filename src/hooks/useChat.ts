@@ -1,106 +1,133 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { useMessageHandling } from './chat/useMessageHandling';
-import { useMessagePersistence } from './chat/useMessagePersistence';
+import { supabase } from '@/integrations/supabase/client';
 import { useChatSessions } from './useChatSessions';
 import type { Message } from '@/types/chat';
 
+interface ChatState {
+  messages: Message[];
+  isLoading: boolean;
+  error: Error | null;
+  chatId: string | null;
+}
+
 export const useChat = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const { isLoading, handleSendMessage: sendMessage } = useMessageHandling();
-  const { loadChatMessages: loadMessages } = useMessagePersistence();
-  const { createSession } = useChatSessions();
+  const [state, setState] = useState<ChatState>({
+    messages: [],
+    isLoading: false,
+    error: null,
+    chatId: null,
+  });
+  
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { createSession } = useChatSessions();
 
+  // Set up real-time subscription for messages
   useEffect(() => {
-    console.log('[useChat] Effect triggered with currentChatId:', currentChatId);
-    
-    if (!currentChatId) {
-      console.log('[useChat] No chat ID, skipping message load');
-      setMessages([]); 
-      return;
-    }
+    if (!state.chatId) return;
 
-    const controller = new AbortController();
+    console.log('[useChat] Setting up real-time subscription for chat:', state.chatId);
     
-    const loadChatMessages = async () => {
-      console.log('[useChat] Loading messages for chat:', currentChatId);
-      try {
-        const loadedMessages = await loadMessages(currentChatId);
-        console.log('[useChat] Successfully loaded messages:', loadedMessages.length);
-        
-        if (!controller.signal.aborted) {
-          setMessages(loadedMessages);
+    const channel = supabase
+      .channel('messages')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_id=eq.${state.chatId}`
+        },
+        (payload) => {
+          console.log('[useChat] Received message update:', payload);
+          
+          // Handle different real-time events
+          if (payload.eventType === 'INSERT') {
+            setState(prev => ({
+              ...prev,
+              messages: [...prev.messages, payload.new as Message]
+            }));
+          } else if (payload.eventType === 'UPDATE') {
+            setState(prev => ({
+              ...prev,
+              messages: prev.messages.map(msg => 
+                msg.id === payload.new.id ? { ...msg, ...payload.new } : msg
+              )
+            }));
+          }
         }
-      } catch (error) {
-        console.error('[useChat] Error loading chat messages:', error);
-        if (!controller.signal.aborted) {
-          toast({
-            title: "Error loading messages",
-            description: "Failed to load chat messages. Please try again.",
-            variant: "destructive",
-          });
-        }
-      }
-    };
-
-    loadChatMessages();
+      )
+      .subscribe();
 
     return () => {
-      console.log('[useChat] Cleaning up effect for chat:', currentChatId);
-      controller.abort();
+      console.log('[useChat] Cleaning up subscription for chat:', state.chatId);
+      supabase.removeChannel(channel);
     };
-  }, [currentChatId, loadMessages, toast]);
+  }, [state.chatId]);
 
-  const handleSendMessage = useCallback(async (
-    content: string,
-    type: 'text' | 'audio' = 'text',
-    systemInstructions?: string
-  ) => {
-    console.log('[useChat] Sending message:', { content, type, systemInstructions });
+  const handleSendMessage = async (content: string, type: 'text' | 'audio' = 'text') => {
+    console.log('[useChat] Sending message:', { content, type });
+    
     try {
-      if (!currentChatId) {
-        console.log('[useChat] Creating new session for first message');
+      setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+      // Create new chat session if needed
+      if (!state.chatId) {
+        console.log('[useChat] Creating new chat session');
         const sessionId = await createSession('New Chat');
         if (sessionId) {
-          console.log('[useChat] Created new session:', sessionId);
-          setCurrentChatId(sessionId);
+          setState(prev => ({ ...prev, chatId: sessionId }));
           navigate(`/c/${sessionId}`);
         }
       }
 
-      const result = await sendMessage(
-        content,
-        type,
-        systemInstructions,
-        messages,
-        currentChatId
-      );
+      // Send message to edge function
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chatId: state.chatId,
+          message: content,
+          type
+        })
+      });
 
-      if (result) {
-        console.log('[useChat] Message sent successfully, updating messages:', result.messages);
-        setMessages(result.messages);
+      if (!response.ok) {
+        throw new Error('Failed to send message');
       }
+
+      // Message will be added through real-time subscription
     } catch (error) {
       console.error('[useChat] Error sending message:', error);
+      setState(prev => ({ 
+        ...prev, 
+        error: error as Error,
+        isLoading: false 
+      }));
+      
       toast({
         title: "Error sending message",
         description: "Failed to send message. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [messages, currentChatId, sendMessage, createSession, navigate, toast]);
+  };
+
+  const setChatId = (id: string | null) => {
+    console.log('[useChat] Setting chat ID:', id);
+    setState(prev => ({ ...prev, chatId: id }));
+  };
 
   return {
-    messages,
-    isLoading,
+    messages: state.messages,
+    isLoading: state.isLoading,
+    error: state.error,
+    chatId: state.chatId,
     handleSendMessage,
-    loadChatMessages: loadMessages,
-    setMessages,
-    currentChatId,
-    setCurrentChatId
+    setChatId
   };
 };
