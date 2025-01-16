@@ -55,13 +55,6 @@ const Index = () => {
     }
   }, [location.search, selectedPatientId]);
 
-  const handleSessionSelect = async (chatId: string) => {
-    console.log('[Index] Selecting session:', chatId);
-    const currentParams = new URLSearchParams(location.search);
-    navigate(`/c/${chatId}?${currentParams.toString()}`);
-    await loadChatMessages(chatId);
-  };
-
   const handlePatientSelect = async (patientId: string | null) => {
     console.log('[Index] Patient selection changed:', patientId);
     setSelectedPatientId(patientId);
@@ -88,24 +81,8 @@ const Index = () => {
   };
 
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
-    if (!currentChatId) {
-      console.log('[Index] Creating new session for first message');
-      const sessionId = await createSession('New Chat');
-      if (sessionId) {
-        console.log('[Index] Created new session:', sessionId);
-        setCurrentChatId(sessionId);
-        
-        const params = new URLSearchParams(location.search);
-        navigate(`/c/${sessionId}?${params.toString()}`);
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    }
-
-    await handleSendMessage(
-      message, 
-      type, 
-      selectedTemplate?.systemInstructions
-    );
+    console.log('[Index] Sending message:', { message, type });
+    await handleSendMessage(message, type);
   };
 
   // Show error toast if template error occurs
