@@ -1,11 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useUI } from '@/contexts/UIContext';
 import { ChatHeader } from '@/features/chat/components/header/ChatHeader';
 import MessageList from '@/features/chat/components/message/MessageList';
 import ChatInput from '@/features/chat/components/input/ChatInput';
-import { supabase } from '@/integrations/supabase/client';
-import { useTemplateContextQueries } from '@/hooks/queries/useTemplateContextQueries';
-import type { Message, Template, PatientContext } from '@/types';
+import type { Message, Template } from '@/types';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -30,7 +28,6 @@ const ChatContainer = ({
 }: ChatContainerProps) => {
   console.log('[ChatContainer] Rendering with messages:', messages.length, 'currentChatId:', currentChatId);
   const [transcriptionText, setTranscriptionText] = useState('');
-  const { currentContext, createContext } = useTemplateContextQueries(currentChatId);
 
   const handleTranscriptionUpdate = (text: string) => {
     console.log('[ChatContainer] Transcription update:', text);
@@ -40,14 +37,6 @@ const ChatContainer = ({
   const handleTemplateChange = async (template: Template) => {
     console.log('[ChatContainer] Template change:', template.name);
     onTemplateChange(template);
-    
-    if (currentChatId) {
-      await createContext({ 
-        template,
-        patientId: selectedPatientId,
-        systemInstructions: template.systemInstructions
-      });
-    }
   };
 
   return (
@@ -80,7 +69,7 @@ const ChatContainer = ({
                   onMessageSend(
                     content, 
                     type, 
-                    currentContext?.template?.systemInstructions
+                    undefined // Remove template context system instructions
                   );
                 }}
                 onTranscriptionComplete={onTranscriptionComplete}
