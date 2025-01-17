@@ -31,7 +31,11 @@ serve(async (req) => {
       throw new Error('Chat ID is required');
     }
 
-    console.log(`Processing ${type} message for chat ${chatId}`);
+    console.log(`Processing ${type} message for chat ${chatId}`, {
+      messageId,
+      contentLength: content.length,
+      type
+    });
 
     // Create Supabase client
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
@@ -48,7 +52,8 @@ serve(async (req) => {
         .update({ 
           sequence,
           status: 'processing',
-          type 
+          type,
+          updated_at: new Date().toISOString()
         })
         .eq('id', messageId);
 
@@ -56,6 +61,8 @@ serve(async (req) => {
         console.error('Error updating message sequence:', updateError);
         throw updateError;
       }
+      
+      console.log('Updated message metadata:', { messageId, sequence, type });
     }
 
     // Assemble context
@@ -77,7 +84,7 @@ serve(async (req) => {
         content: context.patientContext
       }] : []),
       ...context.messageHistory,
-      { role: 'user', content }
+      { role: 'user', content, type }
     ];
 
     // Create transform stream for streaming response
@@ -172,6 +179,12 @@ serve(async (req) => {
         if (updateError) {
           console.error('Error updating chat timestamp:', updateError);
         }
+
+        console.log('Processing completed successfully', {
+          chatId,
+          responseLength: fullResponse.length,
+          sequence: sequence + 1
+        });
 
       } finally {
         await writer.close();

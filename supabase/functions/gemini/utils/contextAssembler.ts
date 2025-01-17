@@ -96,7 +96,8 @@ async function fetchChatHistory(supabase: any, chatId: string) {
   return data.map(msg => ({
     role: msg.sender === 'user' ? 'user' : 'assistant',
     content: msg.content,
-    type: msg.type
+    type: msg.type,
+    sequence: msg.sequence
   }));
 }
 
