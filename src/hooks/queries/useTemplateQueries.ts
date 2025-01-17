@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Template, DbTemplate } from "@/types/template";
 import { isValidTemplate } from "@/types/template/guards";
+import { validateTemplate } from "@/types/template/validation";
 import { convertDbTemplate } from "@/types/template/utils";
 import { templates } from "@/types/template/templates";
 import { useToast } from "@/hooks/use-toast";
@@ -16,16 +17,37 @@ const getDefaultTemplate = (): Template => {
   if (!isValidTemplate(defaultTemplate)) {
     throw new Error('Default template is invalid');
   }
+  
+  // Validate template content
+  const validationResult = validateTemplate(defaultTemplate);
+  if (!validationResult.isValid) {
+    console.error('[useTemplateQueries] Default template validation failed:', 
+      validationResult.errors);
+    throw new Error('Default template failed content validation');
+  }
+  
   return defaultTemplate;
 };
 
 const findTemplateById = (templateId: string): Template | undefined => {
   console.log('[useTemplateQueries] Finding template by id:', templateId);
   const template = templates.find(t => t.id === templateId);
-  if (template && !isValidTemplate(template)) {
-    console.error('[useTemplateQueries] Found template is invalid:', template);
-    return undefined;
+  
+  if (template) {
+    if (!isValidTemplate(template)) {
+      console.error('[useTemplateQueries] Found template is invalid:', template);
+      return undefined;
+    }
+    
+    // Validate template content
+    const validationResult = validateTemplate(template);
+    if (!validationResult.isValid) {
+      console.error('[useTemplateQueries] Template validation failed:', 
+        validationResult.errors);
+      return undefined;
+    }
   }
+  
   return template;
 };
 

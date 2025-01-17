@@ -1,4 +1,5 @@
 import type { Template, TemplateValidationError } from './Template';
+import { validateTemplate } from './validation';
 
 /**
  * Type guard to check if a template is valid
@@ -25,7 +26,17 @@ export const isValidTemplate = (template: unknown): template is Template => {
     (!t.updated_at || typeof t.updated_at === 'string') &&
     (!t.user_id || typeof t.user_id === 'string');
 
-  return hasRequiredFields && hasValidOptionalFields;
+  // Structural validation
+  const isStructurallyValid = hasRequiredFields && hasValidOptionalFields;
+  
+  // Content validation (only if structure is valid)
+  if (isStructurallyValid) {
+    const validationResult = validateTemplate(t as Template);
+    console.log('[isValidTemplate] Content validation result:', validationResult);
+    return validationResult.isValid;
+  }
+
+  return false;
 };
 
 /**
