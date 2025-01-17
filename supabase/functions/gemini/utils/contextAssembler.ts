@@ -4,6 +4,80 @@ import { ChatContext } from '../types.ts';
 const MAX_MESSAGES = 10; // Limit chat history to last 10 messages
 const CRITICAL_CONTEXT_THRESHOLD = 3; // Keep first 3 messages for context
 
+function formatMedicalHistory(history: string | null): string {
+  if (!history) return 'No medical history provided';
+  
+  // Split history into sections if it contains common delimiters
+  const sections = history.split(/[;.]\s+/);
+  return sections
+    .filter(section => section.trim())
+    .map(section => `• ${section.trim()}`)
+    .join('\n');
+}
+
+function formatRecentTests(tests: any[] | null): string {
+  if (!tests || !tests.length) return 'No recent tests recorded';
+  
+  return tests
+    .map(test => `• ${test.name}: ${test.result} (${test.date})`)
+    .join('\n');
+}
+
+function calculateMedicalAge(dob: string): string {
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  // Add medical context to age
+  const ageContext = age < 18 ? 'Pediatric patient' :
+                    age >= 65 ? 'Geriatric patient' : 'Adult patient';
+                    
+  return `${age} years old (${ageContext})`;
+}
+
+async function fetchPatientContext(supabase: any, patientId: string): Promise<string> {
+  console.log('Fetching patient context for:', patientId);
+  
+  const { data, error } = await supabase
+    .from('patients')
+    .select('name, dob, medical_history, current_medications, recent_tests')
+    .eq('id', patientId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching patient context:', error);
+    throw new Error('Failed to fetch patient context');
+  }
+
+  if (!data) return '';
+
+  const medications = Array.isArray(data.current_medications) 
+    ? data.current_medications 
+    : [];
+
+  const formattedTests = formatRecentTests(data.recent_tests);
+  const formattedHistory = formatMedicalHistory(data.medical_history);
+  const ageContext = calculateMedicalAge(data.dob);
+
+  return `Patient Information:
+Name: ${data.name}
+Age: ${ageContext}
+
+Medical History:
+${formattedHistory}
+
+Current Medications:
+${medications.length ? medications.map(med => `• ${med}`).join('\n') : 'No current medications'}
+
+Recent Tests:
+${formattedTests}`;
+}
+
 export async function getMessageSequence(supabase: any, chatId: string): Promise<number> {
   console.log('Fetching message sequence for chat:', chatId);
   const { data, error } = await supabase
@@ -24,6 +98,7 @@ export async function getMessageSequence(supabase: any, chatId: string): Promise
 
 async function fetchChatContext(supabase: any, chatId: string) {
   console.log('Fetching chat context for:', chatId);
+  
   const { data, error } = await supabase
     .from('chats')
     .select('template_type, patient_id')
@@ -39,31 +114,6 @@ async function fetchChatContext(supabase: any, chatId: string) {
     templateType: data?.template_type,
     patientId: data?.patient_id
   };
-}
-
-async function fetchPatientContext(supabase: any, patientId: string): Promise<string> {
-  console.log('Fetching patient context for:', patientId);
-  const { data, error } = await supabase
-    .from('patients')
-    .select('name, dob, medical_history, current_medications')
-    .eq('id', patientId)
-    .maybeSingle();
-
-  if (error) {
-    console.error('Error fetching patient context:', error);
-    throw new Error('Failed to fetch patient context');
-  }
-
-  if (!data) return '';
-
-  const age = new Date().getFullYear() - new Date(data.dob).getFullYear();
-  const medications = Array.isArray(data.current_medications) ? data.current_medications.join(', ') : '';
-  
-  return `Patient Information:
-    Name: ${data.name}
-    Age: ${age}
-    Medical History: ${data.medical_history || 'None'}
-    Current Medications: ${medications || 'None'}`;
 }
 
 async function fetchTemplateContext(supabase: any, chatId: string): Promise<string> {
