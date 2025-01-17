@@ -363,7 +363,7 @@ export type Database = {
           sender: string
           sequence: number | null
           status: string | null
-          type: string
+          type: Database["public"]["Enums"]["message_type"]
         }
         Insert: {
           chat_id: string
@@ -375,7 +375,7 @@ export type Database = {
           sender: string
           sequence?: number | null
           status?: string | null
-          type?: string
+          type?: Database["public"]["Enums"]["message_type"]
         }
         Update: {
           chat_id?: string
@@ -387,7 +387,7 @@ export type Database = {
           sender?: string
           sequence?: number | null
           status?: string | null
-          type?: string
+          type?: Database["public"]["Enums"]["message_type"]
         }
         Relationships: [
           {
@@ -595,7 +595,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      message_type: "text" | "audio"
     }
     CompositeTypes: {
       [_ in never]: never
