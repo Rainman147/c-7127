@@ -3,81 +3,14 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { assembleContext } from "./utils/contextAssembler.ts";
 import { handleError, createAppError } from "./utils/errorHandler.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { checkRateLimits } from "./utils/rateLimiter.ts";
+import { processWithOpenAI, updateMessageStatus } from "./utils/messageProcessor.ts";
+import { handleStreamingResponse } from "./utils/streamHandler.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-async function checkRateLimits(supabase: any, userId: string) {
-  console.log('[checkRateLimits] Checking rate limits for user:', userId);
-
-  // Get or create rate limit records for this user
-  const types = ['requests_per_minute', 'daily_quota', 'concurrent'];
-  for (const type of types) {
-    const { data, error } = await supabase
-      .from('rate_limits')
-      .select()
-      .eq('user_id', userId)
-      .eq('limit_type', type)
-      .single();
-
-    if (!data) {
-      await supabase
-        .from('rate_limits')
-        .insert({
-          user_id: userId,
-          limit_type: type,
-          count: 0
-        });
-    }
-  }
-
-  // Check and update limits
-  const limits = {
-    'requests_per_minute': 30,
-    'daily_quota': 1000,
-    'concurrent': 3
-  };
-
-  // Check each limit type
-  for (const [type, limit] of Object.entries(limits)) {
-    const { data, error } = await supabase
-      .from('rate_limits')
-      .select('count, last_reset')
-      .eq('user_id', userId)
-      .eq('limit_type', type)
-      .single();
-
-    if (error) {
-      console.error(`[checkRateLimits] Error checking ${type}:`, error);
-      throw createAppError(`Error checking rate limits: ${error.message}`, 'RATE_LIMIT_ERROR');
-    }
-
-    if (data.count >= limit) {
-      const timeUnit = type === 'requests_per_minute' ? 'minute' : 
-                      type === 'daily_quota' ? 'day' : 'time';
-      throw createAppError(
-        `Rate limit exceeded: ${limit} requests per ${timeUnit}`, 
-        'RATE_LIMIT_EXCEEDED'
-      );
-    }
-
-    // Increment the counter
-    const { error: updateError } = await supabase
-      .from('rate_limits')
-      .update({ count: data.count + 1 })
-      .eq('user_id', userId)
-      .eq('limit_type', type);
-
-    if (updateError) {
-      console.error(`[checkRateLimits] Error updating ${type}:`, updateError);
-      throw createAppError(`Error updating rate limits: ${updateError.message}`, 'RATE_LIMIT_ERROR');
-    }
-  }
-
-  console.log('[checkRateLimits] Rate limits checked successfully');
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -174,7 +107,7 @@ serve(async (req) => {
     });
 
     // Prepare messages array
-    const messages = [
+    const messageArray = [
       ...(context.templateInstructions ? [{
         role: 'system',
         content: context.templateInstructions
@@ -224,118 +157,27 @@ serve(async (req) => {
       }
     });
 
-    // Process with OpenAI
-    fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4",
-        messages,
-        temperature: 0.7,
-        max_tokens: 2048,
-        stream: true
-      })
-    }).then(async (response) => {
-      if (!response.ok) {
-        const error = await response.text();
-        throw createAppError(
-          `OpenAI API error: ${response.status} ${error}`,
-          'AI_SERVICE_ERROR'
-        );
-      }
-
-      const reader = response.body!.getReader();
-      let fullResponse = '';
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = new TextDecoder().decode(value);
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(5);
-              if (data === '[DONE]') continue;
-
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices[0]?.delta?.content || '';
-                if (content) {
-                  fullResponse += content;
-                  
-                  // Update assistant message in real-time
-                  const { error: updateError } = await supabase
-                    .from('messages')
-                    .update({ content: fullResponse })
-                    .eq('id', assistantMessage.id);
-
-                  if (updateError) {
-                    console.error('Error updating message:', updateError);
-                  }
-
-                  // Send chunk to client
-                  await writer.write(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
-                }
-              } catch (e) {
-                console.error('Error parsing chunk:', e);
-              }
-            }
-          }
-        }
-
-        // Mark message as delivered
-        const { error: finalUpdateError } = await supabase
-          .from('messages')
-          .update({ 
-            status: 'delivered',
-            delivered_at: new Date().toISOString()
-          })
-          .eq('id', assistantMessage.id);
-
-        if (finalUpdateError) {
-          console.error('Error marking message as delivered:', finalUpdateError);
-        }
-
-        // Update chat timestamp
-        const { error: chatUpdateError } = await supabase
-          .from('chats')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('id', chatId);
-
-        if (chatUpdateError) {
-          console.error('Error updating chat timestamp:', chatUpdateError);
-        }
-
-        console.log('Processing completed successfully', {
+    // Process with OpenAI and handle streaming
+    processWithOpenAI(messageArray, apiKey)
+      .then(async (response) => {
+        await handleStreamingResponse(
+          response,
+          supabase,
+          assistantMessage.id,
           chatId,
-          responseLength: fullResponse.length
-        });
-
-      } finally {
+          writer,
+          encoder
+        );
+      })
+      .catch(async (error) => {
+        console.error('Streaming error:', error);
+        const errorResponse = handleError(error);
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ error: errorResponse })}\n\n`));
         await writer.close();
-      }
-    }).catch(async (error) => {
-      console.error('Streaming error:', error);
-      const errorResponse = handleError(error);
-      await writer.write(encoder.encode(`data: ${JSON.stringify({ error: errorResponse })}\n\n`));
-      await writer.close();
 
-      // Update message status to failed
-      const { error: updateError } = await supabase
-        .from('messages')
-        .update({ status: 'failed' })
-        .eq('id', assistantMessage.id);
-
-      if (updateError) {
-        console.error('Error updating message status:', updateError);
-      }
-    });
+        // Update message status to failed
+        await updateMessageStatus(supabase, assistantMessage.id, 'failed');
+      });
 
     return streamResponse;
 
