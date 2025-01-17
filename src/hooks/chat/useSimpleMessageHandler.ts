@@ -3,6 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/types';
 
+type MessageStatus = 'queued' | 'sending' | 'delivered' | 'failed';
+
+interface MessageResponse {
+  userMessage: {
+    id: string;
+    content: string;
+    type: 'text' | 'audio';
+  };
+  assistantMessage: Message | null;
+  status: MessageStatus;
+}
+
 export const useSimpleMessageHandler = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -11,7 +23,7 @@ export const useSimpleMessageHandler = () => {
     content: string,
     chatId: string,
     type: 'text' | 'audio' = 'text'
-  ) => {
+  ): Promise<MessageResponse | null> => {
     console.log('[useSimpleMessageHandler] Sending message:', { content, chatId, type });
     
     if (!content.trim()) {
@@ -26,14 +38,15 @@ export const useSimpleMessageHandler = () => {
     setIsLoading(true);
 
     try {
-      // Save user message
+      // Save user message with initial status
       const { data: userMessage, error: saveError } = await supabase
         .from('messages')
         .insert({
           chat_id: chatId,
           content: content,
           sender: 'user',
-          type: type
+          type: type,
+          status: 'sending'
         })
         .select()
         .single();
@@ -42,6 +55,8 @@ export const useSimpleMessageHandler = () => {
         console.error('[useSimpleMessageHandler] Error saving message:', saveError);
         throw saveError;
       }
+
+      console.log('[useSimpleMessageHandler] User message saved:', userMessage);
 
       // Process with Gemini function
       const { data, error } = await supabase.functions.invoke('gemini', {
@@ -54,8 +69,26 @@ export const useSimpleMessageHandler = () => {
 
       if (error) {
         console.error('[useSimpleMessageHandler] Gemini API error:', error);
+        
+        // Update message status to failed
+        await supabase
+          .from('messages')
+          .update({ status: 'failed' })
+          .eq('id', userMessage.id);
+
         throw error;
       }
+
+      // Update message status to delivered
+      await supabase
+        .from('messages')
+        .update({ 
+          status: 'delivered',
+          delivered_at: new Date().toISOString()
+        })
+        .eq('id', userMessage.id);
+
+      console.log('[useSimpleMessageHandler] Message processed successfully:', data);
 
       return {
         userMessage,
@@ -63,7 +96,8 @@ export const useSimpleMessageHandler = () => {
           role: 'assistant',
           content: data.content,
           type: 'text'
-        } as Message : null
+        } as Message : null,
+        status: 'delivered'
       };
 
     } catch (error: any) {
