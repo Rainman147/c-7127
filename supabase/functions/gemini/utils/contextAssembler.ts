@@ -1,7 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { ChatContext } from '../types.ts';
 
+const MAX_MESSAGES = 10; // Limit chat history to last 10 messages
+const CRITICAL_CONTEXT_THRESHOLD = 3; // Keep first 3 messages for context
+
 export async function getMessageSequence(supabase: any, chatId: string): Promise<number> {
+  console.log('Fetching message sequence for chat:', chatId);
   const { data, error } = await supabase
     .from('messages')
     .select('sequence')
@@ -81,7 +85,57 @@ async function fetchTemplateContext(supabase: any, chatId: string): Promise<stri
 }
 
 async function fetchChatHistory(supabase: any, chatId: string) {
-  console.log('Fetching chat history for:', chatId);
+  console.log('Fetching optimized chat history for:', chatId);
+  
+  // First, get total message count
+  const { count } = await supabase
+    .from('messages')
+    .select('*', { count: 'exact', head: true })
+    .eq('chat_id', chatId);
+
+  // If we have more messages than our limit, fetch both early and recent context
+  if (count > MAX_MESSAGES) {
+    console.log(`Chat has ${count} messages, optimizing context...`);
+    
+    // Fetch critical early context
+    const { data: earlyContext, error: earlyError } = await supabase
+      .from('messages')
+      .select('content, sender, type, sequence')
+      .eq('chat_id', chatId)
+      .order('sequence', { ascending: true })
+      .limit(CRITICAL_CONTEXT_THRESHOLD);
+
+    if (earlyError) {
+      console.error('Error fetching early context:', earlyError);
+      throw new Error('Failed to fetch chat history');
+    }
+
+    // Fetch recent messages
+    const { data: recentMessages, error: recentError } = await supabase
+      .from('messages')
+      .select('content, sender, type, sequence')
+      .eq('chat_id', chatId)
+      .order('sequence', { ascending: true })
+      .range(count - (MAX_MESSAGES - CRITICAL_CONTEXT_THRESHOLD), count - 1);
+
+    if (recentError) {
+      console.error('Error fetching recent messages:', recentError);
+      throw new Error('Failed to fetch chat history');
+    }
+
+    // Combine early context with recent messages
+    const optimizedHistory = [...earlyContext, ...recentMessages];
+    console.log(`Optimized history: ${optimizedHistory.length} messages (${earlyContext.length} early + ${recentMessages.length} recent)`);
+    
+    return optimizedHistory.map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'assistant',
+      content: msg.content,
+      type: msg.type,
+      sequence: msg.sequence
+    }));
+  }
+
+  // If under limit, fetch all messages
   const { data, error } = await supabase
     .from('messages')
     .select('content, sender, type, sequence')
@@ -93,6 +147,7 @@ async function fetchChatHistory(supabase: any, chatId: string) {
     throw new Error('Failed to fetch chat history');
   }
 
+  console.log(`Fetched ${data.length} messages (under limit)`);
   return data.map(msg => ({
     role: msg.sender === 'user' ? 'user' : 'assistant',
     content: msg.content,
@@ -111,6 +166,12 @@ export async function assembleContext(supabase: any, chatId: string): Promise<Ch
     fetchChatHistory(supabase, chatId),
     patientId ? fetchPatientContext(supabase, patientId) : Promise.resolve('')
   ]);
+
+  console.log('Context assembly complete:', {
+    hasTemplateInstructions: !!templateInstructions,
+    hasPatientContext: !!patientContext,
+    messageCount: messageHistory.length
+  });
 
   return {
     templateInstructions,
