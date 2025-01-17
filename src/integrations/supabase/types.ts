@@ -452,6 +452,44 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          count: number | null
+          created_at: string | null
+          id: string
+          last_reset: string | null
+          limit_type: Database["public"]["Enums"]["rate_limit_type"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          count?: number | null
+          created_at?: string | null
+          id?: string
+          last_reset?: string | null
+          limit_type: Database["public"]["Enums"]["rate_limit_type"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          count?: number | null
+          created_at?: string | null
+          id?: string
+          last_reset?: string | null
+          limit_type?: Database["public"]["Enums"]["rate_limit_type"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rate_limits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_contexts: {
         Row: {
           chat_id: string | null
@@ -593,9 +631,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      reset_rate_limits: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       message_type: "text" | "audio"
+      rate_limit_type: "requests_per_minute" | "daily_quota" | "concurrent"
     }
     CompositeTypes: {
       [_ in never]: never

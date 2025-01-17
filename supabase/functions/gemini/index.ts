@@ -9,6 +9,76 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+async function checkRateLimits(supabase: any, userId: string) {
+  console.log('[checkRateLimits] Checking rate limits for user:', userId);
+
+  // Get or create rate limit records for this user
+  const types = ['requests_per_minute', 'daily_quota', 'concurrent'];
+  for (const type of types) {
+    const { data, error } = await supabase
+      .from('rate_limits')
+      .select()
+      .eq('user_id', userId)
+      .eq('limit_type', type)
+      .single();
+
+    if (!data) {
+      await supabase
+        .from('rate_limits')
+        .insert({
+          user_id: userId,
+          limit_type: type,
+          count: 0
+        });
+    }
+  }
+
+  // Check and update limits
+  const limits = {
+    'requests_per_minute': 30,
+    'daily_quota': 1000,
+    'concurrent': 3
+  };
+
+  // Check each limit type
+  for (const [type, limit] of Object.entries(limits)) {
+    const { data, error } = await supabase
+      .from('rate_limits')
+      .select('count, last_reset')
+      .eq('user_id', userId)
+      .eq('limit_type', type)
+      .single();
+
+    if (error) {
+      console.error(`[checkRateLimits] Error checking ${type}:`, error);
+      throw createAppError(`Error checking rate limits: ${error.message}`, 'RATE_LIMIT_ERROR');
+    }
+
+    if (data.count >= limit) {
+      const timeUnit = type === 'requests_per_minute' ? 'minute' : 
+                      type === 'daily_quota' ? 'day' : 'time';
+      throw createAppError(
+        `Rate limit exceeded: ${limit} requests per ${timeUnit}`, 
+        'RATE_LIMIT_EXCEEDED'
+      );
+    }
+
+    // Increment the counter
+    const { error: updateError } = await supabase
+      .from('rate_limits')
+      .update({ count: data.count + 1 })
+      .eq('user_id', userId)
+      .eq('limit_type', type);
+
+    if (updateError) {
+      console.error(`[checkRateLimits] Error updating ${type}:`, updateError);
+      throw createAppError(`Error updating rate limits: ${updateError.message}`, 'RATE_LIMIT_ERROR');
+    }
+  }
+
+  console.log('[checkRateLimits] Rate limits checked successfully');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -39,6 +109,20 @@ serve(async (req) => {
 
     // Create Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get user ID from chat
+    const { data: chat, error: chatError } = await supabase
+      .from('chats')
+      .select('user_id')
+      .eq('id', chatId)
+      .single();
+
+    if (chatError || !chat) {
+      throw createAppError('Chat not found', 'NOT_FOUND_ERROR');
+    }
+
+    // Check rate limits before processing
+    await checkRateLimits(supabase, chat.user_id);
 
     // Get next sequence number
     const { data: messages, error: seqError } = await supabase
