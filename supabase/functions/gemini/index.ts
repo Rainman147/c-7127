@@ -25,11 +25,13 @@ serve(async (req) => {
   }
 
   try {
-    const { chatId, content, type = 'text' } = await req.json();
+    const { chatId, content, type = 'text', messageId } = await req.json();
     
     if (!chatId) {
       throw new Error('Chat ID is required');
     }
+
+    console.log(`Processing ${type} message for chat ${chatId}`);
 
     // Create Supabase client
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
@@ -37,6 +39,24 @@ serve(async (req) => {
 
     // Get next sequence number
     const sequence = await getMessageSequence(supabase, chatId);
+    console.log(`Using sequence number: ${sequence}`);
+
+    // Update the original message with sequence number if it exists
+    if (messageId) {
+      const { error: updateError } = await supabase
+        .from('messages')
+        .update({ 
+          sequence,
+          status: 'processing',
+          type 
+        })
+        .eq('id', messageId);
+
+      if (updateError) {
+        console.error('Error updating message sequence:', updateError);
+        throw updateError;
+      }
+    }
 
     // Assemble context
     const context = await assembleContext(supabase, chatId);
@@ -83,7 +103,7 @@ serve(async (req) => {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4",
         messages,
         temperature: 0.7,
         max_tokens: 2048,
@@ -125,15 +145,15 @@ serve(async (req) => {
           }
         }
 
-        // Save the complete message
+        // Save the complete message with sequence number
         const { error: saveError } = await supabase
           .from('messages')
           .insert({
             chat_id: chatId,
             content: fullResponse,
             sender: 'assistant',
-            sequence,
-            type,
+            sequence: sequence + 1,
+            type: 'text',
             status: 'delivered',
             delivered_at: new Date().toISOString()
           });

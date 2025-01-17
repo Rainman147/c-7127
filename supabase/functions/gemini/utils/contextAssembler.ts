@@ -1,8 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { ChatContext } from '../types.ts';
 
-const MAX_HISTORY_MESSAGES = 10; // Limit chat history
-
 export async function getMessageSequence(supabase: any, chatId: string): Promise<number> {
   const { data, error } = await supabase
     .from('messages')
@@ -86,10 +84,9 @@ async function fetchChatHistory(supabase: any, chatId: string) {
   console.log('Fetching chat history for:', chatId);
   const { data, error } = await supabase
     .from('messages')
-    .select('content, sender, type')
+    .select('content, sender, type, sequence')
     .eq('chat_id', chatId)
-    .order('sequence', { ascending: true })
-    .limit(MAX_HISTORY_MESSAGES);
+    .order('sequence', { ascending: true });
 
   if (error) {
     console.error('Error fetching chat history:', error);

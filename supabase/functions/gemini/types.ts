@@ -1,7 +1,7 @@
 export interface ChatContext {
   templateInstructions?: string;
   patientContext?: string;
-  messageHistory: { role: string; content: string }[];
+  messageHistory: { role: string; content: string; type?: string }[];
 }
 
 export interface MessageMetadata {
