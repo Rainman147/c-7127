@@ -1,59 +1,30 @@
-import type { Template, TemplateValidationError } from './Template';
-import { validateTemplate } from './validation';
+import type { Template } from './Template';
 
 /**
- * Type guard to check if a template is valid
+ * Type guard to check if a template is valid - temporarily simplified during migration
  */
 export const isValidTemplate = (template: unknown): template is Template => {
   if (!template || typeof template !== 'object') {
-    console.error('[isValidTemplate] Invalid template object:', template);
+    console.log('[isValidTemplate] Invalid template object:', template);
     return false;
   }
   
   const t = template as Partial<Template>;
   
-  // Required fields check
+  // Basic type checking only during migration
   const hasRequiredFields = 
     typeof t.id === 'string' &&
-    typeof t.name === 'string' &&
-    typeof t.description === 'string' &&
-    typeof t.systemInstructions === 'string';
+    typeof t.name === 'string';
 
   if (!hasRequiredFields) {
-    console.error('[isValidTemplate] Missing required fields:', {
+    console.log('[isValidTemplate] Missing basic required fields:', {
       id: typeof t.id,
       name: typeof t.name,
-      description: typeof t.description,
-      systemInstructions: typeof t.systemInstructions
     });
     return false;
   }
 
-  // Optional fields type check
-  const hasValidOptionalFields = 
-    (!t.content || typeof t.content === 'string') &&
-    (!t.instructions || t.instructions === null || typeof t.instructions === 'object') &&
-    (!t.schema || t.schema === null || typeof t.schema === 'object') &&
-    (!t.priority_rules || t.priority_rules === null || typeof t.priority_rules === 'object') &&
-    (!t.created_at || typeof t.created_at === 'string') &&
-    (!t.updated_at || typeof t.updated_at === 'string') &&
-    (!t.user_id || typeof t.user_id === 'string');
-
-  if (!hasValidOptionalFields) {
-    console.error('[isValidTemplate] Invalid optional fields');
-    return false;
-  }
-
-  // For live-session template, skip content validation
-  if (t.id === 'live-session') {
-    return true;
-  }
-
-  // Content validation
-  const validationResult = validateTemplate(t as Template);
-  console.log('[isValidTemplate] Content validation result:', validationResult);
-  
-  return validationResult.isValid;
+  return true;
 };
 
 /**
@@ -71,22 +42,13 @@ export const isDefaultTemplate = (template: Template): boolean => {
 };
 
 /**
- * Validates template data before saving
- * Returns array of validation errors or null if valid
+ * Validates template data before saving - temporarily simplified during migration
  */
-export const validateTemplateData = (data: Partial<Template>): TemplateValidationError[] | null => {
-  const errors: TemplateValidationError[] = [];
+export const validateTemplateData = (data: Partial<Template>): { field: keyof Template; message: string; }[] | null => {
+  const errors: { field: keyof Template; message: string; }[] = [];
 
   if (!data.name?.trim()) {
     errors.push({ field: 'name', message: 'Template name is required' });
-  }
-
-  if (!data.description?.trim()) {
-    errors.push({ field: 'description', message: 'Template description is required' });
-  }
-
-  if (!data.systemInstructions?.trim()) {
-    errors.push({ field: 'systemInstructions', message: 'System instructions are required' });
   }
 
   return errors.length > 0 ? errors : null;
