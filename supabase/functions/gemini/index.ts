@@ -3,9 +3,6 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { assembleContext } from "./utils/contextAssembler.ts";
 import { handleError, createAppError } from "./utils/errorHandler.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { checkRateLimits } from "./utils/rateLimiter.ts";
-import { processWithOpenAI, updateMessageStatus } from "./utils/messageProcessor.ts";
-import { handleStreamingResponse } from "./utils/streamHandler.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,20 +39,6 @@ serve(async (req) => {
 
     // Create Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get user ID from chat
-    const { data: chat, error: chatError } = await supabase
-      .from('chats')
-      .select('user_id')
-      .eq('id', chatId)
-      .single();
-
-    if (chatError || !chat) {
-      throw createAppError('Chat not found', 'NOT_FOUND_ERROR');
-    }
-
-    // Check rate limits before processing
-    await checkRateLimits(supabase, chat.user_id);
 
     // Get next sequence number
     const { data: messages, error: seqError } = await supabase
@@ -107,7 +90,7 @@ serve(async (req) => {
     });
 
     // Prepare messages array
-    const messageArray = [
+    const messages = [
       ...(context.templateInstructions ? [{
         role: 'system',
         content: context.templateInstructions
@@ -157,27 +140,118 @@ serve(async (req) => {
       }
     });
 
-    // Process with OpenAI and handle streaming
-    processWithOpenAI(messageArray, apiKey)
-      .then(async (response) => {
-        await handleStreamingResponse(
-          response,
-          supabase,
-          assistantMessage.id,
-          chatId,
-          writer,
-          encoder
-        );
+    // Process with OpenAI
+    fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4",
+        messages,
+        temperature: 0.7,
+        max_tokens: 2048,
+        stream: true
       })
-      .catch(async (error) => {
-        console.error('Streaming error:', error);
-        const errorResponse = handleError(error);
-        await writer.write(encoder.encode(`data: ${JSON.stringify({ error: errorResponse })}\n\n`));
-        await writer.close();
+    }).then(async (response) => {
+      if (!response.ok) {
+        const error = await response.text();
+        throw createAppError(
+          `OpenAI API error: ${response.status} ${error}`,
+          'AI_SERVICE_ERROR'
+        );
+      }
 
-        // Update message status to failed
-        await updateMessageStatus(supabase, assistantMessage.id, 'failed');
-      });
+      const reader = response.body!.getReader();
+      let fullResponse = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = new TextDecoder().decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(5);
+              if (data === '[DONE]') continue;
+
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices[0]?.delta?.content || '';
+                if (content) {
+                  fullResponse += content;
+                  
+                  // Update assistant message in real-time
+                  const { error: updateError } = await supabase
+                    .from('messages')
+                    .update({ content: fullResponse })
+                    .eq('id', assistantMessage.id);
+
+                  if (updateError) {
+                    console.error('Error updating message:', updateError);
+                  }
+
+                  // Send chunk to client
+                  await writer.write(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+                }
+              } catch (e) {
+                console.error('Error parsing chunk:', e);
+              }
+            }
+          }
+        }
+
+        // Mark message as delivered
+        const { error: finalUpdateError } = await supabase
+          .from('messages')
+          .update({ 
+            status: 'delivered',
+            delivered_at: new Date().toISOString()
+          })
+          .eq('id', assistantMessage.id);
+
+        if (finalUpdateError) {
+          console.error('Error marking message as delivered:', finalUpdateError);
+        }
+
+        // Update chat timestamp
+        const { error: chatUpdateError } = await supabase
+          .from('chats')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', chatId);
+
+        if (chatUpdateError) {
+          console.error('Error updating chat timestamp:', chatUpdateError);
+        }
+
+        console.log('Processing completed successfully', {
+          chatId,
+          responseLength: fullResponse.length
+        });
+
+      } finally {
+        await writer.close();
+      }
+    }).catch(async (error) => {
+      console.error('Streaming error:', error);
+      const errorResponse = handleError(error);
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ error: errorResponse })}\n\n`));
+      await writer.close();
+
+      // Update message status to failed
+      const { error: updateError } = await supabase
+        .from('messages')
+        .update({ status: 'failed' })
+        .eq('id', assistantMessage.id);
+
+      if (updateError) {
+        console.error('Error updating message status:', updateError);
+      }
+    });
 
     return streamResponse;
 
