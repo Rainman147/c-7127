@@ -46,6 +46,26 @@ export const validateTemplate = (template: Template): ValidationResult => {
   const errors: ValidationError[] = [];
   const config = defaultValidationConfig;
 
+  // Basic template validation
+  if (!template?.id || !template?.name || !template?.description) {
+    return {
+      isValid: false,
+      errors: [{
+        type: 'content',
+        message: 'Template is missing required fields',
+        field: 'template'
+      }]
+    };
+  }
+
+  // For live-session template, skip detailed validation
+  if (template.id === 'live-session') {
+    return {
+      isValid: true,
+      errors: []
+    };
+  }
+
   // Validate required fields
   if (!template.name?.trim()) {
     errors.push({
@@ -71,6 +91,14 @@ export const validateTemplate = (template: Template): ValidationResult => {
     });
   }
 
+  // For non-SOAP templates, skip section validation
+  if (!template.systemInstructions?.includes('SOAP')) {
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
   // Validate content length
   if (template.systemInstructions && 
       template.systemInstructions.length < config.minTotalLength) {
@@ -92,7 +120,7 @@ export const validateTemplate = (template: Template): ValidationResult => {
     }
   }
 
-  // Validate sections
+  // Validate sections only for SOAP templates
   const sections = extractSections(template.systemInstructions || '');
   for (const [sectionName, rule] of Object.entries(config.sections)) {
     const sectionContent = sections[sectionName];

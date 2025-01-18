@@ -5,7 +5,10 @@ import { validateTemplate } from './validation';
  * Type guard to check if a template is valid
  */
 export const isValidTemplate = (template: unknown): template is Template => {
-  if (!template || typeof template !== 'object') return false;
+  if (!template || typeof template !== 'object') {
+    console.error('[isValidTemplate] Invalid template object:', template);
+    return false;
+  }
   
   const t = template as Partial<Template>;
   
@@ -15,6 +18,16 @@ export const isValidTemplate = (template: unknown): template is Template => {
     typeof t.name === 'string' &&
     typeof t.description === 'string' &&
     typeof t.systemInstructions === 'string';
+
+  if (!hasRequiredFields) {
+    console.error('[isValidTemplate] Missing required fields:', {
+      id: typeof t.id,
+      name: typeof t.name,
+      description: typeof t.description,
+      systemInstructions: typeof t.systemInstructions
+    });
+    return false;
+  }
 
   // Optional fields type check
   const hasValidOptionalFields = 
@@ -26,17 +39,21 @@ export const isValidTemplate = (template: unknown): template is Template => {
     (!t.updated_at || typeof t.updated_at === 'string') &&
     (!t.user_id || typeof t.user_id === 'string');
 
-  // Structural validation
-  const isStructurallyValid = hasRequiredFields && hasValidOptionalFields;
-  
-  // Content validation (only if structure is valid)
-  if (isStructurallyValid) {
-    const validationResult = validateTemplate(t as Template);
-    console.log('[isValidTemplate] Content validation result:', validationResult);
-    return validationResult.isValid;
+  if (!hasValidOptionalFields) {
+    console.error('[isValidTemplate] Invalid optional fields');
+    return false;
   }
 
-  return false;
+  // For live-session template, skip content validation
+  if (t.id === 'live-session') {
+    return true;
+  }
+
+  // Content validation
+  const validationResult = validateTemplate(t as Template);
+  console.log('[isValidTemplate] Content validation result:', validationResult);
+  
+  return validationResult.isValid;
 };
 
 /**
