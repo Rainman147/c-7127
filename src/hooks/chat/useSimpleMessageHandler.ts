@@ -38,7 +38,23 @@ export const useSimpleMessageHandler = () => {
     setIsLoading(true);
 
     try {
-      // Save user message with initial status
+      // Get next sequence number
+      const { data: messages, error: seqError } = await supabase
+        .from('messages')
+        .select('sequence')
+        .eq('chat_id', chatId)
+        .order('sequence', { ascending: false })
+        .limit(1);
+
+      if (seqError) {
+        console.error('[useSimpleMessageHandler] Error getting sequence:', seqError);
+        throw seqError;
+      }
+
+      const sequence = (messages?.[0]?.sequence || 0) + 1;
+      console.log('[useSimpleMessageHandler] Using sequence:', sequence);
+
+      // Save user message
       const { data: userMessage, error: saveError } = await supabase
         .from('messages')
         .insert({
@@ -46,6 +62,7 @@ export const useSimpleMessageHandler = () => {
           content: content,
           sender: 'user',
           type: type,
+          sequence: sequence,
           status: 'sending'
         })
         .select()
@@ -87,6 +104,12 @@ export const useSimpleMessageHandler = () => {
           delivered_at: new Date().toISOString()
         })
         .eq('id', userMessage.id);
+
+      // Update chat timestamp
+      await supabase
+        .from('chats')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', chatId);
 
       console.log('[useSimpleMessageHandler] Message processed successfully:', data);
 
