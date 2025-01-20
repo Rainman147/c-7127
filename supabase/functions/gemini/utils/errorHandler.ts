@@ -1,10 +1,8 @@
 import { ErrorResponse, ErrorType, AppError } from '../types.ts';
 
 const ERROR_CONFIGS: Record<ErrorType, { status: number; retryable: boolean }> = {
-  AUTHENTICATION_ERROR: { status: 401, retryable: false },
-  CONTEXT_ERROR: { status: 400, retryable: false },
   DATABASE_ERROR: { status: 503, retryable: true },
-  AI_SERVICE_ERROR: { status: 503, retryable: true },
+  AI_ERROR: { status: 503, retryable: true },
   VALIDATION_ERROR: { status: 400, retryable: false },
   UNKNOWN_ERROR: { status: 500, retryable: true }
 };

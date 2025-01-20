@@ -23,12 +23,10 @@ export interface ErrorResponse {
 }
 
 export type ErrorType = 
-  | 'AUTHENTICATION_ERROR'
-  | 'CONTEXT_ERROR' 
-  | 'DATABASE_ERROR'
-  | 'AI_SERVICE_ERROR'
-  | 'VALIDATION_ERROR'
-  | 'UNKNOWN_ERROR';
+  | 'DATABASE_ERROR'    // Any database-related issues
+  | 'AI_ERROR'         // OpenAI API issues
+  | 'VALIDATION_ERROR' // Input validation
+  | 'UNKNOWN_ERROR';   // Catch-all
 
 export interface AppError extends Error {
   type: ErrorType;

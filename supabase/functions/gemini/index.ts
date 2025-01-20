@@ -21,7 +21,7 @@ serve(async (req) => {
   if (!apiKey) {
     throw createAppError(
       'OpenAI API key not configured',
-      'AUTHENTICATION_ERROR'
+      'VALIDATION_ERROR'
     );
   }
 
@@ -84,16 +84,16 @@ serve(async (req) => {
     // Assemble context
     const context = await assembleContext(supabase, chatId);
     console.log('Context assembled:', {
-      hasTemplateInstructions: !!context.templateInstructions,
+      hasTemplateInstructions: !!context.systemInstructions,
       hasPatientContext: !!context.patientContext,
       messageCount: context.messageHistory.length
     });
 
     // Prepare messages array
     const messages = [
-      ...(context.templateInstructions ? [{
+      ...(context.systemInstructions ? [{
         role: 'system',
-        content: context.templateInstructions
+        content: context.systemInstructions
       }] : []),
       ...(context.patientContext ? [{
         role: 'system',
@@ -156,10 +156,9 @@ serve(async (req) => {
       })
     }).then(async (response) => {
       if (!response.ok) {
-        const error = await response.text();
         throw createAppError(
-          `OpenAI API error: ${response.status} ${error}`,
-          'AI_SERVICE_ERROR'
+          `OpenAI API error: ${response.status}`,
+          'AI_ERROR'
         );
       }
 
