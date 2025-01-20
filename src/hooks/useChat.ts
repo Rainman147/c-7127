@@ -1,20 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { useSimpleMessageHandler } from './chat/useSimpleMessageHandler';
-import { useMessagePersistence } from './chat/useMessagePersistence';
-import { useChatSessions } from './useChatSessions';
-import type { Message } from '@/types/chat';
 import { supabase } from '@/integrations/supabase/client';
+import type { Message } from '@/types';
 
 export const useChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   
-  // Temporarily keep these until next refactor steps
-  const { loadChatMessages } = useMessagePersistence();
-  const { createSession } = useChatSessions();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -49,7 +43,7 @@ export const useChat = () => {
       }
 
       // Update messages with response
-      if (data?.messages) {
+      if (data?.messages && Array.isArray(data.messages)) {
         console.log('[useChat] Updating messages:', data.messages);
         setMessages(prevMessages => [...prevMessages, ...data.messages]);
       }
@@ -66,39 +60,42 @@ export const useChat = () => {
     }
   }, [currentChatId, navigate, toast]);
 
-  // Keep existing message loading logic temporarily
-  useEffect(() => {
-    if (!currentChatId) {
-      console.log('[useChat] No chat ID, skipping message load');
-      setMessages([]); 
-      return;
-    }
+  // Load initial messages if chatId exists
+  const loadInitialMessages = useCallback(async (chatId: string) => {
+    console.log('[useChat] Loading initial messages for chat:', chatId);
+    setIsLoading(true);
 
-    const loadChatMessages = async () => {
-      try {
-        const loadedMessages = await loadChatMessages(currentChatId);
-        console.log('[useChat] Successfully loaded messages:', loadedMessages.length);
-        setMessages(loadedMessages);
-      } catch (error) {
-        console.error('[useChat] Error loading chat messages:', error);
-        toast({
-          title: "Error loading messages",
-          description: "Failed to load chat messages. Please try again.",
-          variant: "destructive",
-        });
+    try {
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_id', chatId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      if (messages) {
+        console.log('[useChat] Loaded messages:', messages.length);
+        setMessages(messages);
       }
-    };
-
-    loadChatMessages();
-  }, [currentChatId, loadChatMessages, toast]);
+    } catch (error) {
+      console.error('[useChat] Error loading messages:', error);
+      toast({
+        title: "Error loading messages",
+        description: "Failed to load chat messages. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
 
   return {
     messages,
     isLoading,
     handleSendMessage,
-    loadChatMessages,
-    setMessages,
     currentChatId,
-    setCurrentChatId
+    setCurrentChatId,
+    loadInitialMessages
   };
 };
