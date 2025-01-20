@@ -23,7 +23,7 @@ const ChatPage = () => {
     messages, 
     isLoading: isChatLoading, 
     handleSendMessage,
-    loadChatMessages,
+    loadInitialMessages,
     currentChatId,
     setCurrentChatId
   } = useChat();
@@ -36,14 +36,13 @@ const ChatPage = () => {
     console.log('[ChatPage] Session ID changed:', sessionId);
     if (sessionId) {
       setCurrentChatId(sessionId);
-      loadChatMessages(sessionId);
+      loadInitialMessages(sessionId);
     } else {
       // On index route, reset chat state
       setCurrentChatId(null);
     }
-  }, [sessionId, setCurrentChatId, loadChatMessages]);
+  }, [sessionId, setCurrentChatId, loadInitialMessages]);
 
-  // Handle patient selection changes
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const patientId = params.get('patientId');
