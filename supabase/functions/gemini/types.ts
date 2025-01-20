@@ -1,10 +1,10 @@
 export interface ChatContext {
-  systemInstructions?: string;
-  patientContext?: string;
+  systemInstructions: string;
+  patientContext: string | null;
   messageHistory: { 
     role: string; 
     content: string; 
-    type?: 'text' | 'audio';
+    type: 'text' | 'audio';
   }[];
 }
 

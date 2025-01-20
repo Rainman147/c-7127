@@ -1,25 +1,30 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { ChatContext } from '../types.ts';
-import { formatPatientContext } from './formatters.ts';
+
+const DEFAULT_INSTRUCTIONS = 'Process conversation using standard medical documentation format.';
+
+const calculateAge = (dob: string): number => {
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
+
+const formatMedications = (medications: string[] | null): string => {
+  if (!medications?.length) return 'None';
+  return medications.join(', ');
+};
 
 export async function assembleContext(supabase: any, chatId: string): Promise<ChatContext> {
   console.log('[contextAssembler] Assembling context for chat:', chatId);
   
-  // Get chat details with template and patient info in a single query
+  // Get basic chat info
   const { data: chat, error: chatError } = await supabase
     .from('chats')
-    .select(`
-      *,
-      templates!chats_template_type_fkey (
-        system_instructions
-      ),
-      patients!chats_patient_id_fkey (
-        name,
-        dob,
-        medical_history,
-        current_medications
-      )
-    `)
+    .select('template_type, patient_id')
     .eq('id', chatId)
     .maybeSingle();
 
@@ -28,12 +33,44 @@ export async function assembleContext(supabase: any, chatId: string): Promise<Ch
     throw new Error('Failed to fetch chat details');
   }
 
-  // Get message history (last 3 messages for context)
+  // Get template instructions if exists
+  let systemInstructions = DEFAULT_INSTRUCTIONS;
+  if (chat?.template_type) {
+    const { data: template } = await supabase
+      .from('templates')
+      .select('system_instructions')
+      .eq('id', chat.template_type)
+      .maybeSingle();
+    
+    if (template?.system_instructions) {
+      systemInstructions = template.system_instructions;
+    }
+  }
+
+  // Get patient context if exists
+  let patientContext = null;
+  if (chat?.patient_id) {
+    const { data: patient } = await supabase
+      .from('patients')
+      .select('name, dob, medical_history, current_medications')
+      .eq('id', chat.patient_id)
+      .maybeSingle();
+
+    if (patient) {
+      patientContext = `Patient Information:
+Name: ${patient.name}
+Age: ${calculateAge(patient.dob)}
+Medical History: ${patient.medical_history || 'None'}
+Current Medications: ${formatMedications(patient.current_medications)}`.trim();
+    }
+  }
+
+  // Get recent message history
   const { data: messages = [], error: messagesError } = await supabase
     .from('messages')
-    .select('content, sender, type, sequence')
+    .select('content, sender, type')
     .eq('chat_id', chatId)
-    .order('sequence', { ascending: true })
+    .order('created_at', { ascending: true })
     .limit(3);
 
   if (messagesError) {
@@ -44,21 +81,17 @@ export async function assembleContext(supabase: any, chatId: string): Promise<Ch
   const messageHistory = messages.map(msg => ({
     role: msg.sender === 'user' ? 'user' : 'assistant',
     content: msg.content,
-    type: msg.type,
-    sequence: msg.sequence
+    type: msg.type
   }));
 
-  // Format patient context if available
-  const patientContext = chat?.patients ? formatPatientContext(chat.patients) : null;
-
   console.log('[contextAssembler] Context assembly complete:', {
-    hasTemplateInstructions: !!chat?.templates?.system_instructions,
+    hasSystemInstructions: systemInstructions !== DEFAULT_INSTRUCTIONS,
     hasPatientContext: !!patientContext,
     messageCount: messageHistory.length
   });
 
   return {
-    systemInstructions: chat?.templates?.system_instructions || 'Process conversation using standard medical documentation format.',
+    systemInstructions,
     patientContext,
     messageHistory
   };
