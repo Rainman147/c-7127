@@ -2,7 +2,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { assembleContext } from "./utils/contextAssembler.ts";
 import { handleError, createAppError } from "./utils/errorHandler.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { MessageService } from "./services/messageService.ts";
+import { OpenAIService } from "./services/openaiService.ts";
+import { StreamHandler } from "./utils/streamHandler.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,10 +21,7 @@ serve(async (req) => {
   const apiKey = Deno.env.get('OPENAI_API_KEY');
 
   if (!apiKey) {
-    throw createAppError(
-      'OpenAI API key not configured',
-      'VALIDATION_ERROR'
-    );
+    throw createAppError('OpenAI API key not configured', 'VALIDATION_ERROR');
   }
 
   try {
@@ -37,31 +36,15 @@ serve(async (req) => {
       type
     });
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const messageService = new MessageService(supabaseUrl, supabaseKey);
+    const openaiService = new OpenAIService(apiKey);
+    const streamHandler = new StreamHandler();
 
     // Save user message
-    const { data: userMessage, error: saveError } = await supabase
-      .from('messages')
-      .insert({
-        chat_id: chatId,
-        content,
-        sender: 'user',
-        type,
-        status: 'delivered'
-      })
-      .select()
-      .single();
-
-    if (saveError) {
-      throw createAppError(
-        'Error saving user message',
-        'DATABASE_ERROR',
-        saveError
-      );
-    }
+    const userMessage = await messageService.saveUserMessage(chatId, content, type);
 
     // Assemble context
-    const context = await assembleContext(supabase, chatId);
+    const context = await assembleContext(messageService.supabase, chatId);
     console.log('Context assembled:', {
       hasTemplateInstructions: !!context.systemInstructions,
       hasPatientContext: !!context.patientContext,
@@ -82,152 +65,38 @@ serve(async (req) => {
       { role: 'user', content, type }
     ];
 
-    // Create transform stream for streaming response
-    const stream = new TransformStream();
-    const writer = stream.writable.getWriter();
-    const encoder = new TextEncoder();
-
     // Save initial assistant message
-    const { data: assistantMessage, error: assistantError } = await supabase
-      .from('messages')
-      .insert({
-        chat_id: chatId,
-        content: '',
-        sender: 'assistant',
-        type: 'text',
-        status: 'processing'
-      })
-      .select()
-      .single();
-
-    if (assistantError) {
-      throw createAppError(
-        'Error creating assistant message',
-        'DATABASE_ERROR',
-        assistantError
-      );
-    }
+    const assistantMessage = await messageService.saveAssistantMessage(chatId);
 
     // Start streaming response
-    const streamResponse = new Response(stream.readable, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-      }
-    });
+    const streamResponse = streamHandler.getResponse(corsHeaders);
+    const writer = streamHandler.getWriter();
 
     // Process with OpenAI
-    fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4",
-        messages,
-        temperature: 0.7,
-        max_tokens: 2048,
-        stream: true
-      })
-    }).then(async (response) => {
-      if (!response.ok) {
-        throw createAppError(
-          `OpenAI API error: ${response.status}`,
-          'AI_ERROR'
-        );
-      }
-
-      const reader = response.body!.getReader();
-      let fullResponse = '';
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = new TextDecoder().decode(value);
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(5);
-              if (data === '[DONE]') continue;
-
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices[0]?.delta?.content || '';
-                if (content) {
-                  fullResponse += content;
-                  
-                  // Update assistant message
-                  const { error: updateError } = await supabase
-                    .from('messages')
-                    .update({ content: fullResponse })
-                    .eq('id', assistantMessage.id);
-
-                  if (updateError) {
-                    console.error('Error updating message:', updateError);
-                  }
-
-                  await writer.write(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
-                }
-              } catch (e) {
-                console.error('Error parsing chunk:', e);
-              }
-            }
-          }
-        }
-
+    openaiService.streamCompletion(messages, writer)
+      .then(async (fullResponse) => {
         // Mark message as delivered
-        const { error: finalUpdateError } = await supabase
-          .from('messages')
-          .update({ 
-            status: 'delivered',
-            delivered_at: new Date().toISOString()
-          })
-          .eq('id', assistantMessage.id);
-
-        if (finalUpdateError) {
-          console.error('Error marking message as delivered:', finalUpdateError);
-        }
-
+        await messageService.updateMessageStatus(assistantMessage.id, 'delivered', fullResponse);
         // Update chat timestamp
-        const { error: chatUpdateError } = await supabase
-          .from('chats')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('id', chatId);
-
-        if (chatUpdateError) {
-          console.error('Error updating chat timestamp:', chatUpdateError);
-        }
-
+        await messageService.updateChatTimestamp(chatId);
+        
         console.log('Processing completed successfully', {
           chatId,
           responseLength: fullResponse.length
         });
-
-      } finally {
-        await writer.close();
-      }
-    }).catch(async (error) => {
-      console.error('Streaming error:', error);
-      const errorResponse = handleError(error);
-      await writer.write(encoder.encode(`data: ${JSON.stringify({ error: errorResponse })}\n\n`));
-      await writer.close();
-
-      // Update message status to failed
-      const { error: updateError } = await supabase
-        .from('messages')
-        .update({ status: 'failed' })
-        .eq('id', assistantMessage.id);
-
-      if (updateError) {
-        console.error('Error updating message status:', updateError);
-      }
-    });
+      })
+      .catch(async (error) => {
+        console.error('Streaming error:', error);
+        const errorResponse = handleError(error);
+        const encoder = new TextEncoder();
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ error: errorResponse })}\n\n`));
+        
+        // Update message status to failed
+        await messageService.updateMessageStatus(assistantMessage.id, 'failed');
+      })
+      .finally(async () => {
+        await streamHandler.close();
+      });
 
     return streamResponse;
 
