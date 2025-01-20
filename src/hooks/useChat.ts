@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/types';
+import { mapDatabaseMessageToMessage } from '@/types/message';
 
 export const useChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -12,7 +13,6 @@ export const useChat = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Simplified message sending
   const handleSendMessage = useCallback(async (
     content: string,
     type: 'text' | 'audio' = 'text'
@@ -21,7 +21,6 @@ export const useChat = () => {
     setIsLoading(true);
 
     try {
-      // Call Gemini edge function
       const { data, error } = await supabase.functions.invoke('gemini', {
         body: { 
           chatId: currentChatId,
@@ -35,17 +34,16 @@ export const useChat = () => {
         throw error;
       }
 
-      // If no chatId (new chat), update URL with the one created by backend
       if (!currentChatId && data?.chatId) {
         console.log('[useChat] New chat created:', data.chatId);
         setCurrentChatId(data.chatId);
         navigate(`/c/${data.chatId}`);
       }
 
-      // Update messages with response
       if (data?.messages && Array.isArray(data.messages)) {
         console.log('[useChat] Updating messages:', data.messages);
-        setMessages(prevMessages => [...prevMessages, ...data.messages]);
+        const mappedMessages = data.messages.map(mapDatabaseMessageToMessage);
+        setMessages(prevMessages => [...prevMessages, ...mappedMessages]);
       }
 
     } catch (error) {
@@ -60,7 +58,6 @@ export const useChat = () => {
     }
   }, [currentChatId, navigate, toast]);
 
-  // Load initial messages if chatId exists
   const loadInitialMessages = useCallback(async (chatId: string) => {
     console.log('[useChat] Loading initial messages for chat:', chatId);
     setIsLoading(true);
@@ -76,7 +73,8 @@ export const useChat = () => {
 
       if (messages) {
         console.log('[useChat] Loaded messages:', messages.length);
-        setMessages(messages);
+        const mappedMessages = messages.map(mapDatabaseMessageToMessage);
+        setMessages(mappedMessages);
       }
     } catch (error) {
       console.error('[useChat] Error loading messages:', error);

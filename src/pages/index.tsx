@@ -25,7 +25,7 @@ const Index = () => {
     messages, 
     isLoading: isChatLoading, 
     handleSendMessage,
-    loadChatMessages,
+    loadInitialMessages,
     currentChatId,
     setCurrentChatId
   } = useChat();
