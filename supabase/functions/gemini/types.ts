@@ -5,12 +5,10 @@ export interface ChatContext {
     role: string; 
     content: string; 
     type?: 'text' | 'audio';
-    sequence?: number;
   }[];
 }
 
 export interface MessageMetadata {
-  sequence: number;
   type: 'text' | 'audio';
   status?: 'queued' | 'processing' | 'delivered' | 'failed';
 }

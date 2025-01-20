@@ -37,27 +37,7 @@ serve(async (req) => {
       type
     });
 
-    // Create Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get next sequence number
-    const { data: messages, error: seqError } = await supabase
-      .from('messages')
-      .select('sequence')
-      .eq('chat_id', chatId)
-      .order('sequence', { ascending: false })
-      .limit(1);
-
-    if (seqError) {
-      throw createAppError(
-        'Error getting message sequence',
-        'DATABASE_ERROR',
-        seqError
-      );
-    }
-
-    const sequence = (messages?.[0]?.sequence || 0) + 1;
-    console.log(`Using sequence number: ${sequence}`);
 
     // Save user message
     const { data: userMessage, error: saveError } = await supabase
@@ -66,7 +46,6 @@ serve(async (req) => {
         chat_id: chatId,
         content,
         sender: 'user',
-        sequence,
         type,
         status: 'delivered'
       })
@@ -115,7 +94,6 @@ serve(async (req) => {
         chat_id: chatId,
         content: '',
         sender: 'assistant',
-        sequence: sequence + 1,
         type: 'text',
         status: 'processing'
       })
@@ -184,7 +162,7 @@ serve(async (req) => {
                 if (content) {
                   fullResponse += content;
                   
-                  // Update assistant message in real-time
+                  // Update assistant message
                   const { error: updateError } = await supabase
                     .from('messages')
                     .update({ content: fullResponse })
@@ -194,7 +172,6 @@ serve(async (req) => {
                     console.error('Error updating message:', updateError);
                   }
 
-                  // Send chunk to client
                   await writer.write(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
                 }
               } catch (e) {
