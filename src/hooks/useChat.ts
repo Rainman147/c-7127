@@ -34,12 +34,14 @@ export const useChat = () => {
         throw error;
       }
 
+      // Handle new chat creation
       if (!currentChatId && data?.chatId) {
         console.log('[useChat] New chat created:', data.chatId);
         setCurrentChatId(data.chatId);
         navigate(`/c/${data.chatId}`);
       }
 
+      // Update messages from response
       if (data?.messages && Array.isArray(data.messages)) {
         console.log('[useChat] Updating messages:', data.messages);
         const mappedMessages = data.messages.map(mapDatabaseMessageToMessage);
