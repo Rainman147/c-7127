@@ -1,5 +1,5 @@
 export interface ChatContext {
-  templateInstructions?: string;
+  systemInstructions?: string;
   patientContext?: string;
   messageHistory: { 
     role: string; 

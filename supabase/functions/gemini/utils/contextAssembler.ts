@@ -58,7 +58,7 @@ export async function assembleContext(supabase: any, chatId: string): Promise<Ch
   });
 
   return {
-    templateInstructions: chat?.templates?.system_instructions || 'Process conversation using standard medical documentation format.',
+    systemInstructions: chat?.templates?.system_instructions || 'Process conversation using standard medical documentation format.',
     patientContext,
     messageHistory
   };
