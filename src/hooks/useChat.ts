@@ -3,16 +3,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/types';
 
-// Helper function to map database message to frontend format
-const mapDatabaseMessageToMessage = (dbMessage: any): Message => {
-  return {
-    id: dbMessage.id,
-    role: dbMessage.sender === 'user' ? 'user' : 'assistant',
-    content: dbMessage.content,
-    type: dbMessage.type || 'text',
-  };
-};
-
 export const useChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,15 +28,19 @@ export const useChat = () => {
 
       if (error) throw error;
 
-      if (data?.chatId) {
-        console.log('[useChat] Setting chat ID:', data.chatId);
+      if (data?.chatId && !currentChatId) {
+        console.log('[useChat] Setting new chat ID:', data.chatId);
         setCurrentChatId(data.chatId);
       }
 
       if (data?.messages && Array.isArray(data.messages)) {
         console.log('[useChat] Received messages:', data.messages.length);
-        const mappedMessages = data.messages.map(mapDatabaseMessageToMessage);
-        setMessages(mappedMessages);
+        setMessages(data.messages.map(msg => ({
+          id: msg.id,
+          role: msg.sender === 'user' ? 'user' : 'assistant',
+          content: msg.content,
+          type: msg.type || 'text',
+        })));
       }
 
     } catch (error) {
@@ -64,6 +58,7 @@ export const useChat = () => {
   const loadInitialMessages = useCallback(async (chatId: string) => {
     console.log('[useChat] Loading messages for chat:', chatId);
     setIsLoading(true);
+    setCurrentChatId(chatId);
 
     try {
       const { data: messages, error } = await supabase
@@ -76,8 +71,12 @@ export const useChat = () => {
 
       if (messages) {
         console.log('[useChat] Loaded messages:', messages.length);
-        const mappedMessages = messages.map(mapDatabaseMessageToMessage);
-        setMessages(mappedMessages);
+        setMessages(messages.map(msg => ({
+          id: msg.id,
+          role: msg.sender === 'user' ? 'user' : 'assistant',
+          content: msg.content,
+          type: msg.type || 'text',
+        })));
       }
     } catch (error) {
       console.error('[useChat] Error loading messages:', error);
@@ -96,7 +95,6 @@ export const useChat = () => {
     isLoading,
     handleSendMessage,
     currentChatId,
-    setCurrentChatId,
     loadInitialMessages
   };
 };
