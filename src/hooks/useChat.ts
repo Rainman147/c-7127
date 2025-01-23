@@ -1,17 +1,15 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/types';
-import { mapDatabaseMessageToMessage } from '@/types/message';
 
 export const useChat = () => {
+  console.log('[useChat] Initializing hook');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const handleSendMessage = useCallback(async (
     content: string,
@@ -29,23 +27,18 @@ export const useChat = () => {
         }
       });
 
-      if (error) {
-        console.error('[useChat] Error from edge function:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      // Handle new chat creation
-      if (!currentChatId && data?.chatId) {
-        console.log('[useChat] New chat created:', data.chatId);
+      // Handle new chat ID if provided
+      if (data?.chatId) {
+        console.log('[useChat] Setting new chat ID:', data.chatId);
         setCurrentChatId(data.chatId);
-        navigate(`/c/${data.chatId}`);
       }
 
       // Update messages from response
       if (data?.messages && Array.isArray(data.messages)) {
         console.log('[useChat] Updating messages:', data.messages);
-        const mappedMessages = data.messages.map(mapDatabaseMessageToMessage);
-        setMessages(prevMessages => [...prevMessages, ...mappedMessages]);
+        setMessages(prevMessages => [...prevMessages, ...data.messages]);
       }
 
     } catch (error) {
@@ -58,7 +51,7 @@ export const useChat = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentChatId, navigate, toast]);
+  }, [currentChatId, toast]);
 
   const loadInitialMessages = useCallback(async (chatId: string) => {
     console.log('[useChat] Loading initial messages for chat:', chatId);
@@ -75,8 +68,7 @@ export const useChat = () => {
 
       if (messages) {
         console.log('[useChat] Loaded messages:', messages.length);
-        const mappedMessages = messages.map(mapDatabaseMessageToMessage);
-        setMessages(mappedMessages);
+        setMessages(messages);
       }
     } catch (error) {
       console.error('[useChat] Error loading messages:', error);
