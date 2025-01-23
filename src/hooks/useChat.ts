@@ -3,6 +3,16 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/types';
 
+// Helper function to map database message to frontend format
+const mapDatabaseMessageToMessage = (dbMessage: any): Message => {
+  return {
+    id: dbMessage.id,
+    role: dbMessage.sender === 'user' ? 'user' : 'assistant',
+    content: dbMessage.content,
+    type: dbMessage.type || 'text',
+  };
+};
+
 export const useChat = () => {
   console.log('[useChat] Initializing hook');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -35,10 +45,11 @@ export const useChat = () => {
         setCurrentChatId(data.chatId);
       }
 
-      // Update messages from response
+      // Map database messages to frontend format
       if (data?.messages && Array.isArray(data.messages)) {
         console.log('[useChat] Updating messages:', data.messages);
-        setMessages(prevMessages => [...prevMessages, ...data.messages]);
+        const mappedMessages = data.messages.map(mapDatabaseMessageToMessage);
+        setMessages(prevMessages => [...prevMessages, ...mappedMessages]);
       }
 
     } catch (error) {
@@ -68,7 +79,8 @@ export const useChat = () => {
 
       if (messages) {
         console.log('[useChat] Loaded messages:', messages.length);
-        setMessages(messages);
+        const mappedMessages = messages.map(mapDatabaseMessageToMessage);
+        setMessages(mappedMessages);
       }
     } catch (error) {
       console.error('[useChat] Error loading messages:', error);
