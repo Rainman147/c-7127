@@ -187,13 +187,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "edited_messages_message_id_fkey"
-            columns: ["message_id"]
-            isOneToOne: false
-            referencedRelation: "messages"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "edited_messages_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -290,13 +283,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "feedback_message_id_fkey"
-            columns: ["message_id"]
-            isOneToOne: false
-            referencedRelation: "messages"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "feedback_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -357,36 +343,27 @@ export type Database = {
           chat_id: string
           content: string
           created_at: string
-          delivered_at: string | null
           id: string
-          seen_at: string | null
-          sender: string
-          sequence: number | null
-          status: string | null
+          role: Database["public"]["Enums"]["message_role"]
+          status: string
           type: Database["public"]["Enums"]["message_type"]
         }
         Insert: {
           chat_id: string
           content: string
           created_at?: string
-          delivered_at?: string | null
           id?: string
-          seen_at?: string | null
-          sender: string
-          sequence?: number | null
-          status?: string | null
+          role: Database["public"]["Enums"]["message_role"]
+          status?: string
           type?: Database["public"]["Enums"]["message_type"]
         }
         Update: {
           chat_id?: string
           content?: string
           created_at?: string
-          delivered_at?: string | null
           id?: string
-          seen_at?: string | null
-          sender?: string
-          sequence?: number | null
-          status?: string | null
+          role?: Database["public"]["Enums"]["message_role"]
+          status?: string
           type?: Database["public"]["Enums"]["message_type"]
         }
         Relationships: [
@@ -536,13 +513,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "template_contexts_message_id_fkey"
-            columns: ["message_id"]
-            isOneToOne: false
-            referencedRelation: "messages"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "template_contexts_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -637,6 +607,7 @@ export type Database = {
       }
     }
     Enums: {
+      message_role: "user" | "assistant" | "system"
       message_type: "text" | "audio"
       rate_limit_type: "requests_per_minute" | "daily_quota" | "concurrent"
     }
