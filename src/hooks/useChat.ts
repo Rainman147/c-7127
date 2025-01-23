@@ -14,7 +14,6 @@ const mapDatabaseMessageToMessage = (dbMessage: any): Message => {
 };
 
 export const useChat = () => {
-  console.log('[useChat] Initializing hook');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
@@ -39,24 +38,22 @@ export const useChat = () => {
 
       if (error) throw error;
 
-      // Handle new chat ID if provided
       if (data?.chatId) {
-        console.log('[useChat] Setting new chat ID:', data.chatId);
+        console.log('[useChat] Setting chat ID:', data.chatId);
         setCurrentChatId(data.chatId);
       }
 
-      // Map database messages to frontend format
       if (data?.messages && Array.isArray(data.messages)) {
-        console.log('[useChat] Updating messages:', data.messages);
+        console.log('[useChat] Received messages:', data.messages.length);
         const mappedMessages = data.messages.map(mapDatabaseMessageToMessage);
-        setMessages(prevMessages => [...prevMessages, ...mappedMessages]);
+        setMessages(mappedMessages);
       }
 
     } catch (error) {
-      console.error('[useChat] Error sending message:', error);
+      console.error('[useChat] Error:', error);
       toast({
         title: "Error sending message",
-        description: error.message || "Failed to send message. Please try again.",
+        description: "Failed to send message. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -65,7 +62,7 @@ export const useChat = () => {
   }, [currentChatId, toast]);
 
   const loadInitialMessages = useCallback(async (chatId: string) => {
-    console.log('[useChat] Loading initial messages for chat:', chatId);
+    console.log('[useChat] Loading messages for chat:', chatId);
     setIsLoading(true);
 
     try {
@@ -85,8 +82,8 @@ export const useChat = () => {
     } catch (error) {
       console.error('[useChat] Error loading messages:', error);
       toast({
-        title: "Error loading messages",
-        description: "Failed to load chat messages. Please try again.",
+        title: "Error",
+        description: "Failed to load chat messages.",
         variant: "destructive",
       });
     } finally {
