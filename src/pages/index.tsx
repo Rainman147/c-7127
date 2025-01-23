@@ -26,8 +26,7 @@ const Index = () => {
     isLoading: isChatLoading, 
     handleSendMessage,
     loadInitialMessages,
-    currentChatId,
-    setCurrentChatId
+    currentChatId
   } = useChat();
 
   // Get template ID from URL

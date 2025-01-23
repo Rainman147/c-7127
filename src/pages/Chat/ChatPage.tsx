@@ -24,25 +24,20 @@ const ChatPage = () => {
     isLoading: isChatLoading, 
     handleSendMessage,
     loadInitialMessages,
-    currentChatId,
-    setCurrentChatId
+    currentChatId
   } = useChat();
 
   // Initialize audio recovery
   useAudioRecovery();
 
-  // Effect to handle sessionId changes
+  // Load initial messages when sessionId changes
   useEffect(() => {
-    console.log('[ChatPage] Session ID changed:', sessionId);
     if (sessionId) {
-      setCurrentChatId(sessionId);
       loadInitialMessages(sessionId);
-    } else {
-      // On index route, reset chat state
-      setCurrentChatId(null);
     }
-  }, [sessionId, setCurrentChatId, loadInitialMessages]);
+  }, [sessionId, loadInitialMessages]);
 
+  // Handle patient selection changes
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const patientId = params.get('patientId');
@@ -72,20 +67,7 @@ const ChatPage = () => {
   };
 
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
-    if (!currentChatId) {
-      console.log('[ChatPage] Creating new session for first message');
-      const sessionId = await createSession('New Chat');
-      if (sessionId) {
-        console.log('[ChatPage] Created new session:', sessionId);
-        setCurrentChatId(sessionId);
-        
-        const params = new URLSearchParams(location.search);
-        navigate(`/c/${sessionId}?${params.toString()}`);
-        // Wait for navigation to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    }
-
+    console.log('[ChatPage] Sending message:', { message, type });
     await handleSendMessage(message, type);
   };
 
@@ -96,9 +78,9 @@ const ChatPage = () => {
         isLoading={isChatLoading}
         currentChatId={currentChatId}
         onMessageSend={handleMessageSend}
+        onTemplateChange={handleTemplateChange}
         onPatientSelect={handlePatientSelect}
         selectedPatientId={selectedPatientId}
-        onTemplateChange={handleTemplateChange}
         onTranscriptionComplete={async (text: string) => {
           console.log('[ChatPage] Transcription complete, ready for user to edit:', text);
           if (text) {
