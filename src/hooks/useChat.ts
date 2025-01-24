@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import type { Message } from '@/types';
+import type { Message, MessageType } from '@/types/chat';
 
 const MESSAGES_PER_PAGE = 50;
 
@@ -30,7 +30,7 @@ export const useChat = () => {
 
   const handleSendMessage = useCallback(async (
     content: string,
-    type: 'text' | 'audio' = 'text'
+    type: MessageType = 'text'
   ) => {
     console.log('[useChat] Sending message:', { content, type, currentChatId });
     setIsLoading(true);
@@ -84,6 +84,8 @@ export const useChat = () => {
           role: msg.role,
           content: msg.content,
           type: msg.type || 'text',
+          status: msg.status || 'delivered',
+          created_at: msg.created_at
         })));
       }
 
@@ -127,6 +129,8 @@ export const useChat = () => {
           role: msg.role,
           content: msg.content,
           type: msg.type || 'text',
+          status: msg.status || 'delivered',
+          created_at: msg.created_at
         })));
         setHasMore(count ? count > MESSAGES_PER_PAGE : false);
       }
@@ -174,6 +178,8 @@ export const useChat = () => {
             role: msg.role,
             content: msg.content,
             type: msg.type || 'text',
+            status: msg.status || 'delivered',
+            created_at: msg.created_at
           }))
         ]);
         setPage(p => p + 1);

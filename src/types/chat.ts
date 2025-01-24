@@ -1,25 +1,20 @@
-import type { Template } from './template';
+export type MessageRole = 'system' | 'user' | 'assistant';
+export type MessageType = 'text' | 'audio';
+export type MessageStatus = 'delivered' | 'processing' | 'failed';
 
 export interface Message {
   id?: string;
-  role: 'user' | 'assistant' | 'system';
+  role: MessageRole;
   content: string;
-  type?: 'text' | 'audio';
-  isStreaming?: boolean;
+  type?: MessageType;
+  status?: MessageStatus;
+  created_at?: string;
 }
 
 export interface MessageProps {
   content: string;
   sender: 'user' | 'ai';
-  type?: 'text' | 'audio';
-}
-
-export interface TemplateContext {
-  id: string;
-  template: Template;
-  systemInstructions: string;
-  version?: number;
-  metadata?: Record<string, any>;
+  type?: MessageType;
 }
 
 export interface ChatSession {
