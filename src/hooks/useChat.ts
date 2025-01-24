@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import type { Message, MessageType } from '@/types/chat';
+import type { Message, MessageType, MessageStatus } from '@/types/chat';
 
 const MESSAGES_PER_PAGE = 50;
 
@@ -9,6 +9,17 @@ interface MessageError {
   code: string;
   message: string;
 }
+
+const mapDatabaseMessage = (msg: any): Message => ({
+  id: msg.id,
+  role: msg.role,
+  content: msg.content,
+  type: msg.type || 'text',
+  status: ['delivered', 'processing', 'failed'].includes(msg.status) 
+    ? msg.status as MessageStatus 
+    : 'delivered' as MessageStatus,
+  created_at: msg.created_at
+});
 
 export const useChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -79,14 +90,7 @@ export const useChat = () => {
 
       if (messages) {
         console.log('[useChat] Received messages:', messages.length);
-        setMessages(messages.map(msg => ({
-          id: msg.id,
-          role: msg.role,
-          content: msg.content,
-          type: msg.type || 'text',
-          status: msg.status || 'delivered',
-          created_at: msg.created_at
-        })));
+        setMessages(messages.map(mapDatabaseMessage));
       }
 
     } catch (error: any) {
@@ -124,14 +128,7 @@ export const useChat = () => {
 
       if (messages) {
         console.log('[useChat] Loaded initial messages:', messages.length);
-        setMessages(messages.map(msg => ({
-          id: msg.id,
-          role: msg.role,
-          content: msg.content,
-          type: msg.type || 'text',
-          status: msg.status || 'delivered',
-          created_at: msg.created_at
-        })));
+        setMessages(messages.map(mapDatabaseMessage));
         setHasMore(count ? count > MESSAGES_PER_PAGE : false);
       }
     } catch (error: any) {
@@ -173,14 +170,7 @@ export const useChat = () => {
         console.log('[useChat] Loaded additional messages:', newMessages.length);
         setMessages(prevMessages => [
           ...prevMessages,
-          ...newMessages.map(msg => ({
-            id: msg.id,
-            role: msg.role,
-            content: msg.content,
-            type: msg.type || 'text',
-            status: msg.status || 'delivered',
-            created_at: msg.created_at
-          }))
+          ...newMessages.map(mapDatabaseMessage)
         ]);
         setPage(p => p + 1);
         setHasMore(count ? count > (end + 1) : false);
