@@ -37,11 +37,27 @@ export const useChat = () => {
     setMessageError(null);
 
     try {
+      // Save user message first
+      const { data: userMessage, error: saveError } = await supabase
+        .from('messages')
+        .insert({
+          chat_id: currentChatId,
+          role: 'user',
+          content,
+          type,
+          status: 'delivered'
+        })
+        .select()
+        .single();
+
+      if (saveError) throw saveError;
+
+      // Process with Gemini function
       const { data, error } = await supabase.functions.invoke('gemini', {
         body: { 
           chatId: currentChatId,
-          content,
-          type
+          messageId: userMessage.id,
+          content
         }
       });
 
@@ -52,11 +68,20 @@ export const useChat = () => {
         setCurrentChatId(data.chatId);
       }
 
-      if (data?.messages && Array.isArray(data.messages)) {
-        console.log('[useChat] Received messages:', data.messages.length);
-        setMessages(data.messages.map(msg => ({
+      // Load latest messages after processing
+      const { data: messages, error: loadError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_id', currentChatId || data.chatId)
+        .order('created_at', { ascending: true });
+
+      if (loadError) throw loadError;
+
+      if (messages) {
+        console.log('[useChat] Received messages:', messages.length);
+        setMessages(messages.map(msg => ({
           id: msg.id,
-          role: msg.sender === 'user' ? 'user' : 'assistant',
+          role: msg.role,
           content: msg.content,
           type: msg.type || 'text',
         })));
@@ -99,7 +124,7 @@ export const useChat = () => {
         console.log('[useChat] Loaded initial messages:', messages.length);
         setMessages(messages.map(msg => ({
           id: msg.id,
-          role: msg.sender === 'user' ? 'user' : 'assistant',
+          role: msg.role,
           content: msg.content,
           type: msg.type || 'text',
         })));
@@ -146,7 +171,7 @@ export const useChat = () => {
           ...prevMessages,
           ...newMessages.map(msg => ({
             id: msg.id,
-            role: msg.sender === 'user' ? 'user' : 'assistant',
+            role: msg.role,
             content: msg.content,
             type: msg.type || 'text',
           }))
