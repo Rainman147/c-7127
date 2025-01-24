@@ -1,3 +1,5 @@
+import type { Template } from './template';
+
 export type MessageRole = 'system' | 'user' | 'assistant';
 export type MessageType = 'text' | 'audio';
 export type MessageStatus = 'delivered' | 'processing' | 'failed';
