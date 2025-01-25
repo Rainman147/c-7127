@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { mapDatabaseMessage } from '@/utils/chat/messageMapping';
-
-export const MESSAGES_PER_PAGE = 50;
+import { MESSAGES_PER_PAGE } from './constants';
 
 export const useMessagePagination = () => {
   const [page, setPage] = useState(1);
