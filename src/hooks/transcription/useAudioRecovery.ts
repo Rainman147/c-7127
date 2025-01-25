@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useChat } from '@/hooks/useChat';
+import { useChat } from '@/hooks/chat';
 
 interface AudioChunk {
   storage_path: string;

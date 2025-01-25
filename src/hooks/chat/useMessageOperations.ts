@@ -1,6 +1,7 @@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { mapDatabaseMessage } from '@/utils/chat/messageMapping';
+import { MESSAGES_PER_PAGE } from './constants';
 import type { MessageType } from '@/types/chat';
 
 export const useMessageOperations = () => {
