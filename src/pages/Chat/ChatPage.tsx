@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
-import { useChat } from '@/hooks/useChat';
+import { useChat } from '@/hooks/chat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { useToast } from '@/hooks/use-toast';
-import type { Template } from '@/types/template';
+import type { Template } from '@/types';
 
 const ChatPage = () => {
   console.log('[ChatPage] Component initializing');
