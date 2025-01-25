@@ -20,51 +20,17 @@ export const useMessageOperations = () => {
     setMessageError(null);
 
     try {
-      // If no currentChatId, create a new chat first
-      let activeChatId = currentChatId;
-      if (!currentChatId) {
-        console.log('[useMessageOperations] No chat ID provided, creating new chat');
-        const { data: newChat, error: chatError } = await supabase
-          .from('chats')
-          .insert({
-            title: content.substring(0, 50), // Use first 50 chars of message as title
-            template_type: 'live-session'
-          })
-          .select()
-          .single();
-
-        if (chatError) {
-          console.error('[useMessageOperations] Error creating chat:', chatError);
-          throw chatError;
-        }
-        
-        activeChatId = newChat.id;
-        console.log('[useMessageOperations] Created new chat:', activeChatId);
-      }
-
-      const { data: userMessage, error: saveError } = await supabase
-        .from('messages')
-        .insert({
-          chat_id: activeChatId,
-          role: 'user',
-          content,
-          type,
-          status: 'delivered'
-        })
-        .select()
-        .single();
-
-      if (saveError) throw saveError;
-
       const { data, error } = await supabase.functions.invoke('gemini', {
         body: { 
-          chatId: activeChatId,
-          messageId: userMessage.id,
+          chatId: currentChatId,
           content
         }
       });
 
       if (error) throw error;
+
+      // Get the chat ID from the response if it was a new chat
+      const activeChatId = data?.chatId || currentChatId;
 
       const { data: messages, error: loadError } = await supabase
         .from('messages')
