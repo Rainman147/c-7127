@@ -14,10 +14,12 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Initialize services
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const apiKey = Deno.env.get('OPENAI_API_KEY');
@@ -27,6 +29,7 @@ serve(async (req) => {
   }
 
   try {
+    // Parse request
     const { content, chatId } = await req.json();
     
     if (!content?.trim()) {
@@ -38,13 +41,14 @@ serve(async (req) => {
       chatId
     });
 
+    // Initialize services
     const supabase = createClient(supabaseUrl, supabaseKey);
     const chatService = new ChatService(supabaseUrl, supabaseKey);
     const messageService = new MessageService(supabaseUrl, supabaseKey);
     const openaiService = new OpenAIService(apiKey);
     const streamHandler = new StreamHandler();
 
-    // Get user ID from auth header
+    // Validate user authentication
     const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
     if (!authHeader) {
       throw createAppError('No authorization header', 'VALIDATION_ERROR');
@@ -55,7 +59,7 @@ serve(async (req) => {
       throw createAppError('Invalid authorization', 'VALIDATION_ERROR');
     }
 
-    // Get or create chat
+    // Get or create chat session
     const chat = await chatService.getOrCreateChat(user.id, chatId, content.substring(0, 50));
     console.log('Chat context:', chat);
 
@@ -63,11 +67,11 @@ serve(async (req) => {
     const userMessage = await messageService.saveUserMessage(chat.id, content);
     console.log('Saved user message:', userMessage);
 
-    // Create initial assistant message
+    // Create initial assistant message placeholder
     const assistantMessage = await messageService.saveAssistantMessage(chat.id);
     console.log('Created assistant message:', assistantMessage);
 
-    // Assemble context
+    // Assemble context in parallel with message operations
     const context = await assembleContext(supabase, chat.id);
     console.log('Assembled context:', {
       hasTemplateInstructions: !!context.systemInstructions,
@@ -82,6 +86,7 @@ serve(async (req) => {
       { role: 'user', content }
     ];
 
+    // Add patient context if available
     if (context.patientContext) {
       messages.unshift({ 
         role: 'system', 
@@ -89,11 +94,11 @@ serve(async (req) => {
       });
     }
 
-    // Start streaming response
+    // Set up streaming response
     const streamResponse = streamHandler.getResponse(corsHeaders);
     const writer = streamHandler.getWriter();
 
-    // Process with OpenAI
+    // Process with OpenAI and handle response
     openaiService.streamCompletion(messages, writer)
       .then(async (fullResponse) => {
         await messageService.updateMessageStatus(
