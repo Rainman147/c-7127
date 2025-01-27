@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useRef, useEffect } from 'react';
 import Message from './Message';
 import type { Message as MessageType } from '@/types/chat';
 
@@ -8,6 +8,15 @@ interface MessageListProps {
 
 const MessageList = ({ messages }: MessageListProps) => {
   console.log('[MessageList] Rendering messages:', messages);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   return (
     <div className="h-full overflow-y-auto chat-scrollbar">
@@ -17,14 +26,17 @@ const MessageList = ({ messages }: MessageListProps) => {
             Start a new conversation
           </div>
         ) : (
-          messages.map((message) => (
-            <Message
-              key={message.id || `${message.role}-${message.content}`}
-              content={message.content}
-              sender={message.role === 'user' ? 'user' : 'ai'}
-              type={message.type}
-            />
-          ))
+          <>
+            {messages.map((message) => (
+              <Message
+                key={message.id || `${message.role}-${message.content}`}
+                content={message.content}
+                sender={message.role === 'user' ? 'user' : 'ai'}
+                type={message.type}
+              />
+            ))}
+            <div ref={messagesEndRef} />
+          </>
         )}
       </div>
     </div>
