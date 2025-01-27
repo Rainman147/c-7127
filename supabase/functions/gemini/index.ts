@@ -5,6 +5,8 @@ import { assembleContext } from "./utils/contextAssembler.ts";
 import { handleError, createAppError } from "./utils/errorHandler.ts";
 import { StreamHandler } from "./utils/streamHandler.ts";
 import { OpenAIService } from "./services/openaiService.ts";
+import { ChatService } from "./services/chatService.ts";
+import { MessageService } from "./services/messageService.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,6 +39,8 @@ serve(async (req) => {
     });
 
     const supabase = createClient(supabaseUrl, supabaseKey);
+    const chatService = new ChatService(supabaseUrl, supabaseKey);
+    const messageService = new MessageService(supabaseUrl, supabaseKey);
     const openaiService = new OpenAIService(apiKey);
     const streamHandler = new StreamHandler();
 
@@ -51,70 +55,25 @@ serve(async (req) => {
       throw createAppError('Invalid authorization', 'VALIDATION_ERROR');
     }
 
-    // Create or verify chat
-    let activeChatId = chatId;
-    if (!chatId) {
-      const { data: newChat, error: chatError } = await supabase
-        .from('chats')
-        .insert({
-          title: content.substring(0, 50),
-          user_id: user.id
-        })
-        .select()
-        .single();
+    // Get or create chat
+    const chat = await chatService.getOrCreateChat(user.id, chatId, content.substring(0, 50));
+    console.log('Chat context:', chat);
 
-      if (chatError) {
-        console.error('Error creating chat:', chatError);
-        throw createAppError('Failed to create chat', 'DATABASE_ERROR');
-      }
+    // Save user message
+    const userMessage = await messageService.saveUserMessage(chat.id, content);
+    console.log('Saved user message:', userMessage);
 
-      activeChatId = newChat.id;
-      console.log('Created new chat:', activeChatId);
-    }
+    // Create initial assistant message
+    const assistantMessage = await messageService.saveAssistantMessage(chat.id);
+    console.log('Created assistant message:', assistantMessage);
 
     // Assemble context
-    const context = await assembleContext(supabase, activeChatId);
+    const context = await assembleContext(supabase, chat.id);
     console.log('Assembled context:', {
       hasTemplateInstructions: !!context.systemInstructions,
       hasPatientContext: !!context.patientContext,
       messageHistoryCount: context.messageHistory.length
     });
-
-    // Save user message
-    const { data: savedUserMessage, error: messageError } = await supabase
-      .from('messages')
-      .insert({
-        chat_id: activeChatId,
-        role: 'user',
-        content: content,
-        type: 'text',
-        status: 'delivered'
-      })
-      .select()
-      .single();
-
-    if (messageError) {
-      console.error('Error saving user message:', messageError);
-      throw createAppError('Failed to save message', 'DATABASE_ERROR');
-    }
-
-    // Create initial assistant message
-    const { data: savedAssistantMessage, error: assistantError } = await supabase
-      .from('messages')
-      .insert({
-        chat_id: activeChatId,
-        role: 'assistant',
-        content: '',
-        type: 'text',
-        status: 'processing'
-      })
-      .select()
-      .single();
-
-    if (assistantError) {
-      console.error('Error creating assistant message:', assistantError);
-      throw createAppError('Failed to create assistant message', 'DATABASE_ERROR');
-    }
 
     // Prepare messages for OpenAI
     const messages = [
@@ -137,17 +96,14 @@ serve(async (req) => {
     // Process with OpenAI
     openaiService.streamCompletion(messages, writer)
       .then(async (fullResponse) => {
-        // Update assistant message
-        await supabase
-          .from('messages')
-          .update({ 
-            status: 'delivered',
-            content: fullResponse,
-          })
-          .eq('id', savedAssistantMessage.id);
+        await messageService.updateMessageStatus(
+          assistantMessage.id,
+          'delivered',
+          fullResponse
+        );
         
         console.log('Processing completed successfully', {
-          chatId: activeChatId,
+          chatId: chat.id,
           responseLength: fullResponse.length
         });
       })
@@ -157,11 +113,10 @@ serve(async (req) => {
         const encoder = new TextEncoder();
         await writer.write(encoder.encode(`data: ${JSON.stringify({ error: errorResponse })}\n\n`));
         
-        // Update message status to failed
-        await supabase
-          .from('messages')
-          .update({ status: 'failed' })
-          .eq('id', savedAssistantMessage.id);
+        await messageService.updateMessageStatus(
+          assistantMessage.id,
+          'failed'
+        );
       })
       .finally(async () => {
         await streamHandler.close();
