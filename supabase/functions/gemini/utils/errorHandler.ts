@@ -1,8 +1,27 @@
-import { ErrorResponse, ErrorType, AppError } from '../types.ts';
+export type ErrorType = 
+  | 'AUTH_ERROR'        // Authentication/authorization issues
+  | 'CHAT_ERROR'        // Chat creation/validation issues
+  | 'CONTEXT_ERROR'     // Context assembly issues
+  | 'MESSAGE_ERROR'     // Message processing issues
+  | 'AI_ERROR'         // OpenAI API issues
+  | 'STREAM_ERROR'     // Streaming issues
+  | 'VALIDATION_ERROR' // Input validation
+  | 'UNKNOWN_ERROR';   // Catch-all
+
+export interface AppError extends Error {
+  type: ErrorType;
+  status: number;
+  retryable: boolean;
+  details?: any;
+}
 
 const ERROR_CONFIGS: Record<ErrorType, { status: number; retryable: boolean }> = {
-  DATABASE_ERROR: { status: 503, retryable: true },
+  AUTH_ERROR: { status: 401, retryable: false },
+  CHAT_ERROR: { status: 404, retryable: false },
+  CONTEXT_ERROR: { status: 503, retryable: true },
+  MESSAGE_ERROR: { status: 503, retryable: true },
   AI_ERROR: { status: 503, retryable: true },
+  STREAM_ERROR: { status: 503, retryable: true },
   VALIDATION_ERROR: { status: 400, retryable: false },
   UNKNOWN_ERROR: { status: 500, retryable: true }
 };
@@ -21,11 +40,11 @@ export function createAppError(
   return error;
 }
 
-export function handleError(error: any): ErrorResponse {
+export function handleError(error: any) {
   console.error('Error in Gemini function:', error);
 
   // If it's already an AppError, use its properties
-  if (error.type && error.status) {
+  if ((error as AppError).type) {
     return {
       error: error.message,
       status: error.status,
@@ -34,40 +53,42 @@ export function handleError(error: any): ErrorResponse {
     };
   }
 
-  // Handle specific error types
-  if (error.code === 'PGRST301') {
-    return {
-      error: 'Database connection error',
-      status: 503,
-      retryable: true,
-      details: error.message
-    };
+  // Handle specific error patterns
+  if (error.message?.includes('not authenticated')) {
+    return createAppError('Authentication required', 'AUTH_ERROR');
+  }
+
+  if (error.message?.includes('chat not found')) {
+    return createAppError('Chat not found', 'CHAT_ERROR');
   }
 
   if (error.message?.includes('OpenAI')) {
-    return {
-      error: 'AI service error',
-      status: 503,
-      retryable: true,
-      details: error.message
-    };
+    return createAppError('AI service error', 'AI_ERROR', error.message);
   }
 
   // Default error response
-  return {
-    error: 'An unexpected error occurred',
-    status: 500,
-    retryable: true,
-    details: error.message
-  };
+  return createAppError(
+    'An unexpected error occurred',
+    'UNKNOWN_ERROR',
+    error.message
+  );
 }
 
-export function isRetryableError(error: any): boolean {
-  if (error.retryable !== undefined) {
-    return error.retryable;
-  }
+export function isRetryableError(error: AppError): boolean {
+  return ERROR_CONFIGS[error.type]?.retryable ?? false;
+}
 
-  // Default retry strategy for common HTTP errors
-  const retryableStatusCodes = [408, 429, 500, 502, 503, 504];
-  return retryableStatusCodes.includes(error.status);
+export function logError(
+  context: string,
+  error: any,
+  additionalInfo?: Record<string, any>
+) {
+  console.error(`[${context}] Error:`, {
+    message: error.message,
+    type: error.type,
+    status: error.status,
+    retryable: error.retryable,
+    details: error.details,
+    ...additionalInfo
+  });
 }
