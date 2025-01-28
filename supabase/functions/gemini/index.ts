@@ -14,12 +14,10 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Initialize services
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const apiKey = Deno.env.get('OPENAI_API_KEY');
@@ -29,7 +27,6 @@ serve(async (req) => {
   }
 
   try {
-    // Parse request
     const { content, chatId } = await req.json();
     
     if (!content?.trim()) {
@@ -41,14 +38,12 @@ serve(async (req) => {
       chatId
     });
 
-    // Initialize services
     const supabase = createClient(supabaseUrl, supabaseKey);
     const chatService = new ChatService(supabaseUrl, supabaseKey);
     const messageService = new MessageService(supabaseUrl, supabaseKey);
     const openaiService = new OpenAIService(apiKey);
     const streamHandler = new StreamHandler();
 
-    // Validate user authentication
     const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
     if (!authHeader) {
       throw createAppError('No authorization header', 'VALIDATION_ERROR');
@@ -63,6 +58,9 @@ serve(async (req) => {
     const chat = await chatService.getOrCreateChat(user.id, chatId, content.substring(0, 50));
     console.log('Chat context:', chat);
 
+    // Send initial metadata with chat ID
+    await streamHandler.writeMetadata({ chatId: chat.id });
+
     // Save user message
     const userMessage = await messageService.saveUserMessage(chat.id, content);
     console.log('Saved user message:', userMessage);
@@ -71,7 +69,7 @@ serve(async (req) => {
     const assistantMessage = await messageService.saveAssistantMessage(chat.id);
     console.log('Created assistant message:', assistantMessage);
 
-    // Assemble context in parallel with message operations
+    // Assemble context
     const context = await assembleContext(supabase, chat.id);
     console.log('Assembled context:', {
       hasTemplateInstructions: !!context.systemInstructions,
@@ -79,14 +77,12 @@ serve(async (req) => {
       messageHistoryCount: context.messageHistory.length
     });
 
-    // Prepare messages for OpenAI
     const messages = [
       { role: 'system', content: context.systemInstructions },
       ...context.messageHistory,
       { role: 'user', content }
     ];
 
-    // Add patient context if available
     if (context.patientContext) {
       messages.unshift({ 
         role: 'system', 
@@ -96,36 +92,36 @@ serve(async (req) => {
 
     // Set up streaming response
     const streamResponse = streamHandler.getResponse(corsHeaders);
-    const writer = streamHandler.getWriter();
 
     // Process with OpenAI and handle response
-    openaiService.streamCompletion(messages, writer)
-      .then(async (fullResponse) => {
-        await messageService.updateMessageStatus(
-          assistantMessage.id,
-          'delivered',
-          fullResponse
-        );
-        
-        console.log('Processing completed successfully', {
-          chatId: chat.id,
-          responseLength: fullResponse.length
-        });
-      })
-      .catch(async (error) => {
-        console.error('Streaming error:', error);
-        const errorResponse = handleError(error);
-        const encoder = new TextEncoder();
-        await writer.write(encoder.encode(`data: ${JSON.stringify({ error: errorResponse })}\n\n`));
-        
-        await messageService.updateMessageStatus(
-          assistantMessage.id,
-          'failed'
-        );
-      })
-      .finally(async () => {
-        await streamHandler.close();
+    openaiService.streamCompletion(messages, async (chunk: string) => {
+      await streamHandler.writeChunk(chunk);
+    })
+    .then(async (fullResponse) => {
+      await messageService.updateMessageStatus(
+        assistantMessage.id,
+        'delivered',
+        fullResponse
+      );
+      
+      console.log('Processing completed successfully', {
+        chatId: chat.id,
+        responseLength: fullResponse.length
       });
+    })
+    .catch(async (error) => {
+      console.error('Streaming error:', error);
+      const errorResponse = handleError(error);
+      await streamHandler.writeChunk(JSON.stringify({ error: errorResponse }));
+      
+      await messageService.updateMessageStatus(
+        assistantMessage.id,
+        'failed'
+      );
+    })
+    .finally(async () => {
+      await streamHandler.close();
+    });
 
     return streamResponse;
 

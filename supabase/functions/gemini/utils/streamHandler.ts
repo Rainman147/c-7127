@@ -18,6 +18,20 @@ export class StreamHandler {
     });
   }
 
+  async writeMetadata(data: Record<string, any>) {
+    const encoder = new TextEncoder();
+    await this.writer.write(
+      encoder.encode(`data: ${JSON.stringify({ type: 'metadata', ...data })}\n\n`)
+    );
+  }
+
+  async writeChunk(content: string) {
+    const encoder = new TextEncoder();
+    await this.writer.write(
+      encoder.encode(`data: ${JSON.stringify({ type: 'chunk', content })}\n\n`)
+    );
+  }
+
   getWriter() {
     return this.writer;
   }

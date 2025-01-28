@@ -1,8 +1,3 @@
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 export class OpenAIService {
   private apiKey: string;
 
@@ -10,9 +5,9 @@ export class OpenAIService {
     this.apiKey = apiKey;
   }
 
-  async streamCompletion(messages: any[], writer: WritableStreamDefaultWriter<any>) {
+  async streamCompletion(messages: any[], onChunk: (chunk: string) => Promise<void>): Promise<string> {
     console.log('[OpenAIService] Starting stream completion');
-    const encoder = new TextEncoder();
+    let fullResponse = '';
 
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -22,7 +17,7 @@ export class OpenAIService {
           'Authorization': `Bearer ${this.apiKey}`
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: "gpt-4",
           messages,
           temperature: 0.7,
           max_tokens: 2048,
@@ -35,7 +30,6 @@ export class OpenAIService {
       }
 
       const reader = response.body!.getReader();
-      let fullResponse = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -54,7 +48,7 @@ export class OpenAIService {
               const content = parsed.choices[0]?.delta?.content || '';
               if (content) {
                 fullResponse += content;
-                await writer.write(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+                await onChunk(content);
               }
             } catch (e) {
               console.error('[OpenAIService] Error parsing chunk:', e);
