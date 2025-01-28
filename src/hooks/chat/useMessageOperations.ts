@@ -18,7 +18,8 @@ export const useMessageOperations = () => {
     console.log('[useMessageOperations] Starting message send:', { 
       contentLength: content.length,
       type,
-      currentChatId
+      currentChatId,
+      authSession: await supabase.auth.getSession()
     });
     
     setIsLoading(true);
@@ -46,6 +47,10 @@ export const useMessageOperations = () => {
       // Get the chat ID from the response if it was a new chat
       const activeChatId = data?.chatId || currentChatId;
       console.log('[useMessageOperations] Using chatId:', activeChatId);
+
+      if (!activeChatId) {
+        throw new Error('No chat ID available');
+      }
 
       const { data: messages, error: loadError } = await supabase
         .from('messages')
