@@ -4,6 +4,18 @@ import { mapDatabaseMessage } from '@/utils/chat/messageMapping';
 import { MESSAGES_PER_PAGE } from './constants';
 import type { MessageType } from '@/types/chat';
 
+interface StreamMetadata {
+  type: 'metadata';
+  chatId: string;
+}
+
+interface StreamChunk {
+  type: 'chunk';
+  content: string;
+}
+
+type StreamMessage = StreamMetadata | StreamChunk;
+
 export const useMessageOperations = () => {
   const { toast } = useToast();
 
@@ -27,26 +39,51 @@ export const useMessageOperations = () => {
 
     try {
       console.log('[useMessageOperations] Invoking Gemini function');
-      const { data, error } = await supabase.functions.invoke('gemini', {
+      const response = await supabase.functions.invoke('gemini', {
         body: { 
           chatId: currentChatId,
           content
         }
       });
 
-      if (error) {
-        console.error('[useMessageOperations] Gemini function error:', error);
-        throw error;
+      if (!response.data) {
+        throw new Error('No response data received');
       }
 
-      console.log('[useMessageOperations] Gemini function response:', {
-        hasData: !!data,
-        responseChatId: data?.chatId
-      });
+      const reader = new ReadableStreamDefaultReader(response.data);
+      let activeChatId = currentChatId;
+      let receivedMetadata = false;
 
-      // Get the chat ID from the response if it was a new chat
-      const activeChatId = data?.chatId || currentChatId;
-      console.log('[useMessageOperations] Using chatId:', activeChatId);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = new TextDecoder().decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(5)) as StreamMessage;
+              
+              if (data.type === 'metadata') {
+                console.log('[useMessageOperations] Received metadata:', data);
+                activeChatId = data.chatId;
+                receivedMetadata = true;
+              } else if (data.type === 'chunk') {
+                console.log('[useMessageOperations] Received chunk');
+                // Handle content chunk - we'll get the full message at the end
+              }
+            } catch (e) {
+              console.error('[useMessageOperations] Error parsing chunk:', e);
+            }
+          }
+        }
+      }
+
+      if (!receivedMetadata) {
+        throw new Error('No metadata received from stream');
+      }
 
       if (!activeChatId) {
         throw new Error('No chat ID available');
