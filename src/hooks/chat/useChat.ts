@@ -30,12 +30,22 @@ export const useChat = () => {
   } = useMessageOperations();
 
   const handleSendMessage = async (content: string, type: MessageType = 'text') => {
-    console.log('[useChat] Sending message:', { content, type });
+    console.log('[useChat] Handling message:', { 
+      content, 
+      type, 
+      currentChatId,
+      isLoading 
+    });
+    
     await sendMessage(content, type, currentChatId, setMessages, setIsLoading, setMessageError);
   };
 
   const loadInitialMessages = async (chatId: string) => {
-    console.log('[useChat] Loading initial messages for chat:', chatId);
+    console.log('[useChat] Loading initial messages:', { 
+      chatId,
+      currentChatId: currentChatId 
+    });
+    
     await loadInitial(
       chatId,
       setMessages,
@@ -53,7 +63,12 @@ export const useChat = () => {
   };
 
   const handleLoadMore = async () => {
-    console.log('[useChat] Loading more messages');
+    console.log('[useChat] Loading more messages:', {
+      currentChatId,
+      currentPage: page,
+      hasMore
+    });
+    
     await loadMoreMessages(currentChatId, messages, setMessages, setIsLoading);
   };
 

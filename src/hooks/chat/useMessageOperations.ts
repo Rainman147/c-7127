@@ -15,11 +15,17 @@ export const useMessageOperations = () => {
     setIsLoading: (loading: boolean) => void,
     setMessageError: (error: any) => void
   ) => {
-    console.log('[useMessageOperations] Sending message:', { content, type, currentChatId });
+    console.log('[useMessageOperations] Starting message send:', { 
+      contentLength: content.length,
+      type,
+      currentChatId
+    });
+    
     setIsLoading(true);
     setMessageError(null);
 
     try {
+      console.log('[useMessageOperations] Invoking Gemini function');
       const { data, error } = await supabase.functions.invoke('gemini', {
         body: { 
           chatId: currentChatId,
@@ -27,10 +33,19 @@ export const useMessageOperations = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useMessageOperations] Gemini function error:', error);
+        throw error;
+      }
+
+      console.log('[useMessageOperations] Gemini function response:', {
+        hasData: !!data,
+        responseChatId: data?.chatId
+      });
 
       // Get the chat ID from the response if it was a new chat
       const activeChatId = data?.chatId || currentChatId;
+      console.log('[useMessageOperations] Using chatId:', activeChatId);
 
       const { data: messages, error: loadError } = await supabase
         .from('messages')
@@ -38,15 +53,18 @@ export const useMessageOperations = () => {
         .eq('chat_id', activeChatId)
         .order('created_at', { ascending: true });
 
-      if (loadError) throw loadError;
+      if (loadError) {
+        console.error('[useMessageOperations] Error loading messages:', loadError);
+        throw loadError;
+      }
 
       if (messages) {
-        console.log('[useMessageOperations] Received messages:', messages.length);
+        console.log('[useMessageOperations] Loaded messages:', messages.length);
         setMessages(messages.map(mapDatabaseMessage));
       }
 
     } catch (error: any) {
-      console.error('[useMessageOperations] Error:', error);
+      console.error('[useMessageOperations] Operation failed:', error);
       setMessageError({
         code: error.code || 'UNKNOWN_ERROR',
         message: error.message || 'Failed to send message'

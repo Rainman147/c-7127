@@ -22,6 +22,10 @@ const ChatInput = ({
 
   const handleSubmit = () => {
     if (message.trim() && !isLoading) {
+      console.log('[ChatInput] Sending message:', { 
+        message: message.trim(),
+        isLoading 
+      });
       onSend(message);
       setMessage("");
     }
@@ -35,7 +39,7 @@ const ChatInput = ({
   };
 
   const handleTranscriptionComplete = (transcription: string) => {
-    console.log('Transcription complete in ChatInput:', transcription);
+    console.log('[ChatInput] Transcription complete:', { transcription });
     setMessage(transcription);
     onTranscriptionComplete(transcription);
     
@@ -47,7 +51,10 @@ const ChatInput = ({
   };
 
   const handleFileUpload = async (file: File) => {
-    console.log('File uploaded:', file);
+    console.log('[ChatInput] File uploaded:', { 
+      fileName: file.name,
+      fileSize: file.size 
+    });
   };
 
   return (
