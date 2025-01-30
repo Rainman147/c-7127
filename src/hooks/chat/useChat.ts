@@ -30,20 +30,28 @@ export const useChat = () => {
   } = useMessageOperations();
 
   const handleSendMessage = async (content: string, type: MessageType = 'text') => {
-    console.log('[useChat] Handling message:', { 
+    console.log('[DEBUG][useChat] Starting message send:', { 
       content, 
       type, 
       currentChatId,
-      isLoading 
+      isLoading,
+      messageCount: messages.length
     });
     
     await sendMessage(content, type, currentChatId, setMessages, setIsLoading, setMessageError);
+    
+    console.log('[DEBUG][useChat] Message send complete:', {
+      currentChatId,
+      isLoading,
+      hasError: !!messageError
+    });
   };
 
   const loadInitialMessages = async (chatId: string) => {
-    console.log('[useChat] Loading initial messages:', { 
+    console.log('[DEBUG][useChat] Loading initial messages:', { 
       chatId,
-      currentChatId: currentChatId 
+      currentChatId,
+      existingMessages: messages.length 
     });
     
     await loadInitial(
@@ -55,21 +63,36 @@ export const useChat = () => {
       setPage,
       setHasMore
     );
+    
+    console.log('[DEBUG][useChat] Initial load complete:', {
+      newCurrentChatId: currentChatId,
+      messageCount: messages.length,
+      hasError: !!messageError
+    });
   };
 
   const clearMessages = () => {
-    console.log('[useChat] Clearing messages');
+    console.log('[DEBUG][useChat] Clearing messages:', {
+      previousCount: messages.length,
+      currentChatId
+    });
     clear(setMessages, setMessageError, setPage, setHasMore);
   };
 
   const handleLoadMore = async () => {
-    console.log('[useChat] Loading more messages:', {
+    console.log('[DEBUG][useChat] Loading more messages:', {
       currentChatId,
       currentPage: page,
-      hasMore
+      hasMore,
+      currentCount: messages.length
     });
     
     await loadMoreMessages(currentChatId, messages, setMessages, setIsLoading);
+    
+    console.log('[DEBUG][useChat] Load more complete:', {
+      newCount: messages.length,
+      stillHasMore: hasMore
+    });
   };
 
   return {

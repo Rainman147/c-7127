@@ -22,24 +22,36 @@ const ChatInput = ({
 
   const handleSubmit = () => {
     if (message.trim() && !isLoading) {
-      console.log('[ChatInput] Sending message:', { 
-        message: message.trim(),
-        isLoading 
+      console.log('[DEBUG][ChatInput] Submitting message:', { 
+        messageLength: message.trim().length,
+        isLoading,
+        timestamp: new Date().toISOString()
       });
+      
       onSend(message);
       setMessage("");
+      
+      console.log('[DEBUG][ChatInput] Message submitted and cleared');
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
+      console.log('[DEBUG][ChatInput] Enter key pressed:', {
+        isLoading,
+        hasMessage: !!message.trim()
+      });
+      
       e.preventDefault();
       handleSubmit();
     }
   };
 
   const handleTranscriptionComplete = (transcription: string) => {
-    console.log('[ChatInput] Transcription complete:', { transcription });
+    console.log('[DEBUG][ChatInput] Transcription complete:', { 
+      transcriptionLength: transcription.length 
+    });
+    
     setMessage(transcription);
     onTranscriptionComplete(transcription);
     
@@ -51,9 +63,10 @@ const ChatInput = ({
   };
 
   const handleFileUpload = async (file: File) => {
-    console.log('[ChatInput] File uploaded:', { 
+    console.log('[DEBUG][ChatInput] File upload:', { 
       fileName: file.name,
-      fileSize: file.size 
+      fileSize: file.size,
+      fileType: file.type
     });
   };
 

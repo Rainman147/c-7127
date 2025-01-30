@@ -27,23 +27,40 @@ export const useMessageOperations = () => {
     setIsLoading: (loading: boolean) => void,
     setMessageError: (error: any) => void
   ) => {
-    console.log('[useMessageOperations] Starting message send:', { 
+    console.log('[DEBUG][useMessageOperations] Starting send:', { 
       contentLength: content.length,
       type,
       currentChatId,
-      authSession: await supabase.auth.getSession()
+      authStatus: 'checking...'
+    });
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    console.log('[DEBUG][useMessageOperations] Auth check complete:', {
+      hasAuthSession: !!session,
+      userId: session?.user?.id
     });
     
     setIsLoading(true);
     setMessageError(null);
 
     try {
-      console.log('[useMessageOperations] Invoking Gemini function');
+      console.log('[DEBUG][useMessageOperations] Invoking Gemini:', {
+        currentChatId,
+        contentPreview: content.substring(0, 50)
+      });
+      
       const response = await supabase.functions.invoke('gemini', {
         body: { 
           chatId: currentChatId,
           content
         }
+      });
+
+      console.log('[DEBUG][useMessageOperations] Gemini response received:', {
+        hasResponse: !!response,
+        hasData: !!response?.data,
+        status: response?.status
       });
 
       if (!response.data) {
@@ -53,6 +70,8 @@ export const useMessageOperations = () => {
       const reader = new ReadableStreamDefaultReader(response.data);
       let activeChatId = currentChatId;
       let receivedMetadata = false;
+
+      console.log('[DEBUG][useMessageOperations] Starting stream processing');
 
       while (true) {
         const { done, value } = await reader.read();
@@ -67,19 +86,23 @@ export const useMessageOperations = () => {
               const data = JSON.parse(line.slice(5)) as StreamMessage;
               
               if (data.type === 'metadata') {
-                console.log('[useMessageOperations] Received metadata:', data);
+                console.log('[DEBUG][useMessageOperations] Stream metadata:', data);
                 activeChatId = data.chatId;
                 receivedMetadata = true;
               } else if (data.type === 'chunk') {
-                console.log('[useMessageOperations] Received chunk');
-                // Handle content chunk - we'll get the full message at the end
+                console.log('[DEBUG][useMessageOperations] Received chunk');
               }
             } catch (e) {
-              console.error('[useMessageOperations] Error parsing chunk:', e);
+              console.error('[DEBUG][useMessageOperations] Chunk parse error:', e);
             }
           }
         }
       }
+
+      console.log('[DEBUG][useMessageOperations] Stream complete:', {
+        receivedMetadata,
+        activeChatId
+      });
 
       if (!receivedMetadata) {
         throw new Error('No metadata received from stream');
@@ -95,22 +118,32 @@ export const useMessageOperations = () => {
         .eq('chat_id', activeChatId)
         .order('created_at', { ascending: true });
 
+      console.log('[DEBUG][useMessageOperations] Final messages load:', {
+        success: !loadError,
+        messageCount: messages?.length
+      });
+
       if (loadError) {
-        console.error('[useMessageOperations] Error loading messages:', loadError);
+        console.error('[DEBUG][useMessageOperations] Load error:', loadError);
         throw loadError;
       }
 
       if (messages) {
-        console.log('[useMessageOperations] Loaded messages:', messages.length);
         setMessages(messages.map(mapDatabaseMessage));
       }
 
     } catch (error: any) {
-      console.error('[useMessageOperations] Operation failed:', error);
+      console.error('[DEBUG][useMessageOperations] Operation failed:', {
+        error,
+        code: error.code,
+        message: error.message
+      });
+      
       setMessageError({
         code: error.code || 'UNKNOWN_ERROR',
         message: error.message || 'Failed to send message'
       });
+      
       toast({
         title: "Error sending message",
         description: error.message || "Failed to send message. Please try again.",
