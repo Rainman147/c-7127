@@ -60,8 +60,12 @@ export const useMessageOperations = () => {
       console.log('[DEBUG][useMessageOperations] Gemini response received:', {
         hasResponse: !!response,
         hasData: !!response?.data,
-        status: response?.status
+        error: response.error
       });
+
+      if (response.error) {
+        throw response.error;
+      }
 
       if (!response.data) {
         throw new Error('No response data received');
