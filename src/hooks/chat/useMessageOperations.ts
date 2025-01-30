@@ -38,8 +38,18 @@ export const useMessageOperations = () => {
     
     console.log('[DEBUG][useMessageOperations] Auth check complete:', {
       hasAuthSession: !!session,
-      userId: session?.user?.id
+      userId: session?.user?.id,
+      sessionExpiry: session?.expires_at
     });
+
+    if (!session) {
+      console.error('[DEBUG][useMessageOperations] No auth session found');
+      setMessageError({
+        code: 'AUTH_ERROR',
+        message: 'No authentication session found'
+      });
+      return;
+    }
     
     setIsLoading(true);
     setMessageError(null);
@@ -47,7 +57,8 @@ export const useMessageOperations = () => {
     try {
       console.log('[DEBUG][useMessageOperations] Invoking Gemini:', {
         currentChatId,
-        contentPreview: content.substring(0, 50)
+        contentPreview: content.substring(0, 50),
+        requestTime: new Date().toISOString()
       });
       
       const response = await supabase.functions.invoke('gemini', {
@@ -60,14 +71,23 @@ export const useMessageOperations = () => {
       console.log('[DEBUG][useMessageOperations] Gemini response received:', {
         hasResponse: !!response,
         hasData: !!response?.data,
-        error: response.error
+        error: response.error,
+        responseTime: new Date().toISOString(),
+        status: response.status
       });
 
       if (response.error) {
+        console.error('[DEBUG][useMessageOperations] Gemini function error:', {
+          error: response.error,
+          status: response.status,
+          message: response.error.message,
+          details: response.error.details || 'No additional details'
+        });
         throw response.error;
       }
 
       if (!response.data) {
+        console.error('[DEBUG][useMessageOperations] No response data received');
         throw new Error('No response data received');
       }
 
@@ -79,7 +99,10 @@ export const useMessageOperations = () => {
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          console.log('[DEBUG][useMessageOperations] Stream complete');
+          break;
+        }
 
         const chunk = new TextDecoder().decode(value);
         const lines = chunk.split('\n');
@@ -90,29 +113,40 @@ export const useMessageOperations = () => {
               const data = JSON.parse(line.slice(5)) as StreamMessage;
               
               if (data.type === 'metadata') {
-                console.log('[DEBUG][useMessageOperations] Stream metadata:', data);
+                console.log('[DEBUG][useMessageOperations] Stream metadata:', {
+                  chatId: data.chatId,
+                  currentChatId,
+                  time: new Date().toISOString()
+                });
                 activeChatId = data.chatId;
                 receivedMetadata = true;
               } else if (data.type === 'chunk') {
                 console.log('[DEBUG][useMessageOperations] Received chunk');
               }
             } catch (e) {
-              console.error('[DEBUG][useMessageOperations] Chunk parse error:', e);
+              console.error('[DEBUG][useMessageOperations] Chunk parse error:', {
+                error: e,
+                line,
+                time: new Date().toISOString()
+              });
             }
           }
         }
       }
 
-      console.log('[DEBUG][useMessageOperations] Stream complete:', {
+      console.log('[DEBUG][useMessageOperations] Stream processing complete:', {
         receivedMetadata,
-        activeChatId
+        activeChatId,
+        time: new Date().toISOString()
       });
 
       if (!receivedMetadata) {
+        console.error('[DEBUG][useMessageOperations] No metadata in stream');
         throw new Error('No metadata received from stream');
       }
 
       if (!activeChatId) {
+        console.error('[DEBUG][useMessageOperations] No chat ID available');
         throw new Error('No chat ID available');
       }
 
@@ -124,11 +158,18 @@ export const useMessageOperations = () => {
 
       console.log('[DEBUG][useMessageOperations] Final messages load:', {
         success: !loadError,
-        messageCount: messages?.length
+        messageCount: messages?.length,
+        chatId: activeChatId,
+        time: new Date().toISOString()
       });
 
       if (loadError) {
-        console.error('[DEBUG][useMessageOperations] Load error:', loadError);
+        console.error('[DEBUG][useMessageOperations] Load error:', {
+          error: loadError,
+          code: loadError.code,
+          details: loadError.details,
+          time: new Date().toISOString()
+        });
         throw loadError;
       }
 
@@ -140,7 +181,9 @@ export const useMessageOperations = () => {
       console.error('[DEBUG][useMessageOperations] Operation failed:', {
         error,
         code: error.code,
-        message: error.message
+        message: error.message,
+        stack: error.stack,
+        time: new Date().toISOString()
       });
       
       setMessageError({
