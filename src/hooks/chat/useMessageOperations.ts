@@ -72,14 +72,12 @@ export const useMessageOperations = () => {
         hasResponse: !!response,
         hasData: !!response?.data,
         error: response.error,
-        responseTime: new Date().toISOString(),
-        status: response.status
+        responseTime: new Date().toISOString()
       });
 
       if (response.error) {
         console.error('[DEBUG][useMessageOperations] Gemini function error:', {
           error: response.error,
-          status: response.status,
           message: response.error.message,
           details: response.error.details || 'No additional details'
         });
