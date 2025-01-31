@@ -1,4 +1,4 @@
-import { MessageQueue } from './messageQueue';
+import { MessageQueue } from './messageQueue.ts';
 
 interface StreamMessage {
   type: 'metadata' | 'chunk' | 'error';
