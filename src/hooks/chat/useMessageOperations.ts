@@ -27,7 +27,6 @@ export const useMessageOperations = () => {
     setIsLoading: (loading: boolean) => void,
     setMessageError: (error: any) => void
   ) => {
-    // [DEBUG] Log initial message send attempt
     console.log('[DEBUG][useMessageOperations] Starting send:', { 
       contentLength: content.length,
       type,
@@ -37,7 +36,6 @@ export const useMessageOperations = () => {
     
     const { data: { session } } = await supabase.auth.getSession();
     
-    // [DEBUG] Log auth check result
     console.log('[DEBUG][useMessageOperations] Auth check complete:', {
       hasAuthSession: !!session,
       userId: session?.user?.id,
@@ -57,7 +55,6 @@ export const useMessageOperations = () => {
     setMessageError(null);
 
     try {
-      // [DEBUG] Log Gemini function invocation
       console.log('[DEBUG][useMessageOperations] Invoking Gemini:', {
         currentChatId,
         contentPreview: content.substring(0, 50),
@@ -71,7 +68,6 @@ export const useMessageOperations = () => {
         }
       });
 
-      // [DEBUG] Log Gemini response
       console.log('[DEBUG][useMessageOperations] Gemini response received:', {
         hasResponse: !!response,
         hasData: !!response?.data,
