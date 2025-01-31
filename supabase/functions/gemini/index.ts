@@ -33,9 +33,10 @@ serve(async (req) => {
       throw createAppError('Message content is required', 'VALIDATION_ERROR');
     }
 
-    console.log('Processing message:', {
+    console.log('[Gemini] Processing message:', {
       hasContent: !!content,
-      chatId
+      chatId,
+      timestamp: new Date().toISOString()
     });
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -54,27 +55,50 @@ serve(async (req) => {
       throw createAppError('Invalid authorization', 'VALIDATION_ERROR');
     }
 
+    console.log('[Gemini] User authenticated:', {
+      userId: user.id,
+      timestamp: new Date().toISOString()
+    });
+
     // Get or create chat session
     const chat = await chatService.getOrCreateChat(user.id, chatId, content.substring(0, 50));
-    console.log('Chat context:', chat);
+    console.log('[Gemini] Chat context:', {
+      chatId: chat.id,
+      isNew: !chatId,
+      timestamp: new Date().toISOString()
+    });
+
+    // Initialize stream response
+    const streamResponse = streamHandler.getResponse(corsHeaders);
 
     // Send initial metadata with chat ID
     await streamHandler.writeMetadata({ chatId: chat.id });
+    console.log('[Gemini] Sent metadata:', {
+      chatId: chat.id,
+      timestamp: new Date().toISOString()
+    });
 
     // Save user message
     const userMessage = await messageService.saveUserMessage(chat.id, content);
-    console.log('Saved user message:', userMessage);
+    console.log('[Gemini] Saved user message:', {
+      messageId: userMessage.id,
+      timestamp: new Date().toISOString()
+    });
 
     // Create initial assistant message placeholder
     const assistantMessage = await messageService.saveAssistantMessage(chat.id);
-    console.log('Created assistant message:', assistantMessage);
+    console.log('[Gemini] Created assistant message:', {
+      messageId: assistantMessage.id,
+      timestamp: new Date().toISOString()
+    });
 
     // Assemble context
     const context = await assembleContext(supabase, chat.id);
-    console.log('Assembled context:', {
+    console.log('[Gemini] Assembled context:', {
       hasTemplateInstructions: !!context.systemInstructions,
       hasPatientContext: !!context.patientContext,
-      messageHistoryCount: context.messageHistory.length
+      messageHistoryCount: context.messageHistory.length,
+      timestamp: new Date().toISOString()
     });
 
     const messages = [
@@ -90,8 +114,10 @@ serve(async (req) => {
       });
     }
 
-    // Set up streaming response
-    const streamResponse = streamHandler.getResponse(corsHeaders);
+    console.log('[Gemini] Starting OpenAI stream with messages:', {
+      messageCount: messages.length,
+      timestamp: new Date().toISOString()
+    });
 
     // Process with OpenAI and handle response
     openaiService.streamCompletion(messages, async (chunk: string) => {
@@ -104,13 +130,19 @@ serve(async (req) => {
         fullResponse
       );
       
-      console.log('Processing completed successfully', {
+      console.log('[Gemini] Processing completed successfully', {
         chatId: chat.id,
-        responseLength: fullResponse.length
+        responseLength: fullResponse.length,
+        timestamp: new Date().toISOString()
       });
     })
     .catch(async (error) => {
-      console.error('Streaming error:', error);
+      console.error('[Gemini] Streaming error:', {
+        error,
+        chatId: chat.id,
+        timestamp: new Date().toISOString()
+      });
+      
       const errorResponse = handleError(error);
       await streamHandler.writeChunk(JSON.stringify({ error: errorResponse }));
       
@@ -121,12 +153,20 @@ serve(async (req) => {
     })
     .finally(async () => {
       await streamHandler.close();
+      console.log('[Gemini] Stream closed:', {
+        chatId: chat.id,
+        timestamp: new Date().toISOString()
+      });
     });
 
     return streamResponse;
 
   } catch (error) {
-    console.error('Error in Gemini function:', error);
+    console.error('[Gemini] Function error:', {
+      error,
+      timestamp: new Date().toISOString()
+    });
+    
     const errorResponse = handleError(error);
     return new Response(
       JSON.stringify(errorResponse),
