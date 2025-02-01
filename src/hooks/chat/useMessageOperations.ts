@@ -14,10 +14,54 @@ interface StreamChunk {
   content: string;
 }
 
-type StreamMessage = StreamMetadata | StreamChunk;
+interface StreamError {
+  type: 'error';
+  error: string;
+}
+
+type StreamMessage = StreamMetadata | StreamChunk | StreamError;
 
 export const useMessageOperations = () => {
   const { toast } = useToast();
+
+  const handleStreamMessage = async (
+    data: StreamMessage,
+    activeChatId: string | null,
+    setMessages: (messages: any[]) => void,
+    setMessageError: (error: any) => void
+  ) => {
+    console.log('[DEBUG][useMessageOperations] Stream message received:', {
+      type: data.type,
+      chatId: 'chatId' in data ? data.chatId : undefined,
+      hasContent: 'content' in data ? !!data.content : false,
+      time: new Date().toISOString()
+    });
+
+    if (data.type === 'error') {
+      setMessageError({
+        code: 'STREAM_ERROR',
+        message: data.error
+      });
+      return;
+    }
+
+    if (data.type === 'metadata' && data.chatId) {
+      activeChatId = data.chatId;
+      return;
+    }
+
+    if (data.type === 'chunk' && activeChatId && data.content) {
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_id', activeChatId)
+        .order('created_at', { ascending: true });
+
+      if (messages) {
+        setMessages(messages.map(mapDatabaseMessage));
+      }
+    }
+  };
 
   const handleSendMessage = async (
     content: string,
@@ -31,17 +75,11 @@ export const useMessageOperations = () => {
       contentLength: content.length,
       type,
       currentChatId,
-      authStatus: 'checking...'
+      time: new Date().toISOString()
     });
     
     const { data: { session } } = await supabase.auth.getSession();
     
-    console.log('[DEBUG][useMessageOperations] Auth check complete:', {
-      hasAuthSession: !!session,
-      userId: session?.user?.id,
-      sessionExpiry: session?.expires_at
-    });
-
     if (!session) {
       console.error('[DEBUG][useMessageOperations] No auth session found');
       setMessageError({
@@ -58,7 +96,7 @@ export const useMessageOperations = () => {
       console.log('[DEBUG][useMessageOperations] Invoking Gemini:', {
         currentChatId,
         contentPreview: content.substring(0, 50),
-        requestTime: new Date().toISOString()
+        time: new Date().toISOString()
       });
       
       const response = await supabase.functions.invoke('gemini', {
@@ -72,107 +110,29 @@ export const useMessageOperations = () => {
         hasResponse: !!response,
         hasData: !!response?.data,
         error: response.error,
-        responseTime: new Date().toISOString()
+        time: new Date().toISOString()
       });
 
-      if (response.error) {
-        console.error('[DEBUG][useMessageOperations] Gemini function error:', {
-          error: response.error,
-          message: response.error.message,
-          details: response.error.details || 'No additional details'
-        });
-        throw response.error;
-      }
+      if (response.error) throw response.error;
 
-      if (!response.data) {
-        console.error('[DEBUG][useMessageOperations] No response data received');
-        throw new Error('No response data received');
-      }
-
-      const reader = new ReadableStreamDefaultReader(response.data);
+      const reader = new TextDecoder();
       let activeChatId = currentChatId;
-      let receivedMetadata = false;
 
-      console.log('[DEBUG][useMessageOperations] Starting stream processing');
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          console.log('[DEBUG][useMessageOperations] Stream complete');
-          break;
-        }
-
-        const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(5)) as StreamMessage;
-              
-              if (data.type === 'metadata') {
-                console.log('[DEBUG][useMessageOperations] Stream metadata:', {
-                  chatId: data.chatId,
-                  currentChatId,
-                  time: new Date().toISOString()
-                });
-                activeChatId = data.chatId;
-                receivedMetadata = true;
-              } else if (data.type === 'chunk') {
-                console.log('[DEBUG][useMessageOperations] Received chunk');
-              }
-            } catch (e) {
-              console.error('[DEBUG][useMessageOperations] Chunk parse error:', {
-                error: e,
-                line,
-                time: new Date().toISOString()
-              });
-            }
+      // Process the response as Server-Sent Events
+      const lines = reader.decode(response.data).split('\n');
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(5)) as StreamMessage;
+            await handleStreamMessage(data, activeChatId, setMessages, setMessageError);
+          } catch (e) {
+            console.error('[DEBUG][useMessageOperations] Stream parse error:', {
+              error: e,
+              line,
+              time: new Date().toISOString()
+            });
           }
         }
-      }
-
-      console.log('[DEBUG][useMessageOperations] Stream processing complete:', {
-        receivedMetadata,
-        activeChatId,
-        time: new Date().toISOString()
-      });
-
-      if (!receivedMetadata) {
-        console.error('[DEBUG][useMessageOperations] No metadata in stream');
-        throw new Error('No metadata received from stream');
-      }
-
-      if (!activeChatId) {
-        console.error('[DEBUG][useMessageOperations] No chat ID available');
-        throw new Error('No chat ID available');
-      }
-
-      const { data: messages, error: loadError } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('chat_id', activeChatId)
-        .order('created_at', { ascending: true });
-
-      console.log('[DEBUG][useMessageOperations] Final messages load:', {
-        success: !loadError,
-        messageCount: messages?.length,
-        chatId: activeChatId,
-        time: new Date().toISOString()
-      });
-
-      if (loadError) {
-        console.error('[DEBUG][useMessageOperations] Load error:', {
-          error: loadError,
-          code: loadError.code,
-          details: loadError.details,
-          time: new Date().toISOString()
-        });
-        throw loadError;
-      }
-
-      if (messages) {
-        setMessages(messages.map(mapDatabaseMessage));
       }
 
     } catch (error: any) {

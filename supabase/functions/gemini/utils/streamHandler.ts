@@ -9,61 +9,24 @@ interface StreamMessage {
 
 export class StreamHandler {
   private encoder: TextEncoder;
-  private streamController: ReadableStreamDefaultController | null = null;
-  private stream: ReadableStream;
-  private messageQueue: MessageQueue<StreamMessage>;
+  private streamController: TransformStream;
+  private writer: WritableStreamDefaultWriter;
 
   constructor() {
     this.encoder = new TextEncoder();
-    this.messageQueue = new MessageQueue<StreamMessage>();
-    
-    this.stream = new ReadableStream({
-      start: (controller) => {
-        this.streamController = controller;
-        console.log("[StreamHandler] Stream initialized successfully");
-      },
-      cancel: () => {
-        console.log("[StreamHandler] Stream cancelled by client");
-        this.cleanup();
-      }
-    });
-  }
-
-  private validateStreamState(): boolean {
-    if (!this.streamController) {
-      console.error("[StreamHandler] Stream controller not initialized");
-      return false;
-    }
-    return true;
-  }
-
-  private async processMessage(message: StreamMessage): Promise<void> {
-    if (!this.validateStreamState()) {
-      return;
-    }
-
-    try {
-      const encodedMessage = this.encoder.encode(
-        `data: ${JSON.stringify(message)}\n\n`
-      );
-      
-      this.streamController!.enqueue(encodedMessage);
-      console.log(`[StreamHandler] Message processed: ${message.type}`);
-      
-    } catch (error) {
-      console.error(`[StreamHandler] Error processing message:`, error);
-      await this.writeError("Failed to process message");
-    }
+    this.streamController = new TransformStream();
+    this.writer = this.streamController.writable.getWriter();
+    console.log("[StreamHandler] Stream initialized with SSE configuration");
   }
 
   getResponse(headers: Record<string, string>): Response {
     console.log("[StreamHandler] Creating SSE response");
-    return new Response(this.stream, {
+    return new Response(this.streamController.readable, {
       headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
         ...headers,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
       },
     });
   }
@@ -75,7 +38,7 @@ export class StreamHandler {
     }
 
     console.log("[StreamHandler] Writing metadata:", metadata);
-    await this.processMessage({
+    await this.writeEvent({
       type: 'metadata',
       chatId: metadata.chatId
     });
@@ -88,7 +51,7 @@ export class StreamHandler {
     }
     
     console.log("[StreamHandler] Writing chunk");
-    await this.processMessage({
+    await this.writeEvent({
       type: 'chunk',
       content
     });
@@ -96,26 +59,28 @@ export class StreamHandler {
 
   async writeError(error: string): Promise<void> {
     console.error("[StreamHandler] Writing error:", error);
-    await this.processMessage({
+    await this.writeEvent({
       type: 'error',
       error
     });
   }
 
-  private cleanup(): void {
-    console.log("[StreamHandler] Cleaning up resources");
-    this.messageQueue.clear();
+  private async writeEvent(data: StreamMessage): Promise<void> {
+    try {
+      const encoded = this.encoder.encode(`data: ${JSON.stringify(data)}\n\n`);
+      await this.writer.write(encoded);
+      console.log(`[StreamHandler] Event written: ${data.type}`);
+    } catch (error) {
+      console.error("[StreamHandler] Error writing event:", error);
+    }
   }
 
   async close(): Promise<void> {
     console.log("[StreamHandler] Closing stream");
-    if (this.validateStreamState()) {
-      try {
-        this.streamController!.close();
-        this.cleanup();
-      } catch (error) {
-        console.error("[StreamHandler] Error closing stream:", error);
-      }
+    try {
+      await this.writer.close();
+    } catch (error) {
+      console.error("[StreamHandler] Error closing stream:", error);
     }
   }
 }
