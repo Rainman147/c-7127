@@ -5,11 +5,13 @@ export class StreamHandler {
   private isStreamClosed = false;
 
   constructor() {
+    console.log('[StreamHandler] Initializing');
     this.stream = new TransformStream();
     this.writer = this.stream.writable.getWriter();
   }
 
   getResponse(headers: Record<string, string>) {
+    console.log('[StreamHandler] Creating response with headers:', headers);
     return new Response(this.stream.readable, {
       headers: {
         ...headers,

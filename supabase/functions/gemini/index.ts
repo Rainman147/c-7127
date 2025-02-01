@@ -16,6 +16,12 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('[Gemini] Request received:', {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries())
+  });
+
   // Initialize response stream early
   const services = ServiceContainer.getInstance();
   const streamHandler = services.stream;
@@ -23,6 +29,7 @@ serve(async (req) => {
 
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('[Gemini] Handling OPTIONS request');
     return new Response(null, { 
       status: 204,
       headers: corsHeaders 
@@ -30,25 +37,31 @@ serve(async (req) => {
   }
 
   try {
+    console.log('[Gemini] Starting request processing');
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const apiKey = Deno.env.get('OPENAI_API_KEY');
 
     if (!apiKey) {
+      console.error('[Gemini] OpenAI API key missing');
       throw createAppError('OpenAI API key not configured', 'VALIDATION_ERROR');
     }
 
     console.log('[Gemini] Services initialized');
 
     const { content, chatId } = await req.json();
+    console.log('[Gemini] Request payload:', { chatId, contentLength: content?.length });
     
     if (!content?.trim()) {
+      console.error('[Gemini] Empty content received');
       throw createAppError('Message content is required', 'VALIDATION_ERROR');
     }
 
     // 1. Auth validation
     const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
     if (!authHeader) {
+      console.error('[Gemini] Missing authorization header');
       throw createAppError('No authorization header', 'AUTH_ERROR');
     }
 
@@ -130,7 +143,10 @@ serve(async (req) => {
       await streamHandler.writeChunk(chunk);
     });
 
+    console.log('[Gemini] Stream processing completed');
     await streamHandler.close();
+    
+    console.log('[Gemini] Returning response with headers:', corsHeaders);
     return response;
 
   } catch (error) {
