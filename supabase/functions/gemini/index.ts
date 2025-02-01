@@ -8,7 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, x-requested-with',
-  'Access-Control-Max-Age': '86400',
   'Content-Type': 'text/event-stream',
   'Cache-Control': 'no-cache, no-transform',
   'Connection': 'keep-alive',
@@ -17,7 +16,8 @@ const corsHeaders = {
 
 serve(async (req) => {
   // Initialize response stream early
-  const streamHandler = new ServiceContainer.getInstance().stream;
+  const services = ServiceContainer.getInstance();
+  const streamHandler = services.stream;
   const response = streamHandler.getResponse(corsHeaders);
 
   // Handle CORS preflight requests
@@ -37,7 +37,6 @@ serve(async (req) => {
       throw createAppError('OpenAI API key not configured', 'VALIDATION_ERROR');
     }
 
-    const services = ServiceContainer.initialize(supabaseUrl, supabaseKey, apiKey);
     console.log('[Gemini] Services initialized');
 
     const { content, chatId } = await req.json();
@@ -83,7 +82,7 @@ serve(async (req) => {
     });
 
     // 3. Initialize stream and send metadata
-    await services.stream.writeMetadata({ 
+    await streamHandler.writeMetadata({ 
       chatId: chat.id,
       status: 'created',
       timestamp: new Date().toISOString()
@@ -127,10 +126,10 @@ serve(async (req) => {
 
     // 7. Process with OpenAI and handle response
     await services.openai.streamCompletion(messages, async (chunk: string) => {
-      await services.stream.writeChunk(chunk);
+      await streamHandler.writeChunk(chunk);
     });
 
-    await services.stream.close();
+    await streamHandler.close();
     return response;
 
   } catch (error) {
