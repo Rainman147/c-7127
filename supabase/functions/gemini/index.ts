@@ -22,12 +22,7 @@ serve(async (req) => {
     headers: Object.fromEntries(req.headers.entries())
   });
 
-  // Initialize response stream early
-  const services = ServiceContainer.getInstance();
-  const streamHandler = services.stream;
-  const response = streamHandler.getResponse(corsHeaders);
-
-  // Handle CORS preflight requests
+  // Handle CORS preflight requests first
   if (req.method === 'OPTIONS') {
     console.log('[Gemini] Handling OPTIONS request');
     return new Response(null, { 
@@ -37,19 +32,32 @@ serve(async (req) => {
   }
 
   try {
-    console.log('[Gemini] Starting request processing');
-    
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const apiKey = Deno.env.get('OPENAI_API_KEY');
+    // Initialize ServiceContainer first with required env variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const openaiKey = Deno.env.get('OPENAI_API_KEY');
 
-    if (!apiKey) {
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('[Gemini] Missing Supabase configuration');
+      throw createAppError('Supabase configuration missing', 'VALIDATION_ERROR');
+    }
+
+    if (!openaiKey) {
       console.error('[Gemini] OpenAI API key missing');
       throw createAppError('OpenAI API key not configured', 'VALIDATION_ERROR');
     }
 
-    console.log('[Gemini] Services initialized');
+    // Initialize ServiceContainer before getting instance
+    console.log('[Gemini] Initializing ServiceContainer');
+    ServiceContainer.initialize(supabaseUrl, supabaseKey, openaiKey);
+    
+    // Get services after initialization
+    const services = ServiceContainer.getInstance();
+    const streamHandler = services.stream;
+    const response = streamHandler.getResponse(corsHeaders);
 
+    console.log('[Gemini] Starting request processing');
+    
     const { content, chatId } = await req.json();
     console.log('[Gemini] Request payload:', { chatId, contentLength: content?.length });
     
@@ -155,14 +163,7 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     });
     
-    try {
-      // Attempt to write error to stream before closing
-      await streamHandler.writeError(error);
-      await streamHandler.close();
-    } catch (streamError) {
-      console.error('[Gemini] Failed to write error to stream:', streamError);
-    }
-
+    // Always return error response with CORS headers
     return new Response(
       JSON.stringify({ error: error.message }), 
       { 
