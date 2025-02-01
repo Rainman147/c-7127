@@ -6,7 +6,13 @@ import { ServiceContainer } from "./services/ServiceContainer.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, x-requested-with',
+  'Access-Control-Max-Age': '86400',
+  'Content-Type': 'text/event-stream',
+  'Cache-Control': 'no-cache, no-transform',
+  'Connection': 'keep-alive',
+  'X-Accel-Buffering': 'no'
 };
 
 serve(async (req) => {
@@ -14,8 +20,12 @@ serve(async (req) => {
   const streamHandler = new ServiceContainer.getInstance().stream;
   const response = streamHandler.getResponse(corsHeaders);
 
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      status: 204,
+      headers: corsHeaders 
+    });
   }
 
   try {
@@ -137,6 +147,12 @@ serve(async (req) => {
       console.error('[Gemini] Failed to write error to stream:', streamError);
     }
 
-    return response;
+    return new Response(
+      JSON.stringify({ error: error.message }), 
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
   }
 });
