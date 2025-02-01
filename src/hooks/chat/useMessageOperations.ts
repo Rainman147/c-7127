@@ -67,62 +67,6 @@ export const useMessageOperations = () => {
     }
   };
 
-  const setupEventSource = (
-    url: string,
-    activeChatId: string | null,
-    setMessages: (messages: any[]) => void,
-    setIsLoading: (loading: boolean) => void,
-    setMessageError: (error: any) => void,
-    retryCount = 0
-  ): EventSource => {
-    const eventSource = new EventSource(url);
-    
-    eventSource.onmessage = async (event) => {
-      try {
-        const data = JSON.parse(event.data) as StreamMessage;
-        await handleStreamMessage(data, activeChatId, setMessages, setMessageError);
-      } catch (e) {
-        console.error('[DEBUG][useMessageOperations] Stream parse error:', {
-          error: e,
-          data: event.data,
-          time: new Date().toISOString()
-        });
-      }
-    };
-
-    eventSource.onerror = async (error) => {
-      console.error('[DEBUG][useMessageOperations] Stream error:', {
-        error,
-        retryCount,
-        time: new Date().toISOString()
-      });
-
-      eventSource.close();
-
-      if (retryCount < MAX_RETRIES) {
-        console.log(`[DEBUG][useMessageOperations] Retrying connection (${retryCount + 1}/${MAX_RETRIES})`);
-        
-        setTimeout(() => {
-          setupEventSource(url, activeChatId, setMessages, setIsLoading, setMessageError, retryCount + 1);
-        }, RETRY_DELAY * Math.pow(2, retryCount)); // Exponential backoff
-      } else {
-        setIsLoading(false);
-        setMessageError({
-          code: 'STREAM_ERROR',
-          message: 'Connection lost after multiple retries. Please try again.'
-        });
-        
-        toast({
-          title: "Connection Error",
-          description: "Failed to maintain connection after multiple attempts.",
-          variant: "destructive",
-        });
-      }
-    };
-
-    return eventSource;
-  };
-
   const handleSendMessage = async (
     content: string,
     type: MessageType = 'text',
@@ -153,7 +97,12 @@ export const useMessageOperations = () => {
     setMessageError(null);
 
     try {
-      const initResponse = await supabase.functions.invoke('gemini', {
+      // Initialize streaming connection with Gemini
+      const { data: { streamUrl }, error: initError } = await supabase.functions.invoke('gemini', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: { 
           chatId: currentChatId,
           content,
@@ -161,18 +110,47 @@ export const useMessageOperations = () => {
         }
       });
 
-      if (initResponse.error) throw initResponse.error;
+      if (initError) throw initError;
+      if (!streamUrl) throw new Error('No stream URL received');
 
-      const { streamUrl } = initResponse.data;
+      console.log('[DEBUG][useMessageOperations] Stream URL received:', streamUrl);
       let activeChatId = currentChatId;
 
-      const eventSource = setupEventSource(
-        streamUrl,
-        activeChatId,
-        setMessages,
-        setIsLoading,
-        setMessageError
-      );
+      // Set up EventSource for streaming
+      const eventSource = new EventSource(streamUrl);
+      
+      eventSource.onmessage = async (event) => {
+        try {
+          const data = JSON.parse(event.data) as StreamMessage;
+          await handleStreamMessage(data, activeChatId, setMessages, setMessageError);
+        } catch (e) {
+          console.error('[DEBUG][useMessageOperations] Stream parse error:', {
+            error: e,
+            data: event.data,
+            time: new Date().toISOString()
+          });
+        }
+      };
+
+      eventSource.onerror = async (error) => {
+        console.error('[DEBUG][useMessageOperations] Stream error:', {
+          error,
+          time: new Date().toISOString()
+        });
+
+        eventSource.close();
+        setIsLoading(false);
+        setMessageError({
+          code: 'STREAM_ERROR',
+          message: 'Connection lost. Please try again.'
+        });
+        
+        toast({
+          title: "Connection Error",
+          description: "Failed to maintain connection. Please try again.",
+          variant: "destructive",
+        });
+      };
 
       // Cleanup function
       return () => {
