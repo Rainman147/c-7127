@@ -1,12 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { assembleContext } from "./utils/contextAssembler.ts";
 import { handleError, createAppError } from "./utils/errorHandler.ts";
-import { StreamHandler } from "./utils/streamHandler.ts";
-import { OpenAIService } from "./services/openaiService.ts";
-import { ChatService } from "./services/chatService.ts";
-import { MessageService } from "./services/messageService.ts";
+import { ServiceContainer } from "./services/ServiceContainer.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,6 +23,10 @@ serve(async (req) => {
   }
 
   try {
+    // Initialize services
+    const services = ServiceContainer.initialize(supabaseUrl, supabaseKey, apiKey);
+    console.log('[Gemini] Services initialized');
+
     const { content, chatId } = await req.json();
     
     if (!content?.trim()) {
@@ -45,8 +45,7 @@ serve(async (req) => {
       throw createAppError('No authorization header', 'AUTH_ERROR');
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader);
+    const { data: { user }, error: authError } = await services.supabase.auth.getUser(authHeader);
     
     if (authError || !user) {
       console.error('[Gemini] Auth error:', { authError });
@@ -58,14 +57,8 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     });
 
-    // Initialize services
-    const chatService = new ChatService(supabaseUrl, supabaseKey);
-    const messageService = new MessageService(supabaseUrl, supabaseKey);
-    const openaiService = new OpenAIService(apiKey);
-    const streamHandler = new StreamHandler();
-
     // 2. Get or create chat with validation
-    const chat = await chatService.getOrCreateChat(
+    const chat = await services.chat.getOrCreateChat(
       user.id, 
       chatId, 
       content.substring(0, 50)
@@ -83,8 +76,8 @@ serve(async (req) => {
     });
 
     // 3. Initialize stream and send metadata
-    const streamResponse = streamHandler.getResponse(corsHeaders);
-    await streamHandler.writeMetadata({ 
+    const streamResponse = services.stream.getResponse(corsHeaders);
+    await services.stream.writeMetadata({ 
       chatId: chat.id,
       status: 'created',
       timestamp: new Date().toISOString()
@@ -96,21 +89,21 @@ serve(async (req) => {
     });
 
     // 4. Save user message
-    const userMessage = await messageService.saveUserMessage(chat.id, content);
+    const userMessage = await services.message.saveUserMessage(chat.id, content);
     console.log('[Gemini] User message saved:', {
       messageId: userMessage.id,
       timestamp: new Date().toISOString()
     });
 
     // 5. Create assistant message placeholder
-    const assistantMessage = await messageService.saveAssistantMessage(chat.id);
+    const assistantMessage = await services.message.saveAssistantMessage(chat.id);
     console.log('[Gemini] Assistant message created:', {
       messageId: assistantMessage.id,
       timestamp: new Date().toISOString()
     });
 
     // 6. Assemble context and process with OpenAI
-    const context = await assembleContext(supabase, chat.id);
+    const context = await assembleContext(services.supabase, chat.id);
     console.log('[Gemini] Context assembled:', {
       hasTemplateInstructions: !!context.systemInstructions,
       hasPatientContext: !!context.patientContext,
@@ -132,11 +125,11 @@ serve(async (req) => {
     }
 
     // 7. Process with OpenAI and handle response
-    openaiService.streamCompletion(messages, async (chunk: string) => {
-      await streamHandler.writeChunk(chunk);
+    services.openai.streamCompletion(messages, async (chunk: string) => {
+      await services.stream.writeChunk(chunk);
     })
     .then(async (fullResponse) => {
-      await messageService.updateMessageStatus(
+      await services.message.updateMessageStatus(
         assistantMessage.id,
         'delivered',
         fullResponse
@@ -156,15 +149,15 @@ serve(async (req) => {
       });
       
       const errorResponse = handleError(error);
-      await streamHandler.writeChunk(JSON.stringify({ error: errorResponse }));
+      await services.stream.writeChunk(JSON.stringify({ error: errorResponse }));
       
-      await messageService.updateMessageStatus(
+      await services.message.updateMessageStatus(
         assistantMessage.id,
         'failed'
       );
     })
     .finally(async () => {
-      await streamHandler.close();
+      await services.stream.close();
       console.log('[Gemini] Stream closed:', {
         chatId: chat.id,
         timestamp: new Date().toISOString()
