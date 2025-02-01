@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useMessageState } from './useMessageState';
 import { useMessagePagination } from './useMessagePagination';
 import { useMessageOperations } from './useMessageOperations';
@@ -9,10 +10,14 @@ export const useChat = () => {
     setMessages,
     isLoading,
     setIsLoading,
+    isCreatingChat,
+    setIsCreatingChat,
     messageError,
     setMessageError,
     currentChatId,
     setCurrentChatId,
+    updateChatId,
+    handleChatCreationError,
   } = useMessageState();
 
   const {
@@ -29,6 +34,20 @@ export const useChat = () => {
     clearMessages: clear,
   } = useMessageOperations();
 
+  // Prevent navigation during chat creation
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isCreatingChat) {
+        e.preventDefault();
+        e.returnValue = "Chat creation in progress...";
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isCreatingChat]);
+
   const handleSendMessage = async (content: string, type: MessageType = 'text') => {
     console.log('[DEBUG][useChat] Starting message send:', { 
       content, 
@@ -38,7 +57,23 @@ export const useChat = () => {
       messageCount: messages.length
     });
     
-    await sendMessage(content, type, currentChatId, setMessages, setIsLoading, setMessageError);
+    setIsCreatingChat(!currentChatId);
+    
+    try {
+      await sendMessage(
+        content, 
+        type, 
+        currentChatId, 
+        setMessages, 
+        setIsLoading, 
+        setMessageError,
+        updateChatId
+      );
+    } catch (error) {
+      handleChatCreationError();
+    } finally {
+      setIsCreatingChat(false);
+    }
     
     console.log('[DEBUG][useChat] Message send complete:', {
       currentChatId,
@@ -98,12 +133,13 @@ export const useChat = () => {
   return {
     messages,
     isLoading,
+    isCreatingChat,
     messageError,
     currentChatId,
     hasMore,
     handleSendMessage,
-    loadInitialMessages,
-    loadMoreMessages: handleLoadMore,
-    clearMessages,
+    loadInitialMessages: loadInitial,
+    loadMoreMessages,
+    clearMessages: clear,
   };
 };

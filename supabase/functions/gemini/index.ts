@@ -33,68 +33,85 @@ serve(async (req) => {
       throw createAppError('Message content is required', 'VALIDATION_ERROR');
     }
 
-    console.log('[Gemini] Processing message:', {
+    console.log('[Gemini] Starting request processing:', {
       hasContent: !!content,
       chatId,
       timestamp: new Date().toISOString()
     });
 
+    // 1. Auth validation
+    const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
+    if (!authHeader) {
+      throw createAppError('No authorization header', 'AUTH_ERROR');
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey);
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader);
+    
+    if (authError || !user) {
+      console.error('[Gemini] Auth error:', { authError });
+      throw createAppError('Invalid authorization', 'AUTH_ERROR');
+    }
+
+    console.log('[Gemini] Auth validated:', {
+      userId: user.id,
+      timestamp: new Date().toISOString()
+    });
+
+    // Initialize services
     const chatService = new ChatService(supabaseUrl, supabaseKey);
     const messageService = new MessageService(supabaseUrl, supabaseKey);
     const openaiService = new OpenAIService(apiKey);
     const streamHandler = new StreamHandler();
 
-    const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
-    if (!authHeader) {
-      throw createAppError('No authorization header', 'VALIDATION_ERROR');
+    // 2. Get or create chat with validation
+    const chat = await chatService.getOrCreateChat(
+      user.id, 
+      chatId, 
+      content.substring(0, 50)
+    );
+
+    if (!chat?.id) {
+      console.error('[Gemini] Chat creation failed');
+      throw createAppError('Failed to create or get chat', 'CHAT_ERROR');
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader);
-    if (authError || !user) {
-      throw createAppError('Invalid authorization', 'VALIDATION_ERROR');
-    }
-
-    console.log('[Gemini] User authenticated:', {
-      userId: user.id,
-      timestamp: new Date().toISOString()
-    });
-
-    // Get or create chat session
-    const chat = await chatService.getOrCreateChat(user.id, chatId, content.substring(0, 50));
-    console.log('[Gemini] Chat context:', {
+    console.log('[Gemini] Chat context established:', {
       chatId: chat.id,
       isNew: !chatId,
       timestamp: new Date().toISOString()
     });
 
-    // Initialize stream response
+    // 3. Initialize stream and send metadata
     const streamResponse = streamHandler.getResponse(corsHeaders);
+    await streamHandler.writeMetadata({ 
+      chatId: chat.id,
+      status: 'created',
+      timestamp: new Date().toISOString()
+    });
 
-    // Send initial metadata with chat ID
-    await streamHandler.writeMetadata({ chatId: chat.id });
-    console.log('[Gemini] Sent metadata:', {
+    console.log('[Gemini] Metadata sent:', {
       chatId: chat.id,
       timestamp: new Date().toISOString()
     });
 
-    // Save user message
+    // 4. Save user message
     const userMessage = await messageService.saveUserMessage(chat.id, content);
-    console.log('[Gemini] Saved user message:', {
+    console.log('[Gemini] User message saved:', {
       messageId: userMessage.id,
       timestamp: new Date().toISOString()
     });
 
-    // Create initial assistant message placeholder
+    // 5. Create assistant message placeholder
     const assistantMessage = await messageService.saveAssistantMessage(chat.id);
-    console.log('[Gemini] Created assistant message:', {
+    console.log('[Gemini] Assistant message created:', {
       messageId: assistantMessage.id,
       timestamp: new Date().toISOString()
     });
 
-    // Assemble context
+    // 6. Assemble context and process with OpenAI
     const context = await assembleContext(supabase, chat.id);
-    console.log('[Gemini] Assembled context:', {
+    console.log('[Gemini] Context assembled:', {
       hasTemplateInstructions: !!context.systemInstructions,
       hasPatientContext: !!context.patientContext,
       messageHistoryCount: context.messageHistory.length,
@@ -114,12 +131,7 @@ serve(async (req) => {
       });
     }
 
-    console.log('[Gemini] Starting OpenAI stream with messages:', {
-      messageCount: messages.length,
-      timestamp: new Date().toISOString()
-    });
-
-    // Process with OpenAI and handle response
+    // 7. Process with OpenAI and handle response
     openaiService.streamCompletion(messages, async (chunk: string) => {
       await streamHandler.writeChunk(chunk);
     })
