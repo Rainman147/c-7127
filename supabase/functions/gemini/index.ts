@@ -32,6 +32,10 @@ serve(async (req) => {
   }
 
   try {
+    if (req.method !== 'POST') {
+      throw createAppError('Only POST method is allowed', 'VALIDATION_ERROR');
+    }
+
     // Initialize ServiceContainer first with required env variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -58,7 +62,9 @@ serve(async (req) => {
 
     console.log('[Gemini] Starting request processing');
     
-    const { content, chatId } = await req.json();
+    const requestData = await req.json();
+    const { content, chatId } = requestData;
+    
     console.log('[Gemini] Request payload:', { chatId, contentLength: content?.length });
     
     if (!content?.trim()) {
@@ -165,9 +171,13 @@ serve(async (req) => {
     
     // Always return error response with CORS headers
     return new Response(
-      JSON.stringify({ error: error.message }), 
+      JSON.stringify({ 
+        error: error.message,
+        code: error.code || 'UNKNOWN_ERROR',
+        retryable: error.retryable || false
+      }), 
       { 
-        status: 500,
+        status: error.status || 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );

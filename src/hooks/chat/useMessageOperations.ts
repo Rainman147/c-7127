@@ -22,9 +22,6 @@ interface StreamError {
 
 type StreamMessage = StreamMetadata | StreamChunk | StreamError;
 
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
-
 export const useMessageOperations = () => {
   const { toast } = useToast();
 
@@ -97,8 +94,7 @@ export const useMessageOperations = () => {
     setMessageError(null);
 
     try {
-      // Initialize streaming connection with Gemini
-      const { data: { streamUrl }, error: initError } = await supabase.functions.invoke('gemini', {
+      const { data, error } = await supabase.functions.invoke('gemini', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -110,14 +106,19 @@ export const useMessageOperations = () => {
         }
       });
 
-      if (initError) throw initError;
-      if (!streamUrl) throw new Error('No stream URL received');
+      if (error) {
+        console.error('[DEBUG][useMessageOperations] Gemini function error:', error);
+        throw error;
+      }
 
-      console.log('[DEBUG][useMessageOperations] Stream URL received:', streamUrl);
+      if (!data?.streamUrl) {
+        throw new Error('No stream URL received from Gemini function');
+      }
+
+      console.log('[DEBUG][useMessageOperations] Stream URL received:', data.streamUrl);
       let activeChatId = currentChatId;
 
-      // Set up EventSource for streaming
-      const eventSource = new EventSource(streamUrl);
+      const eventSource = new EventSource(data.streamUrl);
       
       eventSource.onmessage = async (event) => {
         try {
@@ -152,7 +153,6 @@ export const useMessageOperations = () => {
         });
       };
 
-      // Cleanup function
       return () => {
         console.log('[DEBUG][useMessageOperations] Cleaning up EventSource');
         eventSource.close();
