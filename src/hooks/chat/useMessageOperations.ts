@@ -17,9 +17,13 @@ interface StreamChunk {
 interface StreamError {
   type: 'error';
   error: string;
+  code?: string;
 }
 
 type StreamMessage = StreamMetadata | StreamChunk | StreamError;
+
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
 
 export const useMessageOperations = () => {
   const { toast } = useToast();
@@ -39,7 +43,7 @@ export const useMessageOperations = () => {
 
     if (data.type === 'error') {
       setMessageError({
-        code: 'STREAM_ERROR',
+        code: data.code || 'STREAM_ERROR',
         message: data.error
       });
       return;
@@ -61,6 +65,62 @@ export const useMessageOperations = () => {
         setMessages(messages.map(mapDatabaseMessage));
       }
     }
+  };
+
+  const setupEventSource = (
+    url: string,
+    activeChatId: string | null,
+    setMessages: (messages: any[]) => void,
+    setIsLoading: (loading: boolean) => void,
+    setMessageError: (error: any) => void,
+    retryCount = 0
+  ): EventSource => {
+    const eventSource = new EventSource(url);
+    
+    eventSource.onmessage = async (event) => {
+      try {
+        const data = JSON.parse(event.data) as StreamMessage;
+        await handleStreamMessage(data, activeChatId, setMessages, setMessageError);
+      } catch (e) {
+        console.error('[DEBUG][useMessageOperations] Stream parse error:', {
+          error: e,
+          data: event.data,
+          time: new Date().toISOString()
+        });
+      }
+    };
+
+    eventSource.onerror = async (error) => {
+      console.error('[DEBUG][useMessageOperations] Stream error:', {
+        error,
+        retryCount,
+        time: new Date().toISOString()
+      });
+
+      eventSource.close();
+
+      if (retryCount < MAX_RETRIES) {
+        console.log(`[DEBUG][useMessageOperations] Retrying connection (${retryCount + 1}/${MAX_RETRIES})`);
+        
+        setTimeout(() => {
+          setupEventSource(url, activeChatId, setMessages, setIsLoading, setMessageError, retryCount + 1);
+        }, RETRY_DELAY * Math.pow(2, retryCount)); // Exponential backoff
+      } else {
+        setIsLoading(false);
+        setMessageError({
+          code: 'STREAM_ERROR',
+          message: 'Connection lost after multiple retries. Please try again.'
+        });
+        
+        toast({
+          title: "Connection Error",
+          description: "Failed to maintain connection after multiple attempts.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    return eventSource;
   };
 
   const handleSendMessage = async (
@@ -93,7 +153,6 @@ export const useMessageOperations = () => {
     setMessageError(null);
 
     try {
-      // Initialize chat and get stream URL
       const initResponse = await supabase.functions.invoke('gemini', {
         body: { 
           chatId: currentChatId,
@@ -105,35 +164,20 @@ export const useMessageOperations = () => {
       if (initResponse.error) throw initResponse.error;
 
       const { streamUrl } = initResponse.data;
-      
-      // Set up EventSource for streaming
-      const eventSource = new EventSource(streamUrl);
       let activeChatId = currentChatId;
 
-      eventSource.onmessage = async (event) => {
-        try {
-          const data = JSON.parse(event.data) as StreamMessage;
-          await handleStreamMessage(data, activeChatId, setMessages, setMessageError);
-        } catch (e) {
-          console.error('[DEBUG][useMessageOperations] Stream parse error:', {
-            error: e,
-            data: event.data,
-            time: new Date().toISOString()
-          });
-        }
-      };
+      const eventSource = setupEventSource(
+        streamUrl,
+        activeChatId,
+        setMessages,
+        setIsLoading,
+        setMessageError
+      );
 
-      eventSource.onerror = (error) => {
-        console.error('[DEBUG][useMessageOperations] Stream error:', {
-          error,
-          time: new Date().toISOString()
-        });
+      // Cleanup function
+      return () => {
+        console.log('[DEBUG][useMessageOperations] Cleaning up EventSource');
         eventSource.close();
-        setIsLoading(false);
-        setMessageError({
-          code: 'STREAM_ERROR',
-          message: 'Connection lost. Please try again.'
-        });
       };
 
     } catch (error: any) {
