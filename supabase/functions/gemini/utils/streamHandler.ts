@@ -1,27 +1,15 @@
-import { MessageQueue } from './messageQueue.ts';
-
-interface StreamMessage {
-  type: 'metadata' | 'chunk' | 'error';
-  content?: string;
-  chatId?: string;
-  error?: string;
-}
-
 export class StreamHandler {
-  private encoder: TextEncoder;
-  private streamController: TransformStream;
-  private writer: WritableStreamDefaultWriter;
+  private encoder = new TextEncoder();
+  private writer: WritableStreamDefaultWriter<Uint8Array>;
+  private stream: TransformStream;
 
   constructor() {
-    this.encoder = new TextEncoder();
-    this.streamController = new TransformStream();
-    this.writer = this.streamController.writable.getWriter();
-    console.log("[StreamHandler] Stream initialized with SSE configuration");
+    this.stream = new TransformStream();
+    this.writer = this.stream.writable.getWriter();
   }
 
-  getResponse(headers: Record<string, string>): Response {
-    console.log("[StreamHandler] Creating SSE response");
-    return new Response(this.streamController.readable, {
+  getResponse(headers: Record<string, string>) {
+    return new Response(this.stream.readable, {
       headers: {
         ...headers,
         'Content-Type': 'text/event-stream',
@@ -31,56 +19,51 @@ export class StreamHandler {
     });
   }
 
-  async writeMetadata(metadata: { chatId: string }): Promise<void> {
-    if (!metadata.chatId) {
-      console.error("[StreamHandler] Invalid metadata: missing chatId");
-      return;
-    }
-
-    console.log("[StreamHandler] Writing metadata:", metadata);
+  async writeMetadata(data: Record<string, any>) {
+    console.log('[StreamHandler] Writing metadata:', data);
     await this.writeEvent({
       type: 'metadata',
-      chatId: metadata.chatId
+      ...data
     });
   }
 
-  async writeChunk(content: string): Promise<void> {
-    if (!content) {
-      console.warn("[StreamHandler] Attempted to write empty chunk");
-      return;
-    }
+  async writeChunk(content: string) {
+    console.log('[StreamHandler] Writing chunk:', { 
+      contentLength: content.length,
+      timestamp: new Date().toISOString()
+    });
     
-    console.log("[StreamHandler] Writing chunk");
     await this.writeEvent({
       type: 'chunk',
       content
     });
   }
 
-  async writeError(error: string): Promise<void> {
-    console.error("[StreamHandler] Writing error:", error);
+  async writeError(error: any) {
+    console.error('[StreamHandler] Writing error:', error);
     await this.writeEvent({
       type: 'error',
-      error
+      error: error.message || 'Unknown error occurred'
     });
   }
 
-  private async writeEvent(data: StreamMessage): Promise<void> {
+  private async writeEvent(data: any) {
     try {
       const encoded = this.encoder.encode(`data: ${JSON.stringify(data)}\n\n`);
       await this.writer.write(encoded);
-      console.log(`[StreamHandler] Event written: ${data.type}`);
     } catch (error) {
-      console.error("[StreamHandler] Error writing event:", error);
+      console.error('[StreamHandler] Failed to write event:', error);
+      throw error;
     }
   }
 
-  async close(): Promise<void> {
-    console.log("[StreamHandler] Closing stream");
+  async close() {
     try {
       await this.writer.close();
+      console.log('[StreamHandler] Stream closed successfully');
     } catch (error) {
-      console.error("[StreamHandler] Error closing stream:", error);
+      console.error('[StreamHandler] Error closing stream:', error);
+      throw error;
     }
   }
 }

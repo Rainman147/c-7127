@@ -10,20 +10,23 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Initialize response stream early
+  const streamHandler = new ServiceContainer.getInstance().stream;
+  const response = streamHandler.getResponse(corsHeaders);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const apiKey = Deno.env.get('OPENAI_API_KEY');
-
-  if (!apiKey) {
-    throw createAppError('OpenAI API key not configured', 'VALIDATION_ERROR');
-  }
-
   try {
-    // Initialize services
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const apiKey = Deno.env.get('OPENAI_API_KEY');
+
+    if (!apiKey) {
+      throw createAppError('OpenAI API key not configured', 'VALIDATION_ERROR');
+    }
+
     const services = ServiceContainer.initialize(supabaseUrl, supabaseKey, apiKey);
     console.log('[Gemini] Services initialized');
 
@@ -32,12 +35,6 @@ serve(async (req) => {
     if (!content?.trim()) {
       throw createAppError('Message content is required', 'VALIDATION_ERROR');
     }
-
-    console.log('[Gemini] Starting request processing:', {
-      hasContent: !!content,
-      chatId,
-      timestamp: new Date().toISOString()
-    });
 
     // 1. Auth validation
     const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
@@ -76,15 +73,9 @@ serve(async (req) => {
     });
 
     // 3. Initialize stream and send metadata
-    const streamResponse = services.stream.getResponse(corsHeaders);
     await services.stream.writeMetadata({ 
       chatId: chat.id,
       status: 'created',
-      timestamp: new Date().toISOString()
-    });
-
-    console.log('[Gemini] Metadata sent:', {
-      chatId: chat.id,
       timestamp: new Date().toISOString()
     });
 
@@ -125,46 +116,12 @@ serve(async (req) => {
     }
 
     // 7. Process with OpenAI and handle response
-    services.openai.streamCompletion(messages, async (chunk: string) => {
+    await services.openai.streamCompletion(messages, async (chunk: string) => {
       await services.stream.writeChunk(chunk);
-    })
-    .then(async (fullResponse) => {
-      await services.message.updateMessageStatus(
-        assistantMessage.id,
-        'delivered',
-        fullResponse
-      );
-      
-      console.log('[Gemini] Processing completed successfully', {
-        chatId: chat.id,
-        responseLength: fullResponse.length,
-        timestamp: new Date().toISOString()
-      });
-    })
-    .catch(async (error) => {
-      console.error('[Gemini] Streaming error:', {
-        error,
-        chatId: chat.id,
-        timestamp: new Date().toISOString()
-      });
-      
-      const errorResponse = handleError(error);
-      await services.stream.writeChunk(JSON.stringify({ error: errorResponse }));
-      
-      await services.message.updateMessageStatus(
-        assistantMessage.id,
-        'failed'
-      );
-    })
-    .finally(async () => {
-      await services.stream.close();
-      console.log('[Gemini] Stream closed:', {
-        chatId: chat.id,
-        timestamp: new Date().toISOString()
-      });
     });
 
-    return streamResponse;
+    await services.stream.close();
+    return response;
 
   } catch (error) {
     console.error('[Gemini] Function error:', {
@@ -172,13 +129,14 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     });
     
-    const errorResponse = handleError(error);
-    return new Response(
-      JSON.stringify(errorResponse),
-      {
-        status: errorResponse.status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    try {
+      // Attempt to write error to stream before closing
+      await streamHandler.writeError(error);
+      await streamHandler.close();
+    } catch (streamError) {
+      console.error('[Gemini] Failed to write error to stream:', streamError);
+    }
+
+    return response;
   }
 });
