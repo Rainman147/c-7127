@@ -66,8 +66,7 @@ export const useChat = () => {
         currentChatId, 
         setMessages, 
         setIsLoading, 
-        setMessageError,
-        updateChatId
+        setMessageError
       );
     } catch (error) {
       handleChatCreationError();
@@ -114,22 +113,6 @@ export const useChat = () => {
     clear(setMessages, setMessageError, setPage, setHasMore);
   };
 
-  const handleLoadMore = async () => {
-    console.log('[DEBUG][useChat] Loading more messages:', {
-      currentChatId,
-      currentPage: page,
-      hasMore,
-      currentCount: messages.length
-    });
-    
-    await loadMoreMessages(currentChatId, messages, setMessages, setIsLoading);
-    
-    console.log('[DEBUG][useChat] Load more complete:', {
-      newCount: messages.length,
-      stillHasMore: hasMore
-    });
-  };
-
   return {
     messages,
     isLoading,
@@ -138,8 +121,8 @@ export const useChat = () => {
     currentChatId,
     hasMore,
     handleSendMessage,
-    loadInitialMessages: loadInitial,
+    loadInitialMessages,
     loadMoreMessages,
-    clearMessages: clear,
+    clearMessages,
   };
 };

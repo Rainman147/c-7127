@@ -21,7 +21,7 @@ const ChatPage = () => {
   
   const { 
     messages, 
-    isLoading: isChatLoading, 
+    isLoading, 
     handleSendMessage,
     loadInitialMessages,
     currentChatId
@@ -66,18 +66,13 @@ const ChatPage = () => {
     console.log('[ChatPage] Template changed:', template.name);
   };
 
-  const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
-    console.log('[ChatPage] Sending message:', { message, type });
-    await handleSendMessage(message, type);
-  };
-
   return (
     <div className="flex h-screen">
       <ChatContainer 
         messages={messages}
-        isLoading={isChatLoading}
+        isLoading={isLoading}
         currentChatId={currentChatId}
-        onMessageSend={handleMessageSend}
+        onMessageSend={handleSendMessage}
         onTemplateChange={handleTemplateChange}
         onPatientSelect={handlePatientSelect}
         selectedPatientId={selectedPatientId}
