@@ -93,47 +93,48 @@ export const useMessageOperations = () => {
     setMessageError(null);
 
     try {
-      console.log('[DEBUG][useMessageOperations] Invoking Gemini:', {
-        currentChatId,
-        contentPreview: content.substring(0, 50),
-        time: new Date().toISOString()
-      });
-      
-      const response = await supabase.functions.invoke('gemini', {
+      // Initialize chat and get stream URL
+      const initResponse = await supabase.functions.invoke('gemini', {
         body: { 
           chatId: currentChatId,
-          content
+          content,
+          action: 'init'
         }
       });
 
-      console.log('[DEBUG][useMessageOperations] Gemini response received:', {
-        hasResponse: !!response,
-        hasData: !!response?.data,
-        error: response.error,
-        time: new Date().toISOString()
-      });
+      if (initResponse.error) throw initResponse.error;
 
-      if (response.error) throw response.error;
-
-      const reader = new TextDecoder();
+      const { streamUrl } = initResponse.data;
+      
+      // Set up EventSource for streaming
+      const eventSource = new EventSource(streamUrl);
       let activeChatId = currentChatId;
 
-      // Process the response as Server-Sent Events
-      const lines = reader.decode(response.data).split('\n');
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const data = JSON.parse(line.slice(5)) as StreamMessage;
-            await handleStreamMessage(data, activeChatId, setMessages, setMessageError);
-          } catch (e) {
-            console.error('[DEBUG][useMessageOperations] Stream parse error:', {
-              error: e,
-              line,
-              time: new Date().toISOString()
-            });
-          }
+      eventSource.onmessage = async (event) => {
+        try {
+          const data = JSON.parse(event.data) as StreamMessage;
+          await handleStreamMessage(data, activeChatId, setMessages, setMessageError);
+        } catch (e) {
+          console.error('[DEBUG][useMessageOperations] Stream parse error:', {
+            error: e,
+            data: event.data,
+            time: new Date().toISOString()
+          });
         }
-      }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('[DEBUG][useMessageOperations] Stream error:', {
+          error,
+          time: new Date().toISOString()
+        });
+        eventSource.close();
+        setIsLoading(false);
+        setMessageError({
+          code: 'STREAM_ERROR',
+          message: 'Connection lost. Please try again.'
+        });
+      };
 
     } catch (error: any) {
       console.error('[DEBUG][useMessageOperations] Operation failed:', {
