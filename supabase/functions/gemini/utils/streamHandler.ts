@@ -3,11 +3,14 @@ export class StreamHandler {
   private writer: WritableStreamDefaultWriter<Uint8Array>;
   private stream: TransformStream;
   private isStreamClosed = false;
+  private lastChunkTime: number;
+  private chunkCount = 0;
 
   constructor() {
     console.log('[StreamHandler] Initializing');
     this.stream = new TransformStream();
     this.writer = this.stream.writable.getWriter();
+    this.lastChunkTime = Date.now();
   }
 
   getResponse(headers: Record<string, string>) {
@@ -24,11 +27,26 @@ export class StreamHandler {
   }
 
   async writeMetadata(data: Record<string, any>) {
-    console.log('[StreamHandler] Writing metadata:', data);
-    await this.writeEvent({
-      type: 'metadata',
-      ...data
+    if (this.isStreamClosed) {
+      console.warn('[StreamHandler] Attempted to write metadata to closed stream');
+      return;
+    }
+
+    console.log('[StreamHandler] Writing metadata:', {
+      ...data,
+      timestamp: new Date().toISOString()
     });
+
+    try {
+      await this.writeEvent({
+        type: 'metadata',
+        ...data,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('[StreamHandler] Failed to write metadata:', error);
+      throw error;
+    }
   }
 
   async writeChunk(content: string) {
@@ -37,8 +55,15 @@ export class StreamHandler {
       return;
     }
 
+    const now = Date.now();
+    const timeSinceLastChunk = now - this.lastChunkTime;
+    this.lastChunkTime = now;
+    this.chunkCount++;
+
     console.log('[StreamHandler] Writing chunk:', { 
+      chunkNumber: this.chunkCount,
       contentLength: content.length,
+      timeSinceLastChunk,
       preview: content.substring(0, 30),
       timestamp: new Date().toISOString()
     });
@@ -46,11 +71,16 @@ export class StreamHandler {
     try {
       await this.writeEvent({
         type: 'chunk',
-        content
+        content,
+        chunkNumber: this.chunkCount
       });
       await this.writer.ready; // Ensures chunk is flushed
     } catch (error) {
-      console.error('[StreamHandler] Error writing chunk:', error);
+      console.error('[StreamHandler] Error writing chunk:', {
+        error,
+        chunkNumber: this.chunkCount,
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   }
@@ -61,17 +91,26 @@ export class StreamHandler {
       return;
     }
 
-    console.error('[StreamHandler] Writing error:', error);
+    console.error('[StreamHandler] Writing error:', {
+      error,
+      timestamp: new Date().toISOString()
+    });
     
     try {
       await this.writeEvent({
         type: 'error',
         error: error.message || 'Unknown error occurred',
         code: error.code || 'UNKNOWN_ERROR',
-        timestamp: new Date().toISOString()
+        retryable: error.retryable || false,
+        timestamp: new Date().toISOString(),
+        chunkCount: this.chunkCount
       });
     } catch (writeError) {
-      console.error('[StreamHandler] Failed to write error event:', writeError);
+      console.error('[StreamHandler] Failed to write error event:', {
+        writeError,
+        originalError: error,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
@@ -80,7 +119,11 @@ export class StreamHandler {
       const encoded = this.encoder.encode(`data: ${JSON.stringify(data)}\n\n`);
       await this.writer.write(encoded);
     } catch (error) {
-      console.error('[StreamHandler] Failed to write event:', error);
+      console.error('[StreamHandler] Failed to write event:', {
+        error,
+        eventType: data.type,
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   }
@@ -92,11 +135,18 @@ export class StreamHandler {
         return;
       }
 
+      console.log('[StreamHandler] Closing stream:', {
+        totalChunks: this.chunkCount,
+        timestamp: new Date().toISOString()
+      });
+
       this.isStreamClosed = true;
       await this.writer.close();
-      console.log('[StreamHandler] Stream closed successfully');
     } catch (error) {
-      console.error('[StreamHandler] Error closing stream:', error);
+      console.error('[StreamHandler] Error closing stream:', {
+        error,
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   }
