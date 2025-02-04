@@ -66,6 +66,11 @@ export const useMessageOperations = () => {
     });
 
     if (data.type === 'error') {
+      console.error('[DEBUG][useMessageOperations] Stream error:', {
+        code: data.code,
+        error: data.error,
+        time: new Date().toISOString()
+      });
       setMessageError({
         code: data.code || 'STREAM_ERROR',
         message: data.error
@@ -120,6 +125,11 @@ export const useMessageOperations = () => {
       });
       return;
     }
+
+    console.log('[DEBUG][useMessageOperations] Auth session found:', {
+      userId: session.user.id,
+      time: new Date().toISOString()
+    });
     
     setIsLoading(true);
     setMessageError(null);
@@ -139,16 +149,20 @@ export const useMessageOperations = () => {
         ...(patientContext && { patientContext })
       };
 
-      // Validate payload before sending
-      if (!validatePayload(payload)) {
-        throw new Error('Invalid message payload');
-      }
-
-      console.log('[DEBUG][useMessageOperations] Sending payload:', {
+      // Log payload before validation
+      console.log('[DEBUG][useMessageOperations] Pre-validation payload:', {
         ...payload,
         content: `${payload.content.substring(0, 50)}...`,
         time: new Date().toISOString()
       });
+
+      // Validate payload before sending
+      if (!validatePayload(payload)) {
+        console.error('[DEBUG][useMessageOperations] Payload validation failed');
+        throw new Error('Invalid message payload');
+      }
+
+      console.log('[DEBUG][useMessageOperations] Payload validated, sending to Gemini function');
 
       const { data, error } = await supabase.functions.invoke('gemini', {
         method: 'POST',
@@ -158,16 +172,30 @@ export const useMessageOperations = () => {
         body: payload
       });
 
+      console.log('[DEBUG][useMessageOperations] Gemini function response:', {
+        hasData: !!data,
+        hasError: !!error,
+        time: new Date().toISOString()
+      });
+
       if (error) {
-        console.error('[DEBUG][useMessageOperations] Gemini function error:', error);
+        console.error('[DEBUG][useMessageOperations] Gemini function error:', {
+          error,
+          time: new Date().toISOString()
+        });
         throw error;
       }
 
       if (!data?.streamUrl) {
+        console.error('[DEBUG][useMessageOperations] No stream URL received');
         throw new Error('No stream URL received from Gemini function');
       }
 
-      console.log('[DEBUG][useMessageOperations] Stream URL received:', data.streamUrl);
+      console.log('[DEBUG][useMessageOperations] Stream URL received:', {
+        url: data.streamUrl,
+        time: new Date().toISOString()
+      });
+      
       let activeChatId = currentChatId;
 
       const eventSource = new EventSource(data.streamUrl);
@@ -175,6 +203,11 @@ export const useMessageOperations = () => {
       eventSource.onmessage = async (event) => {
         try {
           const data = JSON.parse(event.data) as StreamMessage;
+          console.log('[DEBUG][useMessageOperations] Stream message:', {
+            type: data.type,
+            hasContent: 'content' in data ? !!data.content : false,
+            time: new Date().toISOString()
+          });
           await handleStreamMessage(data, activeChatId, setMessages, setMessageError);
         } catch (e) {
           console.error('[DEBUG][useMessageOperations] Stream parse error:', {

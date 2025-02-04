@@ -19,7 +19,8 @@ serve(async (req) => {
   console.log('[Gemini] Request received:', {
     method: req.method,
     url: req.url,
-    headers: Object.fromEntries(req.headers.entries())
+    headers: Object.fromEntries(req.headers.entries()),
+    time: new Date().toISOString()
   });
 
   // Handle CORS preflight requests first
@@ -36,7 +37,36 @@ serve(async (req) => {
       throw createAppError('Only POST method is allowed', 'VALIDATION_ERROR');
     }
 
-    // Initialize ServiceContainer first with required env variables
+    // Log raw request details before parsing
+    console.log('[Gemini] Raw request details:', {
+      bodyUsed: req.bodyUsed,
+      contentType: req.headers.get('content-type'),
+      time: new Date().toISOString()
+    });
+
+    // Attempt to parse request body
+    let requestData;
+    try {
+      requestData = await req.json();
+      console.log('[Gemini] Successfully parsed request data:', {
+        hasContent: !!requestData.content,
+        contentLength: requestData.content?.length,
+        chatId: requestData.chatId,
+        action: requestData.action,
+        hasTemplate: !!requestData.templateContext,
+        hasPatient: !!requestData.patientContext,
+        time: new Date().toISOString()
+      });
+    } catch (parseError) {
+      console.error('[Gemini] JSON parsing error:', {
+        error: parseError.message,
+        stack: parseError.stack,
+        time: new Date().toISOString()
+      });
+      throw createAppError('Invalid JSON payload', 'VALIDATION_ERROR');
+    }
+
+    // Initialize ServiceContainer
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
@@ -60,12 +90,15 @@ serve(async (req) => {
     const streamHandler = services.stream;
     const response = streamHandler.getResponse(corsHeaders);
 
-    console.log('[Gemini] Starting request processing');
+    console.log('[Gemini] Starting request processing with services');
     
-    const requestData = await req.json();
     const { content, chatId } = requestData;
     
-    console.log('[Gemini] Request payload:', { chatId, contentLength: content?.length });
+    console.log('[Gemini] Extracted request data:', { 
+      chatId, 
+      contentLength: content?.length,
+      time: new Date().toISOString()
+    });
     
     if (!content?.trim()) {
       console.error('[Gemini] Empty content received');
@@ -166,10 +199,12 @@ serve(async (req) => {
   } catch (error) {
     console.error('[Gemini] Function error:', {
       error,
-      timestamp: new Date().toISOString()
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+      time: new Date().toISOString()
     });
     
-    // Always return error response with CORS headers
     return new Response(
       JSON.stringify({ 
         error: error.message,
