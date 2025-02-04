@@ -3,6 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { mapDatabaseMessage } from '@/utils/chat/messageMapping';
 import { MESSAGES_PER_PAGE } from './constants';
 import type { MessageType } from '@/types/chat';
+import type { Template } from '@/types/template';
+import type { PatientContext } from '@/types';
+
+interface MessagePayload {
+  chatId: string | null;
+  content: string;
+  action: 'init';
+  templateContext?: {
+    instructions: string;
+    type: string;
+  };
+  patientContext?: PatientContext | null;
+}
 
 interface StreamMetadata {
   type: 'metadata';
@@ -21,6 +34,20 @@ interface StreamError {
 }
 
 type StreamMessage = StreamMetadata | StreamChunk | StreamError;
+
+const validatePayload = (payload: MessagePayload): boolean => {
+  if (!payload.content || typeof payload.content !== 'string') {
+    console.error('[DEBUG][useMessageOperations] Invalid content in payload:', payload);
+    return false;
+  }
+  
+  if (payload.templateContext && !payload.templateContext.instructions) {
+    console.error('[DEBUG][useMessageOperations] Invalid template context:', payload.templateContext);
+    return false;
+  }
+  
+  return true;
+};
 
 export const useMessageOperations = () => {
   const { toast } = useToast();
@@ -70,12 +97,16 @@ export const useMessageOperations = () => {
     currentChatId: string | null,
     setMessages: (messages: any[]) => void,
     setIsLoading: (loading: boolean) => void,
-    setMessageError: (error: any) => void
+    setMessageError: (error: any) => void,
+    template?: Template | null,
+    patientContext?: PatientContext | null
   ) => {
     console.log('[DEBUG][useMessageOperations] Starting send:', { 
       contentLength: content.length,
       type,
       currentChatId,
+      hasTemplate: !!template,
+      hasPatientContext: !!patientContext,
       time: new Date().toISOString()
     });
     
@@ -94,16 +125,37 @@ export const useMessageOperations = () => {
     setMessageError(null);
 
     try {
+      // Construct payload with all necessary context
+      const payload: MessagePayload = {
+        chatId: currentChatId,
+        content,
+        action: 'init',
+        ...(template && {
+          templateContext: {
+            instructions: template.systemInstructions,
+            type: template.id
+          }
+        }),
+        ...(patientContext && { patientContext })
+      };
+
+      // Validate payload before sending
+      if (!validatePayload(payload)) {
+        throw new Error('Invalid message payload');
+      }
+
+      console.log('[DEBUG][useMessageOperations] Sending payload:', {
+        ...payload,
+        content: `${payload.content.substring(0, 50)}...`,
+        time: new Date().toISOString()
+      });
+
       const { data, error } = await supabase.functions.invoke('gemini', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: { 
-          chatId: currentChatId,
-          content,
-          action: 'init'
-        }
+        body: payload
       });
 
       if (error) {
