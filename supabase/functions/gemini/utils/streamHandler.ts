@@ -39,13 +39,20 @@ export class StreamHandler {
 
     console.log('[StreamHandler] Writing chunk:', { 
       contentLength: content.length,
+      preview: content.substring(0, 30),
       timestamp: new Date().toISOString()
     });
     
-    await this.writeEvent({
-      type: 'chunk',
-      content
-    });
+    try {
+      await this.writeEvent({
+        type: 'chunk',
+        content
+      });
+      await this.writer.ready; // Ensures chunk is flushed
+    } catch (error) {
+      console.error('[StreamHandler] Error writing chunk:', error);
+      throw error;
+    }
   }
 
   async writeError(error: any) {
