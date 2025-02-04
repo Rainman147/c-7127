@@ -16,6 +16,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Detailed request logging
   console.log('[Gemini] Request received:', {
     method: req.method,
     url: req.url,
@@ -37,24 +38,38 @@ serve(async (req) => {
       throw createAppError('Only POST method is allowed', 'VALIDATION_ERROR');
     }
 
+    // Validate Content-Type header
+    const contentType = req.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      console.error('[Gemini] Invalid Content-Type:', contentType);
+      throw createAppError('Content-Type must be application/json', 'VALIDATION_ERROR');
+    }
+
     // Log raw request details before parsing
     console.log('[Gemini] Raw request details:', {
       bodyUsed: req.bodyUsed,
-      contentType: req.headers.get('content-type'),
+      contentType,
       contentLength: req.headers.get('content-length'),
       time: new Date().toISOString()
     });
 
-    // Attempt to parse request body
+    // Clone request for logging
+    const clonedReq = req.clone();
+    const rawBody = await clonedReq.text();
+    console.log('[Gemini] Raw body received:', {
+      length: rawBody.length,
+      preview: rawBody.substring(0, 100),
+      time: new Date().toISOString()
+    });
+
+    if (!rawBody) {
+      console.error('[Gemini] Empty request body received');
+      throw createAppError('Request body is empty', 'VALIDATION_ERROR');
+    }
+
+    // Parse request body
     let requestData;
     try {
-      const rawBody = await req.text();
-      console.log('[Gemini] Raw body received:', {
-        length: rawBody.length,
-        preview: rawBody.substring(0, 100),
-        time: new Date().toISOString()
-      });
-
       requestData = JSON.parse(rawBody);
       console.log('[Gemini] Successfully parsed request data:', {
         hasContent: !!requestData.content,
@@ -68,7 +83,7 @@ serve(async (req) => {
     } catch (parseError) {
       console.error('[Gemini] JSON parsing error:', {
         error: parseError.message,
-        stack: parseError.stack,
+        rawBody,
         time: new Date().toISOString()
       });
       throw createAppError('Invalid JSON payload', 'VALIDATION_ERROR');

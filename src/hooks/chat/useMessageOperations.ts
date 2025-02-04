@@ -39,13 +39,17 @@ const validatePayload = (payload: MessagePayload): boolean => {
   console.log('[DEBUG][useMessageOperations] Validating payload:', {
     hasContent: !!payload.content,
     contentType: typeof payload.content,
+    contentLength: payload.content?.length,
     hasTemplateContext: !!payload.templateContext,
     hasPatientContext: !!payload.patientContext,
     time: new Date().toISOString()
   });
   
   if (!payload.content || typeof payload.content !== 'string') {
-    console.error('[DEBUG][useMessageOperations] Invalid content in payload:', payload);
+    console.error('[DEBUG][useMessageOperations] Invalid content in payload:', {
+      content: payload.content,
+      type: typeof payload.content
+    });
     return false;
   }
   
@@ -134,16 +138,10 @@ export const useMessageOperations = () => {
       return;
     }
 
-    console.log('[DEBUG][useMessageOperations] Auth session found:', {
-      userId: session.user.id,
-      time: new Date().toISOString()
-    });
-    
     setIsLoading(true);
     setMessageError(null);
 
     try {
-      // Construct payload with all necessary context
       const payload: MessagePayload = {
         chatId: currentChatId,
         content,
@@ -157,24 +155,20 @@ export const useMessageOperations = () => {
         ...(patientContext && { patientContext })
       };
 
-      // Log payload before validation
-      console.log('[DEBUG][useMessageOperations] Pre-validation payload:', {
-        ...payload,
-        content: `${payload.content.substring(0, 50)}...`,
-        time: new Date().toISOString()
-      });
-
       // Validate payload before sending
       if (!validatePayload(payload)) {
         console.error('[DEBUG][useMessageOperations] Payload validation failed');
         throw new Error('Invalid message payload');
       }
 
-      console.log('[DEBUG][useMessageOperations] Payload validated, sending to Gemini function');
-
-      // Important: Stringify the payload before sending
+      // Stringify and verify payload
       const stringifiedPayload = JSON.stringify(payload);
-      console.log('[DEBUG][useMessageOperations] Stringified payload length:', stringifiedPayload.length);
+      console.log('[DEBUG][useMessageOperations] Prepared payload:', {
+        originalLength: JSON.stringify(payload).length,
+        stringifiedLength: stringifiedPayload.length,
+        sample: stringifiedPayload.substring(0, 100),
+        time: new Date().toISOString()
+      });
 
       const { data, error } = await supabase.functions.invoke('gemini', {
         method: 'POST',
@@ -182,12 +176,6 @@ export const useMessageOperations = () => {
           'Content-Type': 'application/json',
         },
         body: stringifiedPayload
-      });
-
-      console.log('[DEBUG][useMessageOperations] Gemini function response:', {
-        hasData: !!data,
-        hasError: !!error,
-        time: new Date().toISOString()
       });
 
       if (error) {
@@ -198,16 +186,6 @@ export const useMessageOperations = () => {
         throw error;
       }
 
-      if (!data?.streamUrl) {
-        console.error('[DEBUG][useMessageOperations] No stream URL received');
-        throw new Error('No stream URL received from Gemini function');
-      }
-
-      console.log('[DEBUG][useMessageOperations] Stream URL received:', {
-        url: data.streamUrl,
-        time: new Date().toISOString()
-      });
-      
       let activeChatId = currentChatId;
 
       const eventSource = new EventSource(data.streamUrl);
