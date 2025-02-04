@@ -6,107 +6,52 @@ import type { MessageType } from '@/types/chat';
 import type { Template } from '@/types/template';
 import type { PatientContext } from '@/types';
 
-interface MessagePayload {
-  chatId: string | null;
-  content: string;
-  action: 'init';
-  templateContext?: {
-    instructions: string;
-    type: string;
-  };
-  patientContext?: PatientContext | null;
-}
-
-interface StreamMetadata {
-  type: 'metadata';
-  chatId: string;
-}
-
-interface StreamChunk {
-  type: 'chunk';
-  content: string;
-}
-
-interface StreamError {
-  type: 'error';
-  error: string;
-  code?: string;
-}
-
-type StreamMessage = StreamMetadata | StreamChunk | StreamError;
-
-const validatePayload = (payload: MessagePayload): boolean => {
-  console.log('[DEBUG][useMessageOperations] Validating payload:', {
-    hasContent: !!payload.content,
-    contentType: typeof payload.content,
-    contentLength: payload.content?.length,
-    hasTemplateContext: !!payload.templateContext,
-    hasPatientContext: !!payload.patientContext,
+const handleStreamMessage = async (
+  data: any,
+  activeChatId: string | null,
+  setMessages: (messages: any[]) => void,
+  setMessageError: (error: any) => void
+) => {
+  console.log('[DEBUG][useMessageOperations] Stream message received:', {
+    type: data.type,
+    chatId: 'chatId' in data ? data.chatId : undefined,
+    hasContent: 'content' in data ? !!data.content : false,
     time: new Date().toISOString()
   });
-  
-  if (!payload.content || typeof payload.content !== 'string') {
-    console.error('[DEBUG][useMessageOperations] Invalid content in payload:', {
-      content: payload.content,
-      type: typeof payload.content
+
+  if (data.type === 'error') {
+    console.error('[DEBUG][useMessageOperations] Stream error:', {
+      code: data.code,
+      error: data.error,
+      time: new Date().toISOString()
     });
-    return false;
+    setMessageError({
+      code: data.code || 'STREAM_ERROR',
+      message: data.error
+    });
+    return;
   }
-  
-  if (payload.templateContext && !payload.templateContext.instructions) {
-    console.error('[DEBUG][useMessageOperations] Invalid template context:', payload.templateContext);
-    return false;
+
+  if (data.type === 'metadata' && data.chatId) {
+    activeChatId = data.chatId;
+    return;
   }
-  
-  return true;
+
+  if (data.type === 'chunk' && activeChatId && data.content) {
+    const { data: messages } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('chat_id', activeChatId)
+      .order('created_at', { ascending: true });
+
+    if (messages) {
+      setMessages(messages.map(mapDatabaseMessage));
+    }
+  }
 };
 
 export const useMessageOperations = () => {
   const { toast } = useToast();
-
-  const handleStreamMessage = async (
-    data: StreamMessage,
-    activeChatId: string | null,
-    setMessages: (messages: any[]) => void,
-    setMessageError: (error: any) => void
-  ) => {
-    console.log('[DEBUG][useMessageOperations] Stream message received:', {
-      type: data.type,
-      chatId: 'chatId' in data ? data.chatId : undefined,
-      hasContent: 'content' in data ? !!data.content : false,
-      time: new Date().toISOString()
-    });
-
-    if (data.type === 'error') {
-      console.error('[DEBUG][useMessageOperations] Stream error:', {
-        code: data.code,
-        error: data.error,
-        time: new Date().toISOString()
-      });
-      setMessageError({
-        code: data.code || 'STREAM_ERROR',
-        message: data.error
-      });
-      return;
-    }
-
-    if (data.type === 'metadata' && data.chatId) {
-      activeChatId = data.chatId;
-      return;
-    }
-
-    if (data.type === 'chunk' && activeChatId && data.content) {
-      const { data: messages } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('chat_id', activeChatId)
-        .order('created_at', { ascending: true });
-
-      if (messages) {
-        setMessages(messages.map(mapDatabaseMessage));
-      }
-    }
-  };
 
   const handleSendMessage = async (
     content: string,
@@ -142,40 +87,23 @@ export const useMessageOperations = () => {
     setMessageError(null);
 
     try {
-      const payload: MessagePayload = {
-        chatId: currentChatId,
+      // Simplified test payload
+      const payload = {
         content,
         action: 'init',
-        ...(template && {
-          templateContext: {
-            instructions: template.systemInstructions,
-            type: template.id
-          }
-        }),
-        ...(patientContext && { patientContext })
+        timestamp: new Date().toISOString()
       };
 
-      // Validate payload before sending
-      if (!validatePayload(payload)) {
-        console.error('[DEBUG][useMessageOperations] Payload validation failed');
-        throw new Error('Invalid message payload');
-      }
-
-      // Stringify and verify payload
-      const stringifiedPayload = JSON.stringify(payload);
-      console.log('[DEBUG][useMessageOperations] Prepared payload:', {
-        originalLength: JSON.stringify(payload).length,
-        stringifiedLength: stringifiedPayload.length,
-        sample: stringifiedPayload.substring(0, 100),
+      // Log the payload before sending
+      console.log('[DEBUG][useMessageOperations] Sending simplified payload:', {
+        payload,
+        stringified: JSON.stringify(payload),
         time: new Date().toISOString()
       });
 
+      // Test invocation without explicit content-type
       const { data, error } = await supabase.functions.invoke('gemini', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: stringifiedPayload
+        body: payload
       });
 
       if (error) {
@@ -187,12 +115,11 @@ export const useMessageOperations = () => {
       }
 
       let activeChatId = currentChatId;
-
       const eventSource = new EventSource(data.streamUrl);
       
       eventSource.onmessage = async (event) => {
         try {
-          const data = JSON.parse(event.data) as StreamMessage;
+          const data = JSON.parse(event.data);
           console.log('[DEBUG][useMessageOperations] Stream message:', {
             type: data.type,
             hasContent: 'content' in data ? !!data.content : false,

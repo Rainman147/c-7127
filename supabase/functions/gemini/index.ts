@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { assembleContext } from "./utils/contextAssembler.ts";
-import { handleError, createAppError } from "./utils/errorHandler.ts";
 import { ServiceContainer } from "./services/ServiceContainer.ts";
 
 const corsHeaders = {
@@ -35,36 +33,23 @@ serve(async (req) => {
 
   try {
     if (req.method !== 'POST') {
-      throw createAppError('Only POST method is allowed', 'VALIDATION_ERROR');
+      throw new Error('Only POST method is allowed');
     }
-
-    // Validate Content-Type header
-    const contentType = req.headers.get('content-type');
-    if (!contentType?.includes('application/json')) {
-      console.error('[Gemini] Invalid Content-Type:', contentType);
-      throw createAppError('Content-Type must be application/json', 'VALIDATION_ERROR');
-    }
-
-    // Log raw request details before parsing
-    console.log('[Gemini] Raw request details:', {
-      bodyUsed: req.bodyUsed,
-      contentType,
-      contentLength: req.headers.get('content-length'),
-      time: new Date().toISOString()
-    });
 
     // Clone request for logging
     const clonedReq = req.clone();
     const rawBody = await clonedReq.text();
-    console.log('[Gemini] Raw body received:', {
-      length: rawBody.length,
-      preview: rawBody.substring(0, 100),
+    
+    console.log('[Gemini] Raw request details:', {
+      bodyLength: rawBody.length,
+      bodyPreview: rawBody.substring(0, 100),
+      contentType: req.headers.get('content-type'),
       time: new Date().toISOString()
     });
 
     if (!rawBody) {
       console.error('[Gemini] Empty request body received');
-      throw createAppError('Request body is empty', 'VALIDATION_ERROR');
+      throw new Error('Request body is empty');
     }
 
     // Parse request body
@@ -74,10 +59,8 @@ serve(async (req) => {
       console.log('[Gemini] Successfully parsed request data:', {
         hasContent: !!requestData.content,
         contentLength: requestData.content?.length,
-        chatId: requestData.chatId,
         action: requestData.action,
-        hasTemplate: !!requestData.templateContext,
-        hasPatient: !!requestData.patientContext,
+        timestamp: requestData.timestamp,
         time: new Date().toISOString()
       });
     } catch (parseError) {
@@ -86,7 +69,7 @@ serve(async (req) => {
         rawBody,
         time: new Date().toISOString()
       });
-      throw createAppError('Invalid JSON payload', 'VALIDATION_ERROR');
+      throw new Error('Invalid JSON payload');
     }
 
     // Initialize ServiceContainer
@@ -94,121 +77,63 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
 
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('[Gemini] Missing Supabase configuration');
-      throw createAppError('Supabase configuration missing', 'VALIDATION_ERROR');
+    if (!supabaseUrl || !supabaseKey || !openaiKey) {
+      throw new Error('Missing required environment variables');
     }
 
-    if (!openaiKey) {
-      console.error('[Gemini] OpenAI API key missing');
-      throw createAppError('OpenAI API key not configured', 'VALIDATION_ERROR');
-    }
-
-    // Initialize ServiceContainer before getting instance
-    console.log('[Gemini] Initializing ServiceContainer');
     ServiceContainer.initialize(supabaseUrl, supabaseKey, openaiKey);
-    
-    // Get services after initialization
     const services = ServiceContainer.getInstance();
     const streamHandler = services.stream;
     const response = streamHandler.getResponse(corsHeaders);
 
-    console.log('[Gemini] Starting request processing with services');
-    
-    const { content, chatId } = requestData;
-    
-    console.log('[Gemini] Extracted request data:', { 
-      chatId, 
-      contentLength: content?.length,
-      time: new Date().toISOString()
-    });
-    
-    if (!content?.trim()) {
-      console.error('[Gemini] Empty content received');
-      throw createAppError('Message content is required', 'VALIDATION_ERROR');
-    }
-
-    // 1. Auth validation
+    // Auth validation
     const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
     if (!authHeader) {
-      console.error('[Gemini] Missing authorization header');
-      throw createAppError('No authorization header', 'AUTH_ERROR');
+      throw new Error('No authorization header');
     }
 
     const { data: { user }, error: authError } = await services.supabase.auth.getUser(authHeader);
-    
     if (authError || !user) {
-      console.error('[Gemini] Auth error:', { authError });
-      throw createAppError('Invalid authorization', 'AUTH_ERROR');
+      throw new Error('Invalid authorization');
     }
 
-    console.log('[Gemini] Auth validated:', {
-      userId: user.id,
-      timestamp: new Date().toISOString()
-    });
-
-    // 2. Get or create chat with validation
+    // Create test chat
     const chat = await services.chat.getOrCreateChat(
       user.id, 
-      chatId, 
-      content.substring(0, 50)
+      null, 
+      requestData.content.substring(0, 50)
     );
 
     if (!chat?.id) {
-      console.error('[Gemini] Chat creation failed');
-      throw createAppError('Failed to create or get chat', 'CHAT_ERROR');
+      throw new Error('Failed to create chat');
     }
 
-    console.log('[Gemini] Chat context established:', {
-      chatId: chat.id,
-      isNew: !chatId,
-      timestamp: new Date().toISOString()
-    });
-
-    // 3. Initialize stream and send metadata
+    // Initialize stream
     await streamHandler.writeMetadata({ 
       chatId: chat.id,
       status: 'created',
       timestamp: new Date().toISOString()
     });
 
-    // 4. Save user message
-    const userMessage = await services.message.saveUserMessage(chat.id, content);
+    // Save user message
+    const userMessage = await services.message.saveUserMessage(chat.id, requestData.content);
     console.log('[Gemini] User message saved:', {
       messageId: userMessage.id,
       timestamp: new Date().toISOString()
     });
 
-    // 5. Create assistant message placeholder
+    // Create assistant message
     const assistantMessage = await services.message.saveAssistantMessage(chat.id);
     console.log('[Gemini] Assistant message created:', {
       messageId: assistantMessage.id,
       timestamp: new Date().toISOString()
     });
 
-    // 6. Assemble context and process with OpenAI
-    const context = await assembleContext(services.supabase, chat.id);
-    console.log('[Gemini] Context assembled:', {
-      hasTemplateInstructions: !!context.systemInstructions,
-      hasPatientContext: !!context.patientContext,
-      messageHistoryCount: context.messageHistory.length,
-      timestamp: new Date().toISOString()
-    });
-
+    // Process with OpenAI
     const messages = [
-      { role: 'system', content: context.systemInstructions },
-      ...context.messageHistory,
-      { role: 'user', content }
+      { role: 'user', content: requestData.content }
     ];
 
-    if (context.patientContext) {
-      messages.unshift({ 
-        role: 'system', 
-        content: `Patient Context:\n${context.patientContext}`
-      });
-    }
-
-    // 7. Process with OpenAI and handle response
     await services.openai.streamCompletion(messages, async (chunk: string) => {
       await streamHandler.writeChunk(chunk);
     });
@@ -216,14 +141,12 @@ serve(async (req) => {
     console.log('[Gemini] Stream processing completed');
     await streamHandler.close();
     
-    console.log('[Gemini] Returning response with headers:', corsHeaders);
     return response;
 
   } catch (error) {
     console.error('[Gemini] Function error:', {
       error,
       message: error.message,
-      code: error.code,
       stack: error.stack,
       time: new Date().toISOString()
     });
@@ -231,11 +154,10 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error.message,
-        code: error.code || 'UNKNOWN_ERROR',
-        retryable: error.retryable || false
+        retryable: false
       }), 
       { 
-        status: error.status || 500,
+        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
