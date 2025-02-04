@@ -71,76 +71,33 @@ export const useMessageOperations = () => {
       hasPatientContext: !!patientContext,
       time: new Date().toISOString()
     });
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      console.error('[DEBUG][useMessageOperations] No auth session found');
-      setMessageError({
-        code: 'AUTH_ERROR',
-        message: 'No authentication session found'
-      });
-      return;
-    }
 
     setIsLoading(true);
     setMessageError(null);
 
     try {
-      // Simplified test payload
-      const payload = {
-        content,
-        action: 'init',
-        timestamp: new Date().toISOString()
-      };
-
-      // Log the payload before sending
-      console.log('[DEBUG][useMessageOperations] Sending simplified payload:', {
-        payload,
-        stringified: JSON.stringify(payload),
-        time: new Date().toISOString()
-      });
-
-      // Test invocation without explicit content-type
+      // Initial request to set up chat and get stream URL
       const { data, error } = await supabase.functions.invoke('gemini', {
-        body: payload
+        body: { content, type }
       });
 
-      if (error) {
-        console.error('[DEBUG][useMessageOperations] Gemini function error:', {
-          error,
-          time: new Date().toISOString()
-        });
-        throw error;
-      }
+      if (error) throw error;
+      if (!data?.streamUrl) throw new Error('No stream URL returned');
 
-      let activeChatId = currentChatId;
+      // Connect to stream
       const eventSource = new EventSource(data.streamUrl);
       
       eventSource.onmessage = async (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('[DEBUG][useMessageOperations] Stream message:', {
-            type: data.type,
-            hasContent: 'content' in data ? !!data.content : false,
-            time: new Date().toISOString()
-          });
-          await handleStreamMessage(data, activeChatId, setMessages, setMessageError);
+          await handleStreamMessage(data, currentChatId, setMessages, setMessageError);
         } catch (e) {
-          console.error('[DEBUG][useMessageOperations] Stream parse error:', {
-            error: e,
-            data: event.data,
-            time: new Date().toISOString()
-          });
+          console.error('[DEBUG][useMessageOperations] Stream parse error:', e);
         }
       };
 
-      eventSource.onerror = async (error) => {
-        console.error('[DEBUG][useMessageOperations] Stream error:', {
-          error,
-          time: new Date().toISOString()
-        });
-
+      eventSource.onerror = (error) => {
+        console.error('[DEBUG][useMessageOperations] Stream error:', error);
         eventSource.close();
         setIsLoading(false);
         setMessageError({
