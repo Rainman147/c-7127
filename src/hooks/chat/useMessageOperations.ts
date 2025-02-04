@@ -164,12 +164,13 @@ export const useMessageOperations = () => {
 
       console.log('[DEBUG][useMessageOperations] Payload validated, sending to Gemini function');
 
+      // Important change: Stringify the payload before sending
       const { data, error } = await supabase.functions.invoke('gemini', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: payload
+        body: JSON.stringify(payload)  // <-- Fixed: Properly stringify the payload
       });
 
       console.log('[DEBUG][useMessageOperations] Gemini function response:', {
