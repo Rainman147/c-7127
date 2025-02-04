@@ -36,6 +36,14 @@ interface StreamError {
 type StreamMessage = StreamMetadata | StreamChunk | StreamError;
 
 const validatePayload = (payload: MessagePayload): boolean => {
+  console.log('[DEBUG][useMessageOperations] Validating payload:', {
+    hasContent: !!payload.content,
+    contentType: typeof payload.content,
+    hasTemplateContext: !!payload.templateContext,
+    hasPatientContext: !!payload.patientContext,
+    time: new Date().toISOString()
+  });
+  
   if (!payload.content || typeof payload.content !== 'string') {
     console.error('[DEBUG][useMessageOperations] Invalid content in payload:', payload);
     return false;
@@ -164,13 +172,16 @@ export const useMessageOperations = () => {
 
       console.log('[DEBUG][useMessageOperations] Payload validated, sending to Gemini function');
 
-      // Important change: Stringify the payload before sending
+      // Important: Stringify the payload before sending
+      const stringifiedPayload = JSON.stringify(payload);
+      console.log('[DEBUG][useMessageOperations] Stringified payload length:', stringifiedPayload.length);
+
       const { data, error } = await supabase.functions.invoke('gemini', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)  // <-- Fixed: Properly stringify the payload
+        body: stringifiedPayload
       });
 
       console.log('[DEBUG][useMessageOperations] Gemini function response:', {

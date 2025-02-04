@@ -41,13 +41,21 @@ serve(async (req) => {
     console.log('[Gemini] Raw request details:', {
       bodyUsed: req.bodyUsed,
       contentType: req.headers.get('content-type'),
+      contentLength: req.headers.get('content-length'),
       time: new Date().toISOString()
     });
 
     // Attempt to parse request body
     let requestData;
     try {
-      requestData = await req.json();
+      const rawBody = await req.text();
+      console.log('[Gemini] Raw body received:', {
+        length: rawBody.length,
+        preview: rawBody.substring(0, 100),
+        time: new Date().toISOString()
+      });
+
+      requestData = JSON.parse(rawBody);
       console.log('[Gemini] Successfully parsed request data:', {
         hasContent: !!requestData.content,
         contentLength: requestData.content?.length,
