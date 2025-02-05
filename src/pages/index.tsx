@@ -9,6 +9,7 @@ import { useTemplateQuery } from '@/hooks/queries/useTemplateQueries';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import type { Template } from '@/types/template';
+import { useUrlStateManager } from '@/hooks/useUrlStateManager';
 
 const Index = () => {
   console.log('[Index] Component initializing');
@@ -16,6 +17,7 @@ const Index = () => {
   const location = useLocation();
   const { sessionId } = useParams();
   const { toast } = useToast();
+  const { updateTemplateId, updatePatientId } = useUrlStateManager();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const { session } = useSessionManagement();
@@ -57,26 +59,12 @@ const Index = () => {
   const handlePatientSelect = async (patientId: string | null) => {
     console.log('[Index] Patient selection changed:', patientId);
     setSelectedPatientId(patientId);
-    
-    const params = new URLSearchParams(location.search);
-    if (patientId) {
-      params.set('patientId', patientId);
-    } else {
-      params.delete('patientId');
-    }
-    
-    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+    updatePatientId(patientId);
   };
 
   const handleTemplateChange = (template: Template) => {
     console.log('[Index] Template changed:', template.name);
-    const params = new URLSearchParams(location.search);
-    if (template.id === 'live-session') {
-      params.delete('templateId');
-    } else {
-      params.set('templateId', template.id);
-    }
-    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+    updateTemplateId(template.id);
   };
 
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
