@@ -80,8 +80,16 @@ export const useMessageOperations = () => {
 
     try {
       // Initial request to set up chat and get stream URL
+      console.log('[DEBUG][useMessageOperations] Invoking gemini function');
+      
       const { data, error } = await supabase.functions.invoke('gemini', {
         body: { content, type }
+      });
+
+      console.log('[DEBUG][useMessageOperations] Gemini function response:', {
+        hasData: !!data,
+        error,
+        time: new Date().toISOString()
       });
 
       if (error) throw error;
@@ -96,8 +104,30 @@ export const useMessageOperations = () => {
         time: new Date().toISOString()
       });
 
+      // Test the stream URL with a fetch first
+      try {
+        const testResponse = await fetch(streamUrl.toString());
+        console.log('[DEBUG][useMessageOperations] Stream URL test response:', {
+          status: testResponse.status,
+          ok: testResponse.ok,
+          headers: Object.fromEntries(testResponse.headers.entries()),
+          time: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error('[DEBUG][useMessageOperations] Stream URL test failed:', {
+          error: e,
+          message: e.message,
+          time: new Date().toISOString()
+        });
+      }
+
       // Connect to stream
+      console.log('[DEBUG][useMessageOperations] Creating EventSource');
       const eventSource = new EventSource(streamUrl.toString());
+      
+      eventSource.onopen = () => {
+        console.log('[DEBUG][useMessageOperations] EventSource connection opened');
+      };
       
       eventSource.onmessage = async (event) => {
         try {
@@ -111,6 +141,7 @@ export const useMessageOperations = () => {
       eventSource.onerror = async (error) => {
         console.error('[DEBUG][useMessageOperations] Stream error:', {
           error,
+          readyState: eventSource.readyState,
           retryCount,
           time: new Date().toISOString()
         });

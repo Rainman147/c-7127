@@ -9,13 +9,21 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('[Gemini] Request received:', {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries()),
+    time: new Date().toISOString()
+  });
+
   if (req.method === 'OPTIONS') {
+    console.log('[Gemini] Handling CORS preflight');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const requestData = await req.json();
-    console.log('[Gemini] Request received:', {
+    console.log('[Gemini] Request data:', {
       contentLength: requestData.content?.length,
       action: requestData.action,
       timestamp: new Date().toISOString()
@@ -26,6 +34,13 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
 
+    console.log('[Gemini] Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      hasOpenAIKey: !!openaiKey,
+      time: new Date().toISOString()
+    });
+
     if (!supabaseUrl || !supabaseKey || !openaiKey) {
       throw new Error('Missing required environment variables');
     }
@@ -35,11 +50,24 @@ serve(async (req) => {
 
     // Get token from Authorization header
     const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
+    console.log('[Gemini] Auth header:', {
+      hasAuthHeader: !!authHeader,
+      headerLength: authHeader?.length,
+      time: new Date().toISOString()
+    });
+
     if (!authHeader) {
+      console.error('[Gemini] No authorization header');
       throw new Error('No authorization header');
     }
 
     const { data: { user }, error: authError } = await services.supabase.auth.getUser(authHeader);
+    console.log('[Gemini] Auth result:', {
+      hasUser: !!user,
+      error: authError,
+      time: new Date().toISOString()
+    });
+
     if (authError || !user) {
       throw new Error('Invalid authorization');
     }
@@ -50,6 +78,11 @@ serve(async (req) => {
       null, 
       requestData.content.substring(0, 50)
     );
+
+    console.log('[Gemini] Chat created/retrieved:', {
+      chatId: chat?.id,
+      time: new Date().toISOString()
+    });
 
     if (!chat?.id) {
       throw new Error('Failed to create chat');
