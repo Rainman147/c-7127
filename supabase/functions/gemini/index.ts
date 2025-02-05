@@ -25,7 +25,7 @@ serve(async (req) => {
     const requestData = await req.json();
     console.log('[Gemini] Request data:', {
       contentLength: requestData.content?.length,
-      templateId: requestData.templateId,
+      chatId: requestData.chatId,
       timestamp: new Date().toISOString()
     });
 
@@ -72,13 +72,45 @@ serve(async (req) => {
       throw new Error('Invalid authorization');
     }
 
-    // Create or get chat with template_id
-    const chat = await services.chat.getOrCreateChat(
-      user.id, 
-      null, 
-      requestData.content.substring(0, 50),
-      requestData.templateId // Pass template_id to chat service
-    );
+    // Create or get chat
+    let chat;
+    if (requestData.chatId) {
+      // Get existing chat
+      const { data: existingChat, error: chatError } = await services.supabase
+        .from('chats')
+        .select('*')
+        .eq('id', requestData.chatId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (chatError) {
+        console.error('[Gemini] Error fetching chat:', chatError);
+        throw new Error('Failed to fetch chat');
+      }
+      chat = existingChat;
+    } else {
+      // Create new chat with template_id from URL params
+      const url = new URL(req.url);
+      const templateId = url.searchParams.get('templateId');
+      
+      const chatData = {
+        user_id: user.id,
+        title: requestData.content.substring(0, 50),
+        template_id: templateId
+      };
+
+      const { data: newChat, error: createError } = await services.supabase
+        .from('chats')
+        .insert(chatData)
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('[Gemini] Error creating chat:', createError);
+        throw new Error('Failed to create chat');
+      }
+      chat = newChat;
+    }
 
     console.log('[Gemini] Chat created/retrieved:', {
       chatId: chat?.id,
@@ -87,7 +119,7 @@ serve(async (req) => {
     });
 
     if (!chat?.id) {
-      throw new Error('Failed to create chat');
+      throw new Error('Failed to create/retrieve chat');
     }
 
     // Save user message
