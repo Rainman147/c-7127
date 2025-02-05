@@ -19,13 +19,30 @@ const getDefaultTemplate = (): Template => {
   return defaultTemplate;
 };
 
-const findTemplateById = (templateId: string): Template | undefined => {
-  console.log('[useTemplateQueries] Finding template by id:', templateId);
-  const template = templates.find(t => t.id === templateId);
-  if (template && !isValidTemplate(template)) {
+const findTemplateInDb = async (templateId: string): Promise<Template | undefined> => {
+  console.log('[useTemplateQueries] Finding template in database:', templateId);
+  const { data, error } = await supabase
+    .from('templates')
+    .select('*')
+    .eq('id', templateId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[useTemplateQueries] Error finding template:', error);
+    return undefined;
+  }
+
+  if (!data) {
+    console.log('[useTemplateQueries] Template not found in database');
+    return undefined;
+  }
+
+  const template = convertDbTemplate(data as DbTemplate);
+  if (!isValidTemplate(template)) {
     console.error('[useTemplateQueries] Found template is invalid:', template);
     return undefined;
   }
+
   return template;
 };
 
@@ -41,7 +58,7 @@ export const useTemplateQuery = (templateId: string | null) => {
         return getDefaultTemplate();
       }
       
-      const template = findTemplateById(templateId);
+      const template = await findTemplateInDb(templateId);
       if (!template) {
         console.warn('[useTemplateQuery] Template not found:', templateId);
         toast({
@@ -78,33 +95,31 @@ export const useTemplatesListQuery = () => {
   return useQuery({
     queryKey: ['templates'],
     queryFn: async () => {
-      const defaultTemplates = [...templates].filter(isValidTemplate);
-      
       try {
-        const { data: customTemplates, error } = await supabase
+        const { data: templates, error } = await supabase
           .from('templates')
-          .select('*');
+          .select('*')
+          .order('created_at', { ascending: false });
           
         if (error) {
-          console.error('[useTemplatesListQuery] Error fetching custom templates:', error);
+          console.error('[useTemplatesListQuery] Error fetching templates:', error);
           throw error;
         }
         
-        const mappedCustomTemplates = customTemplates
+        const validTemplates = templates
           ?.map(template => convertDbTemplate(template as DbTemplate))
           .filter(isValidTemplate) || [];
         
-        const allTemplates = [...defaultTemplates, ...mappedCustomTemplates];
-        console.log('[useTemplatesListQuery] Fetched templates:', allTemplates.length);
-        return allTemplates;
+        console.log('[useTemplatesListQuery] Fetched templates:', validTemplates.length);
+        return validTemplates;
       } catch (error) {
         console.error('[useTemplatesListQuery] Failed to fetch templates:', error);
         toast({
           title: "Error Loading Templates",
-          description: "Only default templates are available. Please try again later.",
+          description: "Failed to load templates. Please try again later.",
           variant: "destructive",
         });
-        return defaultTemplates;
+        return [];
       }
     },
     staleTime: STALE_TIME,
