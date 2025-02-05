@@ -9,25 +9,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Template } from "@/types/template";
 import { isValidTemplate } from "@/types/template/guards";
 
-interface TemLet's start with updating the template selection logic since that's the core of our changes. We'll go step by step:
-
-Step 1: Let's first update the TemplateSelector component to work with template_id instead of template_type.
-
-<lov-code>
-Let's modify the TemplateSelector component:
-
-<lov-write file_path="src/components/TemplateSelector.tsx">
-import { memo, useCallback, useState } from "react";
-import { DropdownMenu } from "@/components/ui/dropdown-menu";
-import { useSearchParams } from "react-router-dom";
-import { useTemplateQuery, useTemplatesListQuery } from "@/hooks/queries/useTemplateQueries";
-import { useToast } from "@/hooks/use-toast";
-import { TemplateSelectorTrigger } from "./template/selector/TemplateSelectorTrigger";
-import { TemplateSelectorContent } from "./template/selector/TemplateSelectorContent";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import type { Template } from "@/types/template";
-import { isValidTemplate } from "@/types/template/guards";
-
 interface TemplateSelectorProps {
   currentChatId: string | null;
   onTemplateChange: (template: Template) => void;
