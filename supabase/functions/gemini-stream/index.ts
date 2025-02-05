@@ -22,9 +22,10 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const chatId = url.searchParams.get('chatId');
+    const token = url.searchParams.get('token');
     
-    if (!chatId) {
-      throw new Error('No chat ID provided');
+    if (!chatId || !token) {
+      throw new Error('Missing required parameters: chatId and token');
     }
 
     // Initialize services
@@ -41,15 +42,10 @@ serve(async (req) => {
     const streamHandler = services.stream;
     const response = streamHandler.getResponse(corsHeaders);
 
-    // Auth validation
-    const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
-    if (!authHeader) {
-      throw new Error('No authorization header');
-    }
-
-    const { data: { user }, error: authError } = await services.supabase.auth.getUser(authHeader);
+    // Auth validation using token from URL
+    const { data: { user }, error: authError } = await services.supabase.auth.getUser(token);
     if (authError || !user) {
-      throw new Error('Invalid authorization');
+      throw new Error('Invalid token');
     }
 
     // Get chat context

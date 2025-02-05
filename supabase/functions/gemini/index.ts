@@ -33,7 +33,7 @@ serve(async (req) => {
     ServiceContainer.initialize(supabaseUrl, supabaseKey, openaiKey);
     const services = ServiceContainer.getInstance();
 
-    // Auth validation
+    // Get token from Authorization header
     const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
     if (!authHeader) {
       throw new Error('No authorization header');
@@ -69,8 +69,8 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     });
 
-    // Generate stream URL
-    const streamUrl = `${supabaseUrl}/functions/v1/gemini-stream?chatId=${chat.id}`;
+    // Generate stream URL with token
+    const streamUrl = `${supabaseUrl}/functions/v1/gemini-stream?chatId=${chat.id}&token=${authHeader}`;
     
     return new Response(
       JSON.stringify({ streamUrl }),
