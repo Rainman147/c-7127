@@ -1,62 +1,42 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { parseJsonField } from '@/types/template/utils';
+import { useTemplatesListQuery } from '@/hooks/queries/useTemplateQueries';
 import type { Template } from '@/types/template';
 
 const TemplatesListPage = () => {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { 
+    data: templates = [], 
+    isLoading,
+    error 
+  } = useTemplatesListQuery();
 
-  useEffect(() => {
-    const loadTemplates = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('templates')
-          .select('*');
+  if (isLoading) {
+    return (
+      <div className="p-4">
+        <h1 className="text-2xl font-bold mb-4">Templates</h1>
+        <p>Loading templates...</p>
+      </div>
+    );
+  }
 
-        if (error) throw error;
-
-        // Convert database templates to UI template format
-        const uiTemplates: Template[] = data.map(dbTemplate => ({
-          id: dbTemplate.id,
-          name: dbTemplate.name,
-          description: dbTemplate.description,
-          systemInstructions: dbTemplate.system_instructions || '',
-          content: dbTemplate.content,
-          instructions: parseJsonField(dbTemplate.instructions),
-          schema: parseJsonField(dbTemplate.schema),
-          priority_rules: parseJsonField(dbTemplate.priority_rules),
-          created_at: dbTemplate.created_at,
-          updated_at: dbTemplate.updated_at,
-          user_id: dbTemplate.user_id
-        }));
-
-        setTemplates(uiTemplates);
-      } catch (error) {
-        console.error('Error loading templates:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadTemplates();
-  }, []);
+  if (error) {
+    return (
+      <div className="p-4">
+        <h1 className="text-2xl font-bold mb-4">Templates</h1>
+        <p className="text-red-500">Error loading templates: {error.message}</p>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold">Templates</h1>
-      {isLoading ? (
-        <p>Loading templates...</p>
-      ) : (
-        <ul>
-          {templates.map(template => (
-            <li key={template.id} className="border-b py-2">
-              <h2 className="text-lg">{template.name}</h2>
-              <p>{template.description}</p>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Templates</h1>
+      <ul className="space-y-4">
+        {templates.map(template => (
+          <li key={template.id} className="border rounded-lg p-4 bg-chatgpt-main">
+            <h2 className="text-lg font-semibold text-white">{template.name}</h2>
+            <p className="text-gray-300 mt-1">{template.description}</p>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
