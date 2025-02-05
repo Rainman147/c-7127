@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useMessageState } from './useMessageState';
 import { useMessagePagination } from './useMessagePagination';
 import { useMessageOperations } from './useMessageOperations';
-import { useTemplateQuery } from '@/hooks/queries/useTemplateQueries';
 import type { MessageType } from '@/types/chat';
 
 export const useChat = () => {
@@ -51,18 +50,14 @@ export const useChat = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isCreatingChat]);
 
-  const handleSendMessage = async (content: string, type: MessageType = 'text', templateId?: string) => {
+  const handleSendMessage = async (content: string, type: MessageType = 'text') => {
     console.log('[useChat] Starting message send:', { 
       content, 
       type, 
       currentChatId,
-      templateId,
       isLoading,
       messageCount: messages.length
     });
-    
-    // Fetch template if templateId is provided
-    const { data: template } = useTemplateQuery(templateId);
     
     setIsCreatingChat(!currentChatId);
     
@@ -73,8 +68,7 @@ export const useChat = () => {
         currentChatId, 
         setMessages, 
         setIsLoading, 
-        setMessageError,
-        template || undefined
+        setMessageError
       );
     } catch (error) {
       handleChatCreationError();

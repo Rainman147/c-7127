@@ -3,8 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { mapDatabaseMessage } from '@/utils/chat/messageMapping';
 import { MESSAGES_PER_PAGE } from './constants';
 import type { MessageType } from '@/types/chat';
-import type { Template } from '@/types/template';
-import type { PatientContext } from '@/types';
 
 const handleStreamMessage = async (
   data: any,
@@ -62,16 +60,12 @@ export const useMessageOperations = () => {
     currentChatId: string | null,
     setMessages: (messages: any[]) => void,
     setIsLoading: (loading: boolean) => void,
-    setMessageError: (error: any) => void,
-    template?: Template | null,
-    patientContext?: PatientContext | null
+    setMessageError: (error: any) => void
   ) => {
     console.log('[DEBUG][useMessageOperations] Starting send:', { 
       contentLength: content.length,
       type,
       currentChatId,
-      hasTemplate: !!template,
-      hasPatientContext: !!patientContext,
       time: new Date().toISOString()
     });
 
@@ -169,9 +163,7 @@ export const useMessageOperations = () => {
             currentChatId,
             setMessages,
             setIsLoading,
-            setMessageError,
-            template,
-            patientContext
+            setMessageError
           );
         }
 
