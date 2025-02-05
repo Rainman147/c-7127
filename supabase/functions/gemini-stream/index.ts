@@ -20,11 +20,26 @@ serve(async (req) => {
   }
 
   try {
+    console.log('[Gemini-Stream] Request received:', {
+      method: req.method,
+      url: req.url,
+      headers: Object.fromEntries(req.headers.entries()),
+      time: new Date().toISOString()
+    });
+
     const url = new URL(req.url);
     const chatId = url.searchParams.get('chatId');
     const token = url.searchParams.get('token');
     
+    console.log('[Gemini-Stream] Extracted params:', { 
+      chatId, 
+      hasToken: !!token,
+      tokenLength: token?.length,
+      time: new Date().toISOString()
+    });
+
     if (!chatId || !token) {
+      console.error('[Gemini-Stream] Missing required params:', { chatId, hasToken: !!token });
       throw new Error('Missing required parameters: chatId and token');
     }
 
@@ -34,6 +49,11 @@ serve(async (req) => {
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
 
     if (!supabaseUrl || !supabaseKey || !openaiKey) {
+      console.error('[Gemini-Stream] Missing env vars:', { 
+        hasSupabaseUrl: !!supabaseUrl,
+        hasSupabaseKey: !!supabaseKey,
+        hasOpenAIKey: !!openaiKey
+      });
       throw new Error('Missing required environment variables');
     }
 
@@ -43,10 +63,22 @@ serve(async (req) => {
     const response = streamHandler.getResponse(corsHeaders);
 
     // Auth validation using token from URL
+    console.log('[Gemini-Stream] Validating token...');
     const { data: { user }, error: authError } = await services.supabase.auth.getUser(token);
+    
     if (authError || !user) {
+      console.error('[Gemini-Stream] Auth error:', { 
+        error: authError,
+        hasUser: !!user,
+        time: new Date().toISOString()
+      });
       throw new Error('Invalid token');
     }
+
+    console.log('[Gemini-Stream] User authenticated:', {
+      userId: user.id,
+      time: new Date().toISOString()
+    });
 
     // Get chat context
     const { data: chat, error: chatError } = await services.supabase
@@ -56,6 +88,11 @@ serve(async (req) => {
       .single();
 
     if (chatError || !chat) {
+      console.error('[Gemini-Stream] Chat error:', {
+        error: chatError,
+        chatId,
+        time: new Date().toISOString()
+      });
       throw new Error('Failed to load chat context');
     }
 
@@ -65,6 +102,12 @@ serve(async (req) => {
       .select('*')
       .eq('chat_id', chatId)
       .order('created_at', { ascending: true });
+
+    console.log('[Gemini-Stream] Retrieved messages:', {
+      chatId,
+      messageCount: messages?.length,
+      time: new Date().toISOString()
+    });
 
     // Initialize stream
     await streamHandler.writeMetadata({ 
