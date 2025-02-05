@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useMessageState } from './useMessageState';
 import { useMessagePagination } from './useMessagePagination';
 import { useMessageOperations } from './useMessageOperations';
+import { useTemplateQuery } from '@/hooks/queries/useTemplateQueries';
 import type { MessageType } from '@/types/chat';
 
 export const useChat = () => {
@@ -60,6 +61,9 @@ export const useChat = () => {
       messageCount: messages.length
     });
     
+    // Fetch template if templateId is provided
+    const { data: template } = useTemplateQuery(templateId);
+    
     setIsCreatingChat(!currentChatId);
     
     try {
@@ -70,7 +74,7 @@ export const useChat = () => {
         setMessages, 
         setIsLoading, 
         setMessageError,
-        templateId
+        template || undefined
       );
     } catch (error) {
       handleChatCreationError();
