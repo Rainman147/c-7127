@@ -87,13 +87,17 @@ export const useMessageOperations = () => {
       if (error) throw error;
       if (!data?.streamUrl) throw new Error('No stream URL returned');
 
+      // Add debug parameter to stream URL
+      const streamUrl = new URL(data.streamUrl);
+      streamUrl.searchParams.append('debug', 'true');
+
       console.log('[DEBUG][useMessageOperations] Stream URL received:', {
-        url: data.streamUrl,
+        url: streamUrl.toString(),
         time: new Date().toISOString()
       });
 
       // Connect to stream
-      const eventSource = new EventSource(data.streamUrl);
+      const eventSource = new EventSource(streamUrl.toString());
       
       eventSource.onmessage = async (event) => {
         try {
