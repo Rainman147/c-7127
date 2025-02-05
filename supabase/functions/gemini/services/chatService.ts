@@ -8,15 +8,15 @@ export class ChatService {
     this.supabase = createClient(supabaseUrl, supabaseKey);
   }
 
-  async getOrCreateChat(userId: string, chatId: string | null, title: string) {
-    console.log('[ChatService] Getting or creating chat:', { userId, chatId, title });
+  async getOrCreateChat(userId: string, chatId: string | null, title: string, templateId?: string) {
+    console.log('[ChatService] Getting or creating chat:', { userId, chatId, title, templateId });
     
     try {
       // If chatId provided, verify ownership and return
       if (chatId) {
         const { data: chat, error } = await this.supabase
           .from('chats')
-          .select('id, title, template_type, patient_id')
+          .select('id, title, template_id, patient_id')
           .eq('id', chatId)
           .eq('user_id', userId)
           .maybeSingle();
@@ -31,14 +31,16 @@ export class ChatService {
         return chat;
       }
 
-      // Create new chat
+      // Create new chat with template_id if provided
+      const chatData = {
+        user_id: userId,
+        title: title.substring(0, 50), // Limit title length
+        template_id: templateId || null // Use template_id if provided
+      };
+
       const { data: newChat, error: createError } = await this.supabase
         .from('chats')
-        .insert({
-          user_id: userId,
-          title: title.substring(0, 50), // Limit title length
-          template_type: 'live-session' // Default template
-        })
+        .insert(chatData)
         .select()
         .single();
 
@@ -56,7 +58,7 @@ export class ChatService {
   }
 
   async updateChatMetadata(chatId: string, updates: { 
-    template_type?: string;
+    template_id?: string;
     patient_id?: string | null;
     title?: string;
   }) {

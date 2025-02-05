@@ -25,7 +25,7 @@ serve(async (req) => {
     const requestData = await req.json();
     console.log('[Gemini] Request data:', {
       contentLength: requestData.content?.length,
-      action: requestData.action,
+      templateId: requestData.templateId,
       timestamp: new Date().toISOString()
     });
 
@@ -72,15 +72,17 @@ serve(async (req) => {
       throw new Error('Invalid authorization');
     }
 
-    // Create or get chat
+    // Create or get chat with template_id
     const chat = await services.chat.getOrCreateChat(
       user.id, 
       null, 
-      requestData.content.substring(0, 50)
+      requestData.content.substring(0, 50),
+      requestData.templateId // Pass template_id to chat service
     );
 
     console.log('[Gemini] Chat created/retrieved:', {
       chatId: chat?.id,
+      templateId: chat?.template_id,
       time: new Date().toISOString()
     });
 

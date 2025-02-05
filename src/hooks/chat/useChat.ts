@@ -5,6 +5,8 @@ import { useMessageOperations } from './useMessageOperations';
 import type { MessageType } from '@/types/chat';
 
 export const useChat = () => {
+  console.log('[useChat] Initializing hook');
+  
   const {
     messages,
     setMessages,
@@ -48,11 +50,12 @@ export const useChat = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isCreatingChat]);
 
-  const handleSendMessage = async (content: string, type: MessageType = 'text') => {
-    console.log('[DEBUG][useChat] Starting message send:', { 
+  const handleSendMessage = async (content: string, type: MessageType = 'text', templateId?: string) => {
+    console.log('[useChat] Starting message send:', { 
       content, 
       type, 
       currentChatId,
+      templateId,
       isLoading,
       messageCount: messages.length
     });
@@ -66,7 +69,8 @@ export const useChat = () => {
         currentChatId, 
         setMessages, 
         setIsLoading, 
-        setMessageError
+        setMessageError,
+        templateId
       );
     } catch (error) {
       handleChatCreationError();
@@ -74,7 +78,7 @@ export const useChat = () => {
       setIsCreatingChat(false);
     }
     
-    console.log('[DEBUG][useChat] Message send complete:', {
+    console.log('[useChat] Message send complete:', {
       currentChatId,
       isLoading,
       hasError: !!messageError
@@ -82,7 +86,7 @@ export const useChat = () => {
   };
 
   const loadInitialMessages = async (chatId: string) => {
-    console.log('[DEBUG][useChat] Loading initial messages:', { 
+    console.log('[useChat] Loading initial messages:', { 
       chatId,
       currentChatId,
       existingMessages: messages.length 
@@ -98,7 +102,7 @@ export const useChat = () => {
       setHasMore
     );
     
-    console.log('[DEBUG][useChat] Initial load complete:', {
+    console.log('[useChat] Initial load complete:', {
       newCurrentChatId: currentChatId,
       messageCount: messages.length,
       hasError: !!messageError
@@ -106,7 +110,7 @@ export const useChat = () => {
   };
 
   const clearMessages = () => {
-    console.log('[DEBUG][useChat] Clearing messages:', {
+    console.log('[useChat] Clearing messages:', {
       previousCount: messages.length,
       currentChatId
     });
