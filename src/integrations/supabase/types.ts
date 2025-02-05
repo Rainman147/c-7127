@@ -64,7 +64,7 @@ export type Database = {
           created_at: string
           id: string
           patient_id: string | null
-          template_type: string | null
+          template_id: string | null
           title: string
           updated_at: string
           user_id: string
@@ -73,7 +73,7 @@ export type Database = {
           created_at?: string
           id?: string
           patient_id?: string | null
-          template_type?: string | null
+          template_id?: string | null
           title: string
           updated_at?: string
           user_id: string
@@ -82,7 +82,7 @@ export type Database = {
           created_at?: string
           id?: string
           patient_id?: string | null
-          template_type?: string | null
+          template_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -93,6 +93,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chats_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
             referencedColumns: ["id"]
           },
           {
