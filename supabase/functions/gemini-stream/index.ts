@@ -89,10 +89,20 @@ serve(async (req) => {
       console.log('[Gemini-Stream] Debug mode - skipping auth');
     }
 
-    // Get chat context
+    // Get chat with template data
     const { data: chat, error: chatError } = await services.supabase
       .from('chats')
-      .select('*, templates(*), patients(*)')
+      .select(`
+        *,
+        templates (
+          id,
+          name,
+          system_instructions,
+          content,
+          instructions
+        ),
+        patients (*)
+      `)
       .eq('id', chatId)
       .single();
 
@@ -104,6 +114,13 @@ serve(async (req) => {
       });
       throw new Error('Failed to load chat context');
     }
+
+    console.log('[Gemini-Stream] Retrieved chat with template:', {
+      chatId: chat.id,
+      templateId: chat.template_id,
+      hasTemplate: !!chat.templates,
+      time: new Date().toISOString()
+    });
 
     // Get message history
     const { data: messages } = await services.supabase
@@ -125,11 +142,19 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     });
 
-    // Process with OpenAI
+    // Process with OpenAI using template instructions if available
     const messageHistory = messages?.map(msg => ({
       role: msg.role,
       content: msg.content
     })) || [];
+
+    // Add system instructions from template if available
+    if (chat.templates?.system_instructions) {
+      messageHistory.unshift({
+        role: 'system',
+        content: chat.templates.system_instructions
+      });
+    }
 
     await services.openai.streamCompletion(messageHistory, async (chunk: string) => {
       await streamHandler.writeChunk(chunk);
