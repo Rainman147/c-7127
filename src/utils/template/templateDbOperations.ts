@@ -5,7 +5,7 @@ export const loadTemplateFromDb = async (chatId: string) => {
   console.log('[templateDbOperations] Loading template for chat:', chatId);
   const { data, error } = await supabase
     .from('chats')
-    .select('template_type')
+    .select('template_id')
     .eq('id', chatId)
     .maybeSingle();
 
@@ -14,7 +14,7 @@ export const loadTemplateFromDb = async (chatId: string) => {
     throw error;
   }
 
-  return data?.template_type;
+  return data?.template_id;
 };
 
 export const saveTemplateToDb = async (chatId: string, templateId: string) => {
@@ -25,7 +25,7 @@ export const saveTemplateToDb = async (chatId: string, templateId: string) => {
   
   const { error } = await supabase
     .from('chats')
-    .update({ template_type: templateId })
+    .update({ template_id: templateId })
     .eq('id', chatId);
 
   if (error) {
