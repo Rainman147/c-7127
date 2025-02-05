@@ -52,6 +52,9 @@ const handleStreamMessage = async (
 
 export const useMessageOperations = () => {
   const { toast } = useToast();
+  let retryCount = 0;
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 2000;
 
   const handleSendMessage = async (
     content: string,
@@ -84,6 +87,11 @@ export const useMessageOperations = () => {
       if (error) throw error;
       if (!data?.streamUrl) throw new Error('No stream URL returned');
 
+      console.log('[DEBUG][useMessageOperations] Stream URL received:', {
+        url: data.streamUrl,
+        time: new Date().toISOString()
+      });
+
       // Connect to stream
       const eventSource = new EventSource(data.streamUrl);
       
@@ -96,19 +104,54 @@ export const useMessageOperations = () => {
         }
       };
 
-      eventSource.onerror = (error) => {
-        console.error('[DEBUG][useMessageOperations] Stream error:', error);
+      eventSource.onerror = async (error) => {
+        console.error('[DEBUG][useMessageOperations] Stream error:', {
+          error,
+          retryCount,
+          time: new Date().toISOString()
+        });
+
+        if (retryCount < MAX_RETRIES) {
+          retryCount++;
+          console.log(`[DEBUG][useMessageOperations] Retrying connection (${retryCount}/${MAX_RETRIES})`);
+          
+          toast({
+            title: "Connection lost",
+            description: `Attempting to reconnect... (${retryCount}/${MAX_RETRIES})`,
+            duration: 3000,
+          });
+
+          // Close current connection
+          eventSource.close();
+          
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+          
+          // Retry the entire send operation
+          return handleSendMessage(
+            content,
+            type,
+            currentChatId,
+            setMessages,
+            setIsLoading,
+            setMessageError,
+            template,
+            patientContext
+          );
+        }
+
         eventSource.close();
         setIsLoading(false);
         setMessageError({
           code: 'STREAM_ERROR',
-          message: 'Connection lost. Please try again.'
+          message: 'Failed to maintain connection after multiple attempts.'
         });
         
         toast({
           title: "Connection Error",
           description: "Failed to maintain connection. Please try again.",
           variant: "destructive",
+          duration: 5000,
         });
       };
 
@@ -135,6 +178,7 @@ export const useMessageOperations = () => {
         title: "Error sending message",
         description: error.message || "Failed to send message. Please try again.",
         variant: "destructive",
+        duration: 5000,
       });
     } finally {
       setIsLoading(false);
