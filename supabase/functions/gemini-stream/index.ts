@@ -30,15 +30,17 @@ serve(async (req) => {
     const url = new URL(req.url);
     const chatId = url.searchParams.get('chatId');
     const token = url.searchParams.get('token');
+    const debugMode = url.searchParams.get('debug') === 'true';
     
     console.log('[Gemini-Stream] Extracted params:', { 
       chatId, 
       hasToken: !!token,
       tokenLength: token?.length,
+      debugMode,
       time: new Date().toISOString()
     });
 
-    if (!chatId || !token) {
+    if (!chatId || (!token && !debugMode)) {
       console.error('[Gemini-Stream] Missing required params:', { chatId, hasToken: !!token });
       throw new Error('Missing required parameters: chatId and token');
     }
@@ -62,23 +64,30 @@ serve(async (req) => {
     const streamHandler = services.stream;
     const response = streamHandler.getResponse(corsHeaders);
 
-    // Auth validation using token from URL
-    console.log('[Gemini-Stream] Validating token...');
-    const { data: { user }, error: authError } = await services.supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      console.error('[Gemini-Stream] Auth error:', { 
-        error: authError,
-        hasUser: !!user,
+    let userId = 'debug-user';
+
+    // Skip auth in debug mode
+    if (!debugMode) {
+      console.log('[Gemini-Stream] Validating token...');
+      const { data: { user }, error: authError } = await services.supabase.auth.getUser(token);
+      
+      if (authError || !user) {
+        console.error('[Gemini-Stream] Auth error:', { 
+          error: authError,
+          hasUser: !!user,
+          time: new Date().toISOString()
+        });
+        throw new Error('Invalid token');
+      }
+
+      userId = user.id;
+      console.log('[Gemini-Stream] User authenticated:', {
+        userId,
         time: new Date().toISOString()
       });
-      throw new Error('Invalid token');
+    } else {
+      console.log('[Gemini-Stream] Debug mode - skipping auth');
     }
-
-    console.log('[Gemini-Stream] User authenticated:', {
-      userId: user.id,
-      time: new Date().toISOString()
-    });
 
     // Get chat context
     const { data: chat, error: chatError } = await services.supabase
