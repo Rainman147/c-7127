@@ -3,21 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Template, DbTemplate } from "@/types/template";
 import { isValidTemplate } from "@/types/template/guards";
 import { convertDbTemplate } from "@/types/template/utils";
-import { templates } from "@/types/template/templates";
 import { useToast } from "@/hooks/use-toast";
 
 const STALE_TIME = 5 * 60 * 1000; // 5 minutes
 const RETRY_COUNT = 3;
 const RETRY_DELAY = 1000; // 1 second
-
-const getDefaultTemplate = (): Template => {
-  console.log('[useTemplateQueries] Using default template');
-  const defaultTemplate = templates[0];
-  if (!isValidTemplate(defaultTemplate)) {
-    throw new Error('Default template is invalid');
-  }
-  return defaultTemplate;
-};
 
 const findTemplateInDb = async (templateId: string): Promise<Template | undefined> => {
   console.log('[useTemplateQueries] Finding template in database:', templateId);
@@ -46,6 +36,34 @@ const findTemplateInDb = async (templateId: string): Promise<Template | undefine
   return template;
 };
 
+const getFirstAvailableTemplate = async (): Promise<Template | undefined> => {
+  console.log('[useTemplateQueries] Getting first available template');
+  const { data, error } = await supabase
+    .from('templates')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[useTemplateQueries] Error getting first template:', error);
+    return undefined;
+  }
+
+  if (!data) {
+    console.log('[useTemplateQueries] No templates available in database');
+    return undefined;
+  }
+
+  const template = convertDbTemplate(data as DbTemplate);
+  if (!isValidTemplate(template)) {
+    console.error('[useTemplateQueries] First available template is invalid:', template);
+    return undefined;
+  }
+
+  return template;
+};
+
 export const useTemplateQuery = (templateId: string | null) => {
   console.log('[useTemplateQuery] Initializing with templateId:', templateId);
   const { toast } = useToast();
@@ -53,23 +71,25 @@ export const useTemplateQuery = (templateId: string | null) => {
   return useQuery({
     queryKey: ['template', templateId],
     queryFn: async () => {
-      if (!templateId) {
-        console.log('[useTemplateQuery] No templateId provided, using default template');
-        return getDefaultTemplate();
+      let template: Template | undefined;
+      
+      if (templateId) {
+        // Try to fetch specific template
+        template = await findTemplateInDb(templateId);
+        if (!template) {
+          console.log('[useTemplateQuery] Requested template not found, falling back to first available');
+          template = await getFirstAvailableTemplate();
+        }
+      } else {
+        // No template specified, get first available
+        template = await getFirstAvailableTemplate();
       }
       
-      const template = await findTemplateInDb(templateId);
       if (!template) {
-        console.warn('[useTemplateQuery] Template not found:', templateId);
-        toast({
-          title: "Template Not Found",
-          description: "Using default template instead.",
-          variant: "default",
-        });
-        return getDefaultTemplate();
+        throw new Error('No templates available. Please create a template first.');
       }
       
-      console.log('[useTemplateQuery] Template found:', template.name);
+      console.log('[useTemplateQuery] Successfully retrieved template:', template.name);
       return template;
     },
     staleTime: STALE_TIME,
@@ -80,7 +100,7 @@ export const useTemplateQuery = (templateId: string | null) => {
         console.error('[useTemplateQuery] Error fetching template:', error);
         toast({
           title: "Error Loading Template",
-          description: "There was an error loading the template. Using default template instead.",
+          description: error.message,
           variant: "destructive",
         });
       }
