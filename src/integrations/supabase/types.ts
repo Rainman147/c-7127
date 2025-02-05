@@ -535,6 +535,7 @@ export type Database = {
           description: string
           id: string
           instructions: Json | null
+          is_standard: boolean | null
           name: string
           priority_rules: Json | null
           schema: Json | null
@@ -548,6 +549,7 @@ export type Database = {
           description?: string
           id?: string
           instructions?: Json | null
+          is_standard?: boolean | null
           name: string
           priority_rules?: Json | null
           schema?: Json | null
@@ -561,6 +563,7 @@ export type Database = {
           description?: string
           id?: string
           instructions?: Json | null
+          is_standard?: boolean | null
           name?: string
           priority_rules?: Json | null
           schema?: Json | null
