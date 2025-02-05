@@ -1,5 +1,5 @@
-import { templates } from "@/types/template";
-
 export const validateTemplateId = (templateId: string): boolean => {
-  return templates.some(t => t.id === templateId);
+  // Validate UUID format or special template IDs
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(templateId);
 };

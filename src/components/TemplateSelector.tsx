@@ -56,11 +56,7 @@ export const TemplateSelector = memo(({ currentChatId, onTemplateChange }: Templ
     try {
       // Update URL first
       const params = new URLSearchParams(searchParams);
-      if (template.id === 'live-session') {
-        params.delete('templateId');
-      } else {
-        params.set('templateId', template.id);
-      }
+      params.set('templateId', template.id);
       setSearchParams(params, { replace: true });
       
       // Then update parent component
