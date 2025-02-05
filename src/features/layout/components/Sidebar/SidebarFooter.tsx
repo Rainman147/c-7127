@@ -1,4 +1,4 @@
-import { Key, Settings, LogOut, User2 } from 'lucide-react';
+import { Key, Settings, LogOut, User2, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -8,8 +8,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from 'react-router-dom';
 
 interface SidebarFooterProps {
   apiKey: string;
@@ -18,6 +30,7 @@ interface SidebarFooterProps {
 
 const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
@@ -38,6 +51,39 @@ const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) => {
 
   const handleAccountSettings = () => {
     console.log('Navigate to account settings');
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) {
+        throw new Error('No user email found');
+      }
+
+      // Delete all related data in the correct order
+      const { error: deleteError } = await supabase.rpc('delete_user_data', {
+        user_email: user.email
+      });
+
+      if (deleteError) throw deleteError;
+
+      // Sign out after successful deletion
+      await supabase.auth.signOut();
+      
+      toast({
+        title: "Account deleted successfully",
+        description: "Your account and all associated data have been removed",
+      });
+      
+      navigate('/auth');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast({
+        title: "Error deleting account",
+        description: "There was a problem deleting your account. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -61,10 +107,37 @@ const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) => {
               Account Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500 focus:text-red-500">
+            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
               <LogOut className="mr-2 h-4 w-4" />
               Log Out
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer text-red-500 focus:text-red-500">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Account
+                </DropdownMenuItem>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete your account
+                    and remove all of your data including chats, patients, and templates.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteAccount}
+                    className="bg-red-500 hover:bg-red-600"
+                  >
+                    Delete Account
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
