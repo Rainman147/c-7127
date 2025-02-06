@@ -4,55 +4,8 @@ import { mapDatabaseMessage } from '@/utils/chat/messageMapping';
 import { MESSAGES_PER_PAGE } from './constants';
 import type { MessageType } from '@/types/chat';
 
-const handleStreamMessage = async (
-  data: any,
-  activeChatId: string | null,
-  setMessages: (messages: any[]) => void,
-  setMessageError: (error: any) => void
-) => {
-  console.log('[DEBUG][useMessageOperations] Stream message received:', {
-    type: data.type,
-    chatId: 'chatId' in data ? data.chatId : undefined,
-    hasContent: 'content' in data ? !!data.content : false,
-    time: new Date().toISOString()
-  });
-
-  if (data.type === 'error') {
-    console.error('[DEBUG][useMessageOperations] Stream error:', {
-      code: data.code,
-      error: data.error,
-      time: new Date().toISOString()
-    });
-    setMessageError({
-      code: data.code || 'STREAM_ERROR',
-      message: data.error
-    });
-    return;
-  }
-
-  if (data.type === 'metadata' && data.chatId) {
-    activeChatId = data.chatId;
-    return;
-  }
-
-  if (data.type === 'chunk' && activeChatId && data.content) {
-    const { data: messages } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('chat_id', activeChatId)
-      .order('created_at', { ascending: true });
-
-    if (messages) {
-      setMessages(messages.map(mapDatabaseMessage));
-    }
-  }
-};
-
 export const useMessageOperations = () => {
   const { toast } = useToast();
-  let retryCount = 0;
-  const MAX_RETRIES = 3;
-  const RETRY_DELAY = 2000;
 
   const handleSendMessage = async (
     content: string,
@@ -73,9 +26,7 @@ export const useMessageOperations = () => {
     setMessageError(null);
 
     try {
-      // Initial request to set up chat and get stream URL
-      console.log('[DEBUG][useMessageOperations] Invoking gemini function');
-      
+      // Direct API call without streaming
       const { data, error } = await supabase.functions.invoke('gemini', {
         body: { content, type }
       });
@@ -87,105 +38,17 @@ export const useMessageOperations = () => {
       });
 
       if (error) throw error;
-      if (!data?.streamUrl) throw new Error('No stream URL returned');
 
-      // Add debug parameter to stream URL
-      const streamUrl = new URL(data.streamUrl);
-      streamUrl.searchParams.append('debug', 'true');
+      // Fetch updated messages after response
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_id', currentChatId)
+        .order('created_at', { ascending: true });
 
-      console.log('[DEBUG][useMessageOperations] Stream URL received:', {
-        url: streamUrl.toString(),
-        time: new Date().toISOString()
-      });
-
-      // Test the stream URL with a fetch first
-      try {
-        const testResponse = await fetch(streamUrl.toString());
-        console.log('[DEBUG][useMessageOperations] Stream URL test response:', {
-          status: testResponse.status,
-          ok: testResponse.ok,
-          headers: Object.fromEntries(testResponse.headers.entries()),
-          time: new Date().toISOString()
-        });
-      } catch (e) {
-        console.error('[DEBUG][useMessageOperations] Stream URL test failed:', {
-          error: e,
-          message: e.message,
-          time: new Date().toISOString()
-        });
+      if (messages) {
+        setMessages(messages.map(mapDatabaseMessage));
       }
-
-      // Connect to stream
-      console.log('[DEBUG][useMessageOperations] Creating EventSource');
-      const eventSource = new EventSource(streamUrl.toString());
-      
-      eventSource.onopen = () => {
-        console.log('[DEBUG][useMessageOperations] EventSource connection opened');
-      };
-      
-      eventSource.onmessage = async (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          await handleStreamMessage(data, currentChatId, setMessages, setMessageError);
-        } catch (e) {
-          console.error('[DEBUG][useMessageOperations] Stream parse error:', e);
-        }
-      };
-
-      eventSource.onerror = async (error) => {
-        console.error('[DEBUG][useMessageOperations] Stream error:', {
-          error,
-          readyState: eventSource.readyState,
-          retryCount,
-          time: new Date().toISOString()
-        });
-
-        if (retryCount < MAX_RETRIES) {
-          retryCount++;
-          console.log(`[DEBUG][useMessageOperations] Retrying connection (${retryCount}/${MAX_RETRIES})`);
-          
-          toast({
-            title: "Connection lost",
-            description: `Attempting to reconnect... (${retryCount}/${MAX_RETRIES})`,
-            duration: 3000,
-          });
-
-          // Close current connection
-          eventSource.close();
-          
-          // Wait before retrying
-          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-          
-          // Retry the entire send operation
-          return handleSendMessage(
-            content,
-            type,
-            currentChatId,
-            setMessages,
-            setIsLoading,
-            setMessageError
-          );
-        }
-
-        eventSource.close();
-        setIsLoading(false);
-        setMessageError({
-          code: 'STREAM_ERROR',
-          message: 'Failed to maintain connection after multiple attempts.'
-        });
-        
-        toast({
-          title: "Connection Error",
-          description: "Failed to maintain connection. Please try again.",
-          variant: "destructive",
-          duration: 5000,
-        });
-      };
-
-      return () => {
-        console.log('[DEBUG][useMessageOperations] Cleaning up EventSource');
-        eventSource.close();
-      };
 
     } catch (error: any) {
       console.error('[DEBUG][useMessageOperations] Operation failed:', {

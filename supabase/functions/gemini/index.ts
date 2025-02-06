@@ -62,64 +62,25 @@ serve(async (req) => {
     }
 
     const { data: { user }, error: authError } = await services.supabase.auth.getUser(authHeader);
-    console.log('[Gemini] Auth result:', {
-      hasUser: !!user,
-      error: authError,
-      time: new Date().toISOString()
-    });
-
     if (authError || !user) {
       throw new Error('Invalid authorization');
     }
 
-    // Create or get chat
-    let chat;
-    if (requestData.chatId) {
-      // Get existing chat
-      const { data: existingChat, error: chatError } = await services.supabase
-        .from('chats')
-        .select('*')
-        .eq('id', requestData.chatId)
-        .eq('user_id', user.id)
-        .single();
+    // Create new chat if needed
+    const chatData = {
+      user_id: user.id,
+      title: requestData.content.substring(0, 50),
+    };
 
-      if (chatError) {
-        console.error('[Gemini] Error fetching chat:', chatError);
-        throw new Error('Failed to fetch chat');
-      }
-      chat = existingChat;
-    } else {
-      // Create new chat with template_id from URL params
-      const url = new URL(req.url);
-      const templateId = url.searchParams.get('templateId');
-      
-      const chatData = {
-        user_id: user.id,
-        title: requestData.content.substring(0, 50),
-        template_id: templateId
-      };
+    const { data: chat, error: chatError } = await services.supabase
+      .from('chats')
+      .insert(chatData)
+      .select()
+      .single();
 
-      const { data: newChat, error: createError } = await services.supabase
-        .from('chats')
-        .insert(chatData)
-        .select()
-        .single();
-
-      if (createError) {
-        console.error('[Gemini] Error creating chat:', createError);
-        throw new Error('Failed to create chat');
-      }
-      chat = newChat;
-    }
-
-    console.log('[Gemini] Chat created/retrieved:', {
-      chatId: chat?.id,
-      templateId: chat?.template_id,
-      time: new Date().toISOString()
-    });
-
-    if (!chat?.id) {
-      throw new Error('Failed to create/retrieve chat');
+    if (chatError) {
+      console.error('[Gemini] Error creating chat:', chatError);
+      throw new Error('Failed to create chat');
     }
 
     // Save user message
@@ -129,27 +90,32 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     });
 
-    // Create assistant message placeholder
-    const assistantMessage = await services.message.saveAssistantMessage(chat.id);
-    console.log('[Gemini] Assistant message created:', {
-      messageId: assistantMessage.id,
-      timestamp: new Date().toISOString()
+    // Make direct OpenAI call
+    console.log('[Gemini] Making OpenAI API call');
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'user', content: requestData.content }
+        ],
+      }),
     });
 
-    // Generate stream URL with token
-    const projectRef = supabaseUrl.match(/(?:https?:\/\/)?([^.]+)/)?.[1] || '';
-    const streamUrl = `https://${projectRef}.functions.supabase.co/gemini-stream?chatId=${chat.id}&token=${authHeader}`;
-    
-    console.log('[Gemini] Generated stream URL:', {
-      url: streamUrl.replace(authHeader, '[REDACTED]'),
-      time: new Date().toISOString()
-    });
+    const openAIData = await openAIResponse.json();
+    console.log('[Gemini] OpenAI response received');
+
+    // Save assistant message
+    const assistantContent = openAIData.choices[0].message.content;
+    await services.message.saveAssistantMessage(chat.id, assistantContent);
 
     return new Response(
-      JSON.stringify({ streamUrl }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      JSON.stringify({ success: true }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
