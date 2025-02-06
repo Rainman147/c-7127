@@ -41,8 +41,9 @@ export const useMessageOperations = () => {
 
       // Direct API call without streaming
       const { data, error } = await supabase.functions.invoke('gemini-stream', {
-        body: { content, type },
-        query: { 
+        body: { 
+          content, 
+          type,
           chatId: currentChatId,
           debug: process.env.NODE_ENV === 'development'
         }
