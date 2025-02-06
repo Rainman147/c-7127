@@ -44,6 +44,11 @@ export const useMessageOperations = () => {
 
       if (error) throw error;
 
+      // Return new chat ID if one was created
+      if (data.isNewChat) {
+        return data.chatId;
+      }
+
       // Fetch updated messages after response
       const { data: messages } = await supabase
         .from('messages')
@@ -55,8 +60,7 @@ export const useMessageOperations = () => {
         setMessages(messages.map(mapDatabaseMessage));
       }
 
-      // Return new chat ID if one was created
-      return data.isNewChat ? data.chatId : null;
+      return null;
 
     } catch (error: any) {
       console.error('[DEBUG][useMessageOperations] Operation failed:', {

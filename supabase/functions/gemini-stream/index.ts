@@ -61,7 +61,7 @@ serve(async (req) => {
       }
       userId = user.id;
 
-      // Get or create chat if needed
+      // Create new chat if needed
       if (!currentChatId) {
         console.log('[Gemini-Stream] Creating new chat');
         const { data: chat, error: chatError } = await services.supabase
