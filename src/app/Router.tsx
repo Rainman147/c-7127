@@ -15,21 +15,18 @@ const Router = () => {
       <Routes>
         <Route path="/auth" element={<Auth />} />
         
-        {/* Root route with optional template and patient params */}
         <Route path="/" element={
           <ProtectedLayout>
             <ChatPage />
           </ProtectedLayout>
         } />
         
-        {/* Chat session route with optional template and patient params */}
         <Route path="/c/:sessionId" element={
           <ProtectedLayout>
             <ChatPage />
           </ProtectedLayout>
         } />
         
-        {/* Patient routes */}
         <Route path="/patients" element={
           <ProtectedLayout>
             <PatientsListPage />
@@ -46,7 +43,6 @@ const Router = () => {
           </ProtectedLayout>
         } />
         
-        {/* Template routes */}
         <Route path="/templates" element={
           <ProtectedLayout>
             <TemplatesListPage />
@@ -58,7 +54,6 @@ const Router = () => {
           </ProtectedLayout>
         } />
         
-        {/* Catch all redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

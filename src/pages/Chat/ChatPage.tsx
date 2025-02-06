@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
-import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { useToast } from '@/hooks/use-toast';
 import type { Template } from '@/types';
 import { useUrlStateManager } from '@/hooks/useUrlStateManager';
+import { useSessionManagement } from '@/hooks/useSessionManagement';
 
 const ChatPage = () => {
   console.log('[ChatPage] Component initializing');
-  const navigate = useNavigate();
+  
   const location = useLocation();
   const { sessionId } = useParams();
   const { toast } = useToast();
@@ -17,31 +17,21 @@ const ChatPage = () => {
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const { session } = useSessionManagement();
-  const { createSession } = useChatSessions();
-  
-  // Temporary stubs for removed chat functionality
-  const messages = [];
-  const isLoading = false;
-  const currentChatId = sessionId || null;
+  const { activeSessionId } = useChatSessions();
 
-  const handleSendMessage = async (content: string, type: 'text' | 'audio' = 'text') => {
-    console.log('[ChatPage] Message sending temporarily disabled');
-    toast({
-      title: "Info",
-      description: "Message sending is temporarily disabled during system rebuild",
-    });
+  const [messages, setMessages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleMessageSend = async (content: string, type: 'text' | 'audio' = 'text') => {
+    console.log('[ChatPage] Sending message:', { content, type });
+    // Basic message sending implementation
+    setMessages(prev => [...prev, { role: 'user', content, type }]);
   };
 
-  // Handle patient selection changes
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const patientId = params.get('patientId');
-    
-    if (patientId !== selectedPatientId) {
-      setSelectedPatientId(patientId);
-      console.log('[ChatPage] Updated selected patient:', patientId);
-    }
-  }, [location.search, selectedPatientId]);
+  const handleTranscriptionComplete = async (text: string) => {
+    console.log('[ChatPage] Transcription completed:', text);
+    await handleMessageSend(text, 'text');
+  };
 
   const handlePatientSelect = async (patientId: string | null) => {
     console.log('[ChatPage] Patient selection changed:', patientId);
@@ -55,28 +45,16 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="flex h-screen">
-      <ChatContainer 
-        messages={messages}
-        isLoading={isLoading}
-        currentChatId={currentChatId}
-        onMessageSend={handleSendMessage}
-        onTemplateChange={handleTemplateChange}
-        onPatientSelect={handlePatientSelect}
-        selectedPatientId={selectedPatientId}
-        onTranscriptionComplete={async (text: string) => {
-          console.log('[ChatPage] Transcription complete, ready for user to edit:', text);
-          if (text) {
-            const chatInput = document.querySelector('textarea');
-            if (chatInput) {
-              (chatInput as HTMLTextAreaElement).value = text;
-              const event = new Event('input', { bubbles: true });
-              chatInput.dispatchEvent(event);
-            }
-          }
-        }}
-      />
-    </div>
+    <ChatContainer
+      messages={messages}
+      isLoading={isLoading}
+      currentChatId={sessionId || null}
+      onMessageSend={handleMessageSend}
+      onTranscriptionComplete={handleTranscriptionComplete}
+      onTemplateChange={handleTemplateChange}
+      onPatientSelect={handlePatientSelect}
+      selectedPatientId={selectedPatientId}
+    />
   );
 };
 

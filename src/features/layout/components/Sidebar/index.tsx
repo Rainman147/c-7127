@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { useUI } from '@/contexts/UIContext';
@@ -19,8 +19,6 @@ const Sidebar = ({
   const navigate = useNavigate();
   const { isSidebarOpen, isDesktop, setSidebarOpen } = useUI();
   const [apiKey, setApiKey] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState("");
   
   const {
     sessions,
@@ -54,7 +52,6 @@ const Sidebar = ({
 
   return (
     <>
-      {/* Backdrop for mobile */}
       {!isDesktop && isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30"
@@ -63,7 +60,6 @@ const Sidebar = ({
         />
       )}
       
-      {/* Sidebar */}
       <div 
         className={`fixed top-0 left-0 z-40 h-screen bg-chatgpt-sidebar transition-all duration-300 
           ${isSidebarOpen ? "w-64" : "w-0"}
@@ -80,8 +76,7 @@ const Sidebar = ({
                 sessions={sessions}
                 onSessionSelect={handleSessionClick}
                 onSessionEdit={(session) => {
-                  setEditingId(session.id);
-                  setEditTitle(session.title);
+                  renameSession(session.id, session.title);
                 }}
                 onSessionDelete={deleteSession}
               />
