@@ -26,9 +26,26 @@ export const useMessageOperations = () => {
     setMessageError(null);
 
     try {
+      // Save user message first
+      const { error: userMessageError } = await supabase
+        .from('messages')
+        .insert({
+          chat_id: currentChatId,
+          role: 'user',
+          content,
+          type,
+          status: 'delivered'
+        });
+
+      if (userMessageError) throw userMessageError;
+
       // Direct API call without streaming
-      const { data, error } = await supabase.functions.invoke('gemini', {
-        body: { content, type }
+      const { data, error } = await supabase.functions.invoke('gemini-stream', {
+        body: { content, type },
+        query: { 
+          chatId: currentChatId,
+          debug: process.env.NODE_ENV === 'development'
+        }
       });
 
       console.log('[DEBUG][useMessageOperations] Gemini function response:', {

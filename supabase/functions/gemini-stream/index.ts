@@ -6,15 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, x-requested-with',
-  'Access-Control-Max-Age': '86400',
-  'Content-Type': 'text/event-stream',
-  'Cache-Control': 'no-cache, no-transform',
-  'Connection': 'keep-alive',
-  'X-Accel-Buffering': 'no'
+  'Content-Type': 'application/json'
 };
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     console.log('[Gemini-Stream] Handling CORS preflight');
     return new Response(null, { headers: corsHeaders });
@@ -33,14 +28,6 @@ serve(async (req) => {
     const token = url.searchParams.get('token');
     const debugMode = url.searchParams.get('debug') === 'true';
     
-    console.log('[Gemini-Stream] Extracted params:', { 
-      chatId, 
-      hasToken: !!token,
-      tokenLength: token?.length,
-      debugMode,
-      time: new Date().toISOString()
-    });
-
     if (!chatId || (!token && !debugMode)) {
       console.error('[Gemini-Stream] Missing required params:', { chatId, hasToken: !!token });
       throw new Error('Missing required parameters: chatId and token');
@@ -51,45 +38,24 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
 
-    console.log('[Gemini-Stream] Environment check:', {
-      hasSupabaseUrl: !!supabaseUrl,
-      hasSupabaseKey: !!supabaseKey,
-      hasOpenAIKey: !!openaiKey,
-      time: new Date().toISOString()
-    });
-
     if (!supabaseUrl || !supabaseKey || !openaiKey) {
       throw new Error('Missing required environment variables');
     }
 
     ServiceContainer.initialize(supabaseUrl, supabaseKey, openaiKey);
     const services = ServiceContainer.getInstance();
-    const streamHandler = services.stream;
-    const response = streamHandler.getResponse(corsHeaders);
 
     let userId = 'debug-user';
 
     // Skip auth in debug mode
     if (!debugMode) {
-      console.log('[Gemini-Stream] Validating token...');
       const { data: { user }, error: authError } = await services.supabase.auth.getUser(token);
       
       if (authError || !user) {
-        console.error('[Gemini-Stream] Auth error:', { 
-          error: authError,
-          hasUser: !!user,
-          time: new Date().toISOString()
-        });
+        console.error('[Gemini-Stream] Auth error:', { error: authError });
         throw new Error('Invalid token');
       }
-
       userId = user.id;
-      console.log('[Gemini-Stream] User authenticated:', {
-        userId,
-        time: new Date().toISOString()
-      });
-    } else {
-      console.log('[Gemini-Stream] Debug mode - skipping auth');
     }
 
     // Get chat with template data
@@ -110,20 +76,9 @@ serve(async (req) => {
       .single();
 
     if (chatError || !chat) {
-      console.error('[Gemini-Stream] Chat error:', {
-        error: chatError,
-        chatId,
-        time: new Date().toISOString()
-      });
+      console.error('[Gemini-Stream] Chat error:', { error: chatError });
       throw new Error('Failed to load chat context');
     }
-
-    console.log('[Gemini-Stream] Retrieved chat with template:', {
-      chatId: chat.id,
-      templateId: chat.template_id,
-      hasTemplate: !!chat.templates,
-      time: new Date().toISOString()
-    });
 
     // Get message history
     const { data: messages } = await services.supabase
@@ -132,20 +87,6 @@ serve(async (req) => {
       .eq('chat_id', chatId)
       .order('created_at', { ascending: true });
 
-    console.log('[Gemini-Stream] Retrieved messages:', {
-      chatId,
-      messageCount: messages?.length,
-      time: new Date().toISOString()
-    });
-
-    // Initialize stream
-    await streamHandler.writeMetadata({ 
-      chatId,
-      status: 'streaming',
-      timestamp: new Date().toISOString()
-    });
-
-    // Process with OpenAI using template instructions if available
     const messageHistory = messages?.map(msg => ({
       role: msg.role,
       content: msg.content
@@ -159,44 +100,64 @@ serve(async (req) => {
       });
     }
 
-    console.log('[Gemini-Stream] Starting OpenAI stream with:', {
+    console.log('[Gemini-Stream] Making OpenAI request with:', {
       messageCount: messageHistory.length,
-      hasSystemInstructions: !!chat.templates?.system_instructions,
-      time: new Date().toISOString()
+      hasSystemInstructions: !!chat.templates?.system_instructions
     });
 
-    try {
-      await services.openai.streamCompletion(messageHistory, async (chunk: string) => {
-        console.log('[Gemini-Stream] Received chunk:', {
-          chunkLength: chunk.length,
-          preview: chunk.substring(0, 50),
-          time: new Date().toISOString()
-        });
-        await streamHandler.writeChunk(chunk);
-      });
+    // Direct OpenAI call without streaming
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: messageHistory,
+        stream: false
+      }),
+    });
 
-      console.log('[Gemini-Stream] Stream processing completed successfully');
-    } catch (openAiError) {
-      console.error('[Gemini-Stream] OpenAI streaming error:', {
-        error: openAiError,
-        message: openAiError.message,
-        stack: openAiError.stack,
-        time: new Date().toISOString()
-      });
-      throw openAiError;
+    if (!openAIResponse.ok) {
+      throw new Error(`OpenAI API error: ${openAIResponse.status}`);
     }
 
-    console.log('[Gemini-Stream] Stream processing completed');
-    await streamHandler.close();
+    const completion = await openAIResponse.json();
+    const assistantMessage = completion.choices[0].message.content;
 
-    return response;
+    // Save assistant message to database
+    const { error: saveError } = await services.supabase
+      .from('messages')
+      .insert({
+        chat_id: chatId,
+        role: 'assistant',
+        content: assistantMessage,
+        type: 'text',
+        status: 'delivered'
+      });
+
+    if (saveError) {
+      console.error('[Gemini-Stream] Error saving message:', saveError);
+      throw new Error('Failed to save assistant message');
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: true,
+        message: assistantMessage 
+      }), 
+      { 
+        status: 200,
+        headers: corsHeaders
+      }
+    );
 
   } catch (error) {
     console.error('[Gemini-Stream] Function error:', {
       error,
       message: error.message,
-      stack: error.stack,
-      time: new Date().toISOString()
+      stack: error.stack
     });
     
     return new Response(
@@ -206,7 +167,7 @@ serve(async (req) => {
       }), 
       { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: corsHeaders
       }
     );
   }
