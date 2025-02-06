@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
-import { useChat } from '@/hooks/chat';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { useTemplateQuery } from '@/hooks/queries/useTemplateQueries';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import type { Template } from '@/types/template';
+import type { Template } from '@/types';
 import { useUrlStateManager } from '@/hooks/useUrlStateManager';
 
 const Index = () => {
@@ -22,15 +21,12 @@ const Index = () => {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
-  
-  const { 
-    messages, 
-    isLoading: isChatLoading, 
-    handleSendMessage,
-    loadInitialMessages,
-    currentChatId
-  } = useChat();
 
+  // Temporary stubs for removed chat functionality
+  const messages = [];
+  const isLoading = false;
+  const currentChatId = null;
+  
   // Get template ID from URL
   const params = new URLSearchParams(location.search);
   const templateId = params.get('templateId');
@@ -68,8 +64,11 @@ const Index = () => {
   };
 
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
-    console.log('[Index] Sending message:', { message, type });
-    await handleSendMessage(message, type);
+    console.log('[Index] Message sending temporarily disabled');
+    toast({
+      title: "Info",
+      description: "Message sending is temporarily disabled during system rebuild",
+    });
   };
 
   // Show error toast if template error occurs
@@ -83,7 +82,7 @@ const Index = () => {
     }
   }, [templateError, toast]);
 
-  const isLoading = isChatLoading || isTemplateLoading;
+  const isPageLoading = isTemplateLoading;
 
   return (
     <div className="flex h-screen">
@@ -95,7 +94,7 @@ const Index = () => {
       )}
       <ChatContainer 
         messages={messages}
-        isLoading={isLoading}
+        isLoading={isPageLoading}
         currentChatId={currentChatId}
         onMessageSend={handleMessageSend}
         onTemplateChange={handleTemplateChange}

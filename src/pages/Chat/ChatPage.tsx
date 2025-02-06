@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
-import { useChat } from '@/hooks/chat';
-import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { useToast } from '@/hooks/use-toast';
@@ -19,23 +17,18 @@ const ChatPage = () => {
   const { session } = useSessionManagement();
   const { createSession } = useChatSessions();
   
-  const { 
-    messages, 
-    isLoading, 
-    handleSendMessage,
-    loadInitialMessages,
-    currentChatId
-  } = useChat();
+  // Temporary stubs for removed chat functionality
+  const messages = [];
+  const isLoading = false;
+  const currentChatId = sessionId || null;
 
-  // Initialize audio recovery
-  useAudioRecovery();
-
-  // Load initial messages when sessionId changes
-  useEffect(() => {
-    if (sessionId) {
-      loadInitialMessages(sessionId);
-    }
-  }, [sessionId, loadInitialMessages]);
+  const handleSendMessage = async (content: string, type: 'text' | 'audio' = 'text') => {
+    console.log('[ChatPage] Message sending temporarily disabled');
+    toast({
+      title: "Info",
+      description: "Message sending is temporarily disabled during system rebuild",
+    });
+  };
 
   // Handle patient selection changes
   useEffect(() => {
