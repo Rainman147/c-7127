@@ -1,11 +1,10 @@
-import { Loader2, Mic } from 'lucide-react';
+import { Mic } from 'lucide-react';
 import TiptapEditor from '@/features/chat/components/editor/TiptapEditor';
 
 type MessageItemProps = {
   role: 'user' | 'assistant';
   content: string;
   type?: 'text' | 'audio';
-  isStreaming?: boolean;
   isEditing: boolean;
   id?: string;
   wasEdited: boolean;
@@ -17,7 +16,6 @@ const MessageItem = ({
   role, 
   content, 
   type, 
-  isStreaming, 
   isEditing,
   id,
   wasEdited,
@@ -73,12 +71,6 @@ const MessageItem = ({
         </div>
       ) : (
         <div className="text-gray-200 whitespace-pre-wrap">{content}</div>
-      )}
-      {isStreaming && (
-        <div className="inline-flex items-center gap-2 ml-2 text-gray-400">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span className="text-xs">Transcribing...</span>
-        </div>
       )}
     </div>
   );

@@ -23,14 +23,12 @@ serve(async (req) => {
       time: new Date().toISOString()
     });
 
-    const url = new URL(req.url);
-    const chatId = url.searchParams.get('chatId');
-    const token = url.searchParams.get('token');
-    const debugMode = url.searchParams.get('debug') === 'true';
+    const requestData = await req.json();
+    const { content, chatId, debug } = requestData;
     
-    if (!chatId || (!token && !debugMode)) {
-      console.error('[Gemini-Stream] Missing required params:', { chatId, hasToken: !!token });
-      throw new Error('Missing required parameters: chatId and token');
+    if (!chatId && !debug) {
+      console.error('[Gemini-Stream] Missing required params:', { chatId, debug });
+      throw new Error('Missing required parameters');
     }
 
     // Initialize services
@@ -48,7 +46,12 @@ serve(async (req) => {
     let userId = 'debug-user';
 
     // Skip auth in debug mode
-    if (!debugMode) {
+    if (!debug) {
+      const token = req.headers.get('Authorization')?.split('Bearer ')[1];
+      if (!token) {
+        throw new Error('No authorization header');
+      }
+
       const { data: { user }, error: authError } = await services.supabase.auth.getUser(token);
       
       if (authError || !user) {
