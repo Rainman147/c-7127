@@ -22,11 +22,32 @@ export const useMessageOperations = () => {
       time: new Date().toISOString()
     });
 
+    if (!currentChatId) {
+      console.error('[DEBUG][useMessageOperations] No chat ID provided');
+      setMessageError({
+        code: 'NO_CHAT_ID',
+        message: 'No chat session found'
+      });
+      return;
+    }
+
     setIsLoading(true);
     setMessageError(null);
 
     try {
-      // Save user message first
+      // First verify the chat exists and belongs to the user
+      const { data: chat, error: chatError } = await supabase
+        .from('chats')
+        .select('id')
+        .eq('id', currentChatId)
+        .single();
+
+      if (chatError || !chat) {
+        console.error('[DEBUG][useMessageOperations] Chat verification failed:', chatError);
+        throw new Error('Invalid chat session');
+      }
+
+      // Save user message
       const { error: userMessageError } = await supabase
         .from('messages')
         .insert({
@@ -37,7 +58,10 @@ export const useMessageOperations = () => {
           status: 'delivered'
         });
 
-      if (userMessageError) throw userMessageError;
+      if (userMessageError) {
+        console.error('[DEBUG][useMessageOperations] User message insert failed:', userMessageError);
+        throw userMessageError;
+      }
 
       // Direct API call without streaming
       const { data, error } = await supabase.functions.invoke('gemini-stream', {
