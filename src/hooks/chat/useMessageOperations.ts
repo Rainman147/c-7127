@@ -22,48 +22,11 @@ export const useMessageOperations = () => {
       time: new Date().toISOString()
     });
 
-    if (!currentChatId) {
-      console.error('[DEBUG][useMessageOperations] No chat ID provided');
-      setMessageError({
-        code: 'NO_CHAT_ID',
-        message: 'No chat session found'
-      });
-      return;
-    }
-
     setIsLoading(true);
     setMessageError(null);
 
     try {
-      // First verify the chat exists and belongs to the user
-      const { data: chat, error: chatError } = await supabase
-        .from('chats')
-        .select('id')
-        .eq('id', currentChatId)
-        .single();
-
-      if (chatError || !chat) {
-        console.error('[DEBUG][useMessageOperations] Chat verification failed:', chatError);
-        throw new Error('Invalid chat session');
-      }
-
-      // Save user message
-      const { error: userMessageError } = await supabase
-        .from('messages')
-        .insert({
-          chat_id: currentChatId,
-          role: 'user',
-          content,
-          type,
-          status: 'delivered'
-        });
-
-      if (userMessageError) {
-        console.error('[DEBUG][useMessageOperations] User message insert failed:', userMessageError);
-        throw userMessageError;
-      }
-
-      // Direct API call without streaming
+      // Call gemini-stream function
       const { data, error } = await supabase.functions.invoke('gemini-stream', {
         body: { 
           content, 
@@ -85,12 +48,15 @@ export const useMessageOperations = () => {
       const { data: messages } = await supabase
         .from('messages')
         .select('*')
-        .eq('chat_id', currentChatId)
+        .eq('chat_id', data.chatId)
         .order('created_at', { ascending: true });
 
       if (messages) {
         setMessages(messages.map(mapDatabaseMessage));
       }
+
+      // Return new chat ID if one was created
+      return data.isNewChat ? data.chatId : null;
 
     } catch (error: any) {
       console.error('[DEBUG][useMessageOperations] Operation failed:', {
@@ -112,6 +78,8 @@ export const useMessageOperations = () => {
         variant: "destructive",
         duration: 5000,
       });
+
+      return null;
     } finally {
       setIsLoading(false);
     }

@@ -62,7 +62,7 @@ export const useChat = () => {
     setIsCreatingChat(!currentChatId);
     
     try {
-      await sendMessage(
+      const newChatId = await sendMessage(
         content, 
         type, 
         currentChatId, 
@@ -70,6 +70,10 @@ export const useChat = () => {
         setIsLoading, 
         setMessageError
       );
+
+      if (newChatId) {
+        updateChatId(newChatId);
+      }
     } catch (error) {
       handleChatCreationError();
     } finally {
