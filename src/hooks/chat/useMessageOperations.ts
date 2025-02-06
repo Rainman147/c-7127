@@ -26,7 +26,6 @@ export const useMessageOperations = () => {
     setMessageError(null);
 
     try {
-      // Call gemini function (not gemini-stream)
       const { data, error } = await supabase.functions.invoke('gemini', {
         body: { 
           content, 
