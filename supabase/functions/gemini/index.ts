@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { ServiceContainer } from "./services/ServiceContainer.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,9 +44,6 @@ serve(async (req) => {
       throw new Error('Missing required environment variables');
     }
 
-    ServiceContainer.initialize(supabaseUrl, supabaseKey, openaiKey);
-    const services = ServiceContainer.getInstance();
-
     // Get token from Authorization header
     const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
     console.log('[Gemini] Auth header:', {
@@ -61,34 +57,11 @@ serve(async (req) => {
       throw new Error('No authorization header');
     }
 
-    const { data: { user }, error: authError } = await services.supabase.auth.getUser(authHeader);
-    if (authError || !user) {
-      throw new Error('Invalid authorization');
-    }
-
     // Create new chat if needed
     const chatData = {
-      user_id: user.id,
+      user_id: requestData.userId,
       title: requestData.content.substring(0, 50),
     };
-
-    const { data: chat, error: chatError } = await services.supabase
-      .from('chats')
-      .insert(chatData)
-      .select()
-      .single();
-
-    if (chatError) {
-      console.error('[Gemini] Error creating chat:', chatError);
-      throw new Error('Failed to create chat');
-    }
-
-    // Save user message
-    const userMessage = await services.message.saveUserMessage(chat.id, requestData.content);
-    console.log('[Gemini] User message saved:', {
-      messageId: userMessage.id,
-      timestamp: new Date().toISOString()
-    });
 
     // Make direct OpenAI call
     console.log('[Gemini] Making OpenAI API call');
@@ -110,15 +83,14 @@ serve(async (req) => {
     const openAIData = await openAIResponse.json();
     console.log('[Gemini] OpenAI response received');
 
-    // Save assistant message
     const assistantContent = openAIData.choices[0].message.content;
-    await services.message.saveAssistantMessage(chat.id, assistantContent);
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        chatId: chat.id,
-        isNewChat: !requestData.chatId
+        chatId: requestData.chatId || crypto.randomUUID(),
+        isNewChat: !requestData.chatId,
+        content: assistantContent
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -48,7 +48,31 @@ export const useMessageOperations = () => {
         return data.chatId;
       }
 
-      // Fetch updated messages after response
+      // Save user message
+      const { error: userMessageError } = await supabase
+        .from('messages')
+        .insert({
+          chat_id: data.chatId,
+          role: 'user',
+          content: content,
+          type: type
+        });
+
+      if (userMessageError) throw userMessageError;
+
+      // Save assistant message
+      const { error: assistantMessageError } = await supabase
+        .from('messages')
+        .insert({
+          chat_id: data.chatId,
+          role: 'assistant',
+          content: data.content,
+          type: 'text'
+        });
+
+      if (assistantMessageError) throw assistantMessageError;
+
+      // Fetch updated messages
       const { data: messages } = await supabase
         .from('messages')
         .select('*')
