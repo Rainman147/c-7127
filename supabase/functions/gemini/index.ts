@@ -103,6 +103,7 @@ serve(async (req) => {
         messages: [
           { role: 'user', content: requestData.content }
         ],
+        stream: false
       }),
     });
 
@@ -114,7 +115,11 @@ serve(async (req) => {
     await services.message.saveAssistantMessage(chat.id, assistantContent);
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ 
+        success: true,
+        chatId: chat.id,
+        isNewChat: !requestData.chatId
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
