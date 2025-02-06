@@ -137,8 +137,14 @@ serve(async (req) => {
     });
 
     // Generate stream URL with token
-    const streamUrl = `${supabaseUrl}/functions/v1/gemini-stream?chatId=${chat.id}&token=${authHeader}`;
+    const projectRef = supabaseUrl.match(/(?:https?:\/\/)?([^.]+)/)?.[1] || '';
+    const streamUrl = `https://${projectRef}.functions.supabase.co/gemini-stream?chatId=${chat.id}&token=${authHeader}`;
     
+    console.log('[Gemini] Generated stream URL:', {
+      url: streamUrl.replace(authHeader, '[REDACTED]'),
+      time: new Date().toISOString()
+    });
+
     return new Response(
       JSON.stringify({ streamUrl }),
       { 
