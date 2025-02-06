@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useUI } from '@/contexts/UIContext';
 import { ChatHeader } from '@/features/chat/components/header/ChatHeader';
 import MessageList from '@/features/chat/components/message/MessageList';
 import ChatInput from '@/features/chat/components/input/ChatInput';
@@ -9,7 +8,7 @@ interface ChatContainerProps {
   messages: Message[];
   isLoading: boolean;
   currentChatId: string | null;
-  onMessageSend: (content: string, type?: 'text' | 'audio', systemInstructions?: string) => Promise<void>;
+  onMessageSend: (content: string, type?: 'text' | 'audio') => Promise<void>;
   onTranscriptionComplete: (text: string) => Promise<void>;
   onTemplateChange: (template: Template) => void;
   onPatientSelect: (patientId: string | null) => Promise<void>;
@@ -17,16 +16,15 @@ interface ChatContainerProps {
 }
 
 const ChatContainer = ({ 
-  messages, 
-  isLoading,
+  messages = [], 
+  isLoading = false,
   currentChatId,
-  onMessageSend,
-  onTranscriptionComplete,
-  onTemplateChange,
-  onPatientSelect,
+  onMessageSend = async () => {},
+  onTranscriptionComplete = async () => {},
+  onTemplateChange = () => {},
+  onPatientSelect = async () => {},
   selectedPatientId
 }: ChatContainerProps) => {
-  console.log('[ChatContainer] Rendering with messages:', messages.length, 'currentChatId:', currentChatId);
   const [transcriptionText, setTranscriptionText] = useState('');
 
   const handleTranscriptionUpdate = (text: string) => {
@@ -34,17 +32,12 @@ const ChatContainer = ({
     setTranscriptionText(text);
   };
 
-  const handleTemplateChange = async (template: Template) => {
-    console.log('[ChatContainer] Template change:', template.name);
-    onTemplateChange(template);
-  };
-
   return (
     <div className="flex h-screen w-full">
       <div className="flex-1 flex flex-col">
         <ChatHeader 
           currentChatId={currentChatId} 
-          onTemplateChange={handleTemplateChange}
+          onTemplateChange={onTemplateChange}
           onPatientSelect={onPatientSelect}
           selectedPatientId={selectedPatientId}
         />
@@ -65,13 +58,7 @@ const ChatContainer = ({
           <div className="px-4 sm:px-6 md:px-8">
             <div className="mx-auto max-w-2xl">
               <ChatInput
-                onSend={(content, type) => {
-                  onMessageSend(
-                    content, 
-                    type, 
-                    undefined // Remove template context system instructions
-                  );
-                }}
+                onSend={onMessageSend}
                 onTranscriptionComplete={onTranscriptionComplete}
                 onTranscriptionUpdate={handleTranscriptionUpdate}
                 isLoading={isLoading}

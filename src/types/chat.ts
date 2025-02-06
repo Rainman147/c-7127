@@ -22,7 +22,7 @@ export interface MessageProps {
 export interface ChatSession {
   id?: string;
   messages: Message[];
-  templateId?: string; // Updated to use templateId instead of full template
+  templateId?: string;
   patientId?: string;
 }
 
@@ -35,27 +35,3 @@ export const mapDatabaseMessageToMessage = (dbMessage: any): Message => ({
   status: dbMessage.status || 'delivered',
   created_at: dbMessage.created_at
 });
-
-// Type guard to check if a message is valid
-export const isValidMessage = (message: any): message is Message => {
-  return (
-    typeof message === 'object' &&
-    message !== null &&
-    typeof message.content === 'string' &&
-    ['system', 'user', 'assistant'].includes(message.role) &&
-    (!message.type || ['text', 'audio'].includes(message.type)) &&
-    (!message.status || ['delivered', 'processing', 'failed'].includes(message.status))
-  );
-};
-
-// Type guard to check if a chat session is valid
-export const isValidChatSession = (session: any): session is ChatSession => {
-  return (
-    typeof session === 'object' &&
-    session !== null &&
-    Array.isArray(session.messages) &&
-    session.messages.every(isValidMessage) &&
-    (!session.templateId || typeof session.templateId === 'string') &&
-    (!session.patientId || typeof session.patientId === 'string')
-  );
-};

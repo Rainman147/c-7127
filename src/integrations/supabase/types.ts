@@ -170,38 +170,6 @@ export type Database = {
           },
         ]
       }
-      edited_messages: {
-        Row: {
-          created_at: string
-          edited_content: string
-          id: string
-          message_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          edited_content: string
-          id?: string
-          message_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          edited_content?: string
-          id?: string
-          message_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "edited_messages_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       ehr_exports: {
         Row: {
           chat_id: string | null
@@ -263,41 +231,6 @@ export type Database = {
           },
         ]
       }
-      feedback: {
-        Row: {
-          comments: string | null
-          created_at: string
-          feedback_type: string
-          id: string
-          message_id: string
-          user_id: string
-        }
-        Insert: {
-          comments?: string | null
-          created_at?: string
-          feedback_type: string
-          id?: string
-          message_id: string
-          user_id: string
-        }
-        Update: {
-          comments?: string | null
-          created_at?: string
-          feedback_type?: string
-          id?: string
-          message_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedback_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       file_upload_sessions: {
         Row: {
           chunks_uploaded: number | null
@@ -341,44 +274,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      messages: {
-        Row: {
-          chat_id: string
-          content: string
-          created_at: string
-          id: string
-          role: Database["public"]["Enums"]["message_role"]
-          status: string
-          type: Database["public"]["Enums"]["message_type"]
-        }
-        Insert: {
-          chat_id: string
-          content: string
-          created_at?: string
-          id?: string
-          role: Database["public"]["Enums"]["message_role"]
-          status?: string
-          type?: Database["public"]["Enums"]["message_type"]
-        }
-        Update: {
-          chat_id?: string
-          content?: string
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["message_role"]
-          status?: string
-          type?: Database["public"]["Enums"]["message_type"]
-        }
-        Relationships: [
-          {
-            foreignKeyName: "messages_chat_id_fkey"
-            columns: ["chat_id"]
-            isOneToOne: false
-            referencedRelation: "chats"
             referencedColumns: ["id"]
           },
         ]
@@ -467,60 +362,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "rate_limits_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      template_contexts: {
-        Row: {
-          chat_id: string | null
-          created_at: string
-          id: string
-          message_id: string | null
-          metadata: Json | null
-          system_instructions: string
-          template_id: string
-          updated_at: string
-          user_id: string
-          version: number | null
-        }
-        Insert: {
-          chat_id?: string | null
-          created_at?: string
-          id?: string
-          message_id?: string | null
-          metadata?: Json | null
-          system_instructions: string
-          template_id: string
-          updated_at?: string
-          user_id: string
-          version?: number | null
-        }
-        Update: {
-          chat_id?: string | null
-          created_at?: string
-          id?: string
-          message_id?: string | null
-          metadata?: Json | null
-          system_instructions?: string
-          template_id?: string
-          updated_at?: string
-          user_id?: string
-          version?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "template_contexts_chat_id_fkey"
-            columns: ["chat_id"]
-            isOneToOne: false
-            referencedRelation: "chats"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "template_contexts_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
