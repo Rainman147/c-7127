@@ -159,9 +159,32 @@ serve(async (req) => {
       });
     }
 
-    await services.openai.streamCompletion(messageHistory, async (chunk: string) => {
-      await streamHandler.writeChunk(chunk);
+    console.log('[Gemini-Stream] Starting OpenAI stream with:', {
+      messageCount: messageHistory.length,
+      hasSystemInstructions: !!chat.templates?.system_instructions,
+      time: new Date().toISOString()
     });
+
+    try {
+      await services.openai.streamCompletion(messageHistory, async (chunk: string) => {
+        console.log('[Gemini-Stream] Received chunk:', {
+          chunkLength: chunk.length,
+          preview: chunk.substring(0, 50),
+          time: new Date().toISOString()
+        });
+        await streamHandler.writeChunk(chunk);
+      });
+
+      console.log('[Gemini-Stream] Stream processing completed successfully');
+    } catch (openAiError) {
+      console.error('[Gemini-Stream] OpenAI streaming error:', {
+        error: openAiError,
+        message: openAiError.message,
+        stack: openAiError.stack,
+        time: new Date().toISOString()
+      });
+      throw openAiError;
+    }
 
     console.log('[Gemini-Stream] Stream processing completed');
     await streamHandler.close();
