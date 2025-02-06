@@ -611,6 +611,12 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      delete_user_data: {
+        Args: {
+          user_email: string
+        }
+        Returns: undefined
+      }
       reset_rate_limits: {
         Args: Record<PropertyKey, never>
         Returns: undefined
