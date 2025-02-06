@@ -16,6 +16,7 @@ const corsHeaders = {
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
+    console.log('[Gemini-Stream] Handling CORS preflight');
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -50,12 +51,14 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
 
+    console.log('[Gemini-Stream] Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      hasOpenAIKey: !!openaiKey,
+      time: new Date().toISOString()
+    });
+
     if (!supabaseUrl || !supabaseKey || !openaiKey) {
-      console.error('[Gemini-Stream] Missing env vars:', { 
-        hasSupabaseUrl: !!supabaseUrl,
-        hasSupabaseKey: !!supabaseKey,
-        hasOpenAIKey: !!openaiKey
-      });
       throw new Error('Missing required environment variables');
     }
 
@@ -162,7 +165,7 @@ serve(async (req) => {
 
     console.log('[Gemini-Stream] Stream processing completed');
     await streamHandler.close();
-    
+
     return response;
 
   } catch (error) {
