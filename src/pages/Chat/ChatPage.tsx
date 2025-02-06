@@ -5,6 +5,7 @@ import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { useToast } from '@/hooks/use-toast';
 import type { Template } from '@/types';
+import { useUrlStateManager } from '@/hooks/useUrlStateManager';
 
 const ChatPage = () => {
   console.log('[ChatPage] Component initializing');
@@ -12,6 +13,7 @@ const ChatPage = () => {
   const location = useLocation();
   const { sessionId } = useParams();
   const { toast } = useToast();
+  const { updateTemplateId, updatePatientId } = useUrlStateManager();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const { session } = useSessionManagement();
@@ -44,19 +46,12 @@ const ChatPage = () => {
   const handlePatientSelect = async (patientId: string | null) => {
     console.log('[ChatPage] Patient selection changed:', patientId);
     setSelectedPatientId(patientId);
-    
-    const params = new URLSearchParams(location.search);
-    if (patientId) {
-      params.set('patientId', patientId);
-    } else {
-      params.delete('patientId');
-    }
-    
-    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+    updatePatientId(patientId);
   };
 
   const handleTemplateChange = (template: Template) => {
     console.log('[ChatPage] Template changed:', template.name);
+    updateTemplateId(template.id);
   };
 
   return (
