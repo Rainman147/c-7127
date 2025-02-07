@@ -9,6 +9,51 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      audio_chunks: {
+        Row: {
+          chunk_number: number
+          created_at: string
+          id: string
+          metadata: Json | null
+          original_filename: string | null
+          session_id: string
+          status: string
+          storage_path: string
+          total_chunks: number
+          transcription: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chunk_number: number
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          original_filename?: string | null
+          session_id: string
+          status?: string
+          storage_path: string
+          total_chunks: number
+          transcription?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chunk_number?: number
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          original_filename?: string | null
+          session_id?: string
+          status?: string
+          storage_path?: string
+          total_chunks?: number
+          transcription?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chats: {
         Row: {
           created_at: string

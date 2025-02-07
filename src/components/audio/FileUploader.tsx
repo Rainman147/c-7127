@@ -28,7 +28,7 @@ const FileUploader = ({ onFileSelected }: FileUploaderProps) => {
       }
       
       const timestamp = Date.now();
-      const filePath = `audio/${user.id}/${timestamp}-${file.name}`;
+      const filePath = `${user.id}/${timestamp}-${file.name}`;
 
       const { error: uploadError } = await supabase.storage
         .from('audio_files')
@@ -37,10 +37,32 @@ const FileUploader = ({ onFileSelected }: FileUploaderProps) => {
           upsert: false
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw new Error('Failed to upload audio file');
+      }
 
       // Create a blob from the file for processing
       const blob = new Blob([await file.arrayBuffer()], { type: file.type });
+      
+      // Record the upload in audio_chunks
+      const { error: insertError } = await supabase
+        .from('audio_chunks')
+        .insert({
+          user_id: user.id,
+          session_id: timestamp.toString(),
+          chunk_number: 1,
+          total_chunks: 1,
+          storage_path: filePath,
+          original_filename: file.name,
+          status: 'stored'
+        });
+
+      if (insertError) {
+        console.error('Database insert error:', insertError);
+        throw new Error('Failed to record audio upload');
+      }
+
       onFileSelected(blob);
 
       toast({

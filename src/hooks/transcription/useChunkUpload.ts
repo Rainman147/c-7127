@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +19,7 @@ export const useChunkUpload = () => {
       }
 
       // Create a storage path for the chunk
-      const storagePath = `chunks/${user.id}/${sessionId}/${chunkNumber}.webm`;
+      const storagePath = `${user.id}/${sessionId}/chunk_${chunkNumber}.webm`;
       console.log('[useChunkUpload] Uploading chunk to storage:', {
         path: storagePath,
         size: chunk.size,
