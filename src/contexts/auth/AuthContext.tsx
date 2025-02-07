@@ -139,16 +139,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       console.log('[AuthProvider] Signing out');
+      
+      // First update local state to prevent race conditions
+      updateState({ 
+        status: 'UNAUTHENTICATED',
+        session: null,
+        error: null
+      });
+
+      // Then sign out from Supabase
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      
+      // Only show error if there was one, but don't revert state
+      if (error) {
+        console.error('[AuthProvider] Sign out error:', error);
+        toast({
+          title: "Warning",
+          description: "There was an issue completing the sign out process, but you have been signed out locally.",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Signed out",
+          description: "You have been signed out successfully",
+        });
+      }
     } catch (error) {
       console.error('[AuthProvider] Sign out error:', error);
       toast({
-        title: "Error signing out",
-        description: "There was a problem signing you out. Please try again.",
-        variant: "destructive",
+        title: "Warning",
+        description: "There was an issue completing the sign out process, but you have been signed out locally.",
+        variant: "default",
       });
-      handleAuthError(error as Error);
     }
   };
 
