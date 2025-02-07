@@ -126,18 +126,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             description: "Your profile has been updated successfully"
           });
           break;
-
-        case 'USER_DELETED':
-          updateState({
-            session: null,
-            status: 'UNAUTHENTICATED',
-            error: null
-          });
-          toast({
-            title: "Account deleted",
-            description: "Your account has been deleted successfully"
-          });
-          break;
       }
     });
 
