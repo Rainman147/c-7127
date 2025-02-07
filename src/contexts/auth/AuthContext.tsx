@@ -14,8 +14,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, setState] = useState<AuthState>(initialState);
 
   useEffect(() => {
+    console.log('[Auth] Context initialization started');
+    
     // Initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[Auth] Initial session check:', session ? 'Found' : 'Not found');
       setState({ 
         status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
         session,
@@ -23,7 +26,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[Auth] State change detected:', { event, hasSession: !!session });
       setState({ 
         status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
         session,
@@ -31,13 +35,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => {
+      console.log('[Auth] Cleanup: unsubscribing from auth changes');
       subscription.unsubscribe();
     };
   }, []);
 
   const signOut = async () => {
+    console.log('[Auth] Sign out requested');
     await supabase.auth.signOut();
   };
+
+  console.log('[Auth] Current state:', state);
 
   return (
     <AuthContext.Provider value={{ ...state, signOut }}>
