@@ -9,7 +9,6 @@ import type { Message } from '@/types/chat';
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchTemplates } from '@/hooks/queries/useTemplateQueries';
 import { useAuth } from '@/contexts/auth/AuthContext';
-import { withAuth } from '@/components/auth/withAuth';
 import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
@@ -113,4 +112,4 @@ const Index = () => {
   );
 };
 
-export default withAuth(Index);
+export default Index;
