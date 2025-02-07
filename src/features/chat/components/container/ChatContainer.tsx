@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { ChatHeader } from '@/features/chat/components/header/ChatHeader';
 import MessageList from '@/features/chat/components/message/MessageList';
@@ -13,6 +14,8 @@ interface ChatContainerProps {
   onTemplateChange: (template: Template) => void;
   onPatientSelect: (patientId: string | null) => Promise<void>;
   selectedPatientId: string | null;
+  draftMessage?: string;
+  onDraftChange?: (draft: string) => void;
 }
 
 const ChatContainer = ({ 
@@ -23,7 +26,9 @@ const ChatContainer = ({
   onTranscriptionComplete = async () => {},
   onTemplateChange = () => {},
   onPatientSelect = async () => {},
-  selectedPatientId
+  selectedPatientId,
+  draftMessage = '',
+  onDraftChange
 }: ChatContainerProps) => {
   const [transcriptionText, setTranscriptionText] = useState('');
 
@@ -62,6 +67,8 @@ const ChatContainer = ({
                 onTranscriptionComplete={onTranscriptionComplete}
                 onTranscriptionUpdate={handleTranscriptionUpdate}
                 isLoading={isLoading}
+                draftMessage={draftMessage}
+                onDraftChange={onDraftChange}
               />
             </div>
           </div>
