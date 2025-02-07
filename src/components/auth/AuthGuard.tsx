@@ -1,6 +1,5 @@
 
 import { useAuth } from '@/contexts/auth/AuthContext';
-import AuthLoadingState from './AuthLoadingState';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -8,11 +7,8 @@ interface AuthGuardProps {
 
 const AuthGuard = ({ children }: AuthGuardProps) => {
   const { status } = useAuth();
-
-  if (status === 'INITIALIZING' || status === 'CHECKING_SESSION') {
-    return <AuthLoadingState />;
-  }
-
+  console.log('[AuthGuard] Current status:', status);
+  
   return <>{children}</>;
 };
 

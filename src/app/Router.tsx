@@ -6,7 +6,6 @@ import PatientsListPage from '@/pages/Patients/PatientsListPage';
 import PatientDetailPage from '@/pages/Patients/PatientDetailPage';
 import TemplatesListPage from '@/pages/Templates/TemplatesListPage';
 import TemplateDetailPage from '@/pages/Templates/TemplateDetailPage';
-import ProtectedLayout from '@/features/layout/components/ProtectedLayout';
 
 const Router = () => {
   console.log('[Router] Initializing router');
@@ -15,7 +14,6 @@ const Router = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/auth" element={<Auth />} />
-        
         <Route path="/" element={<ChatPage />} />
         <Route path="/c/:sessionId" element={<ChatPage />} />
         <Route path="/patients" element={<PatientsListPage />} />
@@ -23,7 +21,6 @@ const Router = () => {
         <Route path="/patients/:patientId" element={<PatientDetailPage isNew={false} />} />
         <Route path="/templates" element={<TemplatesListPage />} />
         <Route path="/templates/:templateId" element={<TemplateDetailPage />} />
-        
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

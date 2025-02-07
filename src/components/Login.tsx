@@ -34,17 +34,9 @@ const Login = () => {
               }
             },
             style: {
-              button: {
-                padding: '8px 16px',
-                fontSize: '14px',
-              },
-              input: {
-                padding: '8px 12px',
-                fontSize: '14px',
-              },
-              container: {
-                gap: '16px',
-              },
+              button: { padding: '8px 16px', fontSize: '14px' },
+              input: { padding: '8px 12px', fontSize: '14px' },
+              container: { gap: '16px' },
             },
           }}
           theme="dark"
