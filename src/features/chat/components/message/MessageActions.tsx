@@ -1,19 +1,20 @@
+
 import { useState, useRef } from 'react';
 import { AudioButton } from './actions/AudioButton';
 import { CopyButton } from './actions/CopyButton';
 
 interface MessageActionsProps {
   content: string;
-  isAIMessage: boolean;
+  isAssistant: boolean;
 }
 
-const MessageActions = ({ content, isAIMessage }: MessageActionsProps) => {
+const MessageActions = ({ content, isAssistant }: MessageActionsProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   return (
     <div className="flex items-center space-x-2 mt-2">
-      {isAIMessage && (
+      {isAssistant && (
         <AudioButton 
           content={content} 
           isPlaying={isPlaying} 
