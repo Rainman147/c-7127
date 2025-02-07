@@ -8,7 +8,7 @@ import type { Template } from '@/types';
 import { useUrlStateManager } from '@/hooks/useUrlStateManager';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { supabase } from '@/integrations/supabase/client';
-import type { Message } from '@/types/chat';
+import type { Message, MessageRole } from '@/types/chat';
 
 const ChatPage = () => {
   console.log('[ChatPage] Component initializing');
@@ -47,7 +47,8 @@ const ChatPage = () => {
         return;
       }
 
-      setMessages(data || []);
+      // Safe to assert types since our edge function guarantees valid roles
+      setMessages(data as Message[]);
     };
 
     loadMessages();
@@ -66,6 +67,7 @@ const ChatPage = () => {
         (payload) => {
           console.log('Message change received:', payload);
           if (payload.eventType === 'INSERT') {
+            // Safe to assert type since our edge function guarantees valid roles
             setMessages(prev => [...prev, payload.new as Message]);
           }
         }
