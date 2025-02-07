@@ -1,0 +1,212 @@
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+
+interface ChatRequest {
+  content: string;
+  type?: 'text' | 'audio';
+  templateId?: string;
+  patientId?: string;
+  chatId?: string;
+}
+
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || '';
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // Verify authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header');
+    }
+    
+    const { data: { user }, error: userError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (userError || !user) {
+      throw new Error('Invalid user token');
+    }
+
+    // Parse request
+    const { content, type = 'text', templateId, patientId, chatId } = await req.json() as ChatRequest;
+    let activeChatId = chatId;
+
+    console.log('Processing chat request:', { content, type, templateId, patientId, chatId });
+
+    // Create new chat if needed
+    if (!activeChatId) {
+      const { data: newChat, error: chatError } = await supabase
+        .from('chats')
+        .insert({
+          user_id: user.id,
+          title: content.slice(0, 50) + '...',
+          template_id: templateId,
+          patient_id: patientId
+        })
+        .select()
+        .single();
+
+      if (chatError) {
+        console.error('Error creating chat:', chatError);
+        throw chatError;
+      }
+      
+      activeChatId = newChat.id;
+      console.log('Created new chat:', activeChatId);
+    }
+
+    // Get chat context
+    const { data: chat, error: chatError } = await supabase
+      .from('chats')
+      .select(`
+        id,
+        template_id,
+        patient_id,
+        templates (
+          system_instructions,
+          content,
+          schema
+        ),
+        patients (
+          name,
+          dob,
+          medical_history
+        )
+      `)
+      .eq('id', activeChatId)
+      .single();
+
+    if (chatError || !chat) {
+      console.error('Error fetching chat:', chatError);
+      throw new Error('Failed to fetch chat context');
+    }
+
+    // Store user message
+    const { error: userMessageError } = await supabase
+      .from('messages')
+      .insert({
+        chat_id: activeChatId,
+        role: 'user',
+        content,
+        type,
+        metadata: {
+          isFirstMessage: !chatId
+        }
+      });
+
+    if (userMessageError) {
+      console.error('Error storing user message:', userMessageError);
+      throw userMessageError;
+    }
+
+    // Build system context
+    let systemContext = 'You are a helpful medical AI assistant.';
+    if (chat.templates?.system_instructions) {
+      systemContext = chat.templates.system_instructions;
+    }
+    if (chat.patients) {
+      systemContext += `\nPatient Context:\nName: ${chat.patients.name}\nDOB: ${chat.patients.dob}\nMedical History: ${chat.patients.medical_history || 'None provided'}`;
+    }
+
+    // Prepare response format if template has schema
+    const responseFormat = chat.templates?.schema ? {
+      type: "object",
+      schema: chat.templates.schema
+    } : undefined;
+
+    // Get AI response
+    console.log('Making OpenAI request with model o3-mini');
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'o3-mini',
+        messages: [
+          { role: 'system', content: systemContext },
+          { role: 'user', content }
+        ],
+        temperature: 0.7,
+        response_format: responseFormat
+      })
+    });
+
+    if (!openAIResponse.ok) {
+      console.error('OpenAI API error:', openAIResponse.statusText);
+      throw new Error(`OpenAI API error: ${openAIResponse.statusText}`);
+    }
+
+    const completion = await openAIResponse.json();
+    const assistantMessage = completion.choices[0].message.content;
+
+    // Store assistant response
+    const { error: assistantMessageError } = await supabase
+      .from('messages')
+      .insert({
+        chat_id: activeChatId,
+        role: 'assistant',
+        content: assistantMessage,
+        type: 'text'
+      });
+
+    if (assistantMessageError) {
+      console.error('Error storing assistant message:', assistantMessageError);
+      throw assistantMessageError;
+    }
+
+    // Get all messages for the chat
+    const { data: messages, error: messagesError } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('chat_id', activeChatId)
+      .order('created_at', { ascending: true });
+
+    if (messagesError) {
+      console.error('Error fetching messages:', messagesError);
+      throw messagesError;
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        chatId: activeChatId,
+        messages
+      }),
+      {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+  } catch (error) {
+    console.error('Error in chat-manager:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+  }
+});
