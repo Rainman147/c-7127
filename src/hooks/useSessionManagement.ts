@@ -2,9 +2,19 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { AuthError, Session } from '@supabase/supabase-js';
+
+type AuthChangeEvent = 
+  | 'INITIAL_SESSION'
+  | 'SIGNED_IN'
+  | 'SIGNED_OUT'
+  | 'TOKEN_REFRESHED'
+  | 'USER_UPDATED'
+  | 'PASSWORD_RECOVERY'
+  | 'MFA_CHALLENGE_VERIFIED';
 
 export const useSessionManagement = () => {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
 
@@ -43,40 +53,58 @@ export const useSessionManagement = () => {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      console.log('[useSessionManagement] Auth state changed:', _event);
+    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, newSession) => {
+      console.log('[useSessionManagement] Auth state changed:', event);
       console.log('[useSessionManagement] New session state:', newSession ? 'Active' : 'None');
       
       if (mounted) {
-        if (_event === 'SIGNED_OUT') {
-          // Only clear session on explicit sign out
-          setSession(null);
-          console.log('[useSessionManagement] Session cleared on sign out');
-          toast({
-            title: "Signed out",
-            description: "You have been signed out successfully.",
-          });
-        } else if (_event === 'SIGNED_IN' && newSession) {
-          setSession(newSession);
-          toast({
-            title: "Welcome back!",
-            description: "You have successfully signed in.",
-          });
-        } else if (_event === 'TOKEN_REFRESHED' && newSession) {
-          console.log('[useSessionManagement] Session token refreshed');
-          setSession(newSession);
-        } else if (_event === 'USER_UPDATED' && newSession) {
-          console.log('[useSessionManagement] User data updated');
-          setSession(newSession);
-        } else if (!newSession && _event !== 'SIGNED_OUT') {
-          // Handle expired or invalid sessions
-          console.log('[useSessionManagement] Session expired or invalid');
-          setSession(null);
-          toast({
-            title: "Session Expired",
-            description: "Your session has expired. Please sign in again.",
-            variant: "destructive",
-          });
+        switch (event) {
+          case 'SIGNED_OUT':
+            setSession(null);
+            console.log('[useSessionManagement] Session cleared on sign out');
+            toast({
+              title: "Signed out",
+              description: "You have been signed out successfully.",
+            });
+            break;
+          case 'SIGNED_IN':
+            if (newSession) {
+              setSession(newSession);
+              toast({
+                title: "Welcome back!",
+                description: "You have successfully signed in.",
+              });
+            }
+            break;
+          case 'TOKEN_REFRESHED':
+            if (newSession) {
+              console.log('[useSessionManagement] Session token refreshed');
+              setSession(newSession);
+            }
+            break;
+          case 'USER_UPDATED':
+            if (newSession) {
+              console.log('[useSessionManagement] User data updated');
+              setSession(newSession);
+            }
+            break;
+          case 'INITIAL_SESSION':
+            // Handle initial session load - no toast needed
+            if (newSession) {
+              setSession(newSession);
+            }
+            break;
+          default:
+            // Handle any other cases
+            if (!newSession && event !== 'SIGNED_OUT') {
+              console.log('[useSessionManagement] Session expired or invalid');
+              setSession(null);
+              toast({
+                title: "Session Expired",
+                description: "Your session has expired. Please sign in again.",
+                variant: "destructive",
+              });
+            }
         }
       }
     });
