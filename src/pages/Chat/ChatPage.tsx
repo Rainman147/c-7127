@@ -97,27 +97,16 @@ const ChatPage = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(
-        'https://hlnzunnahksudbotqvpk.supabase.co/functions/v1/chat-completion',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            chatId: sessionId,
-            content,
-            type
-          })
+      const { data, error } = await supabase.functions.invoke('chat-manager', {
+        body: {
+          chatId: sessionId,
+          content,
+          type
         }
-      );
+      });
 
-      if (!response.ok) {
-        throw new Error('Failed to send message');
-      }
+      if (error) throw error;
 
-      const data = await response.json();
       console.log('Message sent successfully:', data);
 
     } catch (error) {
@@ -163,3 +152,4 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
+
