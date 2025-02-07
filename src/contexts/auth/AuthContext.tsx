@@ -140,6 +140,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('[AuthProvider] Signing out');
       
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // If no session exists, just update local state
+      if (!session) {
+        console.log('[AuthProvider] No active session found, updating local state only');
+        updateState({ 
+          status: 'UNAUTHENTICATED',
+          session: null,
+          error: null
+        });
+        toast({
+          title: "Signed out",
+          description: "You have been signed out successfully",
+        });
+        return;
+      }
+
       // First update local state to prevent race conditions
       updateState({ 
         status: 'UNAUTHENTICATED',
@@ -150,7 +168,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Then sign out from Supabase
       const { error } = await supabase.auth.signOut();
       
-      // Only show error if there was one, but don't revert state
       if (error) {
         console.error('[AuthProvider] Sign out error:', error);
         toast({
