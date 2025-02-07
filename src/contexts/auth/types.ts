@@ -2,9 +2,9 @@
 import { Session } from '@supabase/supabase-js';
 
 export type AuthStatus = 
-  | 'INITIALIZING'
-  | 'AUTHENTICATED'
-  | 'UNAUTHENTICATED';
+  | 'INITIALIZING'  // Initial loading state
+  | 'AUTHENTICATED' // User is logged in
+  | 'UNAUTHENTICATED'; // User is not logged in
 
 export interface AuthState {
   status: AuthStatus;

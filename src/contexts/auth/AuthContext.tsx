@@ -14,11 +14,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, setState] = useState<AuthState>(initialState);
 
   useEffect(() => {
-    console.log('[AuthProvider] Initializing');
-    
     // Initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('[AuthProvider] Initial session:', session ? 'Found' : 'None');
       setState({ 
         status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
         session,
@@ -26,8 +23,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[AuthProvider] Auth state changed:', event);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setState({ 
         status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
         session,
@@ -35,7 +31,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => {
-      console.log('[AuthProvider] Cleanup');
       subscription.unsubscribe();
     };
   }, []);
