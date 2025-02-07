@@ -6,10 +6,17 @@ import PatientsListPage from '@/pages/Patients/PatientsListPage';
 import PatientDetailPage from '@/pages/Patients/PatientDetailPage';
 import TemplatesListPage from '@/pages/Templates/TemplatesListPage';
 import TemplateDetailPage from '@/pages/Templates/TemplateDetailPage';
+import AuthLoadingState from '@/components/auth/AuthLoadingState';
+import { useAuth } from '@/contexts/auth/AuthContext';
 
 const Router = () => {
-  console.log('[Router] Initializing router');
-  
+  const { status } = useAuth();
+  console.log('[Router] Auth status:', status);
+
+  if (status === 'INITIALIZING') {
+    return <AuthLoadingState />;
+  }
+
   return (
     <BrowserRouter>
       <Routes>
