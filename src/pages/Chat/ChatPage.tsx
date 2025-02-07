@@ -24,60 +24,89 @@ const ChatPage = () => {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
 
   // Subscribe to messages for the current chat
   useEffect(() => {
     if (!sessionId) return;
 
+    let isSubscribed = true;
+
     // Initial messages load
     const loadMessages = async () => {
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('chat_id', sessionId)
-        .order('created_at');
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('chat_id', sessionId)
+          .order('created_at');
 
-      if (error) {
+        if (error) throw error;
+
+        if (isSubscribed) {
+          setMessages(data as Message[]);
+        }
+      } catch (error) {
         console.error('Error loading messages:', error);
         toast({
-          title: "Error",
-          description: "Failed to load messages",
+          title: "Error loading messages",
+          description: "Please check your connection and try again",
           variant: "destructive",
         });
-        return;
       }
-
-      // Safe to assert types since our edge function guarantees valid roles
-      setMessages(data as Message[]);
     };
 
     loadMessages();
 
-    // Real-time subscription
-    const subscription = supabase
-      .channel(`messages:${sessionId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `chat_id=eq.${sessionId}`
-        },
-        (payload) => {
-          console.log('Message change received:', payload);
-          if (payload.eventType === 'INSERT') {
-            // Safe to assert type since our edge function guarantees valid roles
-            setMessages(prev => [...prev, payload.new as Message]);
+    // Real-time subscription with reconnection logic
+    const setupSubscription = () => {
+      const subscription = supabase
+        .channel(`messages:${sessionId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'messages',
+            filter: `chat_id=eq.${sessionId}`
+          },
+          (payload) => {
+            console.log('Message change received:', payload);
+            if (payload.eventType === 'INSERT' && isSubscribed) {
+              setMessages(prev => [...prev, payload.new as Message]);
+              setRetryCount(0); // Reset retry count on successful message
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe((status) => {
+          console.log('Subscription status:', status);
+          
+          if (status === 'SUBSCRIPTION_ERROR' && retryCount < MAX_RETRIES) {
+            console.log(`Retrying subscription (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+            setTimeout(() => {
+              setRetryCount(prev => prev + 1);
+              subscription.unsubscribe();
+              setupSubscription();
+            }, Math.min(1000 * Math.pow(2, retryCount), 10000)); // Exponential backoff
+          }
+          
+          if (status === 'SUBSCRIBED') {
+            console.log('Successfully subscribed to messages');
+            setRetryCount(0);
+          }
+        });
+
+      return subscription;
+    };
+
+    const subscription = setupSubscription();
 
     return () => {
+      isSubscribed = false;
       subscription.unsubscribe();
     };
-  }, [sessionId, toast]);
+  }, [sessionId, toast, retryCount]);
 
   const handleMessageSend = async (content: string, type: 'text' | 'audio' = 'text') => {
     console.log('[ChatPage] Sending message:', { content, type });
@@ -116,8 +145,8 @@ const ChatPage = () => {
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
-        title: "Error",
-        description: "Failed to send message",
+        title: "Error sending message",
+        description: "Please try again. If the problem persists, check your connection.",
         variant: "destructive",
       });
     } finally {

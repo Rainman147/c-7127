@@ -9,56 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      audio_chunks: {
-        Row: {
-          chunk_number: number
-          created_at: string
-          id: string
-          original_filename: string
-          session_id: string | null
-          status: string | null
-          storage_path: string
-          total_chunks: number
-          transcription: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          chunk_number: number
-          created_at?: string
-          id?: string
-          original_filename: string
-          session_id?: string | null
-          status?: string | null
-          storage_path: string
-          total_chunks: number
-          transcription?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          chunk_number?: number
-          created_at?: string
-          id?: string
-          original_filename?: string
-          session_id?: string | null
-          status?: string | null
-          storage_path?: string
-          total_chunks?: number
-          transcription?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "audio_chunks_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       chats: {
         Row: {
           created_at: string
@@ -224,53 +174,6 @@ export type Database = {
           },
           {
             foreignKeyName: "ehr_exports_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      file_upload_sessions: {
-        Row: {
-          chunks_uploaded: number | null
-          content_type: string
-          created_at: string
-          id: string
-          original_filename: string
-          status: string | null
-          total_chunks: number
-          total_size: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          chunks_uploaded?: number | null
-          content_type: string
-          created_at?: string
-          id?: string
-          original_filename: string
-          status?: string | null
-          total_chunks: number
-          total_size: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          chunks_uploaded?: number | null
-          content_type?: string
-          created_at?: string
-          id?: string
-          original_filename?: string
-          status?: string | null
-          total_chunks?: number
-          total_size?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "file_upload_sessions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
