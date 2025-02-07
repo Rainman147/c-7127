@@ -2,58 +2,22 @@
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuthStateChange } from '@/hooks/useAuthStateChange';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  useAuthStateChange();
+  const { session } = useAuth();
 
   useEffect(() => {
-    const init = async () => {
-      console.log('Initializing Login component');
-      
-      // Check if user is already authenticated
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Error checking session:', error);
-        toast({
-          title: "Authentication Error",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (session) {
-        console.log('User already authenticated, redirecting to home');
-        navigate('/');
-        return;
-      }
-    };
-
-    init();
-
-    // Listen for auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event);
-      if (session) {
-        console.log('User authenticated, redirecting to home');
-        navigate('/');
-      }
-    });
-
-    return () => {
-      console.log('Cleaning up auth subscriptions');
-      subscription.unsubscribe();
-    };
-  }, [navigate, toast]);
+    if (session) {
+      console.log('User already authenticated, redirecting to home');
+      navigate('/');
+    }
+  }, [session, navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">

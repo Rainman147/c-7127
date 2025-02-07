@@ -1,14 +1,15 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
 import { useToast } from '@/hooks/use-toast';
 import type { Template } from '@/types';
 import { useUrlStateManager } from '@/hooks/useUrlStateManager';
-import { useSessionManagement } from '@/hooks/useSessionManagement';
-import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/types/chat';
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchTemplates } from '@/hooks/queries/useTemplateQueries';
+import { useAuth } from '@/contexts/auth/AuthContext';
+import { withAuth } from '@/components/auth/withAuth';
 
 const Index = () => {
   console.log('[Index] Component initializing');
@@ -17,22 +18,11 @@ const Index = () => {
   const { toast } = useToast();
   const { updateTemplateId, updatePatientId } = useUrlStateManager();
   const queryClient = useQueryClient();
+  const { session } = useAuth();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const { session, isInitialized } = useSessionManagement();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Add session monitoring
-  useEffect(() => {
-    console.log('[Index] Current session state:', session ? 'Authenticated' : 'Not authenticated');
-    console.log('[Index] Session initialization state:', isInitialized ? 'Initialized' : 'Initializing');
-    
-    if (isInitialized && !session) {
-      console.log('[Index] No active session after initialization, redirecting to auth page');
-      navigate('/auth');
-    }
-  }, [session, isInitialized, navigate]);
 
   // Prefetch templates on initial load if user is authenticated
   useEffect(() => {
@@ -48,7 +38,7 @@ const Index = () => {
     console.log('[Index] Attempting to send message:', { content, type });
     
     if (!session?.user?.id) {
-      console.log('[Index] No active session or user ID, redirecting to auth');
+      console.log('[Index] No active session or user ID');
       toast({
         title: "Authentication Required",
         description: "Please sign in to send messages.",
@@ -78,7 +68,6 @@ const Index = () => {
       const { chatId, messages: newMessages } = response.data;
       console.log('Chat manager response:', { chatId, messageCount: newMessages.length });
 
-      // Navigate to the chat page
       navigate(`/c/${chatId}`);
 
     } catch (error: any) {
@@ -109,15 +98,6 @@ const Index = () => {
     updateTemplateId(template.id);
   };
 
-  // If session is not initialized yet, show loading state
-  if (!isInitialized) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
-
   return (
     <ChatContainer
       messages={messages}
@@ -132,4 +112,5 @@ const Index = () => {
   );
 };
 
-export default Index;
+// Wrap the component with the auth HOC
+export default withAuth(Index);

@@ -19,9 +19,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/auth/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SidebarFooterProps {
   apiKey: string;
@@ -31,34 +32,10 @@ interface SidebarFooterProps {
 const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
 
   const handleLogout = async () => {
-    console.log('[SidebarFooter] Initiating logout');
-    
-    try {
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error('[SidebarFooter] Error during signOut:', error);
-        toast({
-          title: "Error signing out",
-          description: "There was a problem signing you out. Please try again.",
-          variant: "destructive",
-        });
-      } else {
-        console.log('[SidebarFooter] Sign out successful');
-        toast({
-          title: "Signed out successfully",
-          description: "You have been logged out of your account",
-        });
-      }
-      
-      // Always navigate to auth page after attempting logout
-      navigate('/auth');
-    } catch (error) {
-      console.error('[SidebarFooter] Unexpected error during logout:', error);
-      navigate('/auth');
-    }
+    await signOut();
   };
 
   const handleAccountSettings = () => {
@@ -72,15 +49,13 @@ const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) => {
         throw new Error('No user email found');
       }
 
-      // Delete all related data in the correct order
       const { error: deleteError } = await supabase.rpc('delete_user_data', {
         user_email: user.email
       });
 
       if (deleteError) throw deleteError;
 
-      // Sign out after successful deletion
-      await supabase.auth.signOut();
+      await signOut();
       
       toast({
         title: "Account deleted successfully",
