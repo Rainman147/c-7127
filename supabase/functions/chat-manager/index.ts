@@ -31,22 +31,31 @@ serve(async (req) => {
     // Verify authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('No authorization header');
+      console.error('[chat-manager] No authorization header provided');
+      throw new Error('Authentication required');
     }
     
     const { data: { user }, error: userError } = await supabase.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
 
-    if (userError || !user) {
-      throw new Error('Invalid user token');
+    if (userError) {
+      console.error('[chat-manager] User authentication error:', userError);
+      throw new Error('Invalid authentication token');
     }
+
+    if (!user) {
+      console.error('[chat-manager] No user found with provided token');
+      throw new Error('User not found');
+    }
+
+    console.log('[chat-manager] Authenticated user:', user.id);
 
     // Parse request
     const { content, type = 'text', templateId, patientId, chatId } = await req.json() as ChatRequest;
     let activeChatId = chatId;
 
-    console.log('Processing chat request:', { content, type, templateId, patientId, chatId });
+    console.log('[chat-manager] Processing chat request:', { content, type, templateId, patientId, chatId });
 
     // Create new chat if needed
     if (!activeChatId) {
@@ -62,12 +71,12 @@ serve(async (req) => {
         .single();
 
       if (chatError) {
-        console.error('Error creating chat:', chatError);
-        throw chatError;
+        console.error('[chat-manager] Error creating chat:', chatError);
+        throw new Error('Failed to create new chat');
       }
       
       activeChatId = newChat.id;
-      console.log('Created new chat:', activeChatId);
+      console.log('[chat-manager] Created new chat:', activeChatId);
     }
 
     // Get chat context
@@ -92,7 +101,7 @@ serve(async (req) => {
       .single();
 
     if (chatError || !chat) {
-      console.error('Error fetching chat:', chatError);
+      console.error('[chat-manager] Error fetching chat:', chatError);
       throw new Error('Failed to fetch chat context');
     }
 
@@ -110,8 +119,8 @@ serve(async (req) => {
       });
 
     if (userMessageError) {
-      console.error('Error storing user message:', userMessageError);
-      throw userMessageError;
+      console.error('[chat-manager] Error storing user message:', userMessageError);
+      throw new Error('Failed to store user message');
     }
 
     // Build system context
@@ -130,7 +139,7 @@ serve(async (req) => {
     } : undefined;
 
     // Get AI response
-    console.log('Making OpenAI request with model o3-mini');
+    console.log('[chat-manager] Making OpenAI request with model o3-mini');
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -149,7 +158,7 @@ serve(async (req) => {
     });
 
     if (!openAIResponse.ok) {
-      console.error('OpenAI API error:', openAIResponse.statusText);
+      console.error('[chat-manager] OpenAI API error:', await openAIResponse.text());
       throw new Error(`OpenAI API error: ${openAIResponse.statusText}`);
     }
 
@@ -167,8 +176,8 @@ serve(async (req) => {
       });
 
     if (assistantMessageError) {
-      console.error('Error storing assistant message:', assistantMessageError);
-      throw assistantMessageError;
+      console.error('[chat-manager] Error storing assistant message:', assistantMessageError);
+      throw new Error('Failed to store assistant message');
     }
 
     // Get all messages for the chat
@@ -179,8 +188,8 @@ serve(async (req) => {
       .order('created_at', { ascending: true });
 
     if (messagesError) {
-      console.error('Error fetching messages:', messagesError);
-      throw messagesError;
+      console.error('[chat-manager] Error fetching messages:', messagesError);
+      throw new Error('Failed to fetch messages');
     }
 
     return new Response(
@@ -197,11 +206,14 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in chat-manager:', error);
+    console.error('[chat-manager] Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message || 'An unexpected error occurred',
+        details: error.toString()
+      }),
       {
-        status: 500,
+        status: error.message?.includes('Authentication') ? 401 : 500,
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/json'

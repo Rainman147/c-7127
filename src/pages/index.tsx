@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
@@ -20,19 +19,20 @@ const Index = () => {
   const queryClient = useQueryClient();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const { session } = useSessionManagement();
+  const { session, isInitialized } = useSessionManagement();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // Add session monitoring
   useEffect(() => {
     console.log('[Index] Current session state:', session ? 'Authenticated' : 'Not authenticated');
+    console.log('[Index] Session initialization state:', isInitialized ? 'Initialized' : 'Initializing');
     
-    if (!session) {
-      console.log('[Index] No active session, redirecting to auth page');
+    if (isInitialized && !session) {
+      console.log('[Index] No active session after initialization, redirecting to auth page');
       navigate('/auth');
     }
-  }, [session, navigate]);
+  }, [session, isInitialized, navigate]);
 
   // Prefetch templates on initial load if user is authenticated
   useEffect(() => {
@@ -47,8 +47,13 @@ const Index = () => {
   const handleMessageSend = async (content: string, type: 'text' | 'audio' = 'text') => {
     console.log('[Index] Attempting to send message:', { content, type });
     
-    if (!session) {
-      console.log('[Index] No active session, redirecting to auth');
+    if (!session?.user?.id) {
+      console.log('[Index] No active session or user ID, redirecting to auth');
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to send messages.",
+        variant: "destructive",
+      });
       navigate('/auth');
       return;
     }
@@ -103,6 +108,15 @@ const Index = () => {
     console.log('[Index] Template changed:', template.name);
     updateTemplateId(template.id);
   };
+
+  // If session is not initialized yet, show loading state
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   return (
     <ChatContainer

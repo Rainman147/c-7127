@@ -1,37 +1,76 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export const useSessionManagement = () => {
   const [session, setSession] = useState<any>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     console.log('[useSessionManagement] Initializing session management');
+    let mounted = true;
     
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.error('[useSessionManagement] Error getting session:', error);
-        return;
+    const initializeSession = async () => {
+      try {
+        // Get initial session
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('[useSessionManagement] Error getting session:', error);
+          toast({
+            title: "Authentication Error",
+            description: "There was a problem loading your session. Please try logging in again.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (mounted) {
+          console.log('[useSessionManagement] Initial session:', initialSession ? 'Active' : 'None');
+          setSession(initialSession);
+          setIsInitialized(true);
+        }
+      } catch (error) {
+        console.error('[useSessionManagement] Unexpected error:', error);
       }
-      console.log('[useSessionManagement] Initial session:', session ? 'Active' : 'None');
-      setSession(session);
-    });
+    };
+
+    // Initialize session
+    initializeSession();
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       console.log('[useSessionManagement] Auth state changed:', _event);
-      console.log('[useSessionManagement] New session state:', session ? 'Active' : 'None');
-      setSession(session);
+      console.log('[useSessionManagement] New session state:', newSession ? 'Active' : 'None');
+      
+      if (mounted) {
+        setSession(newSession);
+        
+        // Show relevant toast messages
+        if (_event === 'SIGNED_IN') {
+          toast({
+            title: "Welcome back!",
+            description: "You have successfully signed in.",
+          });
+        } else if (_event === 'SIGNED_OUT') {
+          toast({
+            title: "Signed out",
+            description: "You have been signed out successfully.",
+          });
+        }
+      }
     });
 
     return () => {
       console.log('[useSessionManagement] Cleaning up subscription');
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [toast]);
 
-  return { session };
+  return { session, isInitialized };
 };
