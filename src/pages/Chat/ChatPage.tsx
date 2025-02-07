@@ -9,6 +9,7 @@ import { useUrlStateManager } from '@/hooks/useUrlStateManager';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { supabase } from '@/integrations/supabase/client';
 import type { Message, MessageRole } from '@/types/chat';
+import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 const ChatPage = () => {
   console.log('[ChatPage] Component initializing');
@@ -24,8 +25,6 @@ const ChatPage = () => {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const MAX_RETRIES = 3;
 
   // Subscribe to messages for the current chat
   useEffect(() => {
@@ -59,54 +58,33 @@ const ChatPage = () => {
 
     loadMessages();
 
-    // Real-time subscription with reconnection logic
-    const setupSubscription = () => {
-      const subscription = supabase
-        .channel(`messages:${sessionId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'messages',
-            filter: `chat_id=eq.${sessionId}`
-          },
-          (payload) => {
-            console.log('Message change received:', payload);
-            if (payload.eventType === 'INSERT' && isSubscribed) {
-              setMessages(prev => [...prev, payload.new as Message]);
-              setRetryCount(0); // Reset retry count on successful message
-            }
+    // Real-time subscription
+    const channel = supabase
+      .channel(`messages:${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_id=eq.${sessionId}`
+        },
+        (payload: RealtimePostgresChangesPayload<Message>) => {
+          console.log('Message change received:', payload);
+          if (payload.eventType === 'INSERT' && isSubscribed) {
+            setMessages(prev => [...prev, payload.new as Message]);
           }
-        )
-        .subscribe((status) => {
-          console.log('Subscription status:', status);
-          
-          if (status === 'SUBSCRIPTION_ERROR' && retryCount < MAX_RETRIES) {
-            console.log(`Retrying subscription (attempt ${retryCount + 1}/${MAX_RETRIES})`);
-            setTimeout(() => {
-              setRetryCount(prev => prev + 1);
-              subscription.unsubscribe();
-              setupSubscription();
-            }, Math.min(1000 * Math.pow(2, retryCount), 10000)); // Exponential backoff
-          }
-          
-          if (status === 'SUBSCRIBED') {
-            console.log('Successfully subscribed to messages');
-            setRetryCount(0);
-          }
-        });
-
-      return subscription;
-    };
-
-    const subscription = setupSubscription();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
 
     return () => {
       isSubscribed = false;
-      subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
-  }, [sessionId, toast, retryCount]);
+  }, [sessionId, toast]);
 
   const handleMessageSend = async (content: string, type: 'text' | 'audio' = 'text') => {
     console.log('[ChatPage] Sending message:', { content, type });
