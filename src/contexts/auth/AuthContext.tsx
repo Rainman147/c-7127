@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -20,12 +20,14 @@ const initialState: AuthState = {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, setState] = useState<AuthState>(initialState);
   const { toast } = useToast();
+  const mountedRef = useRef(false);
+  const sessionCheckInProgressRef = useRef(false);
 
-  const updateState = (updates: Partial<AuthState>) => {
+  const updateState = useCallback((updates: Partial<AuthState>) => {
     setState(prev => ({ ...prev, ...updates }));
-  };
+  }, []);
 
-  const handleAuthError = (error: Error, recoverable = true) => {
+  const handleAuthError = useCallback((error: Error, recoverable = true) => {
     console.error('[AuthProvider] Auth error:', error);
     
     const authError: AuthError = {
@@ -44,132 +46,134 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       description: error.message,
       variant: "destructive",
     });
-  };
+  }, [toast, updateState]);
 
-  useEffect(() => {
-    let mounted = true;
-    console.log('[AuthProvider] Initializing');
+  const checkSession = useCallback(async () => {
+    if (sessionCheckInProgressRef.current) {
+      console.log('[AuthProvider] Session check already in progress, skipping');
+      return;
+    }
 
-    const initSession = async () => {
-      try {
-        updateState({ status: 'CHECKING_SESSION' });
-        
-        // Get the session and store it
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        
-        if (mounted) {
-          console.log('[AuthProvider] Session check complete:', session ? 'Found session' : 'No session');
-          updateState({ 
-            session, 
-            status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
-            error: null 
-          });
-        }
-      } catch (error) {
-        console.error('[AuthProvider] Error initializing session:', error);
-        if (mounted) {
-          handleAuthError(error as Error);
-        }
-      }
-    };
-
-    // Initialize session
-    initSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[AuthProvider] Auth state changed:', event, session);
-      
-      if (!mounted) return;
-
-      switch (event) {
-        case 'SIGNED_IN':
-          updateState({ 
-            session,
-            status: 'AUTHENTICATED',
-            error: null
-          });
-          toast({
-            title: "Signed in successfully",
-            description: "Welcome back!"
-          });
-          break;
-
-        case 'SIGNED_OUT':
-          updateState({ 
-            session: null,
-            status: 'UNAUTHENTICATED',
-            error: null
-          });
-          toast({
-            title: "Signed out",
-            description: "You have been signed out successfully"
-          });
-          break;
-
-        case 'TOKEN_REFRESHED':
-          updateState({ 
-            session,
-            status: 'AUTHENTICATED',
-            error: null
-          });
-          break;
-
-        case 'USER_UPDATED':
-          updateState({ 
-            session,
-            error: null
-          });
-          toast({
-            title: "Profile updated",
-            description: "Your profile has been updated successfully"
-          });
-          break;
-
-        case 'INITIAL_SESSION':
-          // Only update if we don't already have a session to prevent overwriting
-          if (!state.session) {
-            updateState({
-              session,
-              status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
-              error: null
-            });
-          }
-          break;
-      }
-    });
-
-    return () => {
-      console.log('[AuthProvider] Cleaning up');
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [toast, state.session]);
-
-  const signOut = async () => {
     try {
-      console.log('[AuthProvider] Signing out');
+      sessionCheckInProgressRef.current = true;
+      console.log('[AuthProvider] Checking session');
+      updateState({ status: 'CHECKING_SESSION' });
       
-      // Get current session
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) throw error;
       
-      // If no session exists, just update local state
-      if (!session) {
-        console.log('[AuthProvider] No active session found, updating local state only');
+      if (mountedRef.current) {
+        console.log('[AuthProvider] Session check complete:', session ? 'Found session' : 'No session');
         updateState({ 
-          status: 'UNAUTHENTICATED',
+          session, 
+          status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
+          error: null 
+        });
+      }
+    } catch (error) {
+      console.error('[AuthProvider] Error checking session:', error);
+      if (mountedRef.current) {
+        handleAuthError(error as Error);
+      }
+    } finally {
+      sessionCheckInProgressRef.current = false;
+    }
+  }, [handleAuthError, updateState]);
+
+  const handleAuthStateChange = useCallback(async (event: string, session: Session | null) => {
+    console.log('[AuthProvider] Auth state changed:', event, session);
+    
+    if (!mountedRef.current) {
+      console.log('[AuthProvider] Component unmounted, ignoring auth state change');
+      return;
+    }
+
+    switch (event) {
+      case 'SIGNED_IN':
+        updateState({ 
+          session,
+          status: 'AUTHENTICATED',
+          error: null
+        });
+        toast({
+          title: "Signed in successfully",
+          description: "Welcome back!"
+        });
+        break;
+
+      case 'SIGNED_OUT':
+        updateState({ 
           session: null,
+          status: 'UNAUTHENTICATED',
           error: null
         });
         toast({
           title: "Signed out",
-          description: "You have been signed out successfully",
+          description: "You have been signed out successfully"
         });
-        return;
-      }
+        break;
 
-      // Sign out from Supabase first
+      case 'TOKEN_REFRESHED':
+        updateState({ 
+          session,
+          status: 'AUTHENTICATED',
+          error: null
+        });
+        break;
+
+      case 'USER_UPDATED':
+        updateState({ 
+          session,
+          error: null
+        });
+        toast({
+          title: "Profile updated",
+          description: "Your profile has been updated successfully"
+        });
+        break;
+
+      case 'INITIAL_SESSION':
+        // Only update if we're in INITIALIZING or CHECKING_SESSION state
+        if (state.status === 'INITIALIZING' || state.status === 'CHECKING_SESSION') {
+          updateState({
+            session,
+            status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
+            error: null
+          });
+        }
+        break;
+    }
+  }, [state.status, toast, updateState]);
+
+  useEffect(() => {
+    console.log('[AuthProvider] Component mounted');
+    mountedRef.current = true;
+
+    // Initialize session
+    checkSession();
+
+    // Set up auth state change subscription
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
+
+    return () => {
+      console.log('[AuthProvider] Component unmounting');
+      mountedRef.current = false;
+      subscription.unsubscribe();
+    };
+  }, [checkSession, handleAuthStateChange]);
+
+  const signOut = useCallback(async () => {
+    try {
+      console.log('[AuthProvider] Initiating sign out');
+      
+      // Update local state first to prevent UI flicker
+      updateState({ 
+        status: 'UNAUTHENTICATED',
+        session: null,
+        error: null
+      });
+
+      // Then sign out from Supabase
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -179,15 +183,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           description: "There was an issue completing the sign out process. Please try again.",
           variant: "destructive",
         });
+        // Force a session check to ensure our state is correct
+        await checkSession();
         return;
       }
-
-      // Then update local state
-      updateState({ 
-        status: 'UNAUTHENTICATED',
-        session: null,
-        error: null
-      });
 
       toast({
         title: "Signed out",
@@ -200,8 +199,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: "There was an issue signing out. Please try again.",
         variant: "destructive",
       });
+      // Force a session check to ensure our state is correct
+      await checkSession();
     }
-  };
+  }, [checkSession, toast, updateState]);
 
   return (
     <AuthContext.Provider value={{ ...state, signOut }}>
