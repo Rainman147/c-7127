@@ -1,16 +1,18 @@
+
 import { useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/auth/AuthContext';
 import Login from '@/components/Login';
 
 const LoginPage = () => {
-  const auth = useAuth();
+  const { session } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      await auth.redirectIfAuthenticated();
-    };
-    checkAuth();
-  }, [auth]);
+    if (session) {
+      navigate('/');
+    }
+  }, [session, navigate]);
 
   return <Login />;
 };

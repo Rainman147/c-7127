@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
@@ -6,7 +5,7 @@ import { useChatSessions } from '@/hooks/useChatSessions';
 import { useToast } from '@/hooks/use-toast';
 import type { Template } from '@/types';
 import { useUrlStateManager } from '@/hooks/useUrlStateManager';
-import { useSessionManagement } from '@/hooks/useSessionManagement';
+import { useAuth } from '@/contexts/auth/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import type { Message, MessageRole } from '@/types/chat';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
@@ -20,7 +19,7 @@ const ChatPage = () => {
   const { updateTemplateId, updatePatientId } = useUrlStateManager();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const { session } = useSessionManagement();
+  const { session } = useAuth();
   const { activeSessionId } = useChatSessions();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -152,4 +151,3 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
-

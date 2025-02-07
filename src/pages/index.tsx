@@ -10,6 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { prefetchTemplates } from '@/hooks/queries/useTemplateQueries';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { withAuth } from '@/components/auth/withAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   console.log('[Index] Component initializing');
@@ -112,5 +113,4 @@ const Index = () => {
   );
 };
 
-// Wrap the component with the auth HOC
 export default withAuth(Index);
