@@ -6,7 +6,7 @@ const LoginPage = () => {
   const { status } = useAuth();
   console.log('[LoginPage] Auth status:', status);
   
-  // During Phase 1, we're intentionally not implementing navigation logic
+  // During cleanup phase, we're only rendering the login component
   return <Login />;
 };
 
