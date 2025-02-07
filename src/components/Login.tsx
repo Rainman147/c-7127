@@ -2,23 +2,8 @@
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/auth/AuthContext';
 
 const Login = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { session } = useAuth();
-
-  useEffect(() => {
-    if (session) {
-      console.log('User already authenticated, redirecting to home');
-      navigate('/');
-    }
-  }, [session, navigate]);
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-md space-y-6 rounded-lg bg-card p-8 shadow-lg">

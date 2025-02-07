@@ -16,44 +16,13 @@ const Router = () => {
       <Routes>
         <Route path="/auth" element={<Auth />} />
         
-        <Route path="/" element={
-          <ProtectedLayout>
-            <ChatPage />
-          </ProtectedLayout>
-        } />
-        
-        <Route path="/c/:sessionId" element={
-          <ProtectedLayout>
-            <ChatPage />
-          </ProtectedLayout>
-        } />
-        
-        <Route path="/patients" element={
-          <ProtectedLayout>
-            <PatientsListPage />
-          </ProtectedLayout>
-        } />
-        <Route path="/patients/new" element={
-          <ProtectedLayout>
-            <PatientDetailPage isNew={true} />
-          </ProtectedLayout>
-        } />
-        <Route path="/patients/:patientId" element={
-          <ProtectedLayout>
-            <PatientDetailPage isNew={false} />
-          </ProtectedLayout>
-        } />
-        
-        <Route path="/templates" element={
-          <ProtectedLayout>
-            <TemplatesListPage />
-          </ProtectedLayout>
-        } />
-        <Route path="/templates/:templateId" element={
-          <ProtectedLayout>
-            <TemplateDetailPage />
-          </ProtectedLayout>
-        } />
+        <Route path="/" element={<ChatPage />} />
+        <Route path="/c/:sessionId" element={<ChatPage />} />
+        <Route path="/patients" element={<PatientsListPage />} />
+        <Route path="/patients/new" element={<PatientDetailPage isNew={true} />} />
+        <Route path="/patients/:patientId" element={<PatientDetailPage isNew={false} />} />
+        <Route path="/templates" element={<TemplatesListPage />} />
+        <Route path="/templates/:templateId" element={<TemplateDetailPage />} />
         
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
