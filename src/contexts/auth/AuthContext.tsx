@@ -3,12 +3,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-interface AuthState {
-  session: Session | null;
-  isLoading: boolean;
-  error: Error | null;
-}
+import type { AuthState, AuthStatus, AuthError } from '@/types/auth';
 
 interface AuthContextType extends AuthState {
   signOut: () => Promise<void>;
@@ -16,25 +11,63 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const initialState: AuthState = {
+  status: 'INITIALIZING',
+  session: null,
+  error: null,
+};
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [state, setState] = useState<AuthState>({
-    session: null,
-    isLoading: true,
-    error: null,
-  });
+  const [state, setState] = useState<AuthState>(initialState);
   const { toast } = useToast();
 
-  useEffect(() => {
-    console.log('[AuthProvider] Initializing');
+  const updateState = (updates: Partial<AuthState>) => {
+    setState(prev => ({ ...prev, ...updates }));
+  };
+
+  const handleAuthError = (error: Error, recoverable = true) => {
+    console.error('[AuthProvider] Auth error:', error);
     
+    const authError: AuthError = {
+      code: 'AUTH_ERROR',
+      message: error.message,
+      recoverable,
+    };
+
+    updateState({ 
+      status: 'ERROR',
+      error: authError
+    });
+
+    toast({
+      title: "Authentication Error",
+      description: error.message,
+      variant: "destructive",
+    });
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    console.log('[AuthProvider] Initializing');
+
     const initSession = async () => {
       try {
+        updateState({ status: 'CHECKING_SESSION' });
+        
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) throw error;
-        setState(prev => ({ ...prev, session, isLoading: false }));
+        
+        if (mounted) {
+          updateState({ 
+            session, 
+            status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
+            error: null 
+          });
+        }
       } catch (error) {
-        console.error('[AuthProvider] Session init error:', error);
-        setState(prev => ({ ...prev, error: error as Error, isLoading: false }));
+        if (mounted) {
+          handleAuthError(error as Error);
+        }
       }
     };
 
@@ -42,32 +75,60 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     initSession();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[AuthProvider] Auth state changed:', event);
       
+      if (!mounted) return;
+
       switch (event) {
         case 'SIGNED_IN':
-          setState(prev => ({ ...prev, session }));
+          updateState({ 
+            session,
+            status: 'AUTHENTICATED',
+            error: null
+          });
           toast({
             title: "Signed in successfully",
             description: "Welcome back!"
           });
           break;
+
         case 'SIGNED_OUT':
-          setState(prev => ({ ...prev, session: null }));
+          updateState({ 
+            session: null,
+            status: 'UNAUTHENTICATED',
+            error: null
+          });
           toast({
             title: "Signed out",
             description: "You have been signed out successfully"
           });
           break;
+
         case 'TOKEN_REFRESHED':
-          setState(prev => ({ ...prev, session }));
+          updateState({ 
+            session,
+            status: 'AUTHENTICATED',
+            error: null
+          });
+          break;
+
+        case 'USER_UPDATED':
+          updateState({ 
+            session,
+            error: null
+          });
+          toast({
+            title: "Profile updated",
+            description: "Your profile has been updated successfully"
+          });
           break;
       }
     });
 
     return () => {
       console.log('[AuthProvider] Cleaning up');
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [toast]);
@@ -84,7 +145,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: "There was a problem signing you out. Please try again.",
         variant: "destructive",
       });
-      setState(prev => ({ ...prev, error: error as Error }));
+      handleAuthError(error as Error);
     }
   };
 

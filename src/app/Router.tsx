@@ -7,17 +7,9 @@ import PatientDetailPage from '@/pages/Patients/PatientDetailPage';
 import TemplatesListPage from '@/pages/Templates/TemplatesListPage';
 import TemplateDetailPage from '@/pages/Templates/TemplateDetailPage';
 import ProtectedLayout from '@/features/layout/components/ProtectedLayout';
-import { withAuth } from '@/components/auth/withAuth';
 
 const Router = () => {
   console.log('[Router] Initializing router');
-  
-  // Wrap ChatPage and other protected components with withAuth
-  const ProtectedChatPage = withAuth(ChatPage);
-  const ProtectedPatientsListPage = withAuth(PatientsListPage);
-  const ProtectedPatientDetailPage = withAuth(PatientDetailPage);
-  const ProtectedTemplatesListPage = withAuth(TemplatesListPage);
-  const ProtectedTemplateDetailPage = withAuth(TemplateDetailPage);
   
   return (
     <BrowserRouter>
@@ -26,40 +18,40 @@ const Router = () => {
         
         <Route path="/" element={
           <ProtectedLayout>
-            <ProtectedChatPage />
+            <ChatPage />
           </ProtectedLayout>
         } />
         
         <Route path="/c/:sessionId" element={
           <ProtectedLayout>
-            <ProtectedChatPage />
+            <ChatPage />
           </ProtectedLayout>
         } />
         
         <Route path="/patients" element={
           <ProtectedLayout>
-            <ProtectedPatientsListPage />
+            <PatientsListPage />
           </ProtectedLayout>
         } />
         <Route path="/patients/new" element={
           <ProtectedLayout>
-            <ProtectedPatientDetailPage isNew={true} />
+            <PatientDetailPage isNew={true} />
           </ProtectedLayout>
         } />
         <Route path="/patients/:patientId" element={
           <ProtectedLayout>
-            <ProtectedPatientDetailPage isNew={false} />
+            <PatientDetailPage isNew={false} />
           </ProtectedLayout>
         } />
         
         <Route path="/templates" element={
           <ProtectedLayout>
-            <ProtectedTemplatesListPage />
+            <TemplatesListPage />
           </ProtectedLayout>
         } />
         <Route path="/templates/:templateId" element={
           <ProtectedLayout>
-            <ProtectedTemplateDetailPage />
+            <TemplateDetailPage />
           </ProtectedLayout>
         } />
         
