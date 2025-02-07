@@ -1,3 +1,4 @@
+
 import { Key, Settings, LogOut, User2, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -33,25 +34,26 @@ const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
+    console.log('[SidebarFooter] Initiating logout');
+    
     try {
-      console.log('[SidebarFooter] Initiating logout');
+      // First check if we have a session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       // Clear any local storage data first
-      localStorage.removeItem('supabase.auth.token');
-      localStorage.removeItem('supabase.auth.expires_at');
+      localStorage.clear(); // Clear all Supabase-related data
       
-      const { error } = await supabase.auth.signOut();
-      
-      if (error && error.message !== 'Session not found') {
-        console.error('[SidebarFooter] Error logging out:', error);
-        toast({
-          title: "Error logging out",
-          description: "There was a problem logging out. Please try again.",
-          variant: "destructive",
-        });
+      if (session) {
+        // Only attempt to sign out if we have a session
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          console.error('[SidebarFooter] Error during signOut:', error);
+        }
+      } else {
+        console.log('[SidebarFooter] No active session found');
       }
 
-      // Always navigate to auth page and show success message
+      // Always show success message and navigate to auth page
       console.log('[SidebarFooter] Navigating to auth page');
       toast({
         title: "Logged out successfully",
@@ -61,7 +63,7 @@ const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) => {
       navigate('/auth');
     } catch (error) {
       console.error('[SidebarFooter] Unexpected error during logout:', error);
-      // On any error, still try to navigate to auth page
+      // On any error, still navigate to auth page
       navigate('/auth');
     }
   };

@@ -49,13 +49,12 @@ export const useSessionManagement = () => {
       
       if (mounted) {
         if (_event === 'SIGNED_OUT') {
-          // Always clear session on sign out, regardless of error
+          // Always clear session on sign out
           setSession(null);
           console.log('[useSessionManagement] Session cleared on sign out');
           
-          // Clear any session data from localStorage
-          localStorage.removeItem('supabase.auth.token');
-          localStorage.removeItem('supabase.auth.expires_at');
+          // Clear all Supabase-related data from localStorage
+          localStorage.clear();
           
           toast({
             title: "Signed out",
@@ -70,6 +69,7 @@ export const useSessionManagement = () => {
         } else if (!newSession) {
           // Handle expired or invalid sessions
           setSession(null);
+          localStorage.clear();
         }
       }
     });
@@ -83,4 +83,3 @@ export const useSessionManagement = () => {
 
   return { session, isInitialized };
 };
-
