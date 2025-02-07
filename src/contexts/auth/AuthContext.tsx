@@ -54,10 +54,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         updateState({ status: 'CHECKING_SESSION' });
         
+        // Try to restore session from storage first
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) throw error;
         
         if (mounted) {
+          console.log('[AuthProvider] Session check complete:', session ? 'Found session' : 'No session');
           updateState({ 
             session, 
             status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
@@ -65,6 +67,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           });
         }
       } catch (error) {
+        console.error('[AuthProvider] Error initializing session:', error);
         if (mounted) {
           handleAuthError(error as Error);
         }
@@ -121,6 +124,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           toast({
             title: "Profile updated",
             description: "Your profile has been updated successfully"
+          });
+          break;
+
+        case 'USER_DELETED':
+          updateState({
+            session: null,
+            status: 'UNAUTHENTICATED',
+            error: null
+          });
+          toast({
+            title: "Account deleted",
+            description: "Your account has been deleted successfully"
           });
           break;
       }

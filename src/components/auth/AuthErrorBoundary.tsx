@@ -1,6 +1,9 @@
 
 import React from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 
 interface Props {
   children: React.ReactNode;
@@ -25,21 +28,42 @@ export class AuthErrorBoundary extends React.Component<Props, State> {
     console.error('[AuthErrorBoundary] Error caught:', error, errorInfo);
   }
 
+  private handleRetry = () => {
+    window.location.reload();
+  };
+
+  private handleSignIn = () => {
+    window.location.href = '/auth';
+  };
+
   render() {
     if (this.state.hasError) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-background p-4">
-          <div className="rounded-lg bg-card p-6 shadow-lg">
-            <h2 className="mb-4 text-xl font-semibold">Authentication Error</h2>
-            <p className="mb-4 text-muted-foreground">
-              There was a problem with authentication. Please try signing in again.
-            </p>
-            <button
-              onClick={() => window.location.href = '/auth'}
-              className="rounded bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
-            >
-              Go to Sign In
-            </button>
+          <div className="w-full max-w-md space-y-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Authentication Error</AlertTitle>
+              <AlertDescription>
+                {this.state.error?.message || 'There was a problem with authentication'}
+              </AlertDescription>
+            </Alert>
+            
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={this.handleRetry}
+                variant="outline"
+                className="w-full"
+              >
+                Try Again
+              </Button>
+              <Button
+                onClick={this.handleSignIn}
+                className="w-full"
+              >
+                Sign In
+              </Button>
+            </div>
           </div>
         </div>
       );
@@ -48,4 +72,3 @@ export class AuthErrorBoundary extends React.Component<Props, State> {
     return this.props.children;
   }
 }
-
