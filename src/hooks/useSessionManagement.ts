@@ -49,13 +49,9 @@ export const useSessionManagement = () => {
       
       if (mounted) {
         if (_event === 'SIGNED_OUT') {
-          // Always clear session on sign out
+          // Only clear session on explicit sign out
           setSession(null);
           console.log('[useSessionManagement] Session cleared on sign out');
-          
-          // Clear all Supabase-related data from localStorage
-          localStorage.clear();
-          
           toast({
             title: "Signed out",
             description: "You have been signed out successfully.",
@@ -66,10 +62,21 @@ export const useSessionManagement = () => {
             title: "Welcome back!",
             description: "You have successfully signed in.",
           });
-        } else if (!newSession) {
+        } else if (_event === 'TOKEN_REFRESHED' && newSession) {
+          console.log('[useSessionManagement] Session token refreshed');
+          setSession(newSession);
+        } else if (_event === 'USER_UPDATED' && newSession) {
+          console.log('[useSessionManagement] User data updated');
+          setSession(newSession);
+        } else if (!newSession && _event !== 'SIGNED_OUT') {
           // Handle expired or invalid sessions
+          console.log('[useSessionManagement] Session expired or invalid');
           setSession(null);
-          localStorage.clear();
+          toast({
+            title: "Session Expired",
+            description: "Your session has expired. Please sign in again.",
+            variant: "destructive",
+          });
         }
       }
     });

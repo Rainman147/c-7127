@@ -1,8 +1,8 @@
+
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStateChange } from '@/hooks/useAuthStateChange';
-import { clearSession } from '@/utils/auth/sessionManager';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -16,10 +16,6 @@ const Login = () => {
     const init = async () => {
       console.log('Initializing Login component');
       
-      // Clear any existing session
-      await clearSession();
-      console.log('Session cleared on Login component mount');
-
       // Check if user is already authenticated
       const { data: { session }, error } = await supabase.auth.getSession();
       

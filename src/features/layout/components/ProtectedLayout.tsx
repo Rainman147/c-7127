@@ -1,7 +1,7 @@
+
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { checkSession } from '@/utils/auth/sessionManager';
 import { supabase } from '@/integrations/supabase/client';
 import Sidebar from './Sidebar';
 import { useUI } from '@/contexts/UIContext';
@@ -20,15 +20,21 @@ const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
     
     const validateSession = async () => {
       console.log('[ProtectedLayout] Validating session...');
-      const { session, error } = await checkSession();
+      const { data: { session }, error } = await supabase.auth.getSession();
 
-      if (error || !session) {
-        console.log('[ProtectedLayout] Session validation failed:', error?.message || 'No session found');
+      if (error) {
+        console.error('[ProtectedLayout] Session validation error:', error);
         toast({
-          title: error ? "Authentication Error" : "Session Expired",
-          description: error?.message || "Please sign in to continue",
+          title: "Authentication Error",
+          description: "Please sign in to continue",
           variant: "destructive",
         });
+        navigate('/auth');
+        return;
+      }
+
+      if (!session) {
+        console.log('[ProtectedLayout] No active session found');
         navigate('/auth');
       }
     };
@@ -40,7 +46,7 @@ const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
     } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('[ProtectedLayout] Auth state changed:', event);
       
-      if (event === 'SIGNED_OUT' || !session) {
+      if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
         console.log('[ProtectedLayout] User signed out or session expired, redirecting to auth');
         navigate('/auth');
       }

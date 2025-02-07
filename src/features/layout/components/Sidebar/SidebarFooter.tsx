@@ -1,4 +1,3 @@
-
 import { Key, Settings, LogOut, User2, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -37,33 +36,27 @@ const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) => {
     console.log('[SidebarFooter] Initiating logout');
     
     try {
-      // First check if we have a session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const { error } = await supabase.auth.signOut();
       
-      // Clear any local storage data first
-      localStorage.clear(); // Clear all Supabase-related data
-      
-      if (session) {
-        // Only attempt to sign out if we have a session
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-          console.error('[SidebarFooter] Error during signOut:', error);
-        }
+      if (error) {
+        console.error('[SidebarFooter] Error during signOut:', error);
+        toast({
+          title: "Error signing out",
+          description: "There was a problem signing you out. Please try again.",
+          variant: "destructive",
+        });
       } else {
-        console.log('[SidebarFooter] No active session found');
+        console.log('[SidebarFooter] Sign out successful');
+        toast({
+          title: "Signed out successfully",
+          description: "You have been logged out of your account",
+        });
       }
-
-      // Always show success message and navigate to auth page
-      console.log('[SidebarFooter] Navigating to auth page');
-      toast({
-        title: "Logged out successfully",
-        description: "You have been logged out of your account",
-      });
       
+      // Always navigate to auth page after attempting logout
       navigate('/auth');
     } catch (error) {
       console.error('[SidebarFooter] Unexpected error during logout:', error);
-      // On any error, still navigate to auth page
       navigate('/auth');
     }
   };
