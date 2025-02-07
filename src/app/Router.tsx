@@ -42,7 +42,7 @@ const Router = () => {
         {/* Public route */}
         <Route path="/auth" element={<Auth />} />
         
-        {/* Protected routes */}
+        {/* Protected routes wrapped in AuthGuard and ProtectedLayout */}
         <Route element={
           <AuthGuard>
             <ProtectedLayout>
@@ -60,7 +60,7 @@ const Router = () => {
         }>
         </Route>
         
-        {/* Fallback */}
+        {/* Fallback route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -10,10 +10,10 @@ const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
   const { isSidebarOpen, isDesktop } = useUI();
 
   return (
-    <div className="flex h-screen bg-chatgpt-main">
+    <div className="flex h-screen bg-chatgpt-main overflow-hidden">
       <Sidebar />
       <main 
-        className={`flex-1 transition-all duration-300 ${
+        className={`flex-1 transition-all duration-300 overflow-y-auto ${
           isSidebarOpen && isDesktop ? 'ml-64' : 'ml-0'
         }`}
       >
