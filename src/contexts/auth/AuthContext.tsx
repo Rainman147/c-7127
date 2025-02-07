@@ -1,19 +1,13 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import type { AuthState, AuthStatus } from '@/types/auth';
-
-interface AuthContextType extends AuthState {
-  signOut: () => Promise<void>;
-}
+import type { AuthState, AuthContextType } from './types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const initialState: AuthState = {
   status: 'INITIALIZING',
   session: null,
-  error: null,
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -28,7 +22,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setState({ 
         status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
         session,
-        error: null 
       });
     });
 
@@ -38,7 +31,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setState({ 
         status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
         session,
-        error: null 
       });
     });
 
