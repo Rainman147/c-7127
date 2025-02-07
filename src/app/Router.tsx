@@ -1,5 +1,5 @@
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Auth from '@/pages/Auth/LoginPage';
 import ChatPage from '@/pages/Chat/ChatPage';
 import PatientsListPage from '@/pages/Patients/PatientsListPage';
@@ -10,6 +10,21 @@ import { useAuth } from '@/contexts/auth/AuthContext';
 import AuthLoadingState from '@/components/auth/AuthLoadingState';
 import AuthGuard from '@/components/auth/AuthGuard';
 import ProtectedLayout from '@/features/layout/components/ProtectedLayout';
+
+// Helper component to handle redirects based on auth state
+const AuthRedirect = () => {
+  const { session } = useAuth();
+  const location = useLocation();
+  
+  // If user is authenticated and tries to access /auth, redirect to home
+  if (session && location.pathname === '/auth') {
+    console.log('[Router] Authenticated user accessing /auth, redirecting to home');
+    return <Navigate to="/" replace />;
+  }
+  
+  // Allow access to the requested route
+  return null;
+};
 
 const Router = () => {
   const { status } = useAuth();
@@ -22,6 +37,7 @@ const Router = () => {
 
   return (
     <BrowserRouter>
+      <AuthRedirect />
       <Routes>
         {/* Public route */}
         <Route path="/auth" element={<Auth />} />
