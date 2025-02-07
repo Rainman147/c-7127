@@ -1,4 +1,6 @@
 
+import { Session } from '@supabase/supabase-js';
+
 export type AuthStatus = 
   | 'INITIALIZING'
   | 'CHECKING_SESSION'
@@ -18,4 +20,8 @@ export interface AuthState {
   status: AuthStatus;
   session: Session | null;
   error: AuthError | null;
+}
+
+export interface AuthContextType extends AuthState {
+  signOut: () => Promise<void>;
 }
