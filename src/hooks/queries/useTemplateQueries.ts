@@ -1,13 +1,40 @@
-import { useQuery } from "@tanstack/react-query";
+
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Template, DbTemplate } from "@/types/template";
 import { isValidTemplate } from "@/types/template/guards";
 import { convertDbTemplate } from "@/types/template/utils";
 import { useToast } from "@/hooks/use-toast";
 
-const STALE_TIME = 5 * 60 * 1000; // 5 minutes
+const STALE_TIME = 24 * 60 * 60 * 1000; // 24 hours since templates rarely change
 const RETRY_COUNT = 3;
-const RETRY_DELAY = 1000; // 1 second
+const RETRY_DELAY = 1000;
+
+const TEMPLATES_QUERY_KEY = 'templates';
+
+export const prefetchTemplates = async (queryClient: any) => {
+  console.log('[useTemplateQueries] Prefetching templates');
+  const { data: templates, error } = await supabase
+    .from('templates')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[useTemplateQueries] Error prefetching templates:', error);
+    return;
+  }
+
+  const validTemplates = templates
+    ?.map(template => convertDbTemplate(template as DbTemplate))
+    .filter(isValidTemplate) || [];
+
+  queryClient.setQueryData([TEMPLATES_QUERY_KEY], validTemplates);
+  
+  // If we have a first template, prefetch it as well
+  if (validTemplates.length > 0) {
+    queryClient.setQueryData(['template', validTemplates[0].id], validTemplates[0]);
+  }
+};
 
 const findTemplateInDb = async (templateId: string): Promise<Template | undefined> => {
   console.log('[useTemplateQueries] Finding template in database:', templateId);
@@ -67,6 +94,7 @@ const getFirstAvailableTemplate = async (): Promise<Template | undefined> => {
 export const useTemplateQuery = (templateId: string | null) => {
   console.log('[useTemplateQuery] Initializing with templateId:', templateId);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   return useQuery({
     queryKey: ['template', templateId],
@@ -74,7 +102,17 @@ export const useTemplateQuery = (templateId: string | null) => {
       let template: Template | undefined;
       
       if (templateId) {
-        // Try to fetch specific template
+        // Try to get from cache first
+        const cachedTemplates = queryClient.getQueryData([TEMPLATES_QUERY_KEY]) as Template[];
+        if (cachedTemplates) {
+          template = cachedTemplates.find(t => t.id === templateId);
+          if (template) {
+            console.log('[useTemplateQuery] Template found in cache:', template.name);
+            return template;
+          }
+        }
+        
+        // If not in cache, fetch from DB
         template = await findTemplateInDb(templateId);
         if (!template) {
           console.log('[useTemplateQuery] Requested template not found, falling back to first available');
@@ -113,7 +151,7 @@ export const useTemplatesListQuery = () => {
   const { toast } = useToast();
   
   return useQuery({
-    queryKey: ['templates'],
+    queryKey: [TEMPLATES_QUERY_KEY],
     queryFn: async () => {
       try {
         const { data: templates, error } = await supabase

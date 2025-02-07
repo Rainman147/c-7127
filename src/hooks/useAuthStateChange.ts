@@ -1,13 +1,26 @@
+
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { prefetchTemplates } from './queries/useTemplateQueries';
 
 export const useAuthStateChange = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    const handleAuthStateChange = (event: string) => {
+    const handleAuthStateChange = async (event: string) => {
       console.log('Auth event:', event);
+      
+      if (event === 'SIGNED_IN') {
+        // Prefetch templates when user signs in
+        try {
+          await prefetchTemplates(queryClient);
+        } catch (error) {
+          console.error('Error prefetching templates:', error);
+        }
+      }
       
       // Only show toasts for critical events
       switch (event) {
@@ -38,5 +51,5 @@ export const useAuthStateChange = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [toast]);
+  }, [toast, queryClient]);
 };

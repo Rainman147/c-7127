@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
 import { useToast } from '@/hooks/use-toast';
@@ -8,6 +8,8 @@ import { useUrlStateManager } from '@/hooks/useUrlStateManager';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/types/chat';
+import { useQueryClient } from '@tanstack/react-query';
+import { prefetchTemplates } from '@/hooks/queries/useTemplateQueries';
 
 const Index = () => {
   console.log('[Index] Component initializing');
@@ -15,11 +17,21 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { updateTemplateId, updatePatientId } = useUrlStateManager();
+  const queryClient = useQueryClient();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const { session } = useSessionManagement();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Prefetch templates on initial load if user is authenticated
+  useEffect(() => {
+    if (session) {
+      prefetchTemplates(queryClient).catch(error => {
+        console.error('Error prefetching templates:', error);
+      });
+    }
+  }, [session, queryClient]);
 
   const handleMessageSend = async (content: string, type: 'text' | 'audio' = 'text') => {
     console.log('[Index] Sending message:', { content, type });
