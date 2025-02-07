@@ -14,27 +14,9 @@ export interface Message {
   metadata?: Record<string, any>;
 }
 
-export interface MessageProps {
-  content: string;
-  sender: 'user' | 'ai';
-  type?: MessageType;
-}
-
 export interface ChatSession {
   id?: string;
   messages: Message[];
   templateId?: string;
   patientId?: string;
 }
-
-// Helper function to convert database message to frontend format
-export const mapDatabaseMessageToMessage = (dbMessage: any): Message => ({
-  id: dbMessage.id,
-  chat_id: dbMessage.chat_id,
-  role: dbMessage.role,
-  content: dbMessage.content,
-  type: dbMessage.type || 'text',
-  status: dbMessage.status || 'delivered',
-  created_at: dbMessage.created_at,
-  metadata: dbMessage.metadata
-});

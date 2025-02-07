@@ -1,15 +1,17 @@
+
 import { User } from 'lucide-react';
+import { MessageRole } from '@/types/chat';
 
 interface MessageAvatarProps {
-  sender: 'user' | 'ai';
+  role: MessageRole;
 }
 
-const MessageAvatar = ({ sender }: MessageAvatarProps) => {
-  console.log('[MessageAvatar] Rendering for role:', sender);
+const MessageAvatar = ({ role }: MessageAvatarProps) => {
+  console.log('[MessageAvatar] Rendering for role:', role);
   
   return (
     <div className="flex-shrink-0">
-      {sender === 'user' ? (
+      {role === 'user' ? (
         <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
           <User className="w-5 h-5 text-white" />
         </div>

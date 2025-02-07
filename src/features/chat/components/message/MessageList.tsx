@@ -1,3 +1,4 @@
+
 import { memo, useRef, useEffect } from 'react';
 import Message from './Message';
 import type { Message as MessageType } from '@/types/chat';
@@ -32,9 +33,7 @@ const MessageList = ({ messages, isLoading }: MessageListProps) => {
             {messages.map((message) => (
               <Message
                 key={message.id || `${message.role}-${message.content}`}
-                content={message.content}
-                sender={message.role === 'user' ? 'user' : 'ai'}
-                type={message.type}
+                message={message}
               />
             ))}
             {isLoading && (
