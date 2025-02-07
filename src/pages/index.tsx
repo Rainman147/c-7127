@@ -24,9 +24,20 @@ const Index = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Add session monitoring
+  useEffect(() => {
+    console.log('[Index] Current session state:', session ? 'Authenticated' : 'Not authenticated');
+    
+    if (!session) {
+      console.log('[Index] No active session, redirecting to auth page');
+      navigate('/auth');
+    }
+  }, [session, navigate]);
+
   // Prefetch templates on initial load if user is authenticated
   useEffect(() => {
     if (session) {
+      console.log('[Index] Session active, prefetching templates');
       prefetchTemplates(queryClient).catch(error => {
         console.error('Error prefetching templates:', error);
       });
@@ -34,16 +45,18 @@ const Index = () => {
   }, [session, queryClient]);
 
   const handleMessageSend = async (content: string, type: 'text' | 'audio' = 'text') => {
-    console.log('[Index] Sending message:', { content, type });
+    console.log('[Index] Attempting to send message:', { content, type });
     
     if (!session) {
-      console.error('No active session');
+      console.log('[Index] No active session, redirecting to auth');
+      navigate('/auth');
       return;
     }
 
     setIsLoading(true);
 
     try {
+      console.log('[Index] Making chat-manager request with session:', session.user.id);
       const response = await supabase.functions.invoke('chat-manager', {
         body: {
           content,
