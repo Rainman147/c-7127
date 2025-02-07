@@ -8,6 +8,8 @@ import TemplatesListPage from '@/pages/Templates/TemplatesListPage';
 import TemplateDetailPage from '@/pages/Templates/TemplateDetailPage';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import AuthLoadingState from '@/components/auth/AuthLoadingState';
+import AuthGuard from '@/components/auth/AuthGuard';
+import ProtectedLayout from '@/features/layout/components/ProtectedLayout';
 
 const Router = () => {
   const { status } = useAuth();
@@ -21,14 +23,27 @@ const Router = () => {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public route */}
         <Route path="/auth" element={<Auth />} />
-        <Route path="/" element={<ChatPage />} />
-        <Route path="/c/:sessionId" element={<ChatPage />} />
-        <Route path="/patients" element={<PatientsListPage />} />
-        <Route path="/patients/new" element={<PatientDetailPage isNew={true} />} />
-        <Route path="/patients/:patientId" element={<PatientDetailPage isNew={false} />} />
-        <Route path="/templates" element={<TemplatesListPage />} />
-        <Route path="/templates/:templateId" element={<TemplateDetailPage />} />
+        
+        {/* Protected routes */}
+        <Route element={
+          <AuthGuard>
+            <ProtectedLayout>
+              {/* Protected content */}
+            </ProtectedLayout>
+          </AuthGuard>
+        }>
+          <Route path="/" element={<ChatPage />} />
+          <Route path="/c/:sessionId" element={<ChatPage />} />
+          <Route path="/patients" element={<PatientsListPage />} />
+          <Route path="/patients/new" element={<PatientDetailPage isNew={true} />} />
+          <Route path="/patients/:patientId" element={<PatientDetailPage isNew={false} />} />
+          <Route path="/templates" element={<TemplatesListPage />} />
+          <Route path="/templates/:templateId" element={<TemplateDetailPage />} />
+        </Route>
+        
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
