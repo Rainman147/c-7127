@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         updateState({ status: 'CHECKING_SESSION' });
         
-        // Try to restore session from storage first
+        // Get the session and store it
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) throw error;
         
@@ -79,7 +79,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[AuthProvider] Auth state changed:', event);
+      console.log('[AuthProvider] Auth state changed:', event, session);
       
       if (!mounted) return;
 
@@ -126,6 +126,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             description: "Your profile has been updated successfully"
           });
           break;
+
+        case 'INITIAL_SESSION':
+          // Only update if we don't already have a session to prevent overwriting
+          if (!state.session) {
+            updateState({
+              session,
+              status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
+              error: null
+            });
+          }
+          break;
       }
     });
 
@@ -134,7 +145,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [toast]);
+  }, [toast, state.session]);
 
   const signOut = async () => {
     try {
@@ -158,35 +169,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      // First update local state to prevent race conditions
-      updateState({ 
-        status: 'UNAUTHENTICATED',
-        session: null,
-        error: null
-      });
-
-      // Then sign out from Supabase
+      // Sign out from Supabase first
       const { error } = await supabase.auth.signOut();
       
       if (error) {
         console.error('[AuthProvider] Sign out error:', error);
         toast({
           title: "Warning",
-          description: "There was an issue completing the sign out process, but you have been signed out locally.",
-          variant: "default",
+          description: "There was an issue completing the sign out process. Please try again.",
+          variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Signed out",
-          description: "You have been signed out successfully",
-        });
+        return;
       }
+
+      // Then update local state
+      updateState({ 
+        status: 'UNAUTHENTICATED',
+        session: null,
+        error: null
+      });
+
+      toast({
+        title: "Signed out",
+        description: "You have been signed out successfully",
+      });
     } catch (error) {
       console.error('[AuthProvider] Sign out error:', error);
       toast({
-        title: "Warning",
-        description: "There was an issue completing the sign out process, but you have been signed out locally.",
-        variant: "default",
+        title: "Error",
+        description: "There was an issue signing out. Please try again.",
+        variant: "destructive",
       });
     }
   };
