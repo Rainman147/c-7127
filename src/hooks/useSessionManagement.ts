@@ -48,7 +48,12 @@ export const useSessionManagement = () => {
       console.log('[useSessionManagement] New session state:', newSession ? 'Active' : 'None');
       
       if (mounted) {
-        setSession(newSession);
+        // If we get a session_not_found error during signOut, clear the session anyway
+        if (_event === 'SIGNED_OUT' || _event === 'TOKEN_REFRESHED' || !newSession) {
+          setSession(null);
+        } else {
+          setSession(newSession);
+        }
         
         // Show relevant toast messages
         if (_event === 'SIGNED_IN') {

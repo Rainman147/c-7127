@@ -1,3 +1,4 @@
+
 import { Key, Settings, LogOut, User2, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -34,13 +35,28 @@ const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) => {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      
+      // Even if we get a session_not_found error, continue with logout flow
+      if (error && error.message !== 'Session not found') {
+        console.error('[SidebarFooter] Error logging out:', error);
+        toast({
+          title: "Error logging out",
+          description: "There was a problem logging out. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Always clear local state and redirect regardless of error
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your account",
       });
+      
+      navigate('/auth');
     } catch (error) {
-      console.error('Error logging out:', error);
+      console.error('[SidebarFooter] Unexpected error during logout:', error);
       toast({
         title: "Error logging out",
         description: "There was a problem logging out. Please try again.",
@@ -77,7 +93,7 @@ const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) => {
       
       navigate('/auth');
     } catch (error) {
-      console.error('Error deleting account:', error);
+      console.error('[SidebarFooter] Error deleting account:', error);
       toast({
         title: "Error deleting account",
         description: "There was a problem deleting your account. Please try again.",
