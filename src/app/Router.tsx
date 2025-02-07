@@ -30,17 +30,18 @@ const Router = () => {
         <Route element={
           <AuthGuard>
             <ProtectedLayout>
-              {/* Protected content */}
+              <Routes>
+                <Route path="/" element={<ChatPage />} />
+                <Route path="/c/:sessionId" element={<ChatPage />} />
+                <Route path="/patients" element={<PatientsListPage />} />
+                <Route path="/patients/new" element={<PatientDetailPage isNew={true} />} />
+                <Route path="/patients/:patientId" element={<PatientDetailPage isNew={false} />} />
+                <Route path="/templates" element={<TemplatesListPage />} />
+                <Route path="/templates/:templateId" element={<TemplateDetailPage />} />
+              </Routes>
             </ProtectedLayout>
           </AuthGuard>
         }>
-          <Route path="/" element={<ChatPage />} />
-          <Route path="/c/:sessionId" element={<ChatPage />} />
-          <Route path="/patients" element={<PatientsListPage />} />
-          <Route path="/patients/new" element={<PatientDetailPage isNew={true} />} />
-          <Route path="/patients/:patientId" element={<PatientDetailPage isNew={false} />} />
-          <Route path="/templates" element={<TemplatesListPage />} />
-          <Route path="/templates/:templateId" element={<TemplateDetailPage />} />
         </Route>
         
         {/* Fallback */}
