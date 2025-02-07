@@ -48,24 +48,28 @@ export const useSessionManagement = () => {
       console.log('[useSessionManagement] New session state:', newSession ? 'Active' : 'None');
       
       if (mounted) {
-        // If we get a session_not_found error during signOut, clear the session anyway
-        if (_event === 'SIGNED_OUT' || _event === 'TOKEN_REFRESHED' || !newSession) {
+        if (_event === 'SIGNED_OUT') {
+          // Always clear session on sign out, regardless of error
           setSession(null);
-        } else {
-          setSession(newSession);
-        }
-        
-        // Show relevant toast messages
-        if (_event === 'SIGNED_IN') {
-          toast({
-            title: "Welcome back!",
-            description: "You have successfully signed in.",
-          });
-        } else if (_event === 'SIGNED_OUT') {
+          console.log('[useSessionManagement] Session cleared on sign out');
+          
+          // Clear any session data from localStorage
+          localStorage.removeItem('supabase.auth.token');
+          localStorage.removeItem('supabase.auth.expires_at');
+          
           toast({
             title: "Signed out",
             description: "You have been signed out successfully.",
           });
+        } else if (_event === 'SIGNED_IN' && newSession) {
+          setSession(newSession);
+          toast({
+            title: "Welcome back!",
+            description: "You have successfully signed in.",
+          });
+        } else if (!newSession) {
+          // Handle expired or invalid sessions
+          setSession(null);
         }
       }
     });
@@ -79,3 +83,4 @@ export const useSessionManagement = () => {
 
   return { session, isInitialized };
 };
+

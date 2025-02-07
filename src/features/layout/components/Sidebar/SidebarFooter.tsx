@@ -1,4 +1,3 @@
-
 import { Key, Settings, LogOut, User2, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -35,9 +34,14 @@ const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) => {
 
   const handleLogout = async () => {
     try {
+      console.log('[SidebarFooter] Initiating logout');
+      
+      // Clear any local storage data first
+      localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem('supabase.auth.expires_at');
+      
       const { error } = await supabase.auth.signOut();
       
-      // Even if we get a session_not_found error, continue with logout flow
       if (error && error.message !== 'Session not found') {
         console.error('[SidebarFooter] Error logging out:', error);
         toast({
@@ -45,10 +49,10 @@ const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) => {
           description: "There was a problem logging out. Please try again.",
           variant: "destructive",
         });
-        return;
       }
 
-      // Always clear local state and redirect regardless of error
+      // Always navigate to auth page and show success message
+      console.log('[SidebarFooter] Navigating to auth page');
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your account",
@@ -57,11 +61,8 @@ const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) => {
       navigate('/auth');
     } catch (error) {
       console.error('[SidebarFooter] Unexpected error during logout:', error);
-      toast({
-        title: "Error logging out",
-        description: "There was a problem logging out. Please try again.",
-        variant: "destructive",
-      });
+      // On any error, still try to navigate to auth page
+      navigate('/auth');
     }
   };
 
