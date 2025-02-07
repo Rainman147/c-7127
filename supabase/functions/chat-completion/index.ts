@@ -4,9 +4,11 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 import { corsHeaders } from '../_shared/cors.ts';
 
 interface ChatRequest {
-  chatId: string;
   content: string;
   type?: 'text' | 'audio';
+  templateId?: string;
+  patientId?: string;
+  chatId?: string;
 }
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || '';
@@ -36,9 +38,32 @@ serve(async (req) => {
     }
 
     // Get request body
-    const { chatId, content, type = 'text' } = await req.json() as ChatRequest;
+    const { content, type = 'text', templateId, patientId, chatId } = await req.json() as ChatRequest;
+    let activeChatId = chatId;
 
-    // Get chat context (template and patient info)
+    // If no chatId provided, create a new chat
+    if (!activeChatId) {
+      console.log('Creating new chat:', { templateId, patientId });
+      const { data: newChat, error: chatError } = await supabase
+        .from('chats')
+        .insert({
+          user_id: user.id,
+          title: content.slice(0, 50) + '...',
+          template_id: templateId,
+          patient_id: patientId
+        })
+        .select()
+        .single();
+
+      if (chatError) {
+        throw chatError;
+      }
+      
+      activeChatId = newChat.id;
+      console.log('Created new chat:', activeChatId);
+    }
+
+    // Get chat context
     const { data: chat } = await supabase
       .from('chats')
       .select(`
@@ -55,7 +80,7 @@ serve(async (req) => {
           medical_history
         )
       `)
-      .eq('id', chatId)
+      .eq('id', activeChatId)
       .single();
 
     if (!chat) {
@@ -66,10 +91,13 @@ serve(async (req) => {
     const { error: messageError } = await supabase
       .from('messages')
       .insert({
-        chat_id: chatId,
+        chat_id: activeChatId,
         role: 'user',
         content,
-        type
+        type,
+        metadata: {
+          isFirstMessage: !chatId // Track if this was the first message
+        }
       });
 
     if (messageError) {
@@ -114,7 +142,7 @@ serve(async (req) => {
     const { error: responseError } = await supabase
       .from('messages')
       .insert({
-        chat_id: chatId,
+        chat_id: activeChatId,
         role: 'assistant',
         content: assistantMessage,
         type: 'text'
@@ -125,7 +153,10 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ message: assistantMessage }),
+      JSON.stringify({ 
+        message: assistantMessage,
+        chatId: activeChatId // Return the chatId for frontend routing
+      }),
       {
         headers: {
           ...corsHeaders,

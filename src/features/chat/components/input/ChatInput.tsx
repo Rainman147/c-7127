@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import AudioControls from "../audio/AudioControls";
@@ -9,16 +10,25 @@ interface ChatInputProps {
   onTranscriptionComplete: (text: string) => void;
   onTranscriptionUpdate?: (text: string) => void;
   isLoading?: boolean;
+  draftMessage?: string;
+  onDraftChange?: (draft: string) => void;
 }
 
 const ChatInput = ({ 
   onSend, 
   onTranscriptionComplete,
   onTranscriptionUpdate,
-  isLoading = false 
+  isLoading = false,
+  draftMessage = '',
+  onDraftChange
 }: ChatInputProps) => {
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(draftMessage);
   const { toast } = useToast();
+
+  const handleMessageChange = (newMessage: string) => {
+    setMessage(newMessage);
+    onDraftChange?.(newMessage);
+  };
 
   const handleSubmit = () => {
     if (message.trim() && !isLoading) {
@@ -52,7 +62,7 @@ const ChatInput = ({
       transcriptionLength: transcription.length 
     });
     
-    setMessage(transcription);
+    handleMessageChange(transcription);
     onTranscriptionComplete(transcription);
     
     toast({
@@ -74,7 +84,7 @@ const ChatInput = ({
     <div className="w-full rounded-2xl overflow-hidden bg-[#2F2F2F]">
       <ChatInputField
         message={message}
-        setMessage={setMessage}
+        setMessage={handleMessageChange}
         handleKeyDown={handleKeyDown}
         isLoading={isLoading}
       />

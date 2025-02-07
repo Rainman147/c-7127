@@ -1,42 +1,39 @@
+
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
 import { useAudioRecovery } from '@/hooks/transcription/useAudioRecovery';
-import { useSessionManagement } from '@/hooks/useSessionManagement';
-import { useChatSessions } from '@/hooks/useChatSessions';
-import { useTemplateQuery } from '@/hooks/queries/useTemplateQueries';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import type { Template } from '@/types';
 import { useUrlStateManager } from '@/hooks/useUrlStateManager';
+import { useTemplateQuery } from '@/hooks/queries/useTemplateQueries';
+import { useDraftMessage } from '@/hooks/useDraftMessage';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   console.log('[Index] Component initializing');
   const navigate = useNavigate();
   const location = useLocation();
-  const { sessionId } = useParams();
   const { toast } = useToast();
   const { updateTemplateId, updatePatientId } = useUrlStateManager();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const { session } = useSessionManagement();
-  const { createSession } = useChatSessions();
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Temporary stubs for removed chat functionality
-  const messages = [];
-  const isLoading = false;
-  const currentChatId = null;
-  
   // Get template ID from URL
   const params = new URLSearchParams(location.search);
   const templateId = params.get('templateId');
-
+  
   // Query for selected template
   const { 
     data: selectedTemplate, 
     isLoading: isTemplateLoading,
     error: templateError 
   } = useTemplateQuery(templateId);
+
+  // Initialize draft message handling
+  const { draftMessage, setDraftMessage, clearDraft } = useDraftMessage(templateId, selectedPatientId);
 
   // Initialize audio recovery
   useAudioRecovery();
@@ -64,25 +61,55 @@ const Index = () => {
   };
 
   const handleMessageSend = async (message: string, type: 'text' | 'audio' = 'text') => {
-    console.log('[Index] Message sending temporarily disabled');
-    toast({
-      title: "Info",
-      description: "Message sending is temporarily disabled during system rebuild",
-    });
-  };
+    console.log('[Index] Sending message:', { content: message, type });
+    setIsLoading(true);
 
-  // Show error toast if template error occurs
-  useEffect(() => {
-    if (templateError) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session');
+      }
+
+      const response = await fetch(
+        'https://hlnzunnahksudbotqvpk.supabase.co/functions/v1/chat-completion',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            content: message,
+            type,
+            templateId,
+            patientId: selectedPatientId
+          })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      const data = await response.json();
+      
+      // Clear draft after successful send
+      clearDraft();
+      
+      // Navigate to the chat page
+      navigate(`/c/${data.chatId}`);
+
+    } catch (error) {
+      console.error('Error sending message:', error);
       toast({
-        title: "Template Error",
-        description: templateError.message,
+        title: "Error sending message",
+        description: "Please try again. If the problem persists, check your connection.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
-  }, [templateError, toast]);
-
-  const isPageLoading = isTemplateLoading;
+  };
 
   return (
     <div className="flex h-screen">
@@ -93,22 +120,19 @@ const Index = () => {
         </Alert>
       )}
       <ChatContainer 
-        messages={messages}
-        isLoading={isPageLoading}
-        currentChatId={currentChatId}
+        messages={[]}
+        isLoading={isLoading || isTemplateLoading}
+        currentChatId={null}
         onMessageSend={handleMessageSend}
         onTemplateChange={handleTemplateChange}
         onPatientSelect={handlePatientSelect}
         selectedPatientId={selectedPatientId}
+        draftMessage={draftMessage}
+        onDraftChange={setDraftMessage}
         onTranscriptionComplete={async (text: string) => {
           console.log('[Index] Transcription complete, ready for user to edit:', text);
           if (text) {
-            const chatInput = document.querySelector('textarea');
-            if (chatInput) {
-              (chatInput as HTMLTextAreaElement).value = text;
-              const event = new Event('input', { bubbles: true });
-              chatInput.dispatchEvent(event);
-            }
+            setDraftMessage(text);
           }
         }}
       />
