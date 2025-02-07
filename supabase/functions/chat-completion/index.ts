@@ -1,7 +1,7 @@
 
-import { serve } from 'https://deno.fresh.dev/std@v1/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
-import { corsHeaders } from '../_shared/cors.ts';
+import { serve } from "https://deno.fresh.dev/std@v1/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { corsHeaders } from "../_shared/cors.ts";
 
 interface ChatRequest {
   content: string;
@@ -23,7 +23,6 @@ serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
-    // Get auth user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('No authorization header');
@@ -37,11 +36,9 @@ serve(async (req) => {
       throw new Error('Invalid user token');
     }
 
-    // Get request body
     const { content, type = 'text', templateId, patientId, chatId } = await req.json() as ChatRequest;
     let activeChatId = chatId;
 
-    // If no chatId provided, create a new chat
     if (!activeChatId) {
       console.log('Creating new chat:', { templateId, patientId });
       const { data: newChat, error: chatError } = await supabase
@@ -63,7 +60,6 @@ serve(async (req) => {
       console.log('Created new chat:', activeChatId);
     }
 
-    // Get chat context
     const { data: chat } = await supabase
       .from('chats')
       .select(`
@@ -72,7 +68,8 @@ serve(async (req) => {
         patient_id,
         templates (
           system_instructions,
-          content
+          content,
+          schema
         ),
         patients (
           name,
@@ -87,7 +84,6 @@ serve(async (req) => {
       throw new Error('Chat not found');
     }
 
-    // Store user message
     const { error: messageError } = await supabase
       .from('messages')
       .insert({
@@ -96,7 +92,7 @@ serve(async (req) => {
         content,
         type,
         metadata: {
-          isFirstMessage: !chatId // Track if this was the first message
+          isFirstMessage: !chatId
         }
       });
 
@@ -113,7 +109,14 @@ serve(async (req) => {
       systemContext += `\nPatient Context:\nName: ${chat.patients.name}\nDOB: ${chat.patients.dob}\nMedical History: ${chat.patients.medical_history || 'None provided'}`;
     }
 
-    // Make OpenAI API call
+    // Prepare response format if template has schema
+    const responseFormat = chat.templates?.schema ? {
+      type: "object",
+      schema: chat.templates.schema
+    } : undefined;
+
+    console.log('Making OpenAI request with model o3-mini');
+    
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -121,13 +124,13 @@ serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'o3-mini',
         messages: [
           { role: 'system', content: systemContext },
           { role: 'user', content }
         ],
         temperature: 0.7,
-        response_format: { type: 'text' }
+        response_format: responseFormat
       })
     });
 
@@ -155,7 +158,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         message: assistantMessage,
-        chatId: activeChatId // Return the chatId for frontend routing
+        chatId: activeChatId
       }),
       {
         headers: {
@@ -166,6 +169,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    console.error('Error in chat completion:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
