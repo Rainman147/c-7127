@@ -79,30 +79,36 @@ serve(async (req) => {
       console.log('[chat-manager] Created new chat:', activeChatId);
     }
 
-    // Get chat context
+    // Get chat context - Updated query with optional joins
+    console.log('[chat-manager] Fetching chat context for chat:', activeChatId);
     const { data: chat, error: chatError } = await supabase
       .from('chats')
       .select(`
         id,
         template_id,
         patient_id,
-        templates (
+        templates:template_id (
           system_instructions,
           content,
           schema
         ),
-        patients (
+        patients:patient_id (
           name,
           dob,
           medical_history
         )
       `)
       .eq('id', activeChatId)
-      .single();
+      .maybeSingle();
 
-    if (chatError || !chat) {
+    if (chatError) {
       console.error('[chat-manager] Error fetching chat:', chatError);
-      throw new Error('Failed to fetch chat context');
+      throw new Error('Failed to fetch chat data');
+    }
+
+    if (!chat) {
+      console.error('[chat-manager] No chat found with ID:', activeChatId);
+      throw new Error('Chat not found');
     }
 
     // Store user message
@@ -123,7 +129,7 @@ serve(async (req) => {
       throw new Error('Failed to store user message');
     }
 
-    // Build system context
+    // Build system context - Handle optional template/patient data
     let systemContext = 'You are a helpful medical AI assistant.';
     if (chat.templates?.system_instructions) {
       systemContext = chat.templates.system_instructions;
@@ -222,4 +228,3 @@ serve(async (req) => {
     );
   }
 });
-
