@@ -1,4 +1,3 @@
-
 import { Key, Settings, LogOut, User2, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -37,14 +36,10 @@ const SidebarFooter = ({ apiKey, onApiKeyChange }: SidebarFooterProps) => {
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/auth');
   };
 
   const handleAccountSettings = () => {
-    toast({
-      title: "Coming Soon",
-      description: "Account settings will be available in a future update.",
-    });
+    console.log('Navigate to account settings');
   };
 
   const handleDeleteAccount = async () => {

@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UIProvider } from "@/contexts/UIContext";
 import { AuthProvider } from "@/contexts/auth/AuthContext";
 import { AuthErrorBoundary } from "@/components/auth/AuthErrorBoundary";
-import Router from "@/app/Router";
+import Router from "./app/Router";
 
 const queryClient = new QueryClient();
 
