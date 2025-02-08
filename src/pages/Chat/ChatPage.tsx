@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
@@ -7,7 +8,7 @@ import type { Template } from '@/types';
 import { useUrlStateManager } from '@/hooks/useUrlStateManager';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import type { Message, MessageRole } from '@/types/chat';
+import type { Message } from '@/types/chat';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 const ChatPage = () => {

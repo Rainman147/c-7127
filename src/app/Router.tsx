@@ -29,9 +29,7 @@ const Router = () => {
         {/* Protected routes - wrapped in ProtectedLayout and AuthGuard */}
         <Route element={
           <AuthGuard>
-            <ProtectedLayout>
-              <></>
-            </ProtectedLayout>
+            <ProtectedLayout />
           </AuthGuard>
         }>
           <Route path="/" element={<ChatPage />} />
