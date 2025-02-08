@@ -1,7 +1,9 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { supabase } from '@/integrations/supabase/client';
 import type { Patient } from '@/types';
+import { toFrontendPatient } from '@/utils/transforms';
 
 const PATIENTS_PER_PAGE = 50;
 
@@ -33,10 +35,12 @@ export const usePatientSearch = () => {
 
       console.log('[usePatientSearch] Fetched patients:', data?.length);
       
+      const transformedPatients = (data || []).map(toFrontendPatient);
+      
       if (startIndex === 0) {
-        setPatients(data || []);
+        setPatients(transformedPatients);
       } else {
-        setPatients(prev => [...prev, ...(data || [])]);
+        setPatients(prev => [...prev, ...transformedPatients]);
       }
       
       setHasMore((data?.length || 0) === PATIENTS_PER_PAGE);

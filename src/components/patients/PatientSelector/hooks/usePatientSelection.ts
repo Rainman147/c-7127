@@ -1,8 +1,10 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateAge, formatPatientContext } from '@/types/patient';
 import type { Patient, PatientContext } from '@/types';
+import { toFrontendPatient } from '@/utils/transforms';
 
 interface UsePatientSelectionReturn {
   selectedPatient: Patient | null;
@@ -21,7 +23,6 @@ export const usePatientSelection = (
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // Load patient details when patientId is in URL
   const loadPatientDetails = useCallback(async (patientId: string) => {
     try {
       setIsLoading(true);
@@ -30,7 +31,7 @@ export const usePatientSelection = (
 
       const { data, error: fetchError } = await supabase
         .from('patients')
-        .select('*, medical_history, current_medications')
+        .select('*')
         .eq('id', patientId)
         .maybeSingle();
 
@@ -41,10 +42,11 @@ export const usePatientSelection = (
       }
 
       console.log('[PatientSelection] Loaded patient details:', data);
-      setSelectedPatient(data);
+      const transformedPatient = toFrontendPatient(data);
+      setSelectedPatient(transformedPatient);
 
       // Format patient context
-      const formattedContext = formatPatientContext(data);
+      const formattedContext = formatPatientContext(transformedPatient);
       setPatientContext(formattedContext);
       
     } catch (err) {

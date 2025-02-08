@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
@@ -10,6 +9,7 @@ import { useAuth } from '@/contexts/auth/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/types/chat';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { toFrontendMessage } from '@/utils/transforms';
 
 const ChatPage = () => {
   console.log('[ChatPage] Component initializing');
@@ -69,7 +69,7 @@ const ChatPage = () => {
         if (error) throw error;
 
         if (isSubscribed) {
-          setMessages(data as Message[]);
+          setMessages((data || []).map(toFrontendMessage));
         }
       } catch (error) {
         console.error('Error loading messages:', error);
