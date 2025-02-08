@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { useToast } from '@/hooks/use-toast';
@@ -16,15 +16,40 @@ const ChatPage = () => {
   
   const location = useLocation();
   const { sessionId } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { updateTemplateId, updatePatientId } = useUrlStateManager();
+  const { session } = useAuth();
+  const { createSession } = useChatSessions();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const { session } = useAuth();
-  const { activeSessionId } = useChatSessions();
-
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Create new chat session if we're on the index route
+  useEffect(() => {
+    const initializeChat = async () => {
+      if (!sessionId && session?.user) {
+        console.log('[ChatPage] Creating new chat session');
+        try {
+          const newChat = await createSession();
+          if (newChat?.id) {
+            console.log('[ChatPage] Redirecting to new chat:', newChat.id);
+            navigate(`/c/${newChat.id}`, { replace: true });
+          }
+        } catch (error) {
+          console.error('[ChatPage] Error creating chat session:', error);
+          toast({
+            title: "Error",
+            description: "Failed to create new chat session",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    initializeChat();
+  }, [sessionId, session?.user, createSession, navigate, toast]);
 
   // Subscribe to messages for the current chat
   useEffect(() => {

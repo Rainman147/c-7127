@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Auth from '@/pages/Auth/LoginPage';
 import ChatPage from '@/pages/Chat/ChatPage';
@@ -32,8 +31,11 @@ const Router = () => {
             <ProtectedLayout />
           </AuthGuard>
         }>
-          <Route path="/" element={<ChatPage />} />
-          <Route path="/c/:sessionId" element={<ChatPage />} />
+          {/* Chat routes - both new and existing sessions use ChatPage */}
+          <Route path="/" element={<ChatPage key="new-chat" />} />
+          <Route path="/c/:sessionId" element={<ChatPage key="existing-chat" />} />
+          
+          {/* Other protected routes */}
           <Route path="/patients" element={<PatientsListPage />} />
           <Route path="/patients/new" element={<PatientDetailPage isNew={true} />} />
           <Route path="/patients/:patientId" element={<PatientDetailPage isNew={false} />} />
