@@ -1,16 +1,17 @@
 
 import type { DbMessage } from '@/types/database';
 import type { Message, MessageRole, MessageType } from '@/types/chat';
+import { Json } from '@/integrations/supabase/types';
 
 export const toFrontendMessage = (dbMessage: DbMessage): Message => ({
   id: dbMessage.id,
   chatId: dbMessage.chat_id,
-  role: dbMessage.role as MessageRole, // Type assertion since we know the DB enforces valid roles
+  role: dbMessage.role as MessageRole,
   content: dbMessage.content,
-  type: dbMessage.type as MessageType, // Type assertion since we know the DB enforces valid types
+  type: dbMessage.type as MessageType,
   metadata: dbMessage.metadata as Record<string, any> || {},
   createdAt: dbMessage.created_at,
-  status: dbMessage.status
+  status: dbMessage.status as 'delivered' | 'pending' | 'error'
 });
 
 export const toDatabaseMessage = (message: Partial<Message>): Partial<DbMessage> => ({
@@ -21,4 +22,3 @@ export const toDatabaseMessage = (message: Partial<Message>): Partial<DbMessage>
   metadata: message.metadata as Json,
   status: message.status
 });
-

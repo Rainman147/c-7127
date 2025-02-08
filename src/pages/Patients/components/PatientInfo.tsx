@@ -1,5 +1,5 @@
+
 import { Patient } from '@/types';
-import { parseSupabaseJson } from '@/types';
 
 interface PatientInfoProps {
   patient: Patient | null;
@@ -27,7 +27,7 @@ export const PatientInfo = ({ patient, isNew = false }: PatientInfoProps) => {
     );
   }
 
-  const contactInfo = parseSupabaseJson<ContactInfo>(patient.contact_info) || {};
+  const contactInfo = patient.contactInfo || {};
 
   return (
     <div className="space-y-4">

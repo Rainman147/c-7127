@@ -1,5 +1,5 @@
+
 import { Patient } from '@/types';
-import { parseSupabaseJson } from '@/types';
 
 interface PatientMedicalInfoProps {
   patient: Patient | null;
@@ -18,8 +18,7 @@ export const PatientMedicalInfo = ({ patient, isNew = false }: PatientMedicalInf
     );
   }
 
-  const medications = parseSupabaseJson<string[]>(patient.current_medications) || [];
-  console.log('[PatientMedicalInfo] Parsed medications:', medications);
+  const medications = patient.currentMedications || [];
 
   return (
     <div className="space-y-4">
@@ -35,10 +34,10 @@ export const PatientMedicalInfo = ({ patient, isNew = false }: PatientMedicalInf
             </ul>
           </div>
         )}
-        {patient.medical_history && (
+        {patient.medicalHistory && (
           <div>
             <h3 className="font-semibold mb-2">Medical History</h3>
-            <p className="text-gray-300">{patient.medical_history}</p>
+            <p className="text-gray-300">{patient.medicalHistory}</p>
           </div>
         )}
       </div>

@@ -1,6 +1,8 @@
 
 import type { Json } from '@/integrations/supabase/types';
-import type { MessageRole, MessageType } from './database';
+
+export type MessageRole = 'user' | 'assistant' | 'system';
+export type MessageType = 'text' | 'audio' | 'image';
 
 export interface Message {
   id?: string;
