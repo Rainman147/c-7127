@@ -1,12 +1,9 @@
 
+import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useUI } from '@/contexts/UIContext';
 
-interface ProtectedLayoutProps {
-  children: React.ReactNode;
-}
-
-const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
+const ProtectedLayout = ({ children }: { children?: React.ReactNode }) => {
   const { isSidebarOpen, isDesktop } = useUI();
 
   return (
@@ -17,7 +14,7 @@ const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
           isSidebarOpen && isDesktop ? 'ml-64' : 'ml-0'
         }`}
       >
-        {children}
+        {children || <Outlet />}
       </main>
     </div>
   );
