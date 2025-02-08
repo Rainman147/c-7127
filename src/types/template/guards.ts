@@ -1,3 +1,4 @@
+
 import type { Template, TemplateValidationError } from './Template';
 
 /**
@@ -25,7 +26,8 @@ export const isValidTemplate = (template: unknown): template is Template => {
     isValidUUID(t.id) &&
     typeof t.name === 'string' &&
     typeof t.description === 'string' &&
-    typeof t.systemInstructions === 'string';
+    typeof t.systemInstructions === 'string' &&
+    typeof t.content === 'string';
 
   if (!hasRequiredFields) {
     console.error('[Template Validation] Missing required fields:', {
@@ -33,30 +35,29 @@ export const isValidTemplate = (template: unknown): template is Template => {
       isValidId: typeof t.id === 'string' && isValidUUID(t.id),
       hasName: typeof t.name === 'string',
       hasDescription: typeof t.description === 'string',
-      hasSystemInstructions: typeof t.systemInstructions === 'string'
+      hasSystemInstructions: typeof t.systemInstructions === 'string',
+      hasContent: typeof t.content === 'string'
     });
     return false;
   }
 
   // Optional fields type check
   const hasValidOptionalFields = 
-    (!t.content || typeof t.content === 'string') &&
     (!t.instructions || t.instructions === null || typeof t.instructions === 'object') &&
     (!t.schema || t.schema === null || typeof t.schema === 'object') &&
-    (!t.priority_rules || t.priority_rules === null || typeof t.priority_rules === 'object') &&
-    (!t.created_at || typeof t.created_at === 'string') &&
-    (!t.updated_at || typeof t.updated_at === 'string') &&
-    (!t.user_id || typeof t.user_id === 'string');
+    (!t.priorityRules || t.priorityRules === null || typeof t.priorityRules === 'object') &&
+    (!t.createdAt || typeof t.createdAt === 'string') &&
+    (!t.updatedAt || typeof t.updatedAt === 'string') &&
+    (!t.userId || typeof t.userId === 'string');
 
   if (!hasValidOptionalFields) {
     console.error('[Template Validation] Invalid optional fields:', {
-      content: t.content,
       instructions: t.instructions,
       schema: t.schema,
-      priority_rules: t.priority_rules,
-      created_at: t.created_at,
-      updated_at: t.updated_at,
-      user_id: t.user_id
+      priorityRules: t.priorityRules,
+      createdAt: t.createdAt,
+      updatedAt: t.updatedAt,
+      userId: t.userId
     });
   }
 
@@ -64,17 +65,17 @@ export const isValidTemplate = (template: unknown): template is Template => {
 };
 
 /**
- * Type guard to check if a template is a custom template (has user_id)
+ * Type guard to check if a template is a custom template (has userId)
  */
 export const isCustomTemplate = (template: Template): boolean => {
-  return typeof template.user_id === 'string';
+  return typeof template.userId === 'string';
 };
 
 /**
  * Type guard to check if a template is a default template
  */
 export const isDefaultTemplate = (template: Template): boolean => {
-  return !template.user_id;
+  return !template.userId;
 };
 
 /**
@@ -96,9 +97,14 @@ export const validateTemplateData = (data: Partial<Template>): TemplateValidatio
     errors.push({ field: 'systemInstructions', message: 'System instructions are required' });
   }
 
+  if (!data.content?.trim()) {
+    errors.push({ field: 'content', message: 'Template content is required' });
+  }
+
   if (data.id && !isValidUUID(data.id)) {
     errors.push({ field: 'id', message: 'Invalid template ID format' });
   }
 
   return errors.length > 0 ? errors : null;
 };
+

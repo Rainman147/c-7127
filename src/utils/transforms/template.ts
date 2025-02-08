@@ -41,3 +41,4 @@ export const toDatabaseTemplate = (template: Partial<Template>): Partial<DbTempl
   is_standard: template.isStandard,
   user_id: template.userId
 });
+

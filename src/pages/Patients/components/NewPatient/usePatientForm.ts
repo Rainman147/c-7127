@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { Patient } from '@/types';
+import { toDatabasePatient } from '@/utils/transforms';
 
 export const usePatientForm = (
   onSuccess?: () => void, 
@@ -22,9 +24,9 @@ export const usePatientForm = (
 
   useEffect(() => {
     if (existingPatient) {
-      const contactInfo = existingPatient.contact_info as { email?: string; phone?: string } || {};
-      const currentMedications = Array.isArray(existingPatient.current_medications) 
-        ? existingPatient.current_medications.join('\n')
+      const contactInfo = existingPatient.contactInfo || {};
+      const currentMedications = Array.isArray(existingPatient.currentMedications) 
+        ? existingPatient.currentMedications.join('\n')
         : '';
         
       setFormData({
@@ -33,7 +35,7 @@ export const usePatientForm = (
         email: contactInfo.email || '',
         phone: contactInfo.phone || '',
         address: existingPatient.address || '',
-        medicalHistory: existingPatient.medical_history || '',
+        medicalHistory: existingPatient.medicalHistory || '',
         medications: currentMedications,
       });
     }
@@ -62,31 +64,33 @@ export const usePatientForm = (
       const patientData = {
         name: formData.name,
         dob: formData.dob,
-        user_id: user.id,
-        contact_info: {
+        userId: user.id,
+        contactInfo: {
           email: formData.email,
           phone: formData.phone,
         },
         address: formData.address,
-        medical_history: formData.medicalHistory,
-        current_medications: medicationsArray,
+        medicalHistory: formData.medicalHistory,
+        currentMedications: medicationsArray,
       };
 
       let result;
       
       if (existingPatient) {
         console.log('[PatientForm] Updating patient:', existingPatient.id, patientData);
+        const dbPatient = toDatabasePatient(patientData);
         result = await supabase
           .from('patients')
-          .update(patientData)
+          .update(dbPatient)
           .eq('id', existingPatient.id)
           .select()
           .single();
       } else {
         console.log('[PatientForm] Creating new patient:', patientData);
+        const dbPatient = toDatabasePatient(patientData);
         result = await supabase
           .from('patients')
-          .insert(patientData)
+          .insert(dbPatient)
           .select()
           .single();
       }

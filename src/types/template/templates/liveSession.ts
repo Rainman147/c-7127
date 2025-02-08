@@ -1,9 +1,11 @@
+
 import type { Template } from '../Template';
 
 export const liveSessionTemplate: Template = {
   id: "live-session",
   name: "Live Patient Session",
   description: "Real-time session with focus on symptoms and immediate observations. Perfect for capturing patient interactions as they happen.",
+  content: "Standard live session template content",
   systemInstructions: `Live Patient Session Template - Revised System Instructions
 
 1. Objective
@@ -72,3 +74,4 @@ Patient Education and Safety Netting (if applicable):
 - Conciseness and Clarity: Avoid overly verbose content.
 - Practical Utility: Consider real-world workflow needs.`
 };
+
