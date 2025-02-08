@@ -23,8 +23,16 @@ export const toFrontendPatient = (dbPatient: DbPatient): Patient => ({
 export const toDatabasePatient = (
   patient: Pick<Patient, 'name' | 'dob' | 'userId'> & Partial<Patient>
 ): Pick<DbPatient, 'name' | 'dob' | 'user_id'> & Partial<DbPatient> => {
-  // Format date to YYYY-MM-DD for PostgreSQL
-  const formattedDob = new Date(patient.dob).toISOString().split('T')[0];
+  // Ensure the date is in YYYY-MM-DD format for PostgreSQL
+  let formattedDob = patient.dob;
+  try {
+    const date = new Date(patient.dob);
+    if (!isNaN(date.getTime())) {
+      formattedDob = date.toISOString().split('T')[0];
+    }
+  } catch (error) {
+    console.error('Error formatting date:', error);
+  }
 
   // Ensure medications follow the correct structure
   let currentMedications = patient.currentMedications;
