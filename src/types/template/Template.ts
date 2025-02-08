@@ -1,38 +1,43 @@
 
-import { Json } from '@/integrations/supabase/types';
+import type { Json } from '@/integrations/supabase/types';
 
-export type Template = {
+export interface Template {
   id: string;
   name: string;
   description: string;
   systemInstructions: string;
-  // Database fields (optional since hardcoded templates won't have these)
-  content?: string;
+  content: string;
   instructions?: Record<string, any> | null;
   schema?: Record<string, any> | null;
-  priority_rules?: Record<string, any> | null;
-  created_at?: string;
-  updated_at?: string;
-  user_id?: string;
-};
+  priorityRules?: Record<string, any> | null;
+  isStandard?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  userId?: string;
+}
 
-// Helper type for database templates
-export type DbTemplate = {
+export interface TemplateContext {
   id: string;
   name: string;
-  description: string;
-  system_instructions: string; // Match database column name
-  content: string;
-  instructions: Json;
-  schema: Json;
-  priority_rules: Json;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-};
+  systemInstructions: string;
+  metadata?: Record<string, any>;
+}
 
-// Template validation errors
 export type TemplateValidationError = {
   field: keyof Template;
   message: string;
 };
+
+// Common validation schemas
+export interface TemplateSchema {
+  version: string;
+  fields: TemplateField[];
+  required: string[];
+}
+
+export interface TemplateField {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  description?: string;
+  validation?: Record<string, any>;
+}

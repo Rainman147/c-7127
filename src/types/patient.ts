@@ -1,17 +1,20 @@
-import { Json } from '@/integrations/supabase/types';
+
+import type { Json } from '@/integrations/supabase/types';
+import type { ContactInfo, CurrentMedications, RecentTests } from './database';
 
 export interface Patient {
   id: string;
   name: string;
   dob: string;
-  medical_history?: string | null;
-  contact_info?: Json;
+  medicalHistory?: string | null;
+  contactInfo?: ContactInfo;
   address?: string | null;
-  current_medications?: Json;
-  recent_tests?: Json;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
+  currentMedications?: CurrentMedications;
+  recentTests?: RecentTests;
+  createdAt: string;
+  updatedAt: string;
+  lastAccessed?: string;
+  userId: string;
 }
 
 export interface PatientContext {
@@ -45,13 +48,15 @@ export const calculateAge = (dob: string): number => {
 };
 
 export const formatPatientContext = (patient: Patient): PatientContext => {
-  const medications = parsePatientJson<string[]>(patient.current_medications) || [];
+  const medications = Array.isArray(patient.currentMedications) 
+    ? patient.currentMedications.map(med => med.name)
+    : [];
   
   return {
     id: patient.id,
     name: patient.name,
     age: calculateAge(patient.dob),
-    medicalHistory: patient.medical_history || undefined,
+    medicalHistory: patient.medicalHistory || undefined,
     currentMedications: medications,
   };
 };
