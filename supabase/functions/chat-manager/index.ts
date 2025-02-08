@@ -8,6 +8,13 @@ interface ChatRequest {
   templateId?: string;
   patientId?: string;
   chatId?: string;
+  metadata?: Record<string, any>;
+}
+
+interface MessageMetadata {
+  isFirstMessage?: boolean;
+  transcriptionId?: string;
+  processingDuration?: number;
 }
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || '';
@@ -20,7 +27,8 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  console.log('[chat-manager] Received request:', req.method);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -39,23 +47,22 @@ serve(async (req) => {
       authHeader.replace('Bearer ', '')
     );
 
-    if (userError) {
-      console.error('[chat-manager] User authentication error:', userError);
+    if (userError || !user) {
+      console.error('[chat-manager] Authentication error:', userError);
       throw new Error('Invalid authentication token');
-    }
-
-    if (!user) {
-      console.error('[chat-manager] No user found with provided token');
-      throw new Error('User not found');
     }
 
     console.log('[chat-manager] Authenticated user:', user.id);
 
-    // Parse request
-    const { content, type = 'text', templateId, patientId, chatId } = await req.json() as ChatRequest;
+    // Parse request with proper typing
+    const { content, type = 'text', templateId, patientId, chatId, metadata = {} } = 
+      await req.json() as ChatRequest;
+    
     let activeChatId = chatId;
 
-    console.log('[chat-manager] Processing chat request:', { content, type, templateId, patientId, chatId });
+    console.log('[chat-manager] Processing request:', { 
+      content, type, templateId, patientId, chatId, hasMetadata: !!metadata 
+    });
 
     // Create new chat if needed
     if (!activeChatId) {
@@ -79,8 +86,7 @@ serve(async (req) => {
       console.log('[chat-manager] Created new chat:', activeChatId);
     }
 
-    // Get chat context - Updated query with optional joins
-    console.log('[chat-manager] Fetching chat context for chat:', activeChatId);
+    // Get chat context with proper typing
     const { data: chat, error: chatError } = await supabase
       .from('chats')
       .select(`
@@ -101,17 +107,17 @@ serve(async (req) => {
       .eq('id', activeChatId)
       .maybeSingle();
 
-    if (chatError) {
+    if (chatError || !chat) {
       console.error('[chat-manager] Error fetching chat:', chatError);
       throw new Error('Failed to fetch chat data');
     }
 
-    if (!chat) {
-      console.error('[chat-manager] No chat found with ID:', activeChatId);
-      throw new Error('Chat not found');
-    }
+    // Store user message with proper metadata typing
+    const messageMetadata: MessageMetadata = {
+      isFirstMessage: !chatId,
+      ...metadata
+    };
 
-    // Store user message
     const { error: userMessageError } = await supabase
       .from('messages')
       .insert({
@@ -119,9 +125,8 @@ serve(async (req) => {
         role: 'user',
         content,
         type,
-        metadata: {
-          isFirstMessage: !chatId
-        }
+        metadata: messageMetadata,
+        status: 'delivered'
       });
 
     if (userMessageError) {
@@ -129,11 +134,10 @@ serve(async (req) => {
       throw new Error('Failed to store user message');
     }
 
-    // Build system context - Handle optional template/patient data
-    let systemContext = 'You are a helpful medical AI assistant.';
-    if (chat.templates?.system_instructions) {
-      systemContext = chat.templates.system_instructions;
-    }
+    // Build system context
+    let systemContext = chat.templates?.system_instructions || 
+      'You are a helpful medical AI assistant.';
+    
     if (chat.patients) {
       systemContext += `\nPatient Context:\nName: ${chat.patients.name}\nDOB: ${chat.patients.dob}\nMedical History: ${chat.patients.medical_history || 'None provided'}`;
     }
@@ -145,7 +149,7 @@ serve(async (req) => {
     } : undefined;
 
     // Get AI response
-    console.log('[chat-manager] Making OpenAI request with model gpt-4o-mini');
+    console.log('[chat-manager] Making OpenAI request');
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -153,7 +157,7 @@ serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           { role: 'system', content: systemContext },
           { role: 'user', content }
@@ -171,14 +175,16 @@ serve(async (req) => {
     const completion = await openAIResponse.json();
     const assistantMessage = completion.choices[0].message.content;
 
-    // Store assistant response
+    // Store assistant response with proper typing
     const { error: assistantMessageError } = await supabase
       .from('messages')
       .insert({
         chat_id: activeChatId,
         role: 'assistant',
         content: assistantMessage,
-        type: 'text'
+        type: 'text',
+        metadata: {},
+        status: 'delivered'
       });
 
     if (assistantMessageError) {
@@ -197,6 +203,8 @@ serve(async (req) => {
       console.error('[chat-manager] Error fetching messages:', messagesError);
       throw new Error('Failed to fetch messages');
     }
+
+    console.log('[chat-manager] Successfully processed chat interaction');
 
     return new Response(
       JSON.stringify({ 
