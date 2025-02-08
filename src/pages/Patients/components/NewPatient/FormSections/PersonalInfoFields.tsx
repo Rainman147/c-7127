@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -32,10 +33,11 @@ export const PersonalInfoFields = ({
         <Input
           id="dob"
           name="dob"
+          type="date"
           value={dob}
           onChange={onChange}
-          isDob={true}
           required
+          max={new Date().toISOString().split('T')[0]}
         />
       </div>
     </div>

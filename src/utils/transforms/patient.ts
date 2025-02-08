@@ -23,6 +23,9 @@ export const toFrontendPatient = (dbPatient: DbPatient): Patient => ({
 export const toDatabasePatient = (
   patient: Pick<Patient, 'name' | 'dob' | 'userId'> & Partial<Patient>
 ): Pick<DbPatient, 'name' | 'dob' | 'user_id'> & Partial<DbPatient> => {
+  // Format date to YYYY-MM-DD for PostgreSQL
+  const formattedDob = new Date(patient.dob).toISOString().split('T')[0];
+
   // Ensure medications follow the correct structure
   let currentMedications = patient.currentMedications;
   if (Array.isArray(currentMedications)) {
@@ -40,7 +43,7 @@ export const toDatabasePatient = (
 
   return {
     name: patient.name,
-    dob: patient.dob,
+    dob: formattedDob,
     medical_history: patient.medicalHistory,
     contact_info: patient.contactInfo as Json,
     address: patient.address,
