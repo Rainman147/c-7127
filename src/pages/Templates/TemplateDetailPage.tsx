@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,10 +33,10 @@ const TemplateDetailPage = () => {
             content: data.content,
             instructions: parseJsonField(data.instructions),
             schema: parseJsonField(data.schema),
-            priority_rules: parseJsonField(data.priority_rules),
-            created_at: data.created_at,
-            updated_at: data.updated_at,
-            user_id: data.user_id
+            priorityRules: parseJsonField(data.priority_rules),
+            createdAt: data.created_at,
+            updatedAt: data.updated_at,
+            userId: data.user_id
           };
           setTemplate(uiTemplate);
         }

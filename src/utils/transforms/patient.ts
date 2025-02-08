@@ -20,7 +20,7 @@ export const toFrontendPatient = (dbPatient: DbPatient): Patient => ({
   userId: dbPatient.user_id
 });
 
-export const toDatabasePatient = (patient: Partial<Patient>): Partial<DbPatient> => {
+export const toDatabasePatient = (patient: Pick<Patient, 'name' | 'dob'> & Partial<Patient>): Partial<DbPatient> & Pick<DbPatient, 'name' | 'dob'> => {
   // Ensure medications follow the correct structure
   let currentMedications = patient.currentMedications;
   if (Array.isArray(currentMedications)) {
@@ -59,4 +59,3 @@ export const isValidMedication = (med: unknown): med is CurrentMedications[0] =>
     typeof medication.frequency === 'string'
   );
 };
-
