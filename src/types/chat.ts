@@ -1,15 +1,15 @@
 
-export type MessageRole = 'system' | 'user' | 'assistant';
-export type MessageType = 'text' | 'audio';
+import type { Json } from '@/integrations/supabase/types';
+import type { MessageRole, MessageType } from './database';
 
 export interface Message {
   id?: string;
-  chat_id: string;
+  chatId: string;
   role: MessageRole;
   content: string;
   type?: MessageType;
-  created_at?: string;
   metadata?: Record<string, any>;
+  createdAt?: string;
 }
 
 export interface ChatSession {
@@ -17,4 +17,7 @@ export interface ChatSession {
   messages: Message[];
   templateId?: string;
   patientId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  userId: string;
 }
