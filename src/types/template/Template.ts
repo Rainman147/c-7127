@@ -1,5 +1,8 @@
 
 import type { Json } from '@/integrations/supabase/types';
+import type { Database } from '@/integrations/supabase/types';
+
+export type DbTemplate = Database['public']['Tables']['templates']['Row'];
 
 export interface Template {
   id: string;
@@ -28,7 +31,6 @@ export type TemplateValidationError = {
   message: string;
 };
 
-// Common validation schemas
 export interface TemplateSchema {
   version: string;
   fields: TemplateField[];

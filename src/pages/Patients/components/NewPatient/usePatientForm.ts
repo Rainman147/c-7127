@@ -26,7 +26,9 @@ export const usePatientForm = (
     if (existingPatient) {
       const contactInfo = existingPatient.contactInfo || {};
       const currentMedications = Array.isArray(existingPatient.currentMedications) 
-        ? existingPatient.currentMedications.join('\n')
+        ? existingPatient.currentMedications.map(med => 
+            typeof med === 'string' ? med : med.name
+          ).join('\n')
         : '';
         
       setFormData({
@@ -55,12 +57,6 @@ export const usePatientForm = (
       
       if (!user) throw new Error('No authenticated user found');
 
-      // Convert medications string to array, filtering out empty lines
-      const medicationsArray = formData.medications
-        .split('\n')
-        .map(med => med.trim())
-        .filter(med => med.length > 0);
-
       const patientData = {
         name: formData.name,
         dob: formData.dob,
@@ -71,7 +67,15 @@ export const usePatientForm = (
         },
         address: formData.address,
         medicalHistory: formData.medicalHistory,
-        currentMedications: medicationsArray,
+        currentMedications: formData.medications
+          .split('\n')
+          .map(med => med.trim())
+          .filter(med => med.length > 0)
+          .map(name => ({
+            name,
+            dosage: 'Not specified',
+            frequency: 'Not specified'
+          }))
       };
 
       let result;
@@ -87,7 +91,10 @@ export const usePatientForm = (
           .single();
       } else {
         console.log('[PatientForm] Creating new patient:', patientData);
-        const dbPatient = toDatabasePatient(patientData);
+        const dbPatient = toDatabasePatient({
+          ...patientData,
+          dob: formData.dob // Ensure dob is included for new patients
+        });
         result = await supabase
           .from('patients')
           .insert(dbPatient)

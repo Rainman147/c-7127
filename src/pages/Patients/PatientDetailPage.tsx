@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +10,7 @@ import { Patient } from '@/types';
 import { Loader2, PenSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NewPatientModal } from './components/NewPatient/NewPatientModal';
+import { toFrontendPatient } from '@/utils/transforms';
 
 interface PatientDetailPageProps {
   isNew?: boolean;
@@ -39,7 +41,7 @@ const PatientDetailPage = ({ isNew = false }: PatientDetailPageProps) => {
         .single();
 
       if (error) throw error;
-      setPatient(data);
+      setPatient(toFrontendPatient(data));
     } catch (error) {
       console.error('Error fetching patient details:', error);
       toast({
