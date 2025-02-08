@@ -139,7 +139,7 @@ serve(async (req) => {
     } : undefined;
 
     // Get AI response
-    console.log('[chat-manager] Making OpenAI request with model o3-mini');
+    console.log('[chat-manager] Making OpenAI request with model gpt-4o-mini');
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -147,7 +147,7 @@ serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'o3-mini',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemContext },
           { role: 'user', content }
@@ -222,3 +222,4 @@ serve(async (req) => {
     );
   }
 });
+
