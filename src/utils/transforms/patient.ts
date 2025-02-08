@@ -30,4 +30,3 @@ export const toDatabasePatient = (patient: Partial<Patient>): Partial<DbPatient>
   user_id: patient.userId,
   last_accessed: patient.lastAccessed
 });
-

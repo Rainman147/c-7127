@@ -18,18 +18,18 @@ export const PatientMedicalInfo = ({ patient, isNew = false }: PatientMedicalInf
     );
   }
 
-  const medications = patient.currentMedications || [];
-
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold">Medical Information</h2>
       <div className="p-4 border rounded-lg bg-white/5 space-y-4">
-        {medications.length > 0 && (
+        {patient.currentMedications && patient.currentMedications.length > 0 && (
           <div>
             <h3 className="font-semibold mb-2">Current Medications</h3>
             <ul className="list-disc pl-4">
-              {medications.map((med, index) => (
-                <li key={index} className="text-gray-300">{med}</li>
+              {patient.currentMedications.map((med, index) => (
+                <li key={index} className="text-gray-300">
+                  {med.name} - {med.dosage} ({med.frequency})
+                </li>
               ))}
             </ul>
           </div>

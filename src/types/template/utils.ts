@@ -1,3 +1,4 @@
+
 import { Json } from '@/integrations/supabase/types';
 import type { Template, DbTemplate } from './Template';
 
@@ -28,8 +29,9 @@ export const convertDbTemplate = (dbTemplate: DbTemplate): Template => ({
   content: dbTemplate.content,
   instructions: parseJsonField(dbTemplate.instructions),
   schema: parseJsonField(dbTemplate.schema),
-  priority_rules: parseJsonField(dbTemplate.priority_rules),
-  created_at: dbTemplate.created_at,
-  updated_at: dbTemplate.updated_at,
-  user_id: dbTemplate.user_id
+  priorityRules: parseJsonField(dbTemplate.priority_rules),
+  createdAt: dbTemplate.created_at,
+  updatedAt: dbTemplate.updated_at,
+  userId: dbTemplate.user_id,
+  isStandard: dbTemplate.is_standard
 });
