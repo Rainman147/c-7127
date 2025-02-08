@@ -3,6 +3,7 @@ import type { DbPatient } from '@/types/database';
 import type { Patient, PatientContext } from '@/types/patient';
 import { parsePatientJson } from '@/types/patient';
 import { Json } from '@/integrations/supabase/types';
+import { CurrentMedications } from '@/types/database';
 
 export const toFrontendPatient = (dbPatient: DbPatient): Patient => ({
   id: dbPatient.id,
@@ -11,7 +12,7 @@ export const toFrontendPatient = (dbPatient: DbPatient): Patient => ({
   medicalHistory: dbPatient.medical_history,
   contactInfo: parsePatientJson(dbPatient.contact_info),
   address: dbPatient.address,
-  currentMedications: parsePatientJson(dbPatient.current_medications) || [],
+  currentMedications: parsePatientJson<CurrentMedications>(dbPatient.current_medications) || [],
   recentTests: parsePatientJson(dbPatient.recent_tests) || [],
   createdAt: dbPatient.created_at,
   updatedAt: dbPatient.updated_at,
@@ -20,14 +21,19 @@ export const toFrontendPatient = (dbPatient: DbPatient): Patient => ({
 });
 
 export const toDatabasePatient = (patient: Partial<Patient>): Partial<DbPatient> => {
-  // Convert medications from string[] to proper format if needed
+  // Ensure medications follow the correct structure
   let currentMedications = patient.currentMedications;
-  if (Array.isArray(currentMedications) && typeof currentMedications[0] === 'string') {
-    currentMedications = (currentMedications as string[]).map(name => ({
-      name,
-      dosage: 'Not specified',
-      frequency: 'Not specified'
-    }));
+  if (Array.isArray(currentMedications)) {
+    currentMedications = currentMedications.map(med => {
+      if (typeof med === 'string') {
+        return {
+          name: med,
+          dosage: 'Not specified',
+          frequency: 'Not specified'
+        };
+      }
+      return med;
+    });
   }
 
   return {
@@ -42,3 +48,15 @@ export const toDatabasePatient = (patient: Partial<Patient>): Partial<DbPatient>
     last_accessed: patient.lastAccessed
   };
 };
+
+// Type guard for medication format
+export const isValidMedication = (med: unknown): med is CurrentMedications[0] => {
+  if (!med || typeof med !== 'object') return false;
+  const medication = med as Record<string, unknown>;
+  return (
+    typeof medication.name === 'string' &&
+    typeof medication.dosage === 'string' &&
+    typeof medication.frequency === 'string'
+  );
+};
+

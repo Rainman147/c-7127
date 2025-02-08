@@ -15,6 +15,10 @@ const parseJsonField = <T>(field: Json | null): T | undefined => {
   return field as T;
 };
 
+/**
+ * Converts a database template to frontend format
+ * Following our conventions for camelCase in frontend
+ */
 export const toFrontendTemplate = (dbTemplate: DbTemplate): Template => ({
   id: dbTemplate.id,
   name: dbTemplate.name,
@@ -30,6 +34,10 @@ export const toFrontendTemplate = (dbTemplate: DbTemplate): Template => ({
   isStandard: dbTemplate.is_standard
 });
 
+/**
+ * Converts a frontend template to database format
+ * Following our conventions for snake_case in database
+ */
 export const toDatabaseTemplate = (template: Partial<Template>): Partial<DbTemplate> => ({
   name: template.name,
   description: template.description,
@@ -41,3 +49,4 @@ export const toDatabaseTemplate = (template: Partial<Template>): Partial<DbTempl
   is_standard: template.isStandard,
   user_id: template.userId
 });
+

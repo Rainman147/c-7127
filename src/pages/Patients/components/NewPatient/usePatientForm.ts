@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { Patient } from '@/types';
 import { toDatabasePatient } from '@/utils/transforms';
+import { CurrentMedications } from '@/types/database';
 
 export const usePatientForm = (
   onSuccess?: () => void, 
@@ -57,6 +58,16 @@ export const usePatientForm = (
       
       if (!user) throw new Error('No authenticated user found');
 
+      const medications: CurrentMedications = formData.medications
+        .split('\n')
+        .map(med => med.trim())
+        .filter(med => med.length > 0)
+        .map(name => ({
+          name,
+          dosage: 'Not specified',
+          frequency: 'Not specified'
+        }));
+
       const patientData = {
         name: formData.name,
         dob: formData.dob,
@@ -67,15 +78,7 @@ export const usePatientForm = (
         },
         address: formData.address,
         medicalHistory: formData.medicalHistory,
-        currentMedications: formData.medications
-          .split('\n')
-          .map(med => med.trim())
-          .filter(med => med.length > 0)
-          .map(name => ({
-            name,
-            dosage: 'Not specified',
-            frequency: 'Not specified'
-          }))
+        currentMedications: medications
       };
 
       let result;
@@ -93,7 +96,7 @@ export const usePatientForm = (
         console.log('[PatientForm] Creating new patient:', patientData);
         const dbPatient = toDatabasePatient({
           ...patientData,
-          dob: formData.dob // Ensure dob is included for new patients
+          dob: formData.dob
         });
         result = await supabase
           .from('patients')
@@ -136,3 +139,4 @@ export const usePatientForm = (
     handleSubmit,
   };
 };
+
