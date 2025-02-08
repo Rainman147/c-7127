@@ -41,4 +41,3 @@ export interface TemplateField {
   description?: string;
   validation?: Record<string, any>;
 }
-
