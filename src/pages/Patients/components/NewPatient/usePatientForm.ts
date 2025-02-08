@@ -96,7 +96,9 @@ export const usePatientForm = (
         console.log('[PatientForm] Creating new patient:', patientData);
         const dbPatient = toDatabasePatient({
           ...patientData,
-          dob: formData.dob
+          dob: formData.dob,
+          name: formData.name,
+          userId: user.id
         });
         result = await supabase
           .from('patients')
@@ -139,4 +141,3 @@ export const usePatientForm = (
     handleSubmit,
   };
 };
-
