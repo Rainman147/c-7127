@@ -20,26 +20,18 @@ serve(async (req) => {
   }
 
   try {
-    // Get the authorization header
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // Verify authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('[direct-chat] No authorization header provided');
       throw new Error('Authentication required');
     }
-
-    const jwt = authHeader.replace('Bearer ', '');
     
-    // Create Supabase client with user's JWT token
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${jwt}`
-        }
-      }
-    });
-    
-    // Verify the user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
 
     if (userError || !user) {
       console.error('[direct-chat] Authentication error:', userError);
@@ -85,44 +77,37 @@ serve(async (req) => {
 
     const assistantMessage = completion.choices[0].message.content;
 
-    try {
-      // Store user message
-      const { error: userMessageError } = await supabase
-        .from('messages')
-        .insert({
-          chat_id: chatId,
-          role: 'user',
-          content,
-          type: 'text',
-          metadata: {},
-          status: 'delivered'
-        });
+    // Store messages in the database
+    const { error: userMessageError } = await supabase
+      .from('messages')
+      .insert({
+        chat_id: chatId,
+        role: 'user',
+        content,
+        type: 'text',
+        metadata: {},
+        status: 'delivered'
+      });
 
-      if (userMessageError) {
-        console.error('[direct-chat] Error storing user message:', userMessageError);
-        throw new Error('Failed to store user message');
-      }
+    if (userMessageError) {
+      console.error('[direct-chat] Error storing user message:', userMessageError);
+      throw new Error('Failed to store user message');
+    }
 
-      // Store assistant message
-      const { error: assistantMessageError } = await supabase
-        .from('messages')
-        .insert({
-          chat_id: chatId,
-          role: 'assistant',
-          content: assistantMessage,
-          type: 'text',
-          metadata: {},
-          status: 'delivered'
-        });
+    const { error: assistantMessageError } = await supabase
+      .from('messages')
+      .insert({
+        chat_id: chatId,
+        role: 'assistant',
+        content: assistantMessage,
+        type: 'text',
+        metadata: {},
+        status: 'delivered'
+      });
 
-      if (assistantMessageError) {
-        console.error('[direct-chat] Error storing assistant message:', assistantMessageError);
-        throw new Error('Failed to store assistant message');
-      }
-
-    } catch (error) {
-      console.error('[direct-chat] Database error:', error);
-      throw error;
+    if (assistantMessageError) {
+      console.error('[direct-chat] Error storing assistant message:', assistantMessageError);
+      throw new Error('Failed to store assistant message');
     }
 
     // Get all messages for the chat
