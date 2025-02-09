@@ -105,7 +105,7 @@ serve(async (req) => {
         )
       `)
       .eq('id', activeChatId)
-      .maybeSingle();
+      .single();
 
     if (chatError) {
       console.error('[chat-manager] Error fetching chat:', chatError);
@@ -149,7 +149,7 @@ serve(async (req) => {
     console.log('[chat-manager] Making OpenAI request');
     
     const openAIRequestBody: any = {
-      model: 'gpt-4',
+      model: 'o1-mini',
       messages: [
         { role: 'system', content: systemContext },
         { role: 'user', content }
