@@ -42,9 +42,6 @@ const Login = () => {
           theme="dark"
           providers={['google']}
           redirectTo={`${window.location.origin}/auth/callback`}
-          onError={(error) => {
-            console.error('[Login] Auth error:', error);
-          }}
         />
       </div>
     </div>
@@ -52,3 +49,4 @@ const Login = () => {
 };
 
 export default Login;
+
