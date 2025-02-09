@@ -86,7 +86,7 @@ serve(async (req) => {
       console.log('[chat-manager] Created new chat:', activeChatId);
     }
 
-    // Get chat context with proper typing
+    // Get chat data
     const { data: chat, error: chatError } = await supabase
       .from('chats')
       .select(`
@@ -107,12 +107,12 @@ serve(async (req) => {
       .eq('id', activeChatId)
       .maybeSingle();
 
-    if (chatError || !chat) {
+    if (chatError) {
       console.error('[chat-manager] Error fetching chat:', chatError);
       throw new Error('Failed to fetch chat data');
     }
 
-    // Store user message with proper metadata typing
+    // Store user message
     const messageMetadata: MessageMetadata = {
       isFirstMessage: !chatId,
       ...metadata
@@ -134,48 +134,73 @@ serve(async (req) => {
       throw new Error('Failed to store user message');
     }
 
-    // Build system context
-    let systemContext = chat.templates?.system_instructions || 
-      'You are a helpful medical AI assistant.';
+    // Build system context with proper fallbacks
+    let systemContext = 'You are a helpful medical AI assistant.';
     
-    if (chat.patients) {
+    if (chat?.templates?.system_instructions) {
+      systemContext = chat.templates.system_instructions;
+    }
+    
+    if (chat?.patients) {
       systemContext += `\nPatient Context:\nName: ${chat.patients.name}\nDOB: ${chat.patients.dob}\nMedical History: ${chat.patients.medical_history || 'None provided'}`;
     }
 
-    // Prepare response format if template has schema
-    const responseFormat = chat.templates?.schema ? {
-      type: "object",
-      schema: chat.templates.schema
-    } : undefined;
-
     // Get AI response
     console.log('[chat-manager] Making OpenAI request');
+    
+    const openAIRequestBody: any = {
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemContext },
+        { role: 'user', content }
+      ],
+      temperature: 0.7,
+    };
+
+    // Only add response_format if we have a valid schema
+    if (chat?.templates?.schema) {
+      try {
+        const parsedSchema = typeof chat.templates.schema === 'string' 
+          ? JSON.parse(chat.templates.schema)
+          : chat.templates.schema;
+          
+        if (parsedSchema && typeof parsedSchema === 'object') {
+          openAIRequestBody.response_format = {
+            type: "object",
+            schema: parsedSchema
+          };
+        }
+      } catch (error) {
+        console.error('[chat-manager] Error parsing schema:', error);
+        // Continue without schema if parsing fails
+      }
+    }
+
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          { role: 'system', content: systemContext },
-          { role: 'user', content }
-        ],
-        temperature: 0.7,
-        response_format: responseFormat
-      })
+      body: JSON.stringify(openAIRequestBody)
     });
 
     if (!openAIResponse.ok) {
-      console.error('[chat-manager] OpenAI API error:', await openAIResponse.text());
-      throw new Error(`OpenAI API error: ${openAIResponse.statusText}`);
+      const errorText = await openAIResponse.text();
+      console.error('[chat-manager] OpenAI API error:', errorText);
+      throw new Error(`OpenAI API error: ${openAIResponse.statusText}. Details: ${errorText}`);
     }
 
     const completion = await openAIResponse.json();
+    
+    if (!completion?.choices?.[0]?.message?.content) {
+      console.error('[chat-manager] Invalid OpenAI response:', completion);
+      throw new Error('Invalid response from OpenAI API');
+    }
+
     const assistantMessage = completion.choices[0].message.content;
 
-    // Store assistant response with proper typing
+    // Store assistant response
     const { error: assistantMessageError } = await supabase
       .from('messages')
       .insert({
