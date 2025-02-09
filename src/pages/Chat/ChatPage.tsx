@@ -128,6 +128,9 @@ const ChatPage = () => {
           chatId: sessionId,
           content,
           type
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
         }
       });
 
