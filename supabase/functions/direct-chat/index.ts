@@ -75,7 +75,7 @@ serve(async (req) => {
       throw new Error('Access denied');
     }
 
-    // Store user message immediately
+    // Store user message
     console.log('[direct-chat] Storing user message for chat:', chatId);
     const { error: userMessageError } = await authenticatedClient
       .from('messages')
@@ -113,89 +113,49 @@ serve(async (req) => {
       throw new Error('Failed to create pending message');
     }
 
-    // Create transform stream for SSE parsing
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
-    let assistantMessage = '';
-
-    const stream = new TransformStream({
-      async transform(chunk, controller) {
-        const text = decoder.decode(chunk);
-        const lines = text.split('\n');
-        
-        for (const line of lines) {
-          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-            try {
-              const data = JSON.parse(line.slice(5));
-              const content = data.choices[0]?.delta?.content;
-              if (content) {
-                assistantMessage += content;
-                // Update the assistant message with new content
-                const { error: updateError } = await authenticatedClient
-                  .from('messages')
-                  .update({ 
-                    content: assistantMessage,
-                    status: 'streaming'
-                  })
-                  .eq('id', pendingMessage.id);
-
-                if (updateError) {
-                  console.error('[direct-chat] Error updating streaming message:', updateError);
-                }
-
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
-              }
-            } catch (error) {
-              console.error('[direct-chat] Error parsing SSE:', error);
-            }
-          } else if (line === 'data: [DONE]') {
-            // Update final message status
-            const { error: finalUpdateError } = await authenticatedClient
-              .from('messages')
-              .update({ 
-                content: assistantMessage,
-                status: 'delivered'
-              })
-              .eq('id', pendingMessage.id);
-
-            if (finalUpdateError) {
-              console.error('[direct-chat] Error updating final message:', finalUpdateError);
-            }
-            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-          }
-        }
-      }
-    });
-
-    console.log('[direct-chat] Making streaming OpenAI request');
-    
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Make OpenAI request
+    console.log('[direct-chat] Making OpenAI request');
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'o1-mini',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'user', content }
-        ],
-        stream: true
+        ]
       })
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
+    if (!openAIResponse.ok) {
+      const errorText = await openAIResponse.text();
       console.error('[direct-chat] OpenAI API error:', errorText);
-      throw new Error(`OpenAI API error: ${response.statusText}. Details: ${errorText}`);
+      throw new Error(`OpenAI API error: ${openAIResponse.statusText}`);
     }
 
-    return new Response(response.body?.pipeThrough(stream), {
+    const completion = await openAIResponse.json();
+    const assistantMessage = completion.choices[0].message.content;
+
+    // Update assistant message with response
+    const { error: updateError } = await authenticatedClient
+      .from('messages')
+      .update({ 
+        content: assistantMessage,
+        status: 'delivered'
+      })
+      .eq('id', pendingMessage.id);
+
+    if (updateError) {
+      console.error('[direct-chat] Error updating assistant message:', updateError);
+      throw new Error('Failed to update assistant message');
+    }
+
+    return new Response(JSON.stringify({ success: true }), {
       headers: {
         ...corsHeaders,
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
+        'Content-Type': 'application/json'
       }
     });
 
