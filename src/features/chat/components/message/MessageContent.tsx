@@ -27,11 +27,11 @@ const MessageContent = ({ content, type = 'text', isAssistant }: MessageContentP
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          code({ node, inline, className, children, ...props }) {
+          code({ className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '');
             const language = match ? match[1] : '';
             
-            if (inline) {
+            if (!match) {
               return (
                 <code {...props} className={cn(className, "bg-gray-800 rounded px-1")}>
                   {children}
@@ -40,28 +40,24 @@ const MessageContent = ({ content, type = 'text', isAssistant }: MessageContentP
             }
 
             return (
-              <Prism
-                {...props}
-                theme={themes.nightOwl}
-                language={language}
-                style={{
-                  margin: '1em 0',
-                  padding: '1rem',
-                  borderRadius: '0.375rem',
-                }}
-              >
-                {({ className, style, tokens, getLineProps, getTokenProps }) => (
-                  <pre className={className} style={style}>
-                    {tokens.map((line, i) => (
-                      <div key={i} {...getLineProps({ line })}>
-                        {line.map((token, key) => (
-                          <span key={key} {...getTokenProps({ token })} />
-                        ))}
-                      </div>
-                    ))}
-                  </pre>
-                )}
-              </Prism>
+              <div style={{ margin: '1em 0' }}>
+                <Prism
+                  language={language}
+                  style={themes.nightOwl}
+                >
+                  {({ tokens, getLineProps, getTokenProps }) => (
+                    <pre className="rounded-lg bg-[#011627] p-4 overflow-x-auto">
+                      {tokens.map((line, i) => (
+                        <div key={i} {...getLineProps({ line })}>
+                          {line.map((token, key) => (
+                            <span key={key} {...getTokenProps({ token })} />
+                          ))}
+                        </div>
+                      ))}
+                    </pre>
+                  )}
+                </Prism>
+              </div>
             );
           },
           // Style links
