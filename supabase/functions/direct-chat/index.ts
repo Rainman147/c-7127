@@ -20,18 +20,21 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-    // Verify authentication
+    // Get auth header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('[direct-chat] No authorization header provided');
       throw new Error('Authentication required');
     }
+
+    // Extract JWT token
+    const jwt = authHeader.replace('Bearer ', '');
     
-    const { data: { user }, error: userError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    // Create an initial Supabase client for auth verification
+    const initialClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // Verify the user's token
+    const { data: { user }, error: userError } = await initialClient.auth.getUser(jwt);
 
     if (userError || !user) {
       console.error('[direct-chat] Authentication error:', userError);
@@ -40,10 +43,36 @@ serve(async (req) => {
 
     console.log('[direct-chat] Authenticated user:', user.id);
 
+    // Create a new Supabase client with the verified JWT token
+    const authenticatedClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${jwt}`
+        }
+      }
+    });
+
     const { content, chatId } = await req.json();
     
     if (!content) {
       throw new Error('Content is required');
+    }
+
+    // Verify chat ownership
+    const { data: chat, error: chatError } = await authenticatedClient
+      .from('chats')
+      .select('user_id')
+      .eq('id', chatId)
+      .single();
+
+    if (chatError || !chat) {
+      console.error('[direct-chat] Chat verification error:', chatError);
+      throw new Error('Chat not found or access denied');
+    }
+
+    if (chat.user_id !== user.id) {
+      console.error('[direct-chat] Chat ownership mismatch:', { chatUserId: chat.user_id, requestUserId: user.id });
+      throw new Error('Access denied');
     }
 
     console.log('[direct-chat] Making OpenAI request with model: o1-mini');
@@ -77,8 +106,9 @@ serve(async (req) => {
 
     const assistantMessage = completion.choices[0].message.content;
 
-    // Store messages in the database
-    const { error: userMessageError } = await supabase
+    // Store messages using authenticated client
+    console.log('[direct-chat] Storing user message for chat:', chatId);
+    const { error: userMessageError } = await authenticatedClient
       .from('messages')
       .insert({
         chat_id: chatId,
@@ -94,7 +124,8 @@ serve(async (req) => {
       throw new Error('Failed to store user message');
     }
 
-    const { error: assistantMessageError } = await supabase
+    console.log('[direct-chat] Storing assistant message for chat:', chatId);
+    const { error: assistantMessageError } = await authenticatedClient
       .from('messages')
       .insert({
         chat_id: chatId,
@@ -110,8 +141,9 @@ serve(async (req) => {
       throw new Error('Failed to store assistant message');
     }
 
-    // Get all messages for the chat
-    const { data: messages, error: messagesError } = await supabase
+    // Get all messages using authenticated client
+    console.log('[direct-chat] Fetching all messages for chat:', chatId);
+    const { data: messages, error: messagesError } = await authenticatedClient
       .from('messages')
       .select('*')
       .eq('chat_id', chatId)
