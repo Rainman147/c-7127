@@ -1,5 +1,7 @@
+
 import { Mic } from 'lucide-react';
 import TiptapEditor from '@/features/chat/components/editor/TiptapEditor';
+import MessageContent from './MessageContent';
 
 type MessageItemProps = {
   role: 'user' | 'assistant';
@@ -35,7 +37,7 @@ const MessageItem = ({
       className={`${
         role === 'user' 
           ? 'bg-gray-700/50 rounded-[20px] px-4 py-2 inline-block' 
-          : 'prose prose-invert max-w-none'
+          : ''
       }`}
     >
       {type === 'audio' && (
@@ -57,9 +59,10 @@ const MessageItem = ({
             </div>
           ) : (
             <>
-              <div 
-                className="text-gray-200"
-                dangerouslySetInnerHTML={{ __html: content }}
+              <MessageContent 
+                content={content} 
+                type={type}
+                isAssistant={role === 'assistant'}
               />
               {wasEdited && (
                 <div className="text-xs text-gray-400 mt-1">
@@ -70,7 +73,11 @@ const MessageItem = ({
           )}
         </div>
       ) : (
-        <div className="text-gray-200 whitespace-pre-wrap">{content}</div>
+        <MessageContent 
+          content={content} 
+          type={type}
+          isAssistant={role === 'assistant'}
+        />
       )}
     </div>
   );

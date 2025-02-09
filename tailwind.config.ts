@@ -81,7 +81,43 @@ export default {
             h4: { color: 'white' },
             p: { color: 'white' },
             strong: { color: 'white' },
-            code: { color: 'white' },
+            code: { 
+              color: 'white',
+              backgroundColor: '#1f2937',
+              borderRadius: '0.25rem',
+              padding: '0.25rem',
+            },
+            pre: {
+              backgroundColor: '#1f2937',
+              color: 'white',
+              padding: '1rem',
+              borderRadius: '0.5rem',
+              overflow: 'auto',
+            },
+            blockquote: {
+              color: '#9ca3af',
+              borderLeftColor: '#4b5563',
+            },
+            ul: {
+              color: 'white',
+            },
+            ol: {
+              color: 'white',
+            },
+            li: {
+              color: 'white',
+            },
+            table: {
+              color: 'white',
+              thead: {
+                borderBottomColor: '#4b5563',
+              },
+              tbody: {
+                tr: {
+                  borderBottomColor: '#374151',
+                },
+              },
+            },
           },
         },
       },

@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
@@ -100,6 +99,10 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'o1-mini',
         messages: [
+          { 
+            role: 'system', 
+            content: 'You are a helpful assistant. Format your responses using markdown for better readability. Use code blocks with language specification for code, and proper headings, lists, and emphasis where appropriate.'
+          },
           { role: 'user', content }
         ]
       })
