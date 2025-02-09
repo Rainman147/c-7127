@@ -29,6 +29,19 @@ const ChatPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [directMode, setDirectMode] = useState(false);
 
+  const sortMessages = (msgs: Message[]): Message[] => {
+    return [...msgs].sort((a, b) => {
+      // First sort by createdAt
+      const timeComparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      if (timeComparison !== 0) return timeComparison;
+      
+      // If timestamps are equal, use sortIndex from metadata
+      const aIndex = a.metadata?.sortIndex || 0;
+      const bIndex = b.metadata?.sortIndex || 0;
+      return aIndex - bIndex;
+    });
+  };
+
   useEffect(() => {
     const initializeChat = async () => {
       if (!sessionId && session?.user) {
@@ -69,7 +82,8 @@ const ChatPage = () => {
         if (error) throw error;
 
         if (isSubscribed) {
-          setMessages((data || []).map(toFrontendMessage));
+          const frontendMessages = (data || []).map(toFrontendMessage);
+          setMessages(sortMessages(frontendMessages));
         }
       } catch (error) {
         console.error('Error loading messages:', error);
@@ -97,20 +111,14 @@ const ChatPage = () => {
           console.log('Message change received:', payload);
           if (payload.eventType === 'INSERT' && isSubscribed) {
             setMessages(prev => {
-              // Replace optimistic message if it exists
-              const optimisticMessage = prev.find(m => 
-                m.metadata?.tempId === payload.new.metadata?.tempId
+              // Find and remove any optimistic message with matching tempId
+              const withoutOptimistic = prev.filter(m => 
+                m.metadata?.tempId !== payload.new.metadata?.tempId || 
+                !m.metadata?.isOptimistic
               );
               
-              if (optimisticMessage) {
-                return prev.map(m => 
-                  m.metadata?.tempId === payload.new.metadata?.tempId
-                    ? { ...payload.new, status: 'delivered' }
-                    : m
-                );
-              }
-              
-              return [...prev, payload.new as Message];
+              // Add the new message and sort
+              return sortMessages([...withoutOptimistic, payload.new as Message]);
             });
           }
         }
@@ -137,6 +145,7 @@ const ChatPage = () => {
 
     // Create optimistic message
     const tempId = uuidv4();
+    const now = new Date().toISOString();
     const optimisticMessage: Message = {
       chatId: sessionId,
       content,
@@ -146,12 +155,13 @@ const ChatPage = () => {
       metadata: {
         tempId,
         isOptimistic: true,
+        sortIndex: messages.length
       },
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     };
 
     // Add optimistic message to UI
-    setMessages(prev => [...prev, optimisticMessage]);
+    setMessages(prev => sortMessages([...prev, optimisticMessage]));
 
     try {
       const endpoint = directMode ? 'direct-chat' : 'chat-manager';
@@ -162,7 +172,10 @@ const ChatPage = () => {
           chatId: sessionId,
           content,
           type,
-          metadata: { tempId }
+          metadata: { 
+            tempId,
+            sortIndex: messages.length
+          }
         },
         headers: {
           Authorization: `Bearer ${session.access_token}`

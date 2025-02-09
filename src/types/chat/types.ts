@@ -23,6 +23,7 @@ export interface MessageMetadata {
   tempId?: string;
   isOptimistic?: boolean;
   retryCount?: number;
+  sortIndex?: number;
 }
 
 /**
@@ -35,7 +36,7 @@ export interface Message {
   content: string;
   type?: MessageType;
   metadata?: MessageMetadata;
-  createdAt?: string;
+  createdAt: string;  // Made required
   status?: 'delivered' | 'pending' | 'error';
 }
 

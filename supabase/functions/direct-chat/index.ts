@@ -67,6 +67,9 @@ serve(async (req) => {
       throw new Error('Access denied');
     }
 
+    const now = new Date().toISOString();
+    const sortIndex = metadata?.sortIndex || 0;
+
     // Store user message with tempId from optimistic update
     console.log('[direct-chat] Storing user message for chat:', chatId);
     const { error: userMessageError } = await authenticatedClient
@@ -76,8 +79,9 @@ serve(async (req) => {
         role: 'user',
         content,
         type: 'text',
-        metadata,
-        status: 'delivered'
+        metadata: { ...metadata, sortIndex },
+        status: 'delivered',
+        created_at: now
       });
 
     if (userMessageError) {
@@ -115,6 +119,7 @@ serve(async (req) => {
     }
 
     const assistantMessage = completion.choices[0].message.content;
+    const assistantMessageTime = new Date(new Date(now).getTime() + 1000).toISOString(); // 1 second after user message
 
     console.log('[direct-chat] Storing assistant message for chat:', chatId);
     const { error: assistantMessageError } = await authenticatedClient
@@ -124,8 +129,9 @@ serve(async (req) => {
         role: 'assistant',
         content: assistantMessage,
         type: 'text',
-        metadata: {},
-        status: 'delivered'
+        metadata: { sortIndex: sortIndex + 1 },
+        status: 'delivered',
+        created_at: assistantMessageTime
       });
 
     if (assistantMessageError) {
