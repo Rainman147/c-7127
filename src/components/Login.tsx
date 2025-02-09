@@ -41,8 +41,10 @@ const Login = () => {
           }}
           theme="dark"
           providers={['google']}
-          redirectTo={window.location.origin}
-          magicLink={false}
+          redirectTo={`${window.location.origin}/auth/callback`}
+          onError={(error) => {
+            console.error('[Login] Auth error:', error);
+          }}
         />
       </div>
     </div>

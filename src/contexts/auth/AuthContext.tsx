@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { AuthState, AuthContextType } from './types';
+import { useToast } from '@/hooks/use-toast';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -12,6 +13,7 @@ const initialState: AuthState = {
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, setState] = useState<AuthState>(initialState);
+  const { toast } = useToast();
 
   useEffect(() => {
     console.log('[Auth] Context initialization started');
@@ -52,22 +54,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (event === 'TOKEN_REFRESHED') {
         console.log('[Auth] Token refreshed successfully');
-      }
-      
-      if (event === 'SIGNED_OUT') {
+        setState({ 
+          status: 'AUTHENTICATED',
+          session,
+        });
+      } else if (event === 'SIGNED_OUT') {
         console.log('[Auth] User signed out');
-        // Ensure we clear the session immediately on sign out
         setState({ 
           status: 'UNAUTHENTICATED',
           session: null,
         });
-        return;
+      } else if (event === 'SIGNED_IN') {
+        console.log('[Auth] User signed in');
+        setState({ 
+          status: 'AUTHENTICATED',
+          session,
+        });
+      } else if (event === 'USER_UPDATED') {
+        console.log('[Auth] User updated');
+        setState(prev => ({
+          ...prev,
+          session,
+        }));
       }
-
-      setState({ 
-        status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
-        session,
-      });
     });
 
     return () => {
@@ -82,6 +91,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('[Auth] Sign out error:', error);
+        toast({
+          title: "Error signing out",
+          description: error.message,
+          variant: "destructive",
+        });
         throw error;
       }
     } catch (error) {
@@ -90,6 +104,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setState({ 
         status: 'UNAUTHENTICATED',
         session: null,
+      });
+      toast({
+        title: "Error",
+        description: "Failed to sign out properly. Please try again.",
+        variant: "destructive",
       });
     }
   };
