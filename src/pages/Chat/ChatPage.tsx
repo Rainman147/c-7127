@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
+import { v4 as uuidv4 } from 'uuid';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
 import { useChatSessions } from '@/hooks/useChatSessions';
 import { useToast } from '@/hooks/use-toast';
@@ -95,7 +96,22 @@ const ChatPage = () => {
         (payload: RealtimePostgresChangesPayload<Message>) => {
           console.log('Message change received:', payload);
           if (payload.eventType === 'INSERT' && isSubscribed) {
-            setMessages(prev => [...prev, payload.new as Message]);
+            setMessages(prev => {
+              // Replace optimistic message if it exists
+              const optimisticMessage = prev.find(m => 
+                m.metadata?.tempId === payload.new.metadata?.tempId
+              );
+              
+              if (optimisticMessage) {
+                return prev.map(m => 
+                  m.metadata?.tempId === payload.new.metadata?.tempId
+                    ? { ...payload.new, status: 'delivered' }
+                    : m
+                );
+              }
+              
+              return [...prev, payload.new as Message];
+            });
           }
         }
       )
@@ -119,6 +135,24 @@ const ChatPage = () => {
 
     setIsLoading(true);
 
+    // Create optimistic message
+    const tempId = uuidv4();
+    const optimisticMessage: Message = {
+      chatId: sessionId,
+      content,
+      type,
+      role: 'user',
+      status: 'pending',
+      metadata: {
+        tempId,
+        isOptimistic: true,
+      },
+      createdAt: new Date().toISOString(),
+    };
+
+    // Add optimistic message to UI
+    setMessages(prev => [...prev, optimisticMessage]);
+
     try {
       const endpoint = directMode ? 'direct-chat' : 'chat-manager';
       console.log('[ChatPage] Using endpoint:', endpoint);
@@ -127,14 +161,23 @@ const ChatPage = () => {
         body: {
           chatId: sessionId,
           content,
-          type
+          type,
+          metadata: { tempId }
         },
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        // Update optimistic message to error state
+        setMessages(prev => prev.map(m => 
+          m.metadata?.tempId === tempId
+            ? { ...m, status: 'error' }
+            : m
+        ));
+        throw error;
+      }
 
       console.log('Message sent successfully:', data);
 
@@ -179,7 +222,7 @@ const ChatPage = () => {
   };
 
   return (
-    <ChatContainer
+    <ChatContainer 
       messages={messages}
       isLoading={isLoading}
       currentChatId={sessionId || null}

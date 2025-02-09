@@ -20,20 +20,14 @@ serve(async (req) => {
   }
 
   try {
-    // Get auth header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('[direct-chat] No authorization header provided');
       throw new Error('Authentication required');
     }
 
-    // Extract JWT token
     const jwt = authHeader.replace('Bearer ', '');
-    
-    // Create an initial Supabase client for auth verification
     const initialClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-    // Verify the user's token
     const { data: { user }, error: userError } = await initialClient.auth.getUser(jwt);
 
     if (userError || !user) {
@@ -43,7 +37,6 @@ serve(async (req) => {
 
     console.log('[direct-chat] Authenticated user:', user.id);
 
-    // Create a new Supabase client with the verified JWT token
     const authenticatedClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: {
         headers: {
@@ -52,13 +45,12 @@ serve(async (req) => {
       }
     });
 
-    const { content, chatId } = await req.json();
+    const { content, chatId, metadata } = await req.json();
     
     if (!content) {
       throw new Error('Content is required');
     }
 
-    // Verify chat ownership
     const { data: chat, error: chatError } = await authenticatedClient
       .from('chats')
       .select('user_id')
@@ -73,6 +65,24 @@ serve(async (req) => {
     if (chat.user_id !== user.id) {
       console.error('[direct-chat] Chat ownership mismatch:', { chatUserId: chat.user_id, requestUserId: user.id });
       throw new Error('Access denied');
+    }
+
+    // Store user message with tempId from optimistic update
+    console.log('[direct-chat] Storing user message for chat:', chatId);
+    const { error: userMessageError } = await authenticatedClient
+      .from('messages')
+      .insert({
+        chat_id: chatId,
+        role: 'user',
+        content,
+        type: 'text',
+        metadata,
+        status: 'delivered'
+      });
+
+    if (userMessageError) {
+      console.error('[direct-chat] Error storing user message:', userMessageError);
+      throw new Error('Failed to store user message');
     }
 
     console.log('[direct-chat] Making OpenAI request with model: o1-mini');
@@ -106,24 +116,6 @@ serve(async (req) => {
 
     const assistantMessage = completion.choices[0].message.content;
 
-    // Store messages using authenticated client
-    console.log('[direct-chat] Storing user message for chat:', chatId);
-    const { error: userMessageError } = await authenticatedClient
-      .from('messages')
-      .insert({
-        chat_id: chatId,
-        role: 'user',
-        content,
-        type: 'text',
-        metadata: {},
-        status: 'delivered'
-      });
-
-    if (userMessageError) {
-      console.error('[direct-chat] Error storing user message:', userMessageError);
-      throw new Error('Failed to store user message');
-    }
-
     console.log('[direct-chat] Storing assistant message for chat:', chatId);
     const { error: assistantMessageError } = await authenticatedClient
       .from('messages')
@@ -141,21 +133,11 @@ serve(async (req) => {
       throw new Error('Failed to store assistant message');
     }
 
-    // Get all messages using authenticated client
-    console.log('[direct-chat] Fetching all messages for chat:', chatId);
-    const { data: messages, error: messagesError } = await authenticatedClient
-      .from('messages')
-      .select('*')
-      .eq('chat_id', chatId)
-      .order('created_at', { ascending: true });
-
-    if (messagesError) {
-      console.error('[direct-chat] Error fetching messages:', messagesError);
-      throw new Error('Failed to fetch messages');
-    }
-
     return new Response(
-      JSON.stringify({ messages }),
+      JSON.stringify({ 
+        success: true,
+        metadata
+      }),
       {
         headers: {
           ...corsHeaders,

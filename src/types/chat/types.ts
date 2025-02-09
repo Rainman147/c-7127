@@ -20,6 +20,9 @@ export interface MessageMetadata {
   processingDuration?: number;
   editedAt?: string;
   originalContent?: string;
+  tempId?: string;
+  isOptimistic?: boolean;
+  retryCount?: number;
 }
 
 /**
