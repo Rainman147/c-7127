@@ -33,7 +33,7 @@ export interface Message {
   type?: MessageType;
   metadata?: MessageMetadata;
   createdAt?: string;
-  status?: 'delivered' | 'pending' | 'error';
+  status?: 'delivered' | 'pending' | 'streaming' | 'error';
 }
 
 /**
