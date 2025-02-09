@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 import type { MessageType } from '@/types/chat';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { Prism } from 'prism-react-renderer';
+import { themes } from 'prism-react-renderer';
 
 interface MessageContentProps {
   content: string;
@@ -27,25 +27,41 @@ const MessageContent = ({ content, type = 'text', isAssistant }: MessageContentP
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          code({ node, className, children, ...props }) {
+          code({ node, inline, className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '');
             const language = match ? match[1] : '';
-            const isInline = !match;
+            
+            if (inline) {
+              return (
+                <code {...props} className={cn(className, "bg-gray-800 rounded px-1")}>
+                  {children}
+                </code>
+              );
+            }
 
-            return isInline ? (
-              <code {...props} className={cn(className, "bg-gray-800 rounded px-1")}>
-                {children}
-              </code>
-            ) : (
-              <SyntaxHighlighter
+            return (
+              <Prism
                 {...props}
-                style={oneDark}
+                theme={themes.nightOwl}
                 language={language}
-                PreTag="div"
-                className="rounded-md"
+                style={{
+                  margin: '1em 0',
+                  padding: '1rem',
+                  borderRadius: '0.375rem',
+                }}
               >
-                {String(children).replace(/\n$/, '')}
-              </SyntaxHighlighter>
+                {({ className, style, tokens, getLineProps, getTokenProps }) => (
+                  <pre className={className} style={style}>
+                    {tokens.map((line, i) => (
+                      <div key={i} {...getLineProps({ line })}>
+                        {line.map((token, key) => (
+                          <span key={key} {...getTokenProps({ token })} />
+                        ))}
+                      </div>
+                    ))}
+                  </pre>
+                )}
+              </Prism>
             );
           },
           // Style links
