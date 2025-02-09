@@ -96,6 +96,12 @@ const ChatPage = () => {
           console.log('Message change received:', payload);
           if (payload.eventType === 'INSERT' && isSubscribed) {
             setMessages(prev => [...prev, payload.new as Message]);
+          } else if (payload.eventType === 'UPDATE' && isSubscribed) {
+            setMessages(prev => 
+              prev.map(msg => 
+                msg.id === payload.new.id ? { ...msg, ...payload.new } : msg
+              )
+            );
           }
         }
       )
@@ -120,23 +126,72 @@ const ChatPage = () => {
     setIsLoading(true);
 
     try {
-      const endpoint = directMode ? 'direct-chat' : 'chat-manager';
-      console.log('[ChatPage] Using endpoint:', endpoint);
+      // Add optimistic message
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`,
+        chatId: sessionId,
+        role: 'user',
+        content,
+        type,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      };
       
-      const { data, error } = await supabase.functions.invoke(endpoint, {
-        body: {
-          chatId: sessionId,
-          content,
-          type
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
+      setMessages(prev => [...prev, optimisticMessage]);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/direct-chat`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            chatId: sessionId,
+            content,
+            type
+          })
         }
-      });
+      );
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
 
-      console.log('Message sent successfully:', data);
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+        
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(5);
+            if (data === '[DONE]') {
+              console.log('[ChatPage] Stream complete');
+              break;
+            }
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.content) {
+                console.log('[ChatPage] Received content:', parsed.content);
+              }
+            } catch (e) {
+              console.error('[ChatPage] Error parsing SSE data:', e);
+            }
+          }
+        }
+      }
 
     } catch (error) {
       console.error('Error sending message:', error);
@@ -145,6 +200,9 @@ const ChatPage = () => {
         description: "Please try again. If the problem persists, check your connection.",
         variant: "destructive",
       });
+      
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== `temp-${Date.now()}`));
     } finally {
       setIsLoading(false);
     }

@@ -75,38 +75,7 @@ serve(async (req) => {
       throw new Error('Access denied');
     }
 
-    console.log('[direct-chat] Making OpenAI request with model: o1-mini');
-    
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'o1-mini',
-        messages: [
-          { role: 'user', content }
-        ]
-      })
-    });
-
-    if (!openAIResponse.ok) {
-      const errorText = await openAIResponse.text();
-      console.error('[direct-chat] OpenAI API error:', errorText);
-      throw new Error(`OpenAI API error: ${openAIResponse.statusText}. Details: ${errorText}`);
-    }
-
-    const completion = await openAIResponse.json();
-    
-    if (!completion?.choices?.[0]?.message?.content) {
-      console.error('[direct-chat] Invalid OpenAI response:', completion);
-      throw new Error('Invalid response from OpenAI API');
-    }
-
-    const assistantMessage = completion.choices[0].message.content;
-
-    // Store messages using authenticated client
+    // Store user message immediately
     console.log('[direct-chat] Storing user message for chat:', chatId);
     const { error: userMessageError } = await authenticatedClient
       .from('messages')
@@ -124,45 +93,111 @@ serve(async (req) => {
       throw new Error('Failed to store user message');
     }
 
-    console.log('[direct-chat] Storing assistant message for chat:', chatId);
-    const { error: assistantMessageError } = await authenticatedClient
+    // Create pending assistant message
+    console.log('[direct-chat] Creating pending assistant message');
+    const { data: pendingMessage, error: pendingMessageError } = await authenticatedClient
       .from('messages')
       .insert({
         chat_id: chatId,
         role: 'assistant',
-        content: assistantMessage,
+        content: '',
         type: 'text',
         metadata: {},
-        status: 'delivered'
-      });
+        status: 'pending'
+      })
+      .select()
+      .single();
 
-    if (assistantMessageError) {
-      console.error('[direct-chat] Error storing assistant message:', assistantMessageError);
-      throw new Error('Failed to store assistant message');
+    if (pendingMessageError || !pendingMessage) {
+      console.error('[direct-chat] Error creating pending message:', pendingMessageError);
+      throw new Error('Failed to create pending message');
     }
 
-    // Get all messages using authenticated client
-    console.log('[direct-chat] Fetching all messages for chat:', chatId);
-    const { data: messages, error: messagesError } = await authenticatedClient
-      .from('messages')
-      .select('*')
-      .eq('chat_id', chatId)
-      .order('created_at', { ascending: true });
+    // Create transform stream for SSE parsing
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    let assistantMessage = '';
 
-    if (messagesError) {
-      console.error('[direct-chat] Error fetching messages:', messagesError);
-      throw new Error('Failed to fetch messages');
-    }
+    const stream = new TransformStream({
+      async transform(chunk, controller) {
+        const text = decoder.decode(chunk);
+        const lines = text.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+            try {
+              const data = JSON.parse(line.slice(5));
+              const content = data.choices[0]?.delta?.content;
+              if (content) {
+                assistantMessage += content;
+                // Update the assistant message with new content
+                const { error: updateError } = await authenticatedClient
+                  .from('messages')
+                  .update({ 
+                    content: assistantMessage,
+                    status: 'streaming'
+                  })
+                  .eq('id', pendingMessage.id);
 
-    return new Response(
-      JSON.stringify({ messages }),
-      {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
+                if (updateError) {
+                  console.error('[direct-chat] Error updating streaming message:', updateError);
+                }
+
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+              }
+            } catch (error) {
+              console.error('[direct-chat] Error parsing SSE:', error);
+            }
+          } else if (line === 'data: [DONE]') {
+            // Update final message status
+            const { error: finalUpdateError } = await authenticatedClient
+              .from('messages')
+              .update({ 
+                content: assistantMessage,
+                status: 'delivered'
+              })
+              .eq('id', pendingMessage.id);
+
+            if (finalUpdateError) {
+              console.error('[direct-chat] Error updating final message:', finalUpdateError);
+            }
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          }
         }
       }
-    );
+    });
+
+    console.log('[direct-chat] Making streaming OpenAI request');
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'o1-mini',
+        messages: [
+          { role: 'user', content }
+        ],
+        stream: true
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[direct-chat] OpenAI API error:', errorText);
+      throw new Error(`OpenAI API error: ${response.statusText}. Details: ${errorText}`);
+    }
+
+    return new Response(response.body?.pipeThrough(stream), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+      }
+    });
 
   } catch (error) {
     console.error('[direct-chat] Error:', error);
