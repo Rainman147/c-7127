@@ -4,8 +4,6 @@ import { cn } from '@/lib/utils';
 import type { MessageType } from '@/types/chat';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism } from 'prism-react-renderer';
-import { themes } from 'prism-react-renderer';
 
 interface MessageContentProps {
   content: string;
@@ -27,39 +25,12 @@ const MessageContent = ({ content, type = 'text', isAssistant }: MessageContentP
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          code({ className, children, ...props }) {
-            const match = /language-(\w+)/.exec(className || '');
-            const language = match ? match[1] : '';
-            
-            if (!match) {
-              return (
-                <code {...props} className={cn(className, "bg-gray-800 rounded px-1")}>
-                  {children}
-                </code>
-              );
-            }
-
-            return (
-              <div style={{ margin: '1em 0' }}>
-                <Prism
-                  language={language}
-                  style={themes.nightOwl}
-                >
-                  {({ tokens, getLineProps, getTokenProps }) => (
-                    <pre className="rounded-lg bg-[#011627] p-4 overflow-x-auto">
-                      {tokens.map((line, i) => (
-                        <div key={i} {...getLineProps({ line })}>
-                          {line.map((token, key) => (
-                            <span key={key} {...getTokenProps({ token })} />
-                          ))}
-                        </div>
-                      ))}
-                    </pre>
-                  )}
-                </Prism>
-              </div>
-            );
-          },
+          // Style inline code
+          code: ({ children }) => (
+            <code className="bg-gray-800 rounded px-1">
+              {children}
+            </code>
+          ),
           // Style links
           a: ({ node, ...props }) => (
             <a 
