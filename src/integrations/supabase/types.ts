@@ -58,6 +58,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          last_message: string | null
           patient_id: string | null
           template_id: string | null
           title: string
@@ -67,6 +68,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          last_message?: string | null
           patient_id?: string | null
           template_id?: string | null
           title: string
@@ -76,6 +78,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          last_message?: string | null
           patient_id?: string | null
           template_id?: string | null
           title?: string
