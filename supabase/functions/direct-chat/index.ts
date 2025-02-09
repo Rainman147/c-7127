@@ -58,8 +58,7 @@ serve(async (req) => {
         model: 'o1-mini',
         messages: [
           { role: 'user', content }
-        ],
-        temperature: 0.7,
+        ]
       })
     });
 
