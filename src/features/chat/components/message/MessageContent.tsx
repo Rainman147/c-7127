@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 import type { MessageType } from '@/types/chat';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism } from 'prism-react-renderer';
-import { themes } from 'prism-react-renderer';
+import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface MessageContentProps {
   content: string;
@@ -37,25 +37,15 @@ const MessageContent = ({ content, type = 'text', isAssistant }: MessageContentP
                 {children}
               </code>
             ) : (
-              <div className="relative" style={{ margin: '1em 0' }}>
-                <Prism
-                  code={String(children).replace(/\n$/, '')}
-                  language={language}
-                  theme={themes.nightOwl}
-                >
-                  {({ className, style, tokens, getLineProps, getTokenProps }) => (
-                    <pre className={cn(className, "rounded-md p-4")} style={style}>
-                      {tokens.map((line, i) => (
-                        <div key={i} {...getLineProps({ line })}>
-                          {line.map((token, key) => (
-                            <span key={key} {...getTokenProps({ token })} />
-                          ))}
-                        </div>
-                      ))}
-                    </pre>
-                  )}
-                </Prism>
-              </div>
+              <SyntaxHighlighter
+                {...props}
+                style={oneDark}
+                language={language}
+                PreTag="div"
+                className="rounded-md"
+              >
+                {String(children).replace(/\n$/, '')}
+              </SyntaxHighlighter>
             );
           },
           // Style links
