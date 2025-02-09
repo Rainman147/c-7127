@@ -28,7 +28,6 @@ const ChatPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [directMode, setDirectMode] = useState(false);
 
-  // Create new chat session if we're on the index route
   useEffect(() => {
     const initializeChat = async () => {
       if (!sessionId && session?.user) {
@@ -53,13 +52,11 @@ const ChatPage = () => {
     initializeChat();
   }, [sessionId, session?.user, createSession, navigate, toast]);
 
-  // Subscribe to messages for the current chat
   useEffect(() => {
     if (!sessionId) return;
 
     let isSubscribed = true;
 
-    // Initial messages load
     const loadMessages = async () => {
       try {
         const { data, error } = await supabase
@@ -85,7 +82,6 @@ const ChatPage = () => {
 
     loadMessages();
 
-    // Real-time subscription
     const channel = supabase
       .channel(`messages:${sessionId}`)
       .on(
@@ -125,6 +121,8 @@ const ChatPage = () => {
 
     try {
       const endpoint = directMode ? 'direct-chat' : 'chat-manager';
+      console.log('[ChatPage] Using endpoint:', endpoint);
+      
       const { data, error } = await supabase.functions.invoke(endpoint, {
         body: {
           chatId: sessionId,
@@ -147,6 +145,18 @@ const ChatPage = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleDirectModeToggle = () => {
+    setDirectMode(!directMode);
+    console.log('[ChatPage] Direct mode toggled:', !directMode);
+    toast({
+      title: `Switched to ${!directMode ? 'Direct' : 'Context'} Mode`,
+      description: !directMode 
+        ? "Messages will be sent directly to AI without context" 
+        : "Messages will include context and template information",
+      duration: 3000,
+    });
   };
 
   const handleTranscriptionComplete = async (text: string) => {
@@ -175,6 +185,8 @@ const ChatPage = () => {
       onTemplateChange={handleTemplateChange}
       onPatientSelect={handlePatientSelect}
       selectedPatientId={selectedPatientId}
+      directMode={directMode}
+      onDirectModeToggle={handleDirectModeToggle}
     />
   );
 };

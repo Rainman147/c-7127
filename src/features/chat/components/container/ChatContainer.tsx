@@ -16,6 +16,8 @@ interface ChatContainerProps {
   selectedPatientId: string | null;
   draftMessage?: string;
   onDraftChange?: (draft: string) => void;
+  directMode?: boolean;
+  onDirectModeToggle?: () => void;
 }
 
 const ChatContainer = ({ 
@@ -28,7 +30,9 @@ const ChatContainer = ({
   onPatientSelect = async () => {},
   selectedPatientId,
   draftMessage = '',
-  onDraftChange
+  onDraftChange,
+  directMode = false,
+  onDirectModeToggle
 }: ChatContainerProps) => {
   const [transcriptionText, setTranscriptionText] = useState('');
 
@@ -69,6 +73,8 @@ const ChatContainer = ({
                 isLoading={isLoading}
                 draftMessage={draftMessage}
                 onDraftChange={onDraftChange}
+                directMode={directMode}
+                onDirectModeToggle={onDirectModeToggle}
               />
             </div>
           </div>

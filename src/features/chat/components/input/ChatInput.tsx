@@ -12,6 +12,8 @@ interface ChatInputProps {
   isLoading?: boolean;
   draftMessage?: string;
   onDraftChange?: (draft: string) => void;
+  directMode?: boolean;
+  onDirectModeToggle?: () => void;
 }
 
 const ChatInput = ({ 
@@ -20,10 +22,11 @@ const ChatInput = ({
   onTranscriptionUpdate,
   isLoading = false,
   draftMessage = '',
-  onDraftChange
+  onDraftChange,
+  directMode = false,
+  onDirectModeToggle
 }: ChatInputProps) => {
   const [message, setMessage] = useState(draftMessage);
-  const [directMode, setDirectMode] = useState(false);
   const { toast } = useToast();
 
   const handleMessageChange = (newMessage: string) => {
@@ -82,17 +85,6 @@ const ChatInput = ({
     });
   };
 
-  const handleDirectModeToggle = () => {
-    setDirectMode(!directMode);
-    toast({
-      title: `Switched to ${!directMode ? 'Direct' : 'Context'} Mode`,
-      description: !directMode 
-        ? "Messages will be sent directly to AI without context" 
-        : "Messages will include context and template information",
-      duration: 3000,
-    });
-  };
-
   return (
     <div className="w-full rounded-2xl overflow-hidden bg-[#2F2F2F]">
       <ChatInputField
@@ -108,7 +100,7 @@ const ChatInput = ({
         onTranscriptionComplete={handleTranscriptionComplete}
         handleFileUpload={handleFileUpload}
         directMode={directMode}
-        onDirectModeToggle={handleDirectModeToggle}
+        onDirectModeToggle={onDirectModeToggle}
       />
     </div>
   );
