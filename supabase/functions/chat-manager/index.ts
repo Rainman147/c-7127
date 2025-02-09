@@ -149,7 +149,7 @@ serve(async (req) => {
     console.log('[chat-manager] Making OpenAI request');
     
     const openAIRequestBody: any = {
-      model: 'gpt-4o-mini',
+      model: 'gpt-4',
       messages: [
         { role: 'system', content: systemContext },
         { role: 'user', content }
