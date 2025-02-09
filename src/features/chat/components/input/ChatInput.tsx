@@ -23,6 +23,7 @@ const ChatInput = ({
   onDraftChange
 }: ChatInputProps) => {
   const [message, setMessage] = useState(draftMessage);
+  const [directMode, setDirectMode] = useState(false);
   const { toast } = useToast();
 
   const handleMessageChange = (newMessage: string) => {
@@ -35,10 +36,11 @@ const ChatInput = ({
       console.log('[DEBUG][ChatInput] Submitting message:', { 
         messageLength: message.trim().length,
         isLoading,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        mode: directMode ? 'direct' : 'context'
       });
       
-      onSend(message);
+      onSend(message, 'text');
       setMessage("");
       
       console.log('[DEBUG][ChatInput] Message submitted and cleared');
@@ -80,6 +82,17 @@ const ChatInput = ({
     });
   };
 
+  const handleDirectModeToggle = () => {
+    setDirectMode(!directMode);
+    toast({
+      title: `Switched to ${!directMode ? 'Direct' : 'Context'} Mode`,
+      description: !directMode 
+        ? "Messages will be sent directly to AI without context" 
+        : "Messages will include context and template information",
+      duration: 3000,
+    });
+  };
+
   return (
     <div className="w-full rounded-2xl overflow-hidden bg-[#2F2F2F]">
       <ChatInputField
@@ -94,6 +107,8 @@ const ChatInput = ({
         handleSubmit={handleSubmit}
         onTranscriptionComplete={handleTranscriptionComplete}
         handleFileUpload={handleFileUpload}
+        directMode={directMode}
+        onDirectModeToggle={handleDirectModeToggle}
       />
     </div>
   );

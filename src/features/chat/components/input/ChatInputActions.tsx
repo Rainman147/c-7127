@@ -1,5 +1,7 @@
+
 import { useState } from "react";
-import { Loader2, ArrowUp } from "lucide-react";
+import { Loader2, ArrowUp, ToggleLeft, ToggleRight } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import AudioRecorder from "../audio/AudioRecorder";
 import FileUploadModal from "../input/upload/FileUploadModal";
 
@@ -9,6 +11,8 @@ interface ChatInputActionsProps {
   handleSubmit: () => void;
   onTranscriptionComplete: (text: string) => void;
   handleFileUpload: (file: File) => void;
+  directMode?: boolean;
+  onDirectModeToggle?: () => void;
 }
 
 const ChatInputActions = ({
@@ -16,7 +20,9 @@ const ChatInputActions = ({
   message,
   handleSubmit,
   onTranscriptionComplete,
-  handleFileUpload
+  handleFileUpload,
+  directMode = false,
+  onDirectModeToggle
 }: ChatInputActionsProps) => {
   const [isRecording, setIsRecording] = useState(false);
 
@@ -33,6 +39,25 @@ const ChatInputActions = ({
           onFileSelected={handleFileUpload}
           onTranscriptionComplete={onTranscriptionComplete}
         />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onDirectModeToggle}
+                className="p-2 rounded-full hover:bg-gray-700 transition-colors"
+              >
+                {directMode ? (
+                  <ToggleRight className="h-5 w-5 text-white" />
+                ) : (
+                  <ToggleLeft className="h-5 w-5 text-white" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{directMode ? 'Direct Mode' : 'Context Mode'}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       
       {/* Right side icons */}

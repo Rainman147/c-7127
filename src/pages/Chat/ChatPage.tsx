@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import ChatContainer from '@/features/chat/components/container/ChatContainer';
@@ -25,6 +26,7 @@ const ChatPage = () => {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [directMode, setDirectMode] = useState(false);
 
   // Create new chat session if we're on the index route
   useEffect(() => {
@@ -112,7 +114,7 @@ const ChatPage = () => {
   }, [sessionId, toast]);
 
   const handleMessageSend = async (content: string, type: 'text' | 'audio' = 'text') => {
-    console.log('[ChatPage] Sending message:', { content, type });
+    console.log('[ChatPage] Sending message:', { content, type, directMode });
     
     if (!sessionId || !session) {
       console.error('No active session or user');
@@ -122,7 +124,8 @@ const ChatPage = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('chat-manager', {
+      const endpoint = directMode ? 'direct-chat' : 'chat-manager';
+      const { data, error } = await supabase.functions.invoke(endpoint, {
         body: {
           chatId: sessionId,
           content,
