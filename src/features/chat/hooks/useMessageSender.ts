@@ -9,7 +9,8 @@ export const useMessageSender = (
   sessionId: string | undefined,
   setMessages: (messages: Message[] | ((prev: Message[]) => Message[])) => void,
   setIsLoading: (value: boolean) => void,
-  messages: Message[]
+  messages: Message[],
+  persistSession?: (sessionId: string) => Promise<any>
 ) => {
   const { toast } = useToast();
 
@@ -42,6 +43,15 @@ export const useMessageSender = (
     setMessages(prev => sortMessages([...prev, optimisticMessage]));
 
     try {
+      // If this is the first message and we have a persistSession function,
+      // persist the chat session first
+      if (messages.length === 0 && persistSession) {
+        const persistedChat = await persistSession(sessionId);
+        if (persistedChat) {
+          optimisticMessage.chatId = persistedChat.id;
+        }
+      }
+
       const endpoint = directMode ? 'direct-chat' : 'chat-manager';
       console.log('[MessageSender] Using endpoint:', endpoint);
       
@@ -50,7 +60,7 @@ export const useMessageSender = (
 
       const { data, error } = await supabase.functions.invoke(endpoint, {
         body: {
-          chatId: sessionId,
+          chatId: optimisticMessage.chatId,
           content,
           type,
           metadata: { 

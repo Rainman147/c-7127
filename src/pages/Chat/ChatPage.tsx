@@ -21,7 +21,7 @@ const ChatPage = () => {
   const { toast } = useToast();
   const { updateTemplateId, updatePatientId } = useUrlStateManager();
   const { session, status } = useAuth();
-  const { createSession, setActiveSessionId } = useChatSessions();
+  const { createSession, setActiveSessionId, persistSession } = useChatSessions();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [directMode, setDirectMode] = useState(false);
@@ -92,7 +92,13 @@ const ChatPage = () => {
     setIsLoading
   });
 
-  const handleMessageSend = useMessageSender(sessionId, setMessages, setIsLoading, messages);
+  const handleMessageSend = useMessageSender(
+    sessionId, 
+    setMessages, 
+    setIsLoading, 
+    messages,
+    persistSession
+  );
 
   const handleDirectModeToggle = () => {
     setDirectMode(!directMode);
@@ -120,10 +126,6 @@ const ChatPage = () => {
   const handleTemplateChange = (template: Template) => {
     console.log('[ChatPage] Template changed:', template.name);
     updateTemplateId(template.id);
-  };
-
-  const wrappedHandleMessageSend = (content: string, type: 'text' | 'audio' = 'text') => {
-    return handleMessageSend(content, type, directMode);
   };
 
   return (

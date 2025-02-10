@@ -6,6 +6,7 @@ import { useToast } from './use-toast';
 export const useChatSessions = () => {
   const [sessions, setSessions] = useState<any[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [temporarySession, setTemporarySession] = useState<any>(null);
   const { toast } = useToast();
 
   // Load initial sessions
@@ -72,23 +73,20 @@ export const useChatSessions = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const { data, error } = await supabase
-        .from('chats')
-        .insert([
-          { 
-            user_id: user.id,
-            title: 'New Chat'
-          }
-        ])
-        .select()
-        .single();
-
-      if (error) throw error;
+      // Create a temporary session in memory
+      const tempSession = {
+        id: crypto.randomUUID(),
+        user_id: user.id,
+        title: 'New Chat',
+        created_at: new Date().toISOString(),
+        isTemporary: true
+      };
       
-      console.log('Created new chat session:', data);
-      return data;
+      setTemporarySession(tempSession);
+      console.log('Created temporary chat session:', tempSession);
+      return tempSession;
     } catch (error) {
-      console.error('Error creating chat session:', error);
+      console.error('Error creating temporary chat session:', error);
       toast({
         title: "Error",
         description: "Failed to create new chat session",
@@ -98,8 +96,48 @@ export const useChatSessions = () => {
     }
   }, [toast]);
 
+  const persistSession = useCallback(async (sessionId: string) => {
+    if (!temporarySession || temporarySession.id !== sessionId) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data, error } = await supabase
+        .from('chats')
+        .insert([
+          { 
+            user_id: user.id,
+            title: temporarySession.title
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      console.log('Persisted chat session:', data);
+      setTemporarySession(null);
+      return data;
+    } catch (error) {
+      console.error('Error persisting chat session:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save chat session",
+        variant: "destructive",
+      });
+      return null;
+    }
+  }, [temporarySession, toast]);
+
   const deleteSession = useCallback(async (sessionId: string) => {
     try {
+      // If it's a temporary session, just remove it from state
+      if (temporarySession?.id === sessionId) {
+        setTemporarySession(null);
+        return;
+      }
+
       const { error } = await supabase
         .from('chats')
         .delete()
@@ -117,10 +155,16 @@ export const useChatSessions = () => {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [temporarySession, toast]);
 
   const renameSession = useCallback(async (sessionId: string, newTitle: string) => {
     try {
+      // If it's a temporary session, update it in state
+      if (temporarySession?.id === sessionId) {
+        setTemporarySession(prev => ({ ...prev, title: newTitle }));
+        return;
+      }
+
       const { error } = await supabase
         .from('chats')
         .update({ title: newTitle })
@@ -140,14 +184,17 @@ export const useChatSessions = () => {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [temporarySession, toast]);
 
   return {
-    sessions,
+    sessions: temporarySession 
+      ? [temporarySession, ...sessions]
+      : sessions,
     activeSessionId,
     setActiveSessionId,
     createSession,
     deleteSession,
     renameSession,
+    persistSession,
   };
 };
