@@ -11,7 +11,7 @@ interface UseMessageLoaderProps {
   sessionId: string | undefined;
   isReady: boolean;
   loadAttempts: number;
-  setLoadAttempts: (value: number) => void;
+  setLoadAttempts: (value: number | ((prev: number) => number)) => void;
   setMessages: (messages: Message[] | ((prev: Message[]) => Message[])) => void;
   setIsLoading: (value: boolean) => void;
 }
