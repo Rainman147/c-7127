@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
 
@@ -6,6 +7,65 @@ export const useChatSessions = () => {
   const [sessions, setSessions] = useState<any[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Load initial sessions
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('chats')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        
+        console.log('Fetched chat sessions:', data);
+        setSessions(data || []);
+      } catch (error) {
+        console.error('Error fetching chat sessions:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load chat sessions",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchSessions();
+
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel('chat-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chats'
+        },
+        (payload) => {
+          console.log('Chat update received:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            setSessions(prev => [payload.new as any, ...prev]);
+          } else if (payload.eventType === 'DELETE') {
+            setSessions(prev => prev.filter(session => session.id !== payload.old.id));
+          } else if (payload.eventType === 'UPDATE') {
+            setSessions(prev => prev.map(session => 
+              session.id === payload.new.id ? { ...session, ...payload.new } : session
+            ));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [toast]);
 
   const createSession = useCallback(async () => {
     try {
