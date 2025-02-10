@@ -64,3 +64,4 @@ USING (auth.uid() = user_id);
 - Logging and monitoring
 - Incident response plan
 - Regular security audits
+

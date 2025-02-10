@@ -17,3 +17,4 @@
 
 ## Implementation Details
 See [INTEGRATION_PATTERNS.md](../technical/INTEGRATION_PATTERNS.md) for architecture.
+
