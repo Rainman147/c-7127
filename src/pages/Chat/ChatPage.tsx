@@ -30,6 +30,8 @@ const ChatPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [directMode, setDirectMode] = useState(false);
+  const [loadAttempts, setLoadAttempts] = useState(0);
+  const MAX_LOAD_ATTEMPTS = 3;
 
   // Update active session when route changes
   useEffect(() => {
@@ -77,12 +79,25 @@ const ChatPage = () => {
 
   // Load messages and set up realtime subscription
   useEffect(() => {
-    if (!sessionId || !session?.user || status !== 'AUTHENTICATED') {
-      console.log('[ChatPage] Skipping message load - missing session or auth:', { 
-        hasSessionId: !!sessionId, 
-        hasUser: !!session?.user,
-        authStatus: status 
-      });
+    if (!sessionId) {
+      console.log('[ChatPage] No session ID available');
+      return;
+    }
+
+    if (status === 'INITIALIZING') {
+      console.log('[ChatPage] Auth still initializing, waiting...');
+      return;
+    }
+
+    if (!session?.user || status !== 'AUTHENTICATED') {
+      console.log('[ChatPage] Not authenticated, skipping message load');
+      if (loadAttempts < MAX_LOAD_ATTEMPTS) {
+        console.log('[ChatPage] Will retry message load. Attempt:', loadAttempts + 1);
+        const timer = setTimeout(() => {
+          setLoadAttempts(prev => prev + 1);
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
       return;
     }
 
@@ -98,7 +113,10 @@ const ChatPage = () => {
           .eq('chat_id', sessionId)
           .order('created_at');
 
-        if (error) throw error;
+        if (error) {
+          console.error('[ChatPage] Error loading messages:', error);
+          throw error;
+        }
 
         if (isSubscribed) {
           console.log('[ChatPage] Messages loaded:', data?.length || 0);
@@ -115,6 +133,7 @@ const ChatPage = () => {
       } finally {
         if (isSubscribed) {
           setIsLoading(false);
+          setLoadAttempts(0); // Reset attempts on successful load
         }
       }
     };
@@ -155,7 +174,7 @@ const ChatPage = () => {
       isSubscribed = false;
       supabase.removeChannel(channel);
     };
-  }, [sessionId, session?.user, status, toast]); // Added session.user and status as dependencies
+  }, [sessionId, session?.user, status, toast, loadAttempts]);
 
   const handleMessageSend = async (content: string, type: 'text' | 'audio' = 'text') => {
     console.log('[ChatPage] Sending message:', { content, type, directMode });
@@ -261,7 +280,7 @@ const ChatPage = () => {
   return (
     <ChatContainer 
       messages={messages}
-      isLoading={isLoading}
+      isLoading={isLoading || status === 'INITIALIZING'}
       currentChatId={sessionId || null}
       onMessageSend={handleMessageSend}
       onTranscriptionComplete={handleTranscriptionComplete}
