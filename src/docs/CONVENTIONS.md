@@ -1,6 +1,6 @@
 # Type and Naming Conventions
 
-This document outlines the standardized naming and type conventions for our application.
+This document outlines the standardized naming and type conventions for our application. For product requirements and feature specifications, please refer to [PRD.md](./PRD.md).
 
 ## Layer-Specific Conventions
 
