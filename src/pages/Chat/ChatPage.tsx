@@ -21,17 +21,26 @@ const ChatPage = () => {
   const { toast } = useToast();
   const { updateTemplateId, updatePatientId } = useUrlStateManager();
   const { session, status } = useAuth();
-  const { 
-    createSession, 
-    setActiveSessionId,
-  } = useChatSessions();
+  const { createSession, setActiveSessionId } = useChatSessions();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [directMode, setDirectMode] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
+  const [isReady, setIsReady] = useState(false);
   const MAX_LOAD_ATTEMPTS = 3;
+
+  // Handle authentication readiness
+  useEffect(() => {
+    console.log('[ChatPage] Auth status changed:', status);
+    if (status === 'AUTHENTICATED' && session?.user) {
+      setIsReady(true);
+    } else if (status === 'UNAUTHENTICATED') {
+      setIsReady(false);
+      setMessages([]);
+    }
+  }, [status, session]);
 
   // Update active session when route changes
   useEffect(() => {
@@ -79,25 +88,8 @@ const ChatPage = () => {
 
   // Load messages and set up realtime subscription
   useEffect(() => {
-    if (!sessionId) {
-      console.log('[ChatPage] No session ID available');
-      return;
-    }
-
-    if (status === 'INITIALIZING') {
-      console.log('[ChatPage] Auth still initializing, waiting...');
-      return;
-    }
-
-    if (!session?.user || status !== 'AUTHENTICATED') {
-      console.log('[ChatPage] Not authenticated, skipping message load');
-      if (loadAttempts < MAX_LOAD_ATTEMPTS) {
-        console.log('[ChatPage] Will retry message load. Attempt:', loadAttempts + 1);
-        const timer = setTimeout(() => {
-          setLoadAttempts(prev => prev + 1);
-        }, 1000);
-        return () => clearTimeout(timer);
-      }
+    if (!sessionId || !isReady) {
+      console.log('[ChatPage] Not ready to load messages:', { sessionId, isReady });
       return;
     }
 
@@ -122,9 +114,14 @@ const ChatPage = () => {
           console.log('[ChatPage] Messages loaded:', data?.length || 0);
           const frontendMessages = (data || []).map(toFrontendMessage);
           setMessages(sortMessages(frontendMessages));
+          setLoadAttempts(0); // Reset attempts on successful load
         }
       } catch (error) {
         console.error('[ChatPage] Error loading messages:', error);
+        if (loadAttempts < MAX_LOAD_ATTEMPTS) {
+          console.log('[ChatPage] Will retry message load. Attempt:', loadAttempts + 1);
+          setTimeout(() => setLoadAttempts(prev => prev + 1), 1000);
+        }
         toast({
           title: "Error loading messages",
           description: "Please check your connection and try again",
@@ -133,7 +130,6 @@ const ChatPage = () => {
       } finally {
         if (isSubscribed) {
           setIsLoading(false);
-          setLoadAttempts(0); // Reset attempts on successful load
         }
       }
     };
@@ -174,7 +170,7 @@ const ChatPage = () => {
       isSubscribed = false;
       supabase.removeChannel(channel);
     };
-  }, [sessionId, session?.user, status, toast, loadAttempts]);
+  }, [sessionId, isReady, loadAttempts, toast]);
 
   const handleMessageSend = async (content: string, type: 'text' | 'audio' = 'text') => {
     console.log('[ChatPage] Sending message:', { content, type, directMode });
