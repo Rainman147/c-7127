@@ -22,20 +22,28 @@ const ChatPage = () => {
   const { toast } = useToast();
   const { updateTemplateId, updatePatientId } = useUrlStateManager();
   const { session } = useAuth();
-  const { createSession } = useChatSessions();
+  const { 
+    createSession, 
+    setActiveSessionId,  // Now properly importing setActiveSessionId
+  } = useChatSessions();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [directMode, setDirectMode] = useState(false);
 
+  // Update active session when route changes
+  useEffect(() => {
+    if (sessionId) {
+      console.log('[ChatPage] Setting active session:', sessionId);
+      setActiveSessionId(sessionId);
+    }
+  }, [sessionId, setActiveSessionId]);
+
   const sortMessages = (msgs: Message[]): Message[] => {
     return [...msgs].sort((a, b) => {
-      // First sort by createdAt
       const timeComparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       if (timeComparison !== 0) return timeComparison;
-      
-      // If timestamps are equal, use sortIndex from metadata
       const aIndex = a.metadata?.sortIndex || 0;
       const bIndex = b.metadata?.sortIndex || 0;
       return aIndex - bIndex;
@@ -50,6 +58,7 @@ const ChatPage = () => {
           const newChat = await createSession();
           if (newChat?.id) {
             console.log('[ChatPage] Redirecting to new chat:', newChat.id);
+            setActiveSessionId(newChat.id); // Set active session for new chat
             navigate(`/c/${newChat.id}`, { replace: true });
           }
         } catch (error) {
@@ -64,15 +73,17 @@ const ChatPage = () => {
     };
 
     initializeChat();
-  }, [sessionId, session?.user, createSession, navigate, toast]);
+  }, [sessionId, session?.user, createSession, navigate, toast, setActiveSessionId]);
 
   useEffect(() => {
     if (!sessionId) return;
 
     let isSubscribed = true;
+    setIsLoading(true); // Show loading state while fetching messages
 
     const loadMessages = async () => {
       try {
+        console.log('[ChatPage] Loading messages for session:', sessionId);
         const { data, error } = await supabase
           .from('messages')
           .select('*')
@@ -82,21 +93,28 @@ const ChatPage = () => {
         if (error) throw error;
 
         if (isSubscribed) {
+          console.log('[ChatPage] Messages loaded:', data?.length || 0);
           const frontendMessages = (data || []).map(toFrontendMessage);
           setMessages(sortMessages(frontendMessages));
         }
       } catch (error) {
-        console.error('Error loading messages:', error);
+        console.error('[ChatPage] Error loading messages:', error);
         toast({
           title: "Error loading messages",
           description: "Please check your connection and try again",
           variant: "destructive",
         });
+      } finally {
+        if (isSubscribed) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadMessages();
 
+    // Set up realtime subscription
+    console.log('[ChatPage] Setting up realtime subscription for chat:', sessionId);
     const channel = supabase
       .channel(`messages:${sessionId}`)
       .on(
@@ -108,26 +126,24 @@ const ChatPage = () => {
           filter: `chat_id=eq.${sessionId}`
         },
         (payload: RealtimePostgresChangesPayload<Message>) => {
-          console.log('Message change received:', payload);
+          console.log('[ChatPage] Message change received:', payload);
           if (payload.eventType === 'INSERT' && isSubscribed) {
             setMessages(prev => {
-              // Find and remove any optimistic message with matching tempId
               const withoutOptimistic = prev.filter(m => 
                 m.metadata?.tempId !== payload.new.metadata?.tempId || 
                 !m.metadata?.isOptimistic
               );
-              
-              // Add the new message and sort
               return sortMessages([...withoutOptimistic, payload.new as Message]);
             });
           }
         }
       )
       .subscribe((status) => {
-        console.log('Subscription status:', status);
+        console.log('[ChatPage] Subscription status:', status);
       });
 
     return () => {
+      console.log('[ChatPage] Cleaning up subscription');
       isSubscribed = false;
       supabase.removeChannel(channel);
     };
