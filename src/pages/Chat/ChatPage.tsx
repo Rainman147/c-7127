@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,15 +20,15 @@ const ChatPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { updateTemplateId, updatePatientId } = useUrlStateManager();
-  const { session } = useAuth();
+  const { session, status } = useAuth();
   const { 
     createSession, 
-    setActiveSessionId,  // Now properly importing setActiveSessionId
+    setActiveSessionId,
   } = useChatSessions();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [directMode, setDirectMode] = useState(false);
 
   // Update active session when route changes
@@ -50,15 +49,16 @@ const ChatPage = () => {
     });
   };
 
+  // Handle initial session creation if needed
   useEffect(() => {
     const initializeChat = async () => {
-      if (!sessionId && session?.user) {
+      if (!sessionId && session?.user && status === 'AUTHENTICATED') {
         console.log('[ChatPage] Creating new chat session');
         try {
           const newChat = await createSession();
           if (newChat?.id) {
             console.log('[ChatPage] Redirecting to new chat:', newChat.id);
-            setActiveSessionId(newChat.id); // Set active session for new chat
+            setActiveSessionId(newChat.id);
             navigate(`/c/${newChat.id}`, { replace: true });
           }
         } catch (error) {
@@ -73,13 +73,21 @@ const ChatPage = () => {
     };
 
     initializeChat();
-  }, [sessionId, session?.user, createSession, navigate, toast, setActiveSessionId]);
+  }, [sessionId, session?.user, status, createSession, navigate, toast, setActiveSessionId]);
 
+  // Load messages and set up realtime subscription
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || !session?.user || status !== 'AUTHENTICATED') {
+      console.log('[ChatPage] Skipping message load - missing session or auth:', { 
+        hasSessionId: !!sessionId, 
+        hasUser: !!session?.user,
+        authStatus: status 
+      });
+      return;
+    }
 
     let isSubscribed = true;
-    setIsLoading(true); // Show loading state while fetching messages
+    setIsLoading(true);
 
     const loadMessages = async () => {
       try {
@@ -111,8 +119,6 @@ const ChatPage = () => {
       }
     };
 
-    loadMessages();
-
     // Set up realtime subscription
     console.log('[ChatPage] Setting up realtime subscription for chat:', sessionId);
     const channel = supabase
@@ -142,12 +148,14 @@ const ChatPage = () => {
         console.log('[ChatPage] Subscription status:', status);
       });
 
+    loadMessages();
+
     return () => {
       console.log('[ChatPage] Cleaning up subscription');
       isSubscribed = false;
       supabase.removeChannel(channel);
     };
-  }, [sessionId, toast]);
+  }, [sessionId, session?.user, status, toast]); // Added session.user and status as dependencies
 
   const handleMessageSend = async (content: string, type: 'text' | 'audio' = 'text') => {
     console.log('[ChatPage] Sending message:', { content, type, directMode });
