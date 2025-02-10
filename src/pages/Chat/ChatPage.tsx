@@ -46,7 +46,7 @@ const ChatPage = () => {
       setIsReady(false);
       setMessages([]);
     }
-  }, [status, session, setMessages]);
+  }, [status, session, setMessages, setIsReady]);
 
   // Update active session when route changes
   useEffect(() => {
@@ -133,7 +133,7 @@ const ChatPage = () => {
       messages={messages}
       isLoading={isLoading || status === 'INITIALIZING'}
       currentChatId={sessionId || null}
-      onMessageSend={wrappedHandleMessageSend}
+      onMessageSend={handleMessageSend}
       onTranscriptionComplete={handleTranscriptionComplete}
       onTemplateChange={handleTemplateChange}
       onPatientSelect={handlePatientSelect}

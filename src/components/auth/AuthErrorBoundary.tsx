@@ -28,6 +28,12 @@ export class AuthErrorBoundary extends React.Component<Props, State> {
     console.error('[AuthErrorBoundary] Error caught:', error, errorInfo);
   }
 
+  private isAuthError(error: Error): boolean {
+    return error.message.toLowerCase().includes('auth') || 
+           error.message.toLowerCase().includes('unauthorized') ||
+           error.message.toLowerCase().includes('unauthenticated');
+  }
+
   private handleRetry = () => {
     window.location.reload();
   };
@@ -38,14 +44,18 @@ export class AuthErrorBoundary extends React.Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      const isAuthError = this.state.error && this.isAuthError(this.state.error);
+      
       return (
         <div className="flex min-h-screen items-center justify-center bg-background p-4">
           <div className="w-full max-w-md space-y-4">
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Authentication Error</AlertTitle>
+              <AlertTitle>
+                {isAuthError ? 'Authentication Error' : 'Application Error'}
+              </AlertTitle>
               <AlertDescription>
-                {this.state.error?.message || 'There was a problem with authentication'}
+                {this.state.error?.message || 'An unexpected error occurred'}
               </AlertDescription>
             </Alert>
             
@@ -57,12 +67,14 @@ export class AuthErrorBoundary extends React.Component<Props, State> {
               >
                 Try Again
               </Button>
-              <Button
-                onClick={this.handleSignIn}
-                className="w-full"
-              >
-                Sign In
-              </Button>
+              {isAuthError && (
+                <Button
+                  onClick={this.handleSignIn}
+                  className="w-full"
+                >
+                  Sign In
+                </Button>
+              )}
             </div>
           </div>
         </div>
