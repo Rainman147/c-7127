@@ -65,3 +65,4 @@ USING (auth.uid() = user_id);
 - Incident response plan
 - Regular security audits
 
+
