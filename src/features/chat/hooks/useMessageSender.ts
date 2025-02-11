@@ -46,14 +46,19 @@ export const useMessageSender = (
       // Track the actual chat ID we'll use for the request
       let actualChatId = sessionId;
 
-      // Ensure chat session is persisted before sending first message, regardless of mode
-      if (messages.length === 0 && persistSession) {
-        console.log('[MessageSender] Persisting chat session before first message');
+      // For direct mode or first message, always ensure chat is persisted
+      if ((directMode || messages.length === 0) && persistSession) {
+        console.log('[MessageSender] Persisting chat session:', {
+          directMode,
+          isFirstMessage: messages.length === 0
+        });
         const persistedChat = await persistSession(sessionId);
         if (persistedChat) {
           console.log('[MessageSender] Chat session persisted:', persistedChat.id);
           optimisticMessage.chatId = persistedChat.id;
           actualChatId = persistedChat.id;
+        } else {
+          throw new Error('Failed to persist chat session');
         }
       }
 
