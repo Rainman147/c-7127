@@ -43,6 +43,9 @@ export const useMessageSender = (
     setMessages(prev => sortMessages([...prev, optimisticMessage]));
 
     try {
+      // Track the actual chat ID we'll use for the request
+      let actualChatId = sessionId;
+
       // Ensure chat session is persisted before sending first message, regardless of mode
       if (messages.length === 0 && persistSession) {
         console.log('[MessageSender] Persisting chat session before first message');
@@ -50,18 +53,22 @@ export const useMessageSender = (
         if (persistedChat) {
           console.log('[MessageSender] Chat session persisted:', persistedChat.id);
           optimisticMessage.chatId = persistedChat.id;
+          actualChatId = persistedChat.id;
         }
       }
 
       const endpoint = directMode ? 'direct-chat' : 'chat-manager';
-      console.log('[MessageSender] Using endpoint:', endpoint, { directMode });
+      console.log('[MessageSender] Using endpoint:', endpoint, { 
+        directMode,
+        chatId: actualChatId
+      });
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No active session');
 
       const { data, error } = await supabase.functions.invoke(endpoint, {
         body: {
-          chatId: optimisticMessage.chatId,
+          chatId: actualChatId,
           content,
           type,
           metadata: { 
