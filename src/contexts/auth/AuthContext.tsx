@@ -19,85 +19,110 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     console.log('[Auth] Context initialization started');
+    let ignoreUpdates = false;
     
-    // Initial session check
+    // Initial session check with improved error handling
     const initializeAuth = async () => {
       try {
+        console.log('[Auth] Performing initial session check');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('[Auth] Session check error:', error);
           if (error.message.includes('Invalid Refresh Token')) {
-            console.log('[Auth] Invalid refresh token, redirecting to login');
+            console.log('[Auth] Invalid refresh token detected, clearing session');
             await supabase.auth.signOut();
             navigate('/auth');
           }
+          if (!ignoreUpdates) {
+            setState({ 
+              status: 'UNAUTHENTICATED',
+              session: null,
+            });
+          }
+          return;
+        }
+
+        console.log('[Auth] Initial session check result:', session ? 'Found' : 'Not found');
+        if (!ignoreUpdates) {
+          setState({ 
+            status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
+            session,
+          });
+        }
+      } catch (error) {
+        console.error('[Auth] Unexpected error during session check:', error);
+        if (!ignoreUpdates) {
           setState({ 
             status: 'UNAUTHENTICATED',
             session: null,
           });
-          return;
         }
-
-        console.log('[Auth] Initial session check:', session ? 'Found' : 'Not found');
-        setState({ 
-          status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
-          session,
-        });
-      } catch (error) {
-        console.error('[Auth] Unexpected error during session check:', error);
-        setState({ 
-          status: 'UNAUTHENTICATED',
-          session: null,
-        });
       }
     };
 
     initializeAuth();
 
-    // Subscribe to auth changes
+    // Enhanced auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[Auth] State change detected:', { event, hasSession: !!session });
       
-      if (event === 'TOKEN_REFRESHED') {
-        console.log('[Auth] Token refreshed successfully');
-        setState({ 
-          status: 'AUTHENTICATED',
-          session,
-        });
-      } else if (event === 'SIGNED_OUT') {
-        console.log('[Auth] User signed out');
-        setState({ 
-          status: 'UNAUTHENTICATED',
-          session: null,
-        });
-        navigate('/auth');
-      } else if (event === 'SIGNED_IN') {
-        console.log('[Auth] User signed in');
-        setState({ 
-          status: 'AUTHENTICATED',
-          session,
-        });
-      } else if (event === 'USER_UPDATED') {
-        console.log('[Auth] User updated');
-        setState(prev => ({
-          ...prev,
-          session,
-        }));
-      } else if (event === 'INITIAL_SESSION') {
-        console.log('[Auth] Initial session:', { hasSession: !!session });
-        setState({
-          status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
-          session,
-        });
-        if (!session) {
+      if (ignoreUpdates) return;
+      
+      switch (event) {
+        case 'TOKEN_REFRESHED':
+          console.log('[Auth] Token refreshed successfully');
+          setState({ 
+            status: 'AUTHENTICATED',
+            session,
+          });
+          break;
+          
+        case 'SIGNED_OUT':
+          console.log('[Auth] User signed out');
+          setState({ 
+            status: 'UNAUTHENTICATED',
+            session: null,
+          });
           navigate('/auth');
-        }
+          break;
+          
+        case 'SIGNED_IN':
+          console.log('[Auth] User signed in');
+          setState({ 
+            status: 'AUTHENTICATED',
+            session,
+          });
+          break;
+          
+        case 'USER_UPDATED':
+          console.log('[Auth] User updated');
+          setState(prev => ({
+            ...prev,
+            session,
+          }));
+          break;
+          
+        case 'INITIAL_SESSION':
+          console.log('[Auth] Initial session:', { hasSession: !!session });
+          setState({
+            status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
+            session,
+          });
+          if (!session) {
+            navigate('/auth');
+          }
+          break;
+          
+        default:
+          console.log('[Auth] Unhandled auth event:', event);
       }
     });
 
+    // Cleanup function with state updates prevention
     return () => {
       console.log('[Auth] Cleanup: unsubscribing from auth changes');
+      ignoreUpdates = true;
       subscription.unsubscribe();
     };
   }, [navigate]);
