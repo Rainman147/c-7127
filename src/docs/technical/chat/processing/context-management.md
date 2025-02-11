@@ -26,24 +26,27 @@ async function getChatContext(authenticatedClient, chatId) {
 }
 ```
 
-## Context Formatting
-```typescript
-function formatContextualMessage(currentContent, recentMessages, olderCount) {
-  let formattedContent = '';
-  
-  // Add context header
-  if (olderCount > 0) {
-    formattedContent += `[Context: ${olderCount} previous messages]\n\n`;
-  }
-  
-  // Add recent messages
-  formattedContent += recentMessages
-    .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
-    .join('\n\n');
-    
-  // Add current message
-  formattedContent += `\n\nUser: ${currentContent}`;
-  
-  return formattedContent;
-}
-```
+## Context Management
+1. Message History
+   - Recent message retrieval
+   - Older message count
+   - Pagination support
+   - Memory optimization
+
+2. Template Context
+   - System instructions
+   - Response formatting
+   - Schema validation
+   - Priority rules
+
+3. Patient Context
+   - Medical history
+   - Recent interactions
+   - Context persistence
+   - Privacy management
+
+4. Real-time Updates
+   - Context invalidation
+   - Cache management
+   - State synchronization
+   - Error recovery

@@ -16,3 +16,20 @@ This directory contains comprehensive documentation for the chat system implemen
 9. [Message Sorting](./message/sorting.md)
 
 Each section contains detailed documentation about specific aspects of the chat system.
+
+## Detailed Documentation
+
+### Processing
+- [Context Management](./processing/context-management.md)
+- [Audio Processing](./processing/audio-processing.md)
+- [Real-time Updates](./processing/realtime-updates.md)
+
+### Components
+- [Rich Text Editor](./components/rich-text-editor.md)
+- [Message Components](./components/message-components.md)
+- [Input System](./components/input-system.md)
+
+### State and Sessions
+- [State Management](./state/state-management.md)
+- [Message Management](./session/message.md)
+- [Session Management](./session/README.md)
