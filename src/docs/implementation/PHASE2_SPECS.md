@@ -17,3 +17,4 @@
 
 ## Implementation Details
 See [COMPONENT_ARCHITECTURE.md](../technical/COMPONENT_ARCHITECTURE.md) for structure.
+
