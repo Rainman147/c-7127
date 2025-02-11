@@ -1,71 +1,21 @@
 
 # Component Evolution Guide
 
-## 1. Patient Context System
+This directory contains detailed documentation for the evolution of different system components:
 
-### Current Implementation
-- Basic patient information linking
-- Simple medical history storage
-- Direct chat-patient relationship
+1. [Patient Context](./PATIENT_CONTEXT.md)
+   - Current implementation
+   - Enhancement phases
+   - Integration points
 
-### Evolution Path
-1. Phase 1: Enhanced Patient Context
-   - Temporal data tracking
-   - Comprehensive medical history
-   - Vital signs monitoring
+2. [Template Engine](./TEMPLATE_ENGINE.md)
+   - Current features
+   - Smart templates
+   - Advanced documentation
 
-2. Phase 2: Advanced Clinical Data
-   - Test results integration
-   - Medication tracking
-   - Device data integration
+3. [Integration Layer](./INTEGRATION_LAYER.md)
+   - Current system
+   - EMR integration
+   - Extended features
 
-## 2. Template Engine
-
-### Current Implementation
-- Basic chat-based notes
-- Simple template selection
-
-### Evolution Path
-1. Phase 1: Smart Templates
-   - Context-aware selection
-   - Dynamic prompting
-   - Structured output
-
-2. Phase 2: Advanced Documentation
-   - Multi-format export
-   - Template learning
-   - Automated suggestions
-
-## 3. Integration Layer
-
-### Current Implementation
-- Standalone system operation
-- Basic data persistence
-
-### Evolution Path
-1. Phase 1: EMR Integration
-   - Connection architecture
-   - Data mapping
-   - Sync patterns
-
-2. Phase 2: Extended Integration
-   - Lab systems
-   - Device integration
-   - External APIs
-
-## Implementation Guidelines
-
-### Extension Points
-```typescript
-interface ExtensionPoint {
-  feature: string;
-  dependencies: string[];
-  migrationPath: string;
-  backwardCompatibility: boolean;
-}
-```
-
-### Performance Considerations
-- Cache invalidation strategy
-- Real-time scaling approach
-- Resource optimization
+For implementation details, refer to the specific documentation files.

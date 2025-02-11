@@ -1,47 +1,21 @@
 
 # Migration Paths
 
-## 1. Database Schema Evolution
+This directory contains detailed documentation for different aspects of system migration:
 
-### Current to Enhanced Patient Data
-```sql
--- Example migration path
-ALTER TABLE patients
-ADD COLUMN temporal_data jsonb DEFAULT '{}',
-ADD COLUMN vitals_history jsonb DEFAULT '[]';
-```
+1. [Database Evolution](./DATABASE_EVOLUTION.md)
+   - Schema updates
+   - Data migration
+   - Rollback procedures
 
-### Template System Enhancement
-```sql
--- Example migration path
-ALTER TABLE templates
-ADD COLUMN context_rules jsonb,
-ADD COLUMN learning_data jsonb;
-```
+2. [API Versioning](./API_VERSIONING.md)
+   - Version management
+   - Compatibility
+   - Migration tools
 
-## 2. API Version Management
+3. [Client Updates](./CLIENT_UPDATES.md)
+   - UI migration
+   - Feature flags
+   - Rollback strategies
 
-### Version 1 to Version 2
-- Backward compatibility requirements
-- Deprecation timeline
-- Migration assistance tools
-
-## 3. Client Updates
-
-### UI Component Migration
-- Progressive enhancement strategy
-- Feature flags implementation
-- Fallback mechanisms
-
-## Implementation Guidelines
-
-### Migration Checklist
-1. Database schema updates
-2. API endpoint versioning
-3. Client-side feature detection
-4. Backward compatibility testing
-
-### Rollback Procedures
-1. Database restoration
-2. API version fallback
-3. Client-side graceful degradation
+For implementation details, refer to the specific documentation files.
