@@ -23,4 +23,3 @@ const handleStreamEvent = async (stream: AnalyticsStream) => {
   await checkAlertConditions(processedEvent);
 };
 ```
-
