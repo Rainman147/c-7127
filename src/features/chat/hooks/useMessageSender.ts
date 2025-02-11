@@ -53,7 +53,7 @@ export const useMessageSender = (
       }
 
       const endpoint = directMode ? 'direct-chat' : 'chat-manager';
-      console.log('[MessageSender] Using endpoint:', endpoint);
+      console.log('[MessageSender] Using endpoint:', endpoint, { directMode });
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No active session');
@@ -74,6 +74,7 @@ export const useMessageSender = (
       });
 
       if (error) {
+        console.error('[MessageSender] Error from edge function:', error);
         setMessages(prev => prev.map(m => 
           m.metadata?.tempId === tempId
             ? { ...m, status: 'error' }
@@ -82,10 +83,10 @@ export const useMessageSender = (
         throw error;
       }
 
-      console.log('Message sent successfully:', data);
+      console.log('[MessageSender] Message sent successfully:', data);
 
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('[MessageSender] Error sending message:', error);
       toast({
         title: "Error sending message",
         description: "Please try again. If the problem persists, check your connection.",

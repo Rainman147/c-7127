@@ -9,7 +9,7 @@ interface ChatContainerProps {
   messages: Message[];
   isLoading: boolean;
   currentChatId: string | null;
-  onMessageSend: (content: string, type?: 'text' | 'audio') => Promise<void>;
+  onMessageSend: (content: string, type: 'text' | 'audio', directMode: boolean) => Promise<void>;
   onTranscriptionComplete: (text: string) => Promise<void>;
   onTemplateChange: (template: Template) => void;
   onPatientSelect: (patientId: string | null) => Promise<void>;
@@ -24,10 +24,10 @@ const ChatContainer = ({
   messages = [], 
   isLoading = false,
   currentChatId,
-  onMessageSend = async () => {},
-  onTranscriptionComplete = async () => {},
-  onTemplateChange = () => {},
-  onPatientSelect = async () => {},
+  onMessageSend,
+  onTranscriptionComplete,
+  onTemplateChange,
+  onPatientSelect,
   selectedPatientId,
   draftMessage = '',
   onDraftChange,

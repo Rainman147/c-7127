@@ -6,7 +6,7 @@ import ChatInputField from "./ChatInputField";
 import ChatInputActions from "./ChatInputActions";
 
 interface ChatInputProps {
-  onSend: (message: string, type?: 'text' | 'audio') => void;
+  onSend: (message: string, type: 'text' | 'audio', directMode: boolean) => void;
   onTranscriptionComplete: (text: string) => void;
   onTranscriptionUpdate?: (text: string) => void;
   isLoading?: boolean;
@@ -36,23 +36,23 @@ const ChatInput = ({
 
   const handleSubmit = () => {
     if (message.trim() && !isLoading) {
-      console.log('[DEBUG][ChatInput] Submitting message:', { 
+      console.log('[ChatInput] Submitting message:', { 
         messageLength: message.trim().length,
         isLoading,
         timestamp: new Date().toISOString(),
         mode: directMode ? 'direct' : 'context'
       });
       
-      onSend(message, 'text');
+      onSend(message, 'text', directMode);
       setMessage("");
       
-      console.log('[DEBUG][ChatInput] Message submitted and cleared');
+      console.log('[ChatInput] Message submitted and cleared');
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
-      console.log('[DEBUG][ChatInput] Enter key pressed:', {
+      console.log('[ChatInput] Enter key pressed:', {
         isLoading,
         hasMessage: !!message.trim()
       });
@@ -63,7 +63,7 @@ const ChatInput = ({
   };
 
   const handleTranscriptionComplete = (transcription: string) => {
-    console.log('[DEBUG][ChatInput] Transcription complete:', { 
+    console.log('[ChatInput] Transcription complete:', { 
       transcriptionLength: transcription.length 
     });
     
@@ -78,7 +78,7 @@ const ChatInput = ({
   };
 
   const handleFileUpload = async (file: File) => {
-    console.log('[DEBUG][ChatInput] File upload:', { 
+    console.log('[ChatInput] File upload:', { 
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type
