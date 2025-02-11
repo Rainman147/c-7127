@@ -51,19 +51,48 @@ serve(async (req) => {
       throw new Error('Content is required');
     }
 
-    const { data: chat, error: chatError } = await authenticatedClient
-      .from('chats')
-      .select('user_id')
-      .eq('id', chatId)
-      .single();
+    // Add retry logic for chat verification
+    let retryCount = 0;
+    const maxRetries = 3;
+    let chat;
+    let chatError;
 
-    if (chatError || !chat) {
-      console.error('[direct-chat] Chat verification error:', chatError);
+    while (retryCount < maxRetries) {
+      console.log(`[direct-chat] Attempting to verify chat (attempt ${retryCount + 1}):`, chatId);
+      
+      const result = await authenticatedClient
+        .from('chats')
+        .select('id, user_id')
+        .eq('id', chatId)
+        .single();
+      
+      if (!result.error && result.data) {
+        chat = result.data;
+        break;
+      }
+      
+      chatError = result.error;
+      console.log(`[direct-chat] Verification attempt ${retryCount + 1} failed:`, result.error);
+      
+      // Wait before retrying (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+      retryCount++;
+    }
+
+    if (!chat) {
+      console.error('[direct-chat] Chat verification failed after retries:', {
+        chatId,
+        error: chatError,
+        userId: user.id
+      });
       throw new Error('Chat not found or access denied');
     }
 
     if (chat.user_id !== user.id) {
-      console.error('[direct-chat] Chat ownership mismatch:', { chatUserId: chat.user_id, requestUserId: user.id });
+      console.error('[direct-chat] Chat ownership mismatch:', {
+        chatUserId: chat.user_id,
+        requestUserId: user.id
+      });
       throw new Error('Access denied');
     }
 
