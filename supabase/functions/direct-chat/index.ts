@@ -15,65 +15,90 @@ const corsHeaders = {
 async function getChatContext(authenticatedClient, chatId) {
   console.log('[direct-chat] Getting chat context for:', chatId);
   
-  // Get last 10 messages
-  const { data: recentMessages, error: messagesError } = await authenticatedClient
-    .from('messages')
-    .select('role, content, created_at')
-    .eq('chat_id', chatId)
-    .order('created_at', { ascending: false })
-    .limit(10);
+  try {
+    // Get last 10 messages with performance tracking
+    const startTime = Date.now();
+    const { data: recentMessages, error: messagesError } = await authenticatedClient
+      .from('messages')
+      .select('role, content, created_at')
+      .eq('chat_id', chatId)
+      .order('created_at', { ascending: false })
+      .limit(10);
 
-  if (messagesError) {
-    console.error('[direct-chat] Error fetching recent messages:', messagesError);
-    throw messagesError;
-  }
+    if (messagesError) {
+      console.error('[direct-chat] Error fetching recent messages:', messagesError);
+      return { recentMessages: [], olderCount: 0 }; // Graceful fallback
+    }
 
-  // If there are messages, get count of older ones
-  let olderCount = 0;
-  if (recentMessages && recentMessages.length > 0) {
+    console.log('[direct-chat] Messages query took:', Date.now() - startTime, 'ms');
+
+    // Safely handle empty messages case
+    if (!recentMessages || recentMessages.length === 0) {
+      return { recentMessages: [], olderCount: 0 };
+    }
+
+    // Get count of older messages with proper error handling
+    let olderCount = 0;
+    const lastMessage = recentMessages[recentMessages.length - 1];
+    
     const { count, error: countError } = await authenticatedClient
       .from('messages')
       .select('id', { count: 'exact', head: true })
       .eq('chat_id', chatId)
-      .lt('created_at', recentMessages[recentMessages.data?.length - 1].created_at);
+      .lt('created_at', lastMessage.created_at);
 
     if (countError) {
       console.error('[direct-chat] Error counting older messages:', countError);
     } else {
       olderCount = count || 0;
     }
-  }
 
-  return {
-    recentMessages: recentMessages?.reverse() || [], // Chronological order
-    olderCount
-  };
+    console.log('[direct-chat] Context stats:', {
+      recentCount: recentMessages.length,
+      olderCount,
+      oldestMessageDate: lastMessage.created_at
+    });
+
+    return {
+      recentMessages: recentMessages.reverse(), // Convert to chronological order
+      olderCount
+    };
+  } catch (error) {
+    console.error('[direct-chat] Unexpected error in getChatContext:', error);
+    return { recentMessages: [], olderCount: 0 }; // Graceful fallback
+  }
 }
 
 function formatContextualMessage(currentContent, recentMessages, olderCount) {
-  let formattedContent = '';
-  
-  // Add context header if there are older messages
-  if (olderCount > 0) {
-    formattedContent += `[Context: This conversation has ${olderCount} previous messages before the following recent exchanges]\n\n`;
-  }
-  
-  // Add recent conversation context
-  if (recentMessages.length > 0) {
-    formattedContent += recentMessages
-      .map(msg => {
-        const speaker = msg.role === 'user' ? 'User' : 'Assistant';
-        return `${speaker}: ${msg.content}`;
-      })
-      .join('\n\n');
+  try {
+    let formattedContent = '';
     
-    formattedContent += '\n\n';
-  }
+    // Add context header if there are older messages
+    if (olderCount > 0) {
+      formattedContent += `[Context: This conversation has ${olderCount} previous messages before the following recent exchanges]\n\n`;
+    }
     
-  // Add current message
-  formattedContent += currentContent;
-  
-  return formattedContent;
+    // Add recent conversation context with clear section markers
+    if (recentMessages.length > 0) {
+      formattedContent += '=== Previous Messages ===\n\n';
+      formattedContent += recentMessages
+        .map(msg => {
+          const speaker = msg.role === 'user' ? 'User' : 'Assistant';
+          return `${speaker}: ${msg.content.trim()}`; // Ensure clean formatting
+        })
+        .join('\n\n');
+      
+      formattedContent += '\n\n=== Current Message ===\n\n';
+    }
+      
+    // Add current message
+    formattedContent += `User: ${currentContent.trim()}`;
+    
+    return formattedContent;
+  } catch (error) {
+    console.error('[direct-chat] Error formatting context:', error);
+    return currentContent; // Fallback to just the current message
+  }
 }
 
 serve(async (req) => {
@@ -160,8 +185,10 @@ serve(async (req) => {
       throw new Error('Access denied');
     }
 
-    // Get chat context before storing the new message
+    // Get chat context with performance tracking
+    const contextStartTime = Date.now();
     const { recentMessages, olderCount } = await getChatContext(authenticatedClient, chatId);
+    console.log('[direct-chat] Context retrieval took:', Date.now() - contextStartTime, 'ms');
     console.log('[direct-chat] Retrieved context:', {
       recentMessagesCount: recentMessages.length,
       olderMessagesCount: olderCount
@@ -189,8 +216,10 @@ serve(async (req) => {
       throw new Error('Failed to store user message');
     }
 
-    // Format the contextual message for the AI
+    // Format the contextual message for the AI with performance tracking
+    const formatStartTime = Date.now();
     const contextualContent = formatContextualMessage(content, recentMessages, olderCount);
+    console.log('[direct-chat] Context formatting took:', Date.now() - formatStartTime, 'ms');
     console.log('[direct-chat] Formatted contextual content length:', contextualContent.length);
 
     console.log('[direct-chat] Making OpenAI request with model: o1-mini');
