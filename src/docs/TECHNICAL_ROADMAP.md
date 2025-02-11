@@ -93,3 +93,4 @@ For detailed dependency mapping, see [INTEGRATION_PATTERNS.md](./technical/INTEG
 
 ## Security Considerations
 For security architecture and implementation guidelines, see [SECURITY_FRAMEWORK.md](./technical/SECURITY_FRAMEWORK.md)
+
