@@ -43,11 +43,12 @@ export const useMessageSender = (
     setMessages(prev => sortMessages([...prev, optimisticMessage]));
 
     try {
-      // If this is the first message and we have a persistSession function,
-      // persist the chat session first
+      // Ensure chat session is persisted before sending first message, regardless of mode
       if (messages.length === 0 && persistSession) {
+        console.log('[MessageSender] Persisting chat session before first message');
         const persistedChat = await persistSession(sessionId);
         if (persistedChat) {
+          console.log('[MessageSender] Chat session persisted:', persistedChat.id);
           optimisticMessage.chatId = persistedChat.id;
         }
       }
