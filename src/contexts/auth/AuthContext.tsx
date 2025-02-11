@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { AuthState, AuthContextType } from './types';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -14,6 +15,7 @@ const initialState: AuthState = {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, setState] = useState<AuthState>(initialState);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     console.log('[Auth] Context initialization started');
@@ -25,6 +27,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (error) {
           console.error('[Auth] Session check error:', error);
+          if (error.message.includes('Invalid Refresh Token')) {
+            console.log('[Auth] Invalid refresh token, redirecting to login');
+            await supabase.auth.signOut();
+            navigate('/auth');
+          }
           setState({ 
             status: 'UNAUTHENTICATED',
             session: null,
@@ -64,6 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           status: 'UNAUTHENTICATED',
           session: null,
         });
+        navigate('/auth');
       } else if (event === 'SIGNED_IN') {
         console.log('[Auth] User signed in');
         setState({ 
@@ -76,6 +84,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           ...prev,
           session,
         }));
+      } else if (event === 'INITIAL_SESSION') {
+        console.log('[Auth] Initial session:', { hasSession: !!session });
+        setState({
+          status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
+          session,
+        });
+        if (!session) {
+          navigate('/auth');
+        }
       }
     });
 
@@ -83,7 +100,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('[Auth] Cleanup: unsubscribing from auth changes');
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const signOut = async () => {
     console.log('[Auth] Sign out requested');
@@ -98,6 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
         throw error;
       }
+      navigate('/auth');
     } catch (error) {
       console.error('[Auth] Unexpected error during sign out:', error);
       // Force the state to unauthenticated even if the signOut call failed
