@@ -43,24 +43,37 @@ export const useMessageSender = (
     setMessages(prev => sortMessages([...prev, optimisticMessage]));
 
     try {
-      // If this is the first message and we have a persistSession function,
-      // persist the chat session first
-      if (messages.length === 0 && persistSession) {
+      // Track the actual chat ID we'll use for the request
+      let actualChatId = sessionId;
+
+      // Only try to persist if it's a temporary session (indicated by isTemporary in the URL)
+      const isTemporarySession = !sessionId.includes('-');
+      if (isTemporarySession && persistSession) {
+        console.log('[MessageSender] Persisting temporary chat session:', sessionId);
         const persistedChat = await persistSession(sessionId);
         if (persistedChat) {
+          console.log('[MessageSender] Chat session persisted:', persistedChat.id);
           optimisticMessage.chatId = persistedChat.id;
+          actualChatId = persistedChat.id;
+        } else {
+          throw new Error('Failed to persist temporary chat session');
         }
+      } else {
+        console.log('[MessageSender] Using existing chat session:', sessionId);
       }
 
       const endpoint = directMode ? 'direct-chat' : 'chat-manager';
-      console.log('[MessageSender] Using endpoint:', endpoint);
+      console.log('[MessageSender] Using endpoint:', endpoint, { 
+        directMode,
+        chatId: actualChatId
+      });
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No active session');
 
       const { data, error } = await supabase.functions.invoke(endpoint, {
         body: {
-          chatId: optimisticMessage.chatId,
+          chatId: actualChatId,
           content,
           type,
           metadata: { 
@@ -74,6 +87,7 @@ export const useMessageSender = (
       });
 
       if (error) {
+        console.error('[MessageSender] Error from edge function:', error);
         setMessages(prev => prev.map(m => 
           m.metadata?.tempId === tempId
             ? { ...m, status: 'error' }
@@ -82,10 +96,10 @@ export const useMessageSender = (
         throw error;
       }
 
-      console.log('Message sent successfully:', data);
+      console.log('[MessageSender] Message sent successfully:', data);
 
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('[MessageSender] Error sending message:', error);
       toast({
         title: "Error sending message",
         description: "Please try again. If the problem persists, check your connection.",

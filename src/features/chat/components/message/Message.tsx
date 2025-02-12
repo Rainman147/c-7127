@@ -40,12 +40,13 @@ const Message = ({ message }: MessageProps) => {
           )}>
             <div className="relative">
               <MessageContent content={message.content} type={message.type} isAssistant={isAssistant} />
-              {isPending && (
-                <div className="absolute top-0 right-0 -mr-8">
-                  <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                </div>
-              )}
             </div>
+            {isPending && isAssistant && (
+              <div className="flex items-center gap-2 text-gray-400 ml-1">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Thinking...</span>
+              </div>
+            )}
           </div>
         </div>
         {isAssistant && (

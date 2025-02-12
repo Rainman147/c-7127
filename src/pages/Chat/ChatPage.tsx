@@ -128,12 +128,17 @@ const ChatPage = () => {
     updateTemplateId(template.id);
   };
 
+  const handleSendMessage = async (content: string, type: 'text' | 'audio', useDirectMode: boolean) => {
+    console.log('[ChatPage] Sending message:', { content, type, useDirectMode });
+    await handleMessageSend(content, type, useDirectMode);
+  };
+
   return (
     <ChatContainer 
       messages={messages}
       isLoading={isLoading || status === 'INITIALIZING'}
       currentChatId={sessionId || null}
-      onMessageSend={handleMessageSend}
+      onMessageSend={handleSendMessage}
       onTranscriptionComplete={handleTranscriptionComplete}
       onTemplateChange={handleTemplateChange}
       onPatientSelect={handlePatientSelect}

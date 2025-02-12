@@ -440,10 +440,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      cleanup_empty_chats: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       cleanup_expired_upload_sessions: {
         Args: Record<PropertyKey, never>
         Returns: undefined
