@@ -24,7 +24,7 @@ const ChatPage = () => {
   const { createSession, setActiveSessionId, persistSession } = useChatSessions();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const [directMode, setDirectMode] = useState(false);
+  const [directMode, setDirectMode] = useState(true); // Changed default to true
 
   const {
     messages,
@@ -150,3 +150,4 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
+
