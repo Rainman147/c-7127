@@ -17,6 +17,26 @@ This directory contains comprehensive documentation for the chat system implemen
 
 Each section contains detailed documentation about specific aspects of the chat system.
 
+## Recent Updates
+
+### 1. Direct Mode Default
+- Chat system now defaults to Direct Mode
+- Faster response times
+- Optional context mode available
+- Clear mode switching UI
+
+### 2. Enhanced Loading States
+- New thinking indicator with gradient animation
+- Sequenced dot glow effects
+- Improved visual feedback
+- Responsive design implementation
+
+### 3. Context Processing
+- Optimized context management
+- Flexible mode switching
+- Template integration
+- Patient data handling
+
 ## Detailed Documentation
 
 ### Processing

@@ -14,10 +14,23 @@
 1. Core Features
    - File upload integration
    - Audio recording capability
-   - Direct/Context mode toggle
+   - Direct/Context mode toggle (Direct mode default)
    - Loading state visualization
    - Tooltip-enhanced buttons
    - Error state handling
+
+## Mode Toggle System
+1. Default Configuration
+   - Direct mode enabled by default
+   - Quick response time optimization
+   - Clear visual feedback on current mode
+   - Intuitive toggle interface
+
+2. Mode Switching
+   - Toast notifications for mode changes
+   - Clear mode descriptions
+   - Seamless state updates
+   - Persistent mode selection
 
 ## Audio Input
 1. Processing

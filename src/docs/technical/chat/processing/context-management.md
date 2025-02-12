@@ -27,26 +27,33 @@ async function getChatContext(authenticatedClient, chatId) {
 ```
 
 ## Context Management
-1. Message History
-   - Recent message retrieval
-   - Older message count
-   - Pagination support
-   - Memory optimization
+1. Direct Mode (Default)
+   - Bypasses context processing
+   - Optimized for quick responses
+   - Suitable for standalone queries
+   - Reduces processing overhead
 
-2. Template Context
-   - System instructions
-   - Response formatting
-   - Schema validation
-   - Priority rules
+2. Context Mode (Optional)
+   - Full message history integration
+   - Template context awareness
+   - Patient data inclusion
+   - Enhanced response relevance
 
-3. Patient Context
-   - Medical history
-   - Recent interactions
-   - Context persistence
-   - Privacy management
-
-4. Real-time Updates
+3. Real-time Updates
    - Context invalidation
    - Cache management
    - State synchronization
    - Error recovery
+
+## Loading State Visualization
+1. Thinking Indicator
+   - Smooth gradient animation (4s duration)
+   - Dot glow effect sequence
+   - Responsive design
+   - Clear visual feedback
+
+2. State Transitions
+   - Seamless animation handling
+   - Loading state management
+   - Error state visualization
+   - Success state feedback
