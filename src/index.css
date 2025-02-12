@@ -44,26 +44,23 @@ body {
 }
 
 /* Thinking indicator animations */
-@keyframes shimmer {
+@keyframes textShimmer {
   0% {
-    background-position: -200% 50%;
+    background-position: 100% 50%;
   }
   100% {
-    background-position: 200% 50%;
+    background-position: 0% 50%;
   }
 }
 
-.animate-dot-scale {
-  animation: dotScale 1.5s ease-in-out infinite;
-}
-
-@keyframes dotScale {
+@keyframes dotGlow {
   0%, 100% {
-    transform: scale(1);
     opacity: 0.5;
+    transform: scale(1);
   }
   50% {
-    transform: scale(1.2);
     opacity: 1;
+    transform: scale(1.2);
+    filter: brightness(1.3);
   }
 }

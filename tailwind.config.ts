@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -19,18 +20,25 @@ export default {
     },
     extend: {
       keyframes: {
-        shimmer: {
-          "0%": { backgroundPosition: "-200% 50%" },
-          "100%": { backgroundPosition: "200% 50%" }
+        textShimmer: {
+          "0%": { backgroundPosition: "100% 50%" },
+          "100%": { backgroundPosition: "0% 50%" }
         },
-        dotScale: {
-          "0%, 100%": { transform: "scale(1)", opacity: "0.5" },
-          "50%": { transform: "scale(1.2)", opacity: "1" }
-        },
+        dotGlow: {
+          "0%, 100%": { 
+            opacity: "0.5",
+            transform: "scale(1)"
+          },
+          "50%": { 
+            opacity: "1",
+            transform: "scale(1.2)",
+            filter: "brightness(1.3)"
+          }
+        }
       },
       animation: {
-        shimmer: "shimmer 3s linear infinite",
-        "dot-scale": "dotScale 1.5s ease-in-out infinite",
+        "text-shimmer": "textShimmer 2.5s linear infinite",
+        "dot-glow": "dotGlow 2.5s ease-in-out infinite"
       },
       colors: {
         border: "hsl(var(--border))",
