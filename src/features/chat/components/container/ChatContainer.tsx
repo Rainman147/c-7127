@@ -56,7 +56,7 @@ const ChatContainer = ({
             <div className="absolute inset-0 overflow-y-auto chat-scrollbar">
               <div className="mx-auto max-w-2xl px-4 sm:px-6 md:px-8">
                 <div className="pt-[60px] pb-[100px]">
-                  <MessageList messages={messages} />
+                  <MessageList messages={messages} isLoading={isLoading} />
                 </div>
               </div>
             </div>
