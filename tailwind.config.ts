@@ -27,18 +27,19 @@ export default {
         dotGlow: {
           "0%, 100%": { 
             opacity: "0.5",
-            transform: "scale(1)"
+            transform: "scale(1)",
+            filter: "brightness(1) drop-shadow(0 0 0 rgba(255,255,255,0))"
           },
           "50%": { 
             opacity: "1",
             transform: "scale(1.2)",
-            filter: "brightness(1.3)"
+            filter: "brightness(1.3) drop-shadow(0 0 2px rgba(255,255,255,0.3))"
           }
         }
       },
       animation: {
-        "text-shimmer": "textShimmer 2.5s linear infinite",
-        "dot-glow": "dotGlow 2.5s ease-in-out infinite"
+        "text-shimmer": "textShimmer 2s linear infinite",
+        "dot-glow": "dotGlow 2s ease-in-out infinite"
       },
       colors: {
         border: "hsl(var(--border))",

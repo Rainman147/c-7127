@@ -14,16 +14,16 @@ const ThinkingIndicator = () => {
             <div className="flex items-center gap-2">
               <div className="inline-flex items-center">
                 <span 
-                  className="text-base bg-gradient-to-r from-gray-200 via-white to-gray-200 
+                  className="text-base bg-gradient-to-r from-gray-300/80 via-white to-gray-300/80 
                             text-transparent bg-clip-text animate-text-shimmer 
                             bg-[length:200%_100%]"
                 >
                   Thinking
                 </span>
                 <div className="flex gap-1 ml-2">
-                  <div className="w-1 h-1 rounded-full bg-gray-200 animate-dot-glow delay-[800ms]" />
-                  <div className="w-1 h-1 rounded-full bg-gray-200 animate-dot-glow delay-[1000ms]" />
-                  <div className="w-1 h-1 rounded-full bg-gray-200 animate-dot-glow delay-[1200ms]" />
+                  <div className="w-1 h-1 rounded-full bg-gradient-to-r from-gray-200 to-white/90 animate-dot-glow delay-[600ms] transition-all" />
+                  <div className="w-1 h-1 rounded-full bg-gradient-to-r from-gray-200 to-white/90 animate-dot-glow delay-[750ms] transition-all" />
+                  <div className="w-1 h-1 rounded-full bg-gradient-to-r from-gray-200 to-white/90 animate-dot-glow delay-[900ms] transition-all" />
                 </div>
               </div>
             </div>
