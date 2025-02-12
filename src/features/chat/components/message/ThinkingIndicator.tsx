@@ -11,12 +11,17 @@ const ThinkingIndicator = () => {
         <div className="flex gap-4 w-full">
           <MessageAvatar role="assistant" />
           <div className="flex-1 space-y-4">
-            <div className="flex items-center gap-2 text-gray-400">
-              <span className="text-base">Thinking</span>
-              <span className="flex gap-1">
-                <span className="animate-pulse">.</span>
-                <span className="animate-pulse delay-150">.</span>
-                <span className="animate-pulse delay-300">.</span>
+            <div className="flex items-center gap-2">
+              <span 
+                className="text-base bg-gradient-to-r from-transparent via-white to-transparent 
+                          bg-[length:200%_100%] animate-shimmer inline-flex items-center"
+              >
+                Thinking
+                <span className="flex gap-1 ml-2">
+                  <span className="w-1 h-1 rounded-full bg-current animate-dot-scale delay-[0ms]">.</span>
+                  <span className="w-1 h-1 rounded-full bg-current animate-dot-scale delay-[150ms]">.</span>
+                  <span className="w-1 h-1 rounded-full bg-current animate-dot-scale delay-[300ms]">.</span>
+                </span>
               </span>
             </div>
           </div>

@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -40,4 +41,29 @@ body {
 /* Modal content scrollbar */
 .modal-content-scrollbar {
   @apply scrollbar-thin scrollbar-thumb-gray-500/50 hover:scrollbar-thumb-gray-400/50 scrollbar-track-chatgpt-main scrollbar-thumb-rounded;
+}
+
+/* Thinking indicator animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.animate-dot-scale {
+  animation: dotScale 1.5s ease-in-out infinite;
+}
+
+@keyframes dotScale {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
 }

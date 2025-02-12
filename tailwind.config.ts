@@ -18,6 +18,20 @@ export default {
       },
     },
     extend: {
+      keyframes: {
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 50%" },
+          "100%": { backgroundPosition: "200% 50%" }
+        },
+        dotScale: {
+          "0%, 100%": { transform: "scale(1)", opacity: "0.5" },
+          "50%": { transform: "scale(1.2)", opacity: "1" }
+        },
+      },
+      animation: {
+        shimmer: "shimmer 3s linear infinite",
+        "dot-scale": "dotScale 1.5s ease-in-out infinite",
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
