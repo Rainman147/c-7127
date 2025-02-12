@@ -38,7 +38,7 @@ export default {
         }
       },
       animation: {
-        "text-shimmer": "textShimmer 2.5s linear infinite",
+        "text-shimmer": "textShimmer 3s linear infinite",
         "dot-glow": "dotGlow 2s ease-in-out infinite"
       },
       colors: {
