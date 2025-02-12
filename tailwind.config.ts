@@ -21,8 +21,8 @@ export default {
     extend: {
       keyframes: {
         textShimmer: {
-          "0%": { backgroundPosition: "100% 50%" },
-          "100%": { backgroundPosition: "0% 50%" }
+          "0%": { backgroundPosition: "-50% 50%" },
+          "100%": { backgroundPosition: "200% 50%" }
         },
         dotGlow: {
           "0%, 100%": { 
@@ -38,7 +38,7 @@ export default {
         }
       },
       animation: {
-        "text-shimmer": "textShimmer 3s linear infinite",
+        "text-shimmer": "textShimmer 4s linear infinite",
         "dot-glow": "dotGlow 2s ease-in-out infinite"
       },
       colors: {

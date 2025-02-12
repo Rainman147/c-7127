@@ -14,9 +14,9 @@ const ThinkingIndicator = () => {
             <div className="flex items-center gap-2">
               <div className="inline-flex items-center">
                 <span 
-                  className="text-base bg-gradient-to-r from-gray-300/80 via-gray-300/80 via-47% via-white/95 via-49% via-white via-50% via-white/95 via-51% to-gray-300/80 
+                  className="text-base bg-gradient-to-r from-gray-300/80 via-white/95 via-50% to-gray-300/80 
                             text-transparent bg-clip-text animate-text-shimmer 
-                            bg-[length:400%_100%]"
+                            bg-[length:150%_100%]"
                 >
                   Thinking
                 </span>
