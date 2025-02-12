@@ -1,8 +1,8 @@
 
 import { memo, useRef, useEffect } from 'react';
 import Message from './Message';
+import ThinkingIndicator from './ThinkingIndicator';
 import type { Message as MessageType } from '@/types/chat';
-import { Loader2 } from 'lucide-react';
 
 interface MessageListProps {
   messages: MessageType[];
@@ -36,11 +36,7 @@ const MessageList = ({ messages, isLoading }: MessageListProps) => {
                 message={message}
               />
             ))}
-            {isLoading && (
-              <div className="flex items-center justify-center p-4">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-              </div>
-            )}
+            {isLoading && <ThinkingIndicator />}
             <div ref={messagesEndRef} />
           </>
         )}
