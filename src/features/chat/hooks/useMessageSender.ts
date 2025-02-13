@@ -20,7 +20,7 @@ export const useMessageSender = (
     console.log('[MessageSender] Sending message:', { content, type, directMode });
     
     if (!sessionId) {
-      console.error('No active session');
+      console.error('[MessageSender] No active session');
       return;
     }
 
@@ -28,7 +28,7 @@ export const useMessageSender = (
       console.error('[MessageSender] No auth session');
       toast({
         title: "Authentication Error",
-        description: "Please try logging in again",
+        description: "Please sign in again to continue",
         variant: "destructive",
       });
       return;
@@ -55,10 +55,8 @@ export const useMessageSender = (
     setMessages(prev => sortMessages([...prev, optimisticMessage]));
 
     try {
-      // Track the actual chat ID we'll use for the request
       let actualChatId = sessionId;
 
-      // Only try to persist if it's a temporary session (indicated by isTemporary in the URL)
       const isTemporarySession = !sessionId.includes('-');
       if (isTemporarySession && persistSession) {
         console.log('[MessageSender] Persisting temporary chat session:', sessionId);
@@ -80,7 +78,6 @@ export const useMessageSender = (
         chatId: actualChatId
       });
 
-      // Let supabase.functions.invoke handle auth automatically
       const { data, error } = await supabase.functions.invoke(endpoint, {
         body: {
           chatId: actualChatId,
@@ -110,7 +107,7 @@ export const useMessageSender = (
       console.error('[MessageSender] Error sending message:', error);
       toast({
         title: "Error sending message",
-        description: "Please try again. If the problem persists, check your connection.",
+        description: "Please try again. If the problem persists, try signing out and back in.",
         variant: "destructive",
       });
     } finally {
