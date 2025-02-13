@@ -95,12 +95,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }));
             break;
 
-          case 'USER_DELETED':
-            console.log('[Auth] User deleted');
-            setState({ 
-              status: 'UNAUTHENTICATED',
-              session: null,
-            });
+          case 'MFA_CHALLENGE_VERIFIED':
+            console.log('[Auth] MFA challenge verified');
+            setState(prev => ({
+              ...prev,
+              session,
+            }));
+            break;
+
+          case 'PASSWORD_RECOVERY':
+            console.log('[Auth] Password recovery event received');
+            // Keep current state for password recovery
             break;
 
           default:
