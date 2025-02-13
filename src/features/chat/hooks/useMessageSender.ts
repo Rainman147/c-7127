@@ -2,6 +2,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth/AuthContext';
 import type { Message } from '@/types';
 import { sortMessages } from '../utils/messageSort';
 
@@ -13,6 +14,7 @@ export const useMessageSender = (
   persistSession?: (sessionId: string) => Promise<any>
 ) => {
   const { toast } = useToast();
+  const { session: authSession } = useAuth();
 
   const handleMessageSend = async (content: string, type: 'text' | 'audio' = 'text', directMode = false) => {
     console.log('[MessageSender] Sending message:', { content, type, directMode });
@@ -22,10 +24,8 @@ export const useMessageSender = (
       return;
     }
 
-    // Get current session and verify authentication
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session) {
-      console.error('[MessageSender] Auth error:', sessionError);
+    if (!authSession) {
+      console.error('[MessageSender] No auth session');
       toast({
         title: "Authentication Error",
         description: "Please try logging in again",
@@ -80,12 +80,7 @@ export const useMessageSender = (
         chatId: actualChatId
       });
 
-      // Get fresh session token before making the request
-      const { data: { session: freshSession } } = await supabase.auth.getSession();
-      if (!freshSession?.access_token) {
-        throw new Error('No valid session token');
-      }
-
+      // Let supabase.functions.invoke handle auth automatically
       const { data, error } = await supabase.functions.invoke(endpoint, {
         body: {
           chatId: actualChatId,
@@ -95,9 +90,6 @@ export const useMessageSender = (
             tempId,
             sortIndex: messages.length
           }
-        },
-        headers: {
-          Authorization: `Bearer ${freshSession.access_token}`
         }
       });
 
