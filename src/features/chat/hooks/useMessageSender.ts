@@ -80,6 +80,12 @@ export const useMessageSender = (
         chatId: actualChatId
       });
 
+      // Make sure we have a valid auth header
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No valid auth session found');
+      }
+
       // Let supabase.functions.invoke handle auth automatically
       const { data, error } = await supabase.functions.invoke(endpoint, {
         body: {
