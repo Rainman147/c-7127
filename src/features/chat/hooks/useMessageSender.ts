@@ -17,8 +17,20 @@ export const useMessageSender = (
   const handleMessageSend = async (content: string, type: 'text' | 'audio' = 'text', directMode = false) => {
     console.log('[MessageSender] Sending message:', { content, type, directMode });
     
-    if (!sessionId || !supabase.auth.getSession()) {
-      console.error('No active session or user');
+    if (!sessionId) {
+      console.error('No active session');
+      return;
+    }
+
+    // Get current session and verify authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      console.error('[MessageSender] Auth error:', sessionError);
+      toast({
+        title: "Authentication Error",
+        description: "Please try logging in again",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -67,9 +79,12 @@ export const useMessageSender = (
         directMode,
         chatId: actualChatId
       });
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('No active session');
+
+      // Get fresh session token before making the request
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      if (!freshSession?.access_token) {
+        throw new Error('No valid session token');
+      }
 
       const { data, error } = await supabase.functions.invoke(endpoint, {
         body: {
@@ -82,12 +97,13 @@ export const useMessageSender = (
           }
         },
         headers: {
-          Authorization: `Bearer ${session.access_token}`
+          Authorization: `Bearer ${freshSession.access_token}`
         }
       });
 
       if (error) {
         console.error('[MessageSender] Error from edge function:', error);
+        // Update optimistic message to show error
         setMessages(prev => prev.map(m => 
           m.metadata?.tempId === tempId
             ? { ...m, status: 'error' }
