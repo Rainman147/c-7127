@@ -24,8 +24,8 @@ export const useMessageSender = (
       return;
     }
 
-    if (!authSession) {
-      console.error('[MessageSender] No auth session');
+    if (!authSession?.access_token) {
+      console.error('[MessageSender] No auth session or access token');
       toast({
         title: "Authentication Error",
         description: "Please sign in again to continue",
@@ -87,6 +87,9 @@ export const useMessageSender = (
             tempId,
             sortIndex: messages.length
           }
+        },
+        headers: {
+          Authorization: `Bearer ${authSession.access_token}`
         }
       });
 
@@ -117,3 +120,4 @@ export const useMessageSender = (
 
   return handleMessageSend;
 };
+

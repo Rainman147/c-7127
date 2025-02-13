@@ -13,7 +13,14 @@ export const supabase = createClient<Database>(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: true
-    }
+      detectSessionInUrl: true,
+      flowType: 'pkce',
+      storage: window.localStorage,
+      storageKey: 'supabase.auth.token',
+    },
+    headers: {
+      'X-Client-Info': 'clinical-assistant'
+    },
   }
 );
+

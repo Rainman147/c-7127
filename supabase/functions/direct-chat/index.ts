@@ -30,7 +30,8 @@ serve(async (req) => {
         },
         auth: {
           autoRefreshToken: false,
-          persistSession: false
+          persistSession: false,
+          detectSessionInUrl: false
         }
       }
     );
@@ -157,3 +158,4 @@ serve(async (req) => {
     );
   }
 });
+
