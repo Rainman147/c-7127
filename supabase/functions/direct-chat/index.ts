@@ -19,36 +19,26 @@ serve(async (req) => {
       throw new Error('Missing Authorization header');
     }
 
-    // Initialize Supabase client with debug logging
+    // Initialize Supabase client
     console.log('[direct-chat] Initializing Supabase client');
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-        auth: {
-          persistSession: false // Don't persist in edge function context
-        }
+        global: { headers: { Authorization: authHeader } }
       }
     );
 
-    // Get authenticated user with enhanced error handling
+    // Get authenticated user
     console.log('[direct-chat] Verifying authentication');
     const {
       data: { user },
       error: userError,
     } = await supabaseClient.auth.getUser();
 
-    if (userError) {
-      console.error('[direct-chat] User authentication error:', userError);
-      throw new Error(`Authentication failed: ${userError.message}`);
-    }
-
-    if (!user) {
-      console.error('[direct-chat] No user found in session');
-      throw new Error('Authentication failed: No user found');
+    if (userError || !user) {
+      console.error('[direct-chat] Authentication failed:', userError);
+      throw new Error('Authentication failed');
     }
 
     console.log('[direct-chat] Authentication successful for user:', user.id);
