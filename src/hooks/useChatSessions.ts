@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -30,7 +31,6 @@ export const useChatSessions = () => {
         if (error) throw error;
         
         console.log('Fetched chat sessions:', data);
-        // Transform database records to frontend type
         setSessions(data?.map(chat => toFrontendChatSession(chat as DbChat)) || []);
       } catch (error) {
         console.error('Error fetching chat sessions:', error);
@@ -89,7 +89,6 @@ export const useChatSessions = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      // Create a temporary session with a UUID
       const tempSession: ChatSession = {
         id: crypto.randomUUID(),
         userId: user.id,
@@ -117,32 +116,41 @@ export const useChatSessions = () => {
     if (!temporarySession || temporarySession.id !== sessionId) return null;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      // Get current session and verify authentication
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.error('[persistSession] Auth error:', sessionError);
+        toast({
+          title: "Authentication Error",
+          description: "Please try logging in again",
+          variant: "destructive",
+        });
+        return null;
+      }
 
       // Start transition
       setTemporarySession(prev => prev ? { ...prev, isTransitioning: true } : null);
 
-      // Create chat and first message in a transaction through the edge function
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/direct-chat`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Use supabase.functions.invoke instead of raw fetch
+      const { data, error } = await supabase.functions.invoke('direct-chat', {
+        body: {
           tempId: sessionId,
           title: temporarySession.title,
           message: firstMessage
-        })
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to persist chat: ${response.statusText}`);
+      if (error) {
+        console.error('[persistSession] Edge function error:', error);
+        // Revert transition state
+        setTemporarySession(prev => prev ? { ...prev, isTransitioning: false } : null);
+        throw error;
       }
 
-      const data = await response.json();
-      console.log('Persisted chat session:', data);
+      console.log('[persistSession] Chat persisted successfully:', data);
 
       // Update route to new permanent ID
       navigate(`/c/${data.chatId}`);
@@ -150,7 +158,7 @@ export const useChatSessions = () => {
       setTemporarySession(null);
       return data;
     } catch (error) {
-      console.error('Error persisting chat session:', error);
+      console.error('[persistSession] Error persisting chat session:', error);
       // Revert transition state
       setTemporarySession(prev => prev ? { ...prev, isTransitioning: false } : null);
       
