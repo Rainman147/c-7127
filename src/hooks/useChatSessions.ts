@@ -1,10 +1,11 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
 import { ChatSession, Message } from '@/types/chat/types';
+import { toFrontendChatSession } from '@/utils/transforms/chat';
+import type { DbChat } from '@/types/database';
 
 export const useChatSessions = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -29,7 +30,8 @@ export const useChatSessions = () => {
         if (error) throw error;
         
         console.log('Fetched chat sessions:', data);
-        setSessions(data || []);
+        // Transform database records to frontend type
+        setSessions(data?.map(chat => toFrontendChatSession(chat as DbChat)) || []);
       } catch (error) {
         console.error('Error fetching chat sessions:', error);
         toast({
@@ -56,12 +58,17 @@ export const useChatSessions = () => {
           console.log('Chat update received:', payload);
           
           if (payload.eventType === 'INSERT') {
-            setSessions(prev => [payload.new as ChatSession, ...prev]);
+            setSessions(prev => [
+              toFrontendChatSession(payload.new as DbChat),
+              ...prev
+            ]);
           } else if (payload.eventType === 'DELETE') {
             setSessions(prev => prev.filter(session => session.id !== payload.old.id));
           } else if (payload.eventType === 'UPDATE') {
             setSessions(prev => prev.map(session => 
-              session.id === payload.new.id ? { ...session, ...payload.new } : session
+              session.id === payload.new.id 
+                ? toFrontendChatSession(payload.new as DbChat)
+                : session
             ));
           }
         }
