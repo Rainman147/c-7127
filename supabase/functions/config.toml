@@ -1,0 +1,26 @@
+
+project_id = "hlnzunnahksudbotqvpk"
+
+[global.env]
+OPENAI_API_KEY = "{{env.OPENAI_API_KEY}}"
+
+[[functions]]
+name = "direct-chat"
+verify_jwt = true
+
+[[functions]]
+name = "transcribe"
+verify_jwt = true
+
+[[functions]]
+name = "combine-chunks"
+verify_jwt = true
+
+[[functions]]
+name = "backup-audio-chunk"
+verify_jwt = true
+
+[[functions]]
+name = "text-to-speech"
+verify_jwt = true
+
