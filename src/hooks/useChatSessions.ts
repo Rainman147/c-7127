@@ -1,13 +1,18 @@
 
 import { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
+import { ChatSession, Message } from '@/types/chat/types';
 
 export const useChatSessions = () => {
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [temporarySession, setTemporarySession] = useState<any>(null);
+  const [temporarySession, setTemporarySession] = useState<ChatSession | null>(null);
+  const [realtimeChannel, setRealtimeChannel] = useState<RealtimeChannel | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Load initial sessions
   useEffect(() => {
@@ -51,7 +56,7 @@ export const useChatSessions = () => {
           console.log('Chat update received:', payload);
           
           if (payload.eventType === 'INSERT') {
-            setSessions(prev => [payload.new as any, ...prev]);
+            setSessions(prev => [payload.new as ChatSession, ...prev]);
           } else if (payload.eventType === 'DELETE') {
             setSessions(prev => prev.filter(session => session.id !== payload.old.id));
           } else if (payload.eventType === 'UPDATE') {
@@ -63,8 +68,12 @@ export const useChatSessions = () => {
       )
       .subscribe();
 
+    setRealtimeChannel(channel);
+
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [toast]);
 
@@ -73,12 +82,13 @@ export const useChatSessions = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      // Create a temporary session in memory
-      const tempSession = {
+      // Create a temporary session with a UUID
+      const tempSession: ChatSession = {
         id: crypto.randomUUID(),
-        user_id: user.id,
+        userId: user.id,
         title: 'New Chat',
-        created_at: new Date().toISOString(),
+        messages: [],
+        createdAt: new Date().toISOString(),
         isTemporary: true
       };
       
@@ -96,31 +106,47 @@ export const useChatSessions = () => {
     }
   }, [toast]);
 
-  const persistSession = useCallback(async (sessionId: string) => {
-    if (!temporarySession || temporarySession.id !== sessionId) return;
+  const persistSession = useCallback(async (sessionId: string, firstMessage?: Message) => {
+    if (!temporarySession || temporarySession.id !== sessionId) return null;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const { data, error } = await supabase
-        .from('chats')
-        .insert([
-          { 
-            user_id: user.id,
-            title: temporarySession.title
-          }
-        ])
-        .select()
-        .single();
+      // Start transition
+      setTemporarySession(prev => prev ? { ...prev, isTransitioning: true } : null);
 
-      if (error) throw error;
-      
+      // Create chat and first message in a transaction through the edge function
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/direct-chat`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tempId: sessionId,
+          title: temporarySession.title,
+          message: firstMessage
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to persist chat: ${response.statusText}`);
+      }
+
+      const data = await response.json();
       console.log('Persisted chat session:', data);
+
+      // Update route to new permanent ID
+      navigate(`/c/${data.chatId}`);
+      
       setTemporarySession(null);
       return data;
     } catch (error) {
       console.error('Error persisting chat session:', error);
+      // Revert transition state
+      setTemporarySession(prev => prev ? { ...prev, isTransitioning: false } : null);
+      
       toast({
         title: "Error",
         description: "Failed to save chat session",
@@ -128,7 +154,7 @@ export const useChatSessions = () => {
       });
       return null;
     }
-  }, [temporarySession, toast]);
+  }, [temporarySession, toast, navigate]);
 
   const deleteSession = useCallback(async (sessionId: string) => {
     try {
@@ -147,6 +173,11 @@ export const useChatSessions = () => {
       
       console.log('Deleted chat session:', sessionId);
       setSessions(prev => prev.filter(session => session.id !== sessionId));
+
+      // Navigate away if the active session is deleted
+      if (activeSessionId === sessionId) {
+        navigate('/');
+      }
     } catch (error) {
       console.error('Error deleting chat session:', error);
       toast({
@@ -155,13 +186,13 @@ export const useChatSessions = () => {
         variant: "destructive",
       });
     }
-  }, [temporarySession, toast]);
+  }, [temporarySession, activeSessionId, toast, navigate]);
 
   const renameSession = useCallback(async (sessionId: string, newTitle: string) => {
     try {
       // If it's a temporary session, update it in state
       if (temporarySession?.id === sessionId) {
-        setTemporarySession(prev => ({ ...prev, title: newTitle }));
+        setTemporarySession(prev => prev ? { ...prev, title: newTitle } : null);
         return;
       }
 

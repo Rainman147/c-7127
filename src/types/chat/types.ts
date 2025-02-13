@@ -24,6 +24,7 @@ export interface MessageMetadata {
   isOptimistic?: boolean;
   retryCount?: number;
   sortIndex?: number;
+  isTransitioning?: boolean;
 }
 
 /**
@@ -36,7 +37,7 @@ export interface Message {
   content: string;
   type?: MessageType;
   metadata?: MessageMetadata;
-  createdAt: string;  // Made required
+  createdAt: string;
   status?: 'delivered' | 'pending' | 'error';
 }
 
@@ -52,6 +53,8 @@ export interface ChatSession {
   createdAt?: string;
   updatedAt?: string;
   userId: string;
+  isTemporary?: boolean;
+  isTransitioning?: boolean;
 }
 
 /**
@@ -71,3 +74,4 @@ export interface ChatError extends Error {
   code: string;
   details?: Record<string, unknown>;
 }
+
