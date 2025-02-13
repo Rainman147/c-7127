@@ -19,7 +19,8 @@ serve(async (req) => {
       throw new Error('Missing Authorization header');
     }
 
-    // Initialize Supabase client
+    // Initialize Supabase client with debug logging
+    console.log('[direct-chat] Initializing Supabase client');
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -27,10 +28,14 @@ serve(async (req) => {
         global: {
           headers: { Authorization: authHeader },
         },
+        auth: {
+          persistSession: false // Don't persist in edge function context
+        }
       }
     );
 
-    // Get authenticated user and handle auth errors explicitly
+    // Get authenticated user with enhanced error handling
+    console.log('[direct-chat] Verifying authentication');
     const {
       data: { user },
       error: userError,
@@ -46,35 +51,37 @@ serve(async (req) => {
       throw new Error('Authentication failed: No user found');
     }
 
-    console.log('[direct-chat] Authenticated user:', user.id);
+    console.log('[direct-chat] Authentication successful for user:', user.id);
 
     // Parse request body
-    const { tempId, title, message } = await req.json();
+    const { chatId, content, type = 'text', metadata = {} } = await req.json();
 
-    if (!tempId || !title || !message) {
-      console.error('[direct-chat] Missing required fields:', { tempId, title, message });
+    if (!chatId || !content) {
+      console.error('[direct-chat] Missing required fields:', { chatId, content });
       throw new Error('Missing required fields');
     }
 
-    // Begin transaction
-    const { data: chatData, error: chatError } = await supabaseClient
-      .rpc('create_chat_with_message', {
-        p_user_id: user.id,
-        p_title: title,
-        p_content: message.content,
-        p_role: message.role,
-        p_type: message.type || 'text',
-        p_metadata: message.metadata || {}
+    console.log('[direct-chat] Processing message:', { chatId, type });
+
+    // Insert user's message
+    const { error: messageError } = await supabaseClient
+      .from('messages')
+      .insert({
+        chat_id: chatId,
+        content,
+        type,
+        role: 'user',
+        metadata
       });
 
-    if (chatError) {
-      console.error('[direct-chat] Error creating chat:', chatError);
-      throw chatError;
+    if (messageError) {
+      console.error('[direct-chat] Error inserting message:', messageError);
+      throw messageError;
     }
 
-    console.log('[direct-chat] Chat created successfully:', chatData);
+    console.log('[direct-chat] User message inserted successfully');
 
-    // Process the message with OpenAI
+    // Process with OpenAI
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -82,8 +89,8 @@ serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'o1-mini',
-        messages: [{ role: 'user', content: message.content }]
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content }]
       })
     });
 
@@ -103,11 +110,13 @@ serve(async (req) => {
     const { error: responseError } = await supabaseClient
       .from('messages')
       .insert({
-        chat_id: chatData.chat_id,
+        chat_id: chatId,
         role: 'assistant',
         content: completion.choices[0].message.content,
         type: 'text',
-        metadata: { sortIndex: (message.metadata?.sortIndex || 0) + 1 }
+        metadata: { 
+          sortIndex: (metadata?.sortIndex || 0) + 1 
+        }
       });
 
     if (responseError) {
@@ -120,8 +129,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        chatId: chatData.chat_id,
-        tempId
+        chatId
       }),
       {
         headers: {
