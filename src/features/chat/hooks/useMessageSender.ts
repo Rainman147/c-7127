@@ -2,7 +2,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/auth/AuthContext';
 import type { Message } from '@/types';
 import { sortMessages } from '../utils/messageSort';
 
@@ -14,23 +13,12 @@ export const useMessageSender = (
   persistSession?: (sessionId: string) => Promise<any>
 ) => {
   const { toast } = useToast();
-  const { session: authSession } = useAuth();
 
   const handleMessageSend = async (content: string, type: 'text' | 'audio' = 'text', directMode = false) => {
     console.log('[MessageSender] Sending message:', { content, type, directMode });
     
-    if (!sessionId) {
-      console.error('[MessageSender] No active session');
-      return;
-    }
-
-    if (!authSession?.access_token) {
-      console.error('[MessageSender] No auth session or access token');
-      toast({
-        title: "Authentication Error",
-        description: "Please sign in again to continue",
-        variant: "destructive",
-      });
+    if (!sessionId || !supabase.auth.getSession()) {
+      console.error('No active session or user');
       return;
     }
 
@@ -55,8 +43,10 @@ export const useMessageSender = (
     setMessages(prev => sortMessages([...prev, optimisticMessage]));
 
     try {
+      // Track the actual chat ID we'll use for the request
       let actualChatId = sessionId;
 
+      // Only try to persist if it's a temporary session (indicated by isTemporary in the URL)
       const isTemporarySession = !sessionId.includes('-');
       if (isTemporarySession && persistSession) {
         console.log('[MessageSender] Persisting temporary chat session:', sessionId);
@@ -77,6 +67,9 @@ export const useMessageSender = (
         directMode,
         chatId: actualChatId
       });
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No active session');
 
       const { data, error } = await supabase.functions.invoke(endpoint, {
         body: {
@@ -89,13 +82,12 @@ export const useMessageSender = (
           }
         },
         headers: {
-          Authorization: `Bearer ${authSession.access_token}`
+          Authorization: `Bearer ${session.access_token}`
         }
       });
 
       if (error) {
         console.error('[MessageSender] Error from edge function:', error);
-        // Update optimistic message to show error
         setMessages(prev => prev.map(m => 
           m.metadata?.tempId === tempId
             ? { ...m, status: 'error' }
@@ -110,7 +102,7 @@ export const useMessageSender = (
       console.error('[MessageSender] Error sending message:', error);
       toast({
         title: "Error sending message",
-        description: "Please try again. If the problem persists, try signing out and back in.",
+        description: "Please try again. If the problem persists, check your connection.",
         variant: "destructive",
       });
     } finally {
@@ -120,4 +112,3 @@ export const useMessageSender = (
 
   return handleMessageSend;
 };
-

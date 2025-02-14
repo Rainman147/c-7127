@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { AuthState, AuthContextType } from './types';
@@ -17,118 +18,72 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     console.log('[Auth] Context initialization started');
     
-    let mounted = true;
-
     // Initial session check
     const initializeAuth = async () => {
       try {
-        console.log('[Auth] Checking initial session');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('[Auth] Session check error:', error);
-          if (mounted) {
-            setState({ 
-              status: 'UNAUTHENTICATED',
-              session: null,
-            });
-          }
-          return;
-        }
-
-        console.log('[Auth] Initial session state:', session ? 'Found' : 'Not found');
-        if (mounted) {
-          setState({ 
-            status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
-            session,
-          });
-        }
-      } catch (error) {
-        console.error('[Auth] Unexpected error during session check:', error);
-        if (mounted) {
           setState({ 
             status: 'UNAUTHENTICATED',
             session: null,
           });
+          return;
         }
+
+        console.log('[Auth] Initial session check:', session ? 'Found' : 'Not found');
+        setState({ 
+          status: session ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
+          session,
+        });
+      } catch (error) {
+        console.error('[Auth] Unexpected error during session check:', error);
+        setState({ 
+          status: 'UNAUTHENTICATED',
+          session: null,
+        });
       }
     };
 
-    // Initialize auth state
     initializeAuth();
 
-    // Subscribe to auth changes with enhanced error handling
+    // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[Auth] State change detected:', { event, hasSession: !!session });
       
-      try {
-        switch (event) {
-          case 'SIGNED_IN':
-            console.log('[Auth] User signed in');
-            setState({ 
-              status: 'AUTHENTICATED',
-              session,
-            });
-            break;
-
-          case 'SIGNED_OUT':
-            console.log('[Auth] User signed out');
-            setState({ 
-              status: 'UNAUTHENTICATED',
-              session: null,
-            });
-            break;
-
-          case 'TOKEN_REFRESHED':
-            console.log('[Auth] Token refreshed successfully');
-            setState(prev => ({ 
-              ...prev,
-              session,
-            }));
-            break;
-
-          case 'USER_UPDATED':
-            console.log('[Auth] User data updated');
-            setState(prev => ({
-              ...prev,
-              session,
-            }));
-            break;
-
-          case 'MFA_CHALLENGE_VERIFIED':
-            console.log('[Auth] MFA challenge verified');
-            setState(prev => ({
-              ...prev,
-              session,
-            }));
-            break;
-
-          case 'PASSWORD_RECOVERY':
-            console.log('[Auth] Password recovery event received');
-            // Keep current state for password recovery
-            break;
-
-          default:
-            console.log('[Auth] Unhandled auth event:', event);
-            // Keep current state for unhandled events
-            break;
-        }
-      } catch (error) {
-        console.error('[Auth] Error handling auth state change:', error);
-        toast({
-          title: "Authentication Error",
-          description: "There was a problem with your session. Please try logging in again.",
-          variant: "destructive",
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('[Auth] Token refreshed successfully');
+        setState({ 
+          status: 'AUTHENTICATED',
+          session,
         });
+      } else if (event === 'SIGNED_OUT') {
+        console.log('[Auth] User signed out');
+        setState({ 
+          status: 'UNAUTHENTICATED',
+          session: null,
+        });
+      } else if (event === 'SIGNED_IN') {
+        console.log('[Auth] User signed in');
+        setState({ 
+          status: 'AUTHENTICATED',
+          session,
+        });
+      } else if (event === 'USER_UPDATED') {
+        console.log('[Auth] User updated');
+        setState(prev => ({
+          ...prev,
+          session,
+        }));
       }
     });
 
     return () => {
       console.log('[Auth] Cleanup: unsubscribing from auth changes');
-      mounted = false;
       subscription.unsubscribe();
     };
-  }, [toast]);
+  }, []);
 
   const signOut = async () => {
     console.log('[Auth] Sign out requested');
